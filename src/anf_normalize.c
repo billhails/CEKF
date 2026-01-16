@@ -20,24 +20,24 @@
 #include "bigint.h"
 #include "common.h"
 #include "hash.h"
-#include "lambda_helper.h"
 #include "memory.h"
+#include "minlam_helper.h"
 #include "symbol.h"
 
 #ifdef DEBUG_ANF
 #include "anf_debug.h"
 #include "debug.h"
 #include "debugging_on.h"
-#include "lambda_pp.h"
+#include "minlam_pp.h"
 #include <stdio.h>
 #include <unistd.h>
 #else
 #include "debugging_off.h"
 #endif
 
-static AnfExp *normalize(LamExp *lamExp, AnfExp *tail);
-static AnfExp *normalizeLam(LamLam *lamLam, AnfExp *tail);
-static AnfExp *normalizeNameSpaces(ParserInfo I, LamNameSpaceArray *nsArray,
+static AnfExp *normalize(MinExp *minExp, AnfExp *tail);
+static AnfExp *normalizeMin(MinLam *minMin, AnfExp *tail);
+static AnfExp *normalizeNameSpaces(ParserInfo I, MinNameSpaceArray *nsArray,
                                    AnfExp *tail);
 static AnfExp *normalizeVar(ParserInfo I, HashSymbol *var, AnfExp *tail);
 static AnfExp *normalizeMaybeBigInteger(ParserInfo I, MaybeBigInt *integer,
@@ -45,125 +45,125 @@ static AnfExp *normalizeMaybeBigInteger(ParserInfo I, MaybeBigInt *integer,
 static AnfExp *normalizeStdInteger(ParserInfo I, int integer, AnfExp *tail);
 static AnfExp *normalizeCharacter(ParserInfo I, Character character,
                                   AnfExp *tail);
-static AnfExp *normalizeAmb(LamAmb *app, AnfExp *tail);
-static AnfExp *normalizeSequence(LamSequence *sequence, AnfExp *tail);
-static AnfExp *normalizePrim(LamPrimApp *app, AnfExp *tail);
-static AnfExp *normalizeApply(LamApply *lamApply, AnfExp *tail);
+static AnfExp *normalizeAmb(MinAmb *app, AnfExp *tail);
+static AnfExp *normalizeSequence(MinSequence *sequence, AnfExp *tail);
+static AnfExp *normalizePrim(MinPrimApp *app, AnfExp *tail);
+static AnfExp *normalizeApply(MinApply *minApply, AnfExp *tail);
 static AnfExp *normalizeBack(ParserInfo I, AnfExp *tail);
 static AnfExp *normalizeError(ParserInfo I, AnfExp *tail);
 static HashSymbol *freshSymbol();
-static Aexp *replaceLamExp(LamExp *lamExp, LamExpTable *replacements);
-static AnfExp *letBind(AnfExp *body, LamExpTable *replacements);
-static AexpPrimOp mapPrimOp(LamPrimOp op);
+static Aexp *replaceMinExp(MinExp *minExp, MinExpTable *replacements);
+static AnfExp *letBind(AnfExp *body, MinExpTable *replacements);
+static AexpPrimOp mapPrimOp(MinPrimOp op);
 static Aexp *aexpNormalizeVar(ParserInfo I, HashSymbol *var);
 static Aexp *aexpNormalizeMaybeBigInteger(ParserInfo I, MaybeBigInt *integer);
 static Aexp *aexpNormalizeStdInteger(ParserInfo I, int integer);
 static Aexp *aexpNormalizeCharacter(ParserInfo I, Character character);
-static Aexp *aexpNormalizeLam(LamLam *lamLam);
+static Aexp *aexpNormalizeMin(MinLam *minMin);
 static AexpNameSpaceArray *aexpNormalizeNameSpaces(ParserInfo I,
-                                                   LamNameSpaceArray *nsArray);
-static AexpVarList *convertVarList(LamVarList *args);
-static AexpList *replaceLamArgs(LamArgs *, LamExpTable *);
-static Aexp *replaceLamPrim(LamPrimApp *lamPrimApp, LamExpTable *replacements);
-static Aexp *replaceLamMakeVec(LamMakeVec *makeVec, LamExpTable *replacements);
-static Aexp *replaceLamConstruct(LamConstruct *construct,
-                                 LamExpTable *replacements);
-static Aexp *replaceLamCexp(LamExp *apply, LamExpTable *replacements);
-static AnfExp *normalizeMakeVec(LamMakeVec *makeVec, AnfExp *tail);
+                                                   MinNameSpaceArray *nsArray);
+static AexpVarList *convertVarList(MinVarList *args);
+static AexpList *replaceMinArgs(MinArgs *, MinExpTable *);
+static Aexp *replaceMinPrim(MinPrimApp *minPrimApp, MinExpTable *replacements);
+static Aexp *replaceMinMakeVec(MinMakeVec *makeVec, MinExpTable *replacements);
+static Aexp *replaceMinConstruct(MinConstruct *construct,
+                                 MinExpTable *replacements);
+static Aexp *replaceMinCexp(MinExp *apply, MinExpTable *replacements);
+static AnfExp *normalizeMakeVec(MinMakeVec *makeVec, AnfExp *tail);
 static AnfExp *wrapTail(AnfExp *exp, AnfExp *tail);
-static AnfExp *normalizeIff(LamIff *lamIff, AnfExp *tail);
-static AnfExp *normalizeCallCc(LamExp *callCC, AnfExp *tail);
-static AnfExp *normalizeLetRec(LamLetRec *lamLetRec, AnfExp *tail);
-static AnfExp *normalizeLet(LamLet *lamLet, AnfExp *tail);
-static AnfExp *normalizeLetStar(LamLetStar *, AnfExp *);
-static AnfExp *normalizeMatch(LamMatch *match, AnfExp *tail);
-static AnfMatchList *normalizeMatchList(LamMatchList *matchList);
-static AexpIntList *convertIntList(LamIntList *list);
-static AnfExp *normalizeCond(LamCond *cond, AnfExp *tail);
-static CexpCondCases *normalizeCondCases(LamCondCases *cases);
-static CexpLetRec *normalizeLetRecBindings(CexpLetRec *, LamBindings *);
-static AnfExp *normalizeConstruct(LamConstruct *construct, AnfExp *tail);
-static AnfExp *normalizeMakeTuple(ParserInfo, LamArgs *, AnfExp *);
-static AnfExp *normalizeTupleIndex(LamTupleIndex *construct, AnfExp *tail);
-static AnfExp *normalizeDeconstruct(LamDeconstruct *deconstruct, AnfExp *tail);
-static AnfExp *normalizeTag(LamExp *tag, AnfExp *tail);
+static AnfExp *normalizeIff(MinIff *minIff, AnfExp *tail);
+static AnfExp *normalizeCallCc(MinExp *callCC, AnfExp *tail);
+static AnfExp *normalizeLetRec(MinLetRec *minLetRec, AnfExp *tail);
+static AnfExp *normalizeLet(MinLet *minLet, AnfExp *tail);
+static AnfExp *normalizeLetStar(MinLetStar *, AnfExp *);
+static AnfExp *normalizeMatch(MinMatch *match, AnfExp *tail);
+static AnfMatchList *normalizeMatchList(MinMatchList *matchList);
+static AexpIntList *convertIntList(MinIntList *list);
+static AnfExp *normalizeCond(MinCond *cond, AnfExp *tail);
+static CexpCondCases *normalizeCondCases(MinCondCases *cases);
+static CexpLetRec *normalizeLetRecBindings(CexpLetRec *, MinBindings *);
+static AnfExp *normalizeConstruct(MinConstruct *construct, AnfExp *tail);
+static AnfExp *normalizeMakeTuple(ParserInfo, MinArgs *, AnfExp *);
+static AnfExp *normalizeTupleIndex(MinTupleIndex *construct, AnfExp *tail);
+static AnfExp *normalizeDeconstruct(MinDeconstruct *deconstruct, AnfExp *tail);
+static AnfExp *normalizeTag(MinExp *tag, AnfExp *tail);
 static AnfExp *normalizeEnv(ParserInfo I, AnfExp *tail);
-static AnfExp *normalizeLamLookUp(LamLookUp *, AnfExp *);
+static AnfExp *normalizeMinLookUp(MinLookUp *, AnfExp *);
 
-AnfExp *anfNormalize(LamExp *lamExp) { return normalize(lamExp, NULL); }
+AnfExp *anfNormalize(MinExp *minExp) { return normalize(minExp, NULL); }
 
-static AnfExp *normalize(LamExp *lamExp, AnfExp *tail) {
-    if (lamExp == NULL) {
+static AnfExp *normalize(MinExp *minExp, AnfExp *tail) {
+    if (minExp == NULL) {
         return NULL;
     }
     ENTER(normalize);
-    IFDEBUG(ppLamExp(lamExp));
-    switch (lamExp->type) {
-    case LAMEXP_TYPE_LAM:
-        return normalizeLam(getLamExp_Lam(lamExp), tail);
-    case LAMEXP_TYPE_VAR:
-        return normalizeVar(CPI(lamExp), getLamExp_Var(lamExp), tail);
-    case LAMEXP_TYPE_STDINT:
-        return normalizeStdInteger(CPI(lamExp), getLamExp_Stdint(lamExp), tail);
-    case LAMEXP_TYPE_BIGINTEGER:
-        return normalizeMaybeBigInteger(CPI(lamExp),
-                                        getLamExp_BigInteger(lamExp), tail);
-    case LAMEXP_TYPE_PRIM:
-        return normalizePrim(getLamExp_Prim(lamExp), tail);
-    case LAMEXP_TYPE_AMB:
-        return normalizeAmb(getLamExp_Amb(lamExp), tail);
-    case LAMEXP_TYPE_SEQUENCE:
-        return normalizeSequence(getLamExp_Sequence(lamExp), tail);
-    case LAMEXP_TYPE_MAKEVEC:
-        return normalizeMakeVec(getLamExp_MakeVec(lamExp), tail);
-    case LAMEXP_TYPE_TYPEDEFS:
-        return normalize(getLamExp_TypeDefs(lamExp)->body, tail);
-    case LAMEXP_TYPE_APPLY:
-        return normalizeApply(getLamExp_Apply(lamExp), tail);
-    case LAMEXP_TYPE_IFF:
-        return normalizeIff(getLamExp_Iff(lamExp), tail);
-    case LAMEXP_TYPE_CALLCC:
-        return normalizeCallCc(getLamExp_CallCC(lamExp), tail);
-    case LAMEXP_TYPE_LET:
-        return normalizeLet(getLamExp_Let(lamExp), tail);
-    case LAMEXP_TYPE_LETSTAR:
-        return normalizeLetStar(getLamExp_LetStar(lamExp), tail);
-    case LAMEXP_TYPE_LETREC:
-        return normalizeLetRec(getLamExp_LetRec(lamExp), tail);
-    case LAMEXP_TYPE_TUPLEINDEX:
-        return normalizeTupleIndex(getLamExp_TupleIndex(lamExp), tail);
-    case LAMEXP_TYPE_DECONSTRUCT:
-        return normalizeDeconstruct(getLamExp_Deconstruct(lamExp), tail);
-    case LAMEXP_TYPE_CONSTRUCT:
-        return normalizeConstruct(getLamExp_Construct(lamExp), tail);
-    case LAMEXP_TYPE_TAG:
-        return normalizeTag(getLamExp_Tag(lamExp), tail);
-    case LAMEXP_TYPE_CONSTANT:
-        return normalizeStdInteger(CPI(lamExp), getLamExp_Constant(lamExp)->tag,
+    IFDEBUG(ppMinExp(minExp));
+    switch (minExp->type) {
+    case MINEXP_TYPE_LAM:
+        return normalizeMin(getMinExp_Lam(minExp), tail);
+    case MINEXP_TYPE_VAR:
+        return normalizeVar(CPI(minExp), getMinExp_Var(minExp), tail);
+    case MINEXP_TYPE_STDINT:
+        return normalizeStdInteger(CPI(minExp), getMinExp_Stdint(minExp), tail);
+    case MINEXP_TYPE_BIGINTEGER:
+        return normalizeMaybeBigInteger(CPI(minExp),
+                                        getMinExp_BigInteger(minExp), tail);
+    case MINEXP_TYPE_PRIM:
+        return normalizePrim(getMinExp_Prim(minExp), tail);
+    case MINEXP_TYPE_AMB:
+        return normalizeAmb(getMinExp_Amb(minExp), tail);
+    case MINEXP_TYPE_SEQUENCE:
+        return normalizeSequence(getMinExp_Sequence(minExp), tail);
+    case MINEXP_TYPE_MAKEVEC:
+        return normalizeMakeVec(getMinExp_MakeVec(minExp), tail);
+    case MINEXP_TYPE_TYPEDEFS:
+        return normalize(getMinExp_TypeDefs(minExp)->body, tail);
+    case MINEXP_TYPE_APPLY:
+        return normalizeApply(getMinExp_Apply(minExp), tail);
+    case MINEXP_TYPE_IFF:
+        return normalizeIff(getMinExp_Iff(minExp), tail);
+    case MINEXP_TYPE_CALLCC:
+        return normalizeCallCc(getMinExp_CallCC(minExp), tail);
+    case MINEXP_TYPE_LET:
+        return normalizeLet(getMinExp_Let(minExp), tail);
+    case MINEXP_TYPE_LETSTAR:
+        return normalizeLetStar(getMinExp_LetStar(minExp), tail);
+    case MINEXP_TYPE_LETREC:
+        return normalizeLetRec(getMinExp_LetRec(minExp), tail);
+    case MINEXP_TYPE_TUPLEINDEX:
+        return normalizeTupleIndex(getMinExp_TupleIndex(minExp), tail);
+    case MINEXP_TYPE_DECONSTRUCT:
+        return normalizeDeconstruct(getMinExp_Deconstruct(minExp), tail);
+    case MINEXP_TYPE_CONSTRUCT:
+        return normalizeConstruct(getMinExp_Construct(minExp), tail);
+    case MINEXP_TYPE_TAG:
+        return normalizeTag(getMinExp_Tag(minExp), tail);
+    case MINEXP_TYPE_CONSTANT:
+        return normalizeStdInteger(CPI(minExp), getMinExp_Constant(minExp)->tag,
                                    tail);
-    case LAMEXP_TYPE_MATCH:
-        return normalizeMatch(getLamExp_Match(lamExp), tail);
-    case LAMEXP_TYPE_COND:
-        return normalizeCond(getLamExp_Cond(lamExp), tail);
-    case LAMEXP_TYPE_CHARACTER:
-        return normalizeCharacter(CPI(lamExp), getLamExp_Character(lamExp),
+    case MINEXP_TYPE_MATCH:
+        return normalizeMatch(getMinExp_Match(minExp), tail);
+    case MINEXP_TYPE_COND:
+        return normalizeCond(getMinExp_Cond(minExp), tail);
+    case MINEXP_TYPE_CHARACTER:
+        return normalizeCharacter(CPI(minExp), getMinExp_Character(minExp),
                                   tail);
-    case LAMEXP_TYPE_BACK:
-        return normalizeBack(CPI(lamExp), tail);
-    case LAMEXP_TYPE_ERROR:
-        return normalizeError(CPI(lamExp), tail);
-    case LAMEXP_TYPE_MAKETUPLE:
-        return normalizeMakeTuple(CPI(lamExp), getLamExp_MakeTuple(lamExp),
+    case MINEXP_TYPE_BACK:
+        return normalizeBack(CPI(minExp), tail);
+    case MINEXP_TYPE_ERROR:
+        return normalizeError(CPI(minExp), tail);
+    case MINEXP_TYPE_MAKETUPLE:
+        return normalizeMakeTuple(CPI(minExp), getMinExp_MakeTuple(minExp),
                                   tail);
-    case LAMEXP_TYPE_NAMESPACES:
-        return normalizeNameSpaces(CPI(lamExp), getLamExp_NameSpaces(lamExp),
+    case MINEXP_TYPE_NAMESPACES:
+        return normalizeNameSpaces(CPI(minExp), getMinExp_NameSpaces(minExp),
                                    tail);
-    case LAMEXP_TYPE_ENV:
-        return normalizeEnv(CPI(lamExp), tail);
-    case LAMEXP_TYPE_LOOKUP:
-        return normalizeLamLookUp(getLamExp_LookUp(lamExp), tail);
+    case MINEXP_TYPE_ENV:
+        return normalizeEnv(CPI(minExp), tail);
+    case MINEXP_TYPE_LOOKUP:
+        return normalizeMinLookUp(getMinExp_LookUp(minExp), tail);
     default:
-        cant_happen("unrecognized type %s", lamExpTypeName(lamExp->type));
+        cant_happen("unrecognized type %s", minExpTypeName(minExp->type));
     }
     LEAVE(normalize);
 }
@@ -172,11 +172,11 @@ static AnfExp *wrapAexp(Aexp *aexp) { return newAnfExp_Aexp(CPI(aexp), aexp); }
 
 static AnfExp *wrapCexp(Cexp *cexp) { return newAnfExp_Cexp(CPI(cexp), cexp); }
 
-static AnfExp *normalizeCond(LamCond *cond, AnfExp *tail) {
+static AnfExp *normalizeCond(MinCond *cond, AnfExp *tail) {
     ENTER(normalizeCond);
-    LamExpTable *replacements = newLamExpTable();
+    MinExpTable *replacements = newMinExpTable();
     int save = PROTECT(replacements);
-    Aexp *value = replaceLamExp(cond->value, replacements);
+    Aexp *value = replaceMinExp(cond->value, replacements);
     int save2 = PROTECT(value);
     CexpCondCases *cases = normalizeCondCases(cond->cases);
     PROTECT(cases);
@@ -195,11 +195,11 @@ static AnfExp *normalizeCond(LamCond *cond, AnfExp *tail) {
     return exp;
 }
 
-static AnfExp *normalizeMatch(LamMatch *match, AnfExp *tail) {
+static AnfExp *normalizeMatch(MinMatch *match, AnfExp *tail) {
     ENTER(normalizeMatch);
-    LamExpTable *replacements = newLamExpTable();
+    MinExpTable *replacements = newMinExpTable();
     int save = PROTECT(replacements);
-    Aexp *index = replaceLamExp(match->index, replacements);
+    Aexp *index = replaceMinExp(match->index, replacements);
     int save2 = PROTECT(index);
     AnfMatchList *matchList = normalizeMatchList(match->cases);
     PROTECT(matchList);
@@ -218,7 +218,7 @@ static AnfExp *normalizeMatch(LamMatch *match, AnfExp *tail) {
     return res;
 }
 
-static AnfMatchList *normalizeMatchList(LamMatchList *matchList) {
+static AnfMatchList *normalizeMatchList(MinMatchList *matchList) {
     ENTER(normalizeMatchList);
     if (matchList == NULL) {
         LEAVE(normalizeMatchList);
@@ -236,7 +236,7 @@ static AnfMatchList *normalizeMatchList(LamMatchList *matchList) {
     return this;
 }
 
-static AnfExp *normalizeLetBindings(LamBindings *bindings, AnfExp *body) {
+static AnfExp *normalizeLetBindings(MinBindings *bindings, AnfExp *body) {
     ENTER(normalizeLetBindings);
     if (bindings == NULL) {
         LEAVE(normalizeLetBindings);
@@ -254,7 +254,7 @@ static AnfExp *normalizeLetBindings(LamBindings *bindings, AnfExp *body) {
     return exp;
 }
 
-static AnfExp *normalizeLetStarBindings(LamBindings *bindings, AnfExp *body) {
+static AnfExp *normalizeLetStarBindings(MinBindings *bindings, AnfExp *body) {
     ENTER(normalizeLetStarBindings);
     if (bindings == NULL) {
         LEAVE(normalizeLetStarBindings);
@@ -270,47 +270,47 @@ static AnfExp *normalizeLetStarBindings(LamBindings *bindings, AnfExp *body) {
     return exp;
 }
 
-static AnfExp *normalizeLet(LamLet *lamLet, AnfExp *tail) {
+static AnfExp *normalizeLet(MinLet *minLet, AnfExp *tail) {
     ENTER(normalizeLet);
-    AnfExp *body = normalize(lamLet->body, tail);
+    AnfExp *body = normalize(minLet->body, tail);
     int save = PROTECT(body);
-    AnfExp *exp = normalizeLetBindings(lamLet->bindings, body);
+    AnfExp *exp = normalizeLetBindings(minLet->bindings, body);
     UNPROTECT(save);
     LEAVE(normalizeLet);
     return exp;
 }
 
-static AnfExp *normalizeLetStar(LamLetStar *lamLetStar, AnfExp *tail) {
+static AnfExp *normalizeLetStar(MinLetStar *minLetStar, AnfExp *tail) {
     ENTER(normalizeLetStar);
-    AnfExp *body = normalize(lamLetStar->body, tail);
+    AnfExp *body = normalize(minLetStar->body, tail);
     int save = PROTECT(body);
-    AnfExp *exp = normalizeLetStarBindings(lamLetStar->bindings, body);
+    AnfExp *exp = normalizeLetStarBindings(minLetStar->bindings, body);
     UNPROTECT(save);
     LEAVE(normalizeLetStar);
     return exp;
 }
 
-static LamPrimApp *deconstructToPrimApp(LamDeconstruct *deconstruct) {
-    LamExp *index = newLamExp_Stdint(CPI(deconstruct), deconstruct->vec);
+static MinPrimApp *deconstructToPrimApp(MinDeconstruct *deconstruct) {
+    MinExp *index = newMinExp_Stdint(CPI(deconstruct), deconstruct->vec);
     int save = PROTECT(index);
-    LamPrimApp *res = newLamPrimApp(CPI(deconstruct), LAMPRIMOP_TYPE_VEC, index,
+    MinPrimApp *res = newMinPrimApp(CPI(deconstruct), MINPRIMOP_TYPE_VEC, index,
                                     deconstruct->exp);
     UNPROTECT(save);
     return res;
 }
 
-static LamPrimApp *tagToPrimApp(LamExp *tagged) {
-    LamExp *index = newLamExp_Stdint(CPI(tagged), 0);
+static MinPrimApp *tagToPrimApp(MinExp *tagged) {
+    MinExp *index = newMinExp_Stdint(CPI(tagged), 0);
     int save = PROTECT(index);
-    LamPrimApp *res =
-        newLamPrimApp(CPI(tagged), LAMPRIMOP_TYPE_VEC, index, tagged);
+    MinPrimApp *res =
+        newMinPrimApp(CPI(tagged), MINPRIMOP_TYPE_VEC, index, tagged);
     UNPROTECT(save);
     return res;
 }
 
-static AnfExp *normalizeDeconstruct(LamDeconstruct *deconstruct, AnfExp *tail) {
+static AnfExp *normalizeDeconstruct(MinDeconstruct *deconstruct, AnfExp *tail) {
     ENTER(noramaalizeDeconstruct);
-    LamPrimApp *primApp = deconstructToPrimApp(deconstruct);
+    MinPrimApp *primApp = deconstructToPrimApp(deconstruct);
     int save = PROTECT(primApp);
     AnfExp *res = normalizePrim(primApp, tail);
     UNPROTECT(save);
@@ -318,18 +318,18 @@ static AnfExp *normalizeDeconstruct(LamDeconstruct *deconstruct, AnfExp *tail) {
     return res;
 }
 
-static LamPrimApp *tupleIndexToPrimApp(LamTupleIndex *tupleIndex) {
-    LamExp *index = newLamExp_Stdint(CPI(tupleIndex), tupleIndex->vec);
+static MinPrimApp *tupleIndexToPrimApp(MinTupleIndex *tupleIndex) {
+    MinExp *index = newMinExp_Stdint(CPI(tupleIndex), tupleIndex->vec);
     int save = PROTECT(index);
-    LamPrimApp *res = newLamPrimApp(CPI(tupleIndex), LAMPRIMOP_TYPE_VEC, index,
+    MinPrimApp *res = newMinPrimApp(CPI(tupleIndex), MINPRIMOP_TYPE_VEC, index,
                                     tupleIndex->exp);
     UNPROTECT(save);
     return res;
 }
 
-static AnfExp *normalizeTupleIndex(LamTupleIndex *index, AnfExp *tail) {
+static AnfExp *normalizeTupleIndex(MinTupleIndex *index, AnfExp *tail) {
     ENTER(noramaalizeTupleIndex);
-    LamPrimApp *primApp = tupleIndexToPrimApp(index);
+    MinPrimApp *primApp = tupleIndexToPrimApp(index);
     int save = PROTECT(primApp);
     AnfExp *res = normalizePrim(primApp, tail);
     UNPROTECT(save);
@@ -337,9 +337,9 @@ static AnfExp *normalizeTupleIndex(LamTupleIndex *index, AnfExp *tail) {
     return res;
 }
 
-static AnfExp *normalizeTag(LamExp *tagged, AnfExp *tail) {
+static AnfExp *normalizeTag(MinExp *tagged, AnfExp *tail) {
     ENTER(noramaalizeTag);
-    LamPrimApp *primApp = tagToPrimApp(tagged);
+    MinPrimApp *primApp = tagToPrimApp(tagged);
     int save = PROTECT(primApp);
     AnfExp *res = normalizePrim(primApp, tail);
     UNPROTECT(save);
@@ -347,14 +347,14 @@ static AnfExp *normalizeTag(LamExp *tagged, AnfExp *tail) {
     return res;
 }
 
-static AnfExp *normalizeLetRec(LamLetRec *lamLetRec, AnfExp *tail) {
+static AnfExp *normalizeLetRec(MinLetRec *minLetRec, AnfExp *tail) {
     ENTER(normalizeLetRec);
-    IFDEBUG(ppLamLetRec(lamLetRec));
-    AnfExp *body = normalize(lamLetRec->body, tail);
+    IFDEBUG(ppMinLetRec(minLetRec));
+    AnfExp *body = normalize(minLetRec->body, tail);
     int save = PROTECT(body);
     CexpLetRec *cexpLetRec = newCexpLetRec(CPI(body), 0, NULL, body);
     PROTECT(cexpLetRec);
-    cexpLetRec = normalizeLetRecBindings(cexpLetRec, lamLetRec->bindings);
+    cexpLetRec = normalizeLetRecBindings(cexpLetRec, minLetRec->bindings);
     PROTECT(cexpLetRec);
     if (cexpLetRec->bindings == NULL) {
         UNPROTECT(save);
@@ -394,11 +394,11 @@ static AnfExp *normalizeBack(ParserInfo I, AnfExp *tail) {
     return exp;
 }
 
-static AnfExp *normalizeCallCc(LamExp *lamExp, AnfExp *tail) {
+static AnfExp *normalizeCallCc(MinExp *minExp, AnfExp *tail) {
     ENTER(normalizeCallCc);
-    LamExpTable *replacements = newLamExpTable();
+    MinExpTable *replacements = newMinExpTable();
     int save = PROTECT(replacements);
-    Aexp *aexp = replaceLamExp(lamExp, replacements);
+    Aexp *aexp = replaceMinExp(minExp, replacements);
     int save2 = PROTECT(aexp);
     Cexp *cexp = newCexp_CallCC(CPI(aexp), aexp);
     REPLACE_PROTECT(save2, cexp);
@@ -412,17 +412,17 @@ static AnfExp *normalizeCallCc(LamExp *lamExp, AnfExp *tail) {
     return res;
 }
 
-static AnfExp *normalizeIff(LamIff *lamIff, AnfExp *tail) {
+static AnfExp *normalizeIff(MinIff *minIff, AnfExp *tail) {
     ENTER(normalizeIff);
-    LamExpTable *replacements = newLamExpTable();
+    MinExpTable *replacements = newMinExpTable();
     int save = PROTECT(replacements);
-    Aexp *condition = replaceLamExp(lamIff->condition, replacements);
+    Aexp *condition = replaceMinExp(minIff->condition, replacements);
     int save2 = PROTECT(condition);
-    AnfExp *consequent = normalize(lamIff->consequent, NULL);
+    AnfExp *consequent = normalize(minIff->consequent, NULL);
     PROTECT(consequent);
-    AnfExp *alternative = normalize(lamIff->alternative, NULL);
+    AnfExp *alternative = normalize(minIff->alternative, NULL);
     PROTECT(alternative);
-    Cexp *cexp = makeCexp_Iff(CPI(lamIff), condition, consequent, alternative);
+    Cexp *cexp = makeCexp_Iff(CPI(minIff), condition, consequent, alternative);
     REPLACE_PROTECT(save2, cexp);
     AnfExp *exp = wrapCexp(cexp);
     REPLACE_PROTECT(save2, exp);
@@ -434,15 +434,15 @@ static AnfExp *normalizeIff(LamIff *lamIff, AnfExp *tail) {
     return res;
 }
 
-static AnfExp *normalizeMakeVec(LamMakeVec *lamMakeVec, AnfExp *tail) {
+static AnfExp *normalizeMakeVec(MinMakeVec *minMakeVec, AnfExp *tail) {
     ENTER(normalizeMakeVec);
-    LamExpTable *replacements = newLamExpTable();
+    MinExpTable *replacements = newMinExpTable();
     int save = PROTECT(replacements);
-    DEBUG("calling replaceLamArgs");
-    AexpList *args = replaceLamArgs(lamMakeVec->args, replacements);
+    DEBUG("calling replaceMinArgs");
+    AexpList *args = replaceMinArgs(minMakeVec->args, replacements);
     int save2 = PROTECT(args);
     AexpMakeVec *aexpMakeVec =
-        newAexpMakeVec(CPI(lamMakeVec), countAexpList(args), args);
+        newAexpMakeVec(CPI(minMakeVec), countAexpList(args), args);
     REPLACE_PROTECT(save2, aexpMakeVec);
     Aexp *aexp = newAexp_MakeVec(CPI(aexpMakeVec), aexpMakeVec);
     REPLACE_PROTECT(save2, aexp);
@@ -456,26 +456,26 @@ static AnfExp *normalizeMakeVec(LamMakeVec *lamMakeVec, AnfExp *tail) {
     return res;
 }
 
-static LamMakeVec *constructToMakeVec(LamConstruct *construct) {
-    int nArgs = countLamArgs(construct->args);
-    LamExp *newArg = newLamExp_Stdint(CPI(construct), construct->tag);
+static MinMakeVec *constructToMakeVec(MinConstruct *construct) {
+    int nArgs = countMinArgs(construct->args);
+    MinExp *newArg = newMinExp_Stdint(CPI(construct), construct->tag);
     int save = PROTECT(newArg);
-    LamArgs *extraItem = newLamArgs(CPI(construct), newArg, construct->args);
+    MinArgs *extraItem = newMinArgs(CPI(construct), newArg, construct->args);
     PROTECT(extraItem);
-    LamMakeVec *res = newLamMakeVec(CPI(construct), nArgs + 1, extraItem);
+    MinMakeVec *res = newMinMakeVec(CPI(construct), nArgs + 1, extraItem);
     UNPROTECT(save);
     return res;
 }
 
-static LamMakeVec *tupleToMakeVec(ParserInfo PI, LamArgs *tuple) {
-    int nArgs = countLamArgs(tuple);
-    LamMakeVec *res = newLamMakeVec(PI, nArgs, tuple);
+static MinMakeVec *tupleToMakeVec(ParserInfo PI, MinArgs *tuple) {
+    int nArgs = countMinArgs(tuple);
+    MinMakeVec *res = newMinMakeVec(PI, nArgs, tuple);
     return res;
 }
 
-static AnfExp *normalizeConstruct(LamConstruct *construct, AnfExp *tail) {
+static AnfExp *normalizeConstruct(MinConstruct *construct, AnfExp *tail) {
     ENTER(normalizeConstruct);
-    LamMakeVec *makeVec = constructToMakeVec(construct);
+    MinMakeVec *makeVec = constructToMakeVec(construct);
     int save = PROTECT(makeVec);
     AnfExp *res = normalizeMakeVec(makeVec, tail);
     UNPROTECT(save);
@@ -483,8 +483,8 @@ static AnfExp *normalizeConstruct(LamConstruct *construct, AnfExp *tail) {
     return res;
 }
 
-static AnfExp *normalizeMakeTuple(ParserInfo PI, LamArgs *tuple, AnfExp *tail) {
-    LamMakeVec *makeVec = tupleToMakeVec(PI, tuple);
+static AnfExp *normalizeMakeTuple(ParserInfo PI, MinArgs *tuple, AnfExp *tail) {
+    MinMakeVec *makeVec = tupleToMakeVec(PI, tuple);
     int save = PROTECT(makeVec);
     AnfExp *res = normalizeMakeVec(makeVec, tail);
     UNPROTECT(save);
@@ -514,7 +514,7 @@ static AnfExp *normalizeMakeTuple(ParserInfo PI, LamArgs *tuple, AnfExp *tail) {
 // (let (anf$123 (expr1)) (expr2 anf$123))
 // and a tail <expr3> and we want to build
 // (let (anf$123 (expr1)) (let (f (expr2 anf$123)) <expr3>))
-static AnfExp *normalizeSequence(LamSequence *sequence, AnfExp *tail) {
+static AnfExp *normalizeSequence(MinSequence *sequence, AnfExp *tail) {
     ENTER(normalizeSequence);
     if (sequence == NULL) {
         cant_happen("empty sequence in normalizeSequence");
@@ -545,13 +545,13 @@ static AnfExp *wrapTail(AnfExp *exp, AnfExp *tail) {
     return exp;
 }
 
-static AnfExp *normalizePrim(LamPrimApp *app, AnfExp *tail) {
+static AnfExp *normalizePrim(MinPrimApp *app, AnfExp *tail) {
     ENTER(normalizePrim);
-    LamExpTable *replacements = newLamExpTable();
+    MinExpTable *replacements = newMinExpTable();
     int save = PROTECT(replacements);
-    Aexp *exp1 = replaceLamExp(app->exp1, replacements);
+    Aexp *exp1 = replaceMinExp(app->exp1, replacements);
     PROTECT(exp1);
-    Aexp *exp2 = replaceLamExp(app->exp2, replacements);
+    Aexp *exp2 = replaceMinExp(app->exp2, replacements);
     PROTECT(exp2);
     Aexp *aexp = makeAexp_Prim(CPI(app), mapPrimOp(app->type), exp1, exp2);
     PROTECT(aexp);
@@ -565,7 +565,7 @@ static AnfExp *normalizePrim(LamPrimApp *app, AnfExp *tail) {
     return res;
 }
 
-static AnfExp *normalizeAmb(LamAmb *app, AnfExp *tail) {
+static AnfExp *normalizeAmb(MinAmb *app, AnfExp *tail) {
     AnfExp *left = normalize(app->left, NULL);
     int save = PROTECT(left);
     AnfExp *right = normalize(app->right, NULL);
@@ -639,7 +639,7 @@ static AnfExp *normalizeStdInteger(ParserInfo I, int integer, AnfExp *tail) {
     return exp;
 }
 
-static AnfExp *normalizeNameSpaces(ParserInfo I, LamNameSpaceArray *nsArray,
+static AnfExp *normalizeNameSpaces(ParserInfo I, MinNameSpaceArray *nsArray,
                                    AnfExp *tail) {
     ENTER(normalizeNameSpaces);
     AexpNameSpaceArray *nsa = aexpNormalizeNameSpaces(I, nsArray);
@@ -655,7 +655,7 @@ static AnfExp *normalizeNameSpaces(ParserInfo I, LamNameSpaceArray *nsArray,
 }
 
 static AexpNameSpaceArray *aexpNormalizeNameSpaces(ParserInfo I,
-                                                   LamNameSpaceArray *nsArray) {
+                                                   MinNameSpaceArray *nsArray) {
     ENTER(aexpNormalizeNameSpaces);
     AexpNameSpaceArray *res = newAexpNameSpaceArray();
     int save = PROTECT(res);
@@ -679,11 +679,11 @@ static AnfExp *normalizeEnv(ParserInfo I, AnfExp *tail) {
         return tail;
     }
     AnfExp *exp = newAnfExp_Env(I);
-    LEAVE(normalizeLam);
+    LEAVE(normalizeMin);
     return exp;
 }
 
-static AnfExp *normalizeLamLookUp(LamLookUp *lookUp, AnfExp *tail) {
+static AnfExp *normalizeMinLookUp(MinLookUp *lookUp, AnfExp *tail) {
     AnfExp *rest = normalize(lookUp->exp, tail);
     int save = PROTECT(rest);
     AnfExpLookUp *exp = newAnfExpLookUp(CPI(lookUp), lookUp->nsId, rest);
@@ -693,34 +693,34 @@ static AnfExp *normalizeLamLookUp(LamLookUp *lookUp, AnfExp *tail) {
     return res;
 }
 
-static AnfExp *normalizeLam(LamLam *lamLam, AnfExp *tail) {
-    ENTER(normalizeLam);
+static AnfExp *normalizeMin(MinLam *minMin, AnfExp *tail) {
+    ENTER(normalizeMin);
     if (tail != NULL) {
-        LEAVE(normalizeLam);
+        LEAVE(normalizeMin);
         return tail;
     }
-    Aexp *aexp = aexpNormalizeLam(lamLam);
+    Aexp *aexp = aexpNormalizeMin(minMin);
     int save = PROTECT(aexp);
     AnfExp *exp = wrapAexp(aexp);
     UNPROTECT(save);
-    LEAVE(normalizeLam);
+    LEAVE(normalizeMin);
     return exp;
 }
 
-static Aexp *aexpNormalizeLam(LamLam *lamLam) {
-    ENTER(aexpNormalizeLam);
-    AexpVarList *varList = convertVarList(lamLam->args);
+static Aexp *aexpNormalizeMin(MinLam *minMin) {
+    ENTER(aexpNormalizeMin);
+    AexpVarList *varList = convertVarList(minMin->args);
     int save = PROTECT(varList);
-    AnfExp *body = normalize(lamLam->exp, NULL);
+    AnfExp *body = normalize(minMin->exp, NULL);
     PROTECT(body);
     Aexp *aexp =
-        makeAexp_Lam(CPI(lamLam), countAexpVarList(varList), 0, varList, body);
+        makeAexp_Lam(CPI(minMin), countAexpVarList(varList), 0, varList, body);
     UNPROTECT(save);
-    LEAVE(aexpNormalizeLam);
+    LEAVE(aexpNormalizeMin);
     return aexp;
 }
 
-static AexpIntList *convertIntList(LamIntList *list) {
+static AexpIntList *convertIntList(MinIntList *list) {
     ENTER(convertIntList);
     if (list == NULL) {
         LEAVE(convertIntList);
@@ -734,7 +734,7 @@ static AexpIntList *convertIntList(LamIntList *list) {
     return this;
 }
 
-static AexpVarList *convertVarList(LamVarList *args) {
+static AexpVarList *convertVarList(MinVarList *args) {
     ENTER(convertVarList);
     if (args == NULL) {
         LEAVE(convertVarList);
@@ -748,19 +748,19 @@ static AexpVarList *convertVarList(LamVarList *args) {
     return this;
 }
 
-static AnfExp *normalizeApply(LamApply *lamApply, AnfExp *tail) {
+static AnfExp *normalizeApply(MinApply *minApply, AnfExp *tail) {
     ENTER(normalizeApply);
-    LamExpTable *replacements = newLamExpTable();
+    MinExpTable *replacements = newMinExpTable();
     int save = PROTECT(replacements);
-    Aexp *function = replaceLamExp(lamApply->function, replacements);
+    Aexp *function = replaceMinExp(minApply->function, replacements);
     int save2 = PROTECT(function);
-    DEBUG("calling replaceLamArgs");
-    AexpList *args = replaceLamArgs(lamApply->args, replacements);
+    DEBUG("calling replaceMinArgs");
+    AexpList *args = replaceMinArgs(minApply->args, replacements);
     PROTECT(args);
-    DEBUG("back from replaceLamArgs");
-    IFDEBUG(printLamExpTable(replacements, 0));
+    DEBUG("back from replaceMinArgs");
+    IFDEBUG(printMinExpTable(replacements, 0));
     Cexp *cexp =
-        makeCexp_Apply(CPI(lamApply), function, countAexpList(args), args);
+        makeCexp_Apply(CPI(minApply), function, countAexpList(args), args);
     REPLACE_PROTECT(save2, cexp);
     AnfExp *exp = wrapCexp(cexp);
     REPLACE_PROTECT(save2, exp);
@@ -773,22 +773,22 @@ static AnfExp *normalizeApply(LamApply *lamApply, AnfExp *tail) {
     return res;
 }
 
-static AnfExp *letBind(AnfExp *body, LamExpTable *replacements) {
+static AnfExp *letBind(AnfExp *body, MinExpTable *replacements) {
     ENTER(letBind);
     // DEBUG("sleep %d", sleep(1));
     IFDEBUG(printExp(body, 0));
-    IFDEBUG(printLamExpTable(replacements, 0));
-    if (countLamExpTable(replacements) == 0) {
+    IFDEBUG(printMinExpTable(replacements, 0));
+    if (countMinExpTable(replacements) == 0) {
         LEAVE(letBind);
         return body;
     }
     int save = PROTECT(body);
-    LamExp *lamExpVal = NULL;
+    MinExp *minExpVal = NULL;
     Index i = 0;
     HashSymbol *key = NULL;
-    while ((key = iterateLamExpTable(replacements, &i, &lamExpVal)) != NULL) {
+    while ((key = iterateMinExpTable(replacements, &i, &minExpVal)) != NULL) {
         DEBUG("letBind iteration %d", i);
-        AnfExp *exp = normalize(lamExpVal, NULL);
+        AnfExp *exp = normalize(minExpVal, NULL);
         int save2 = PROTECT(exp);
         AnfExpLet *let = newAnfExpLet(CPI(exp), key, exp, body);
         PROTECT(let);
@@ -818,7 +818,7 @@ static Aexp *aexpNormalizeCharacter(ParserInfo I, Character character) {
     return newAexp_Character(I, character);
 }
 
-static CexpIntCondCases *normalizeIntCondCases(LamIntCondCases *cases) {
+static CexpIntCondCases *normalizeIntCondCases(MinIntCondCases *cases) {
     if (cases == NULL)
         return NULL;
     CexpIntCondCases *next = normalizeIntCondCases(cases->next);
@@ -831,7 +831,7 @@ static CexpIntCondCases *normalizeIntCondCases(LamIntCondCases *cases) {
     return this;
 }
 
-static CexpCharCondCases *normalizeCharCondCases(LamCharCondCases *cases) {
+static CexpCharCondCases *normalizeCharCondCases(MinCharCondCases *cases) {
     if (cases == NULL)
         return NULL;
     CexpCharCondCases *next = normalizeCharCondCases(cases->next);
@@ -844,7 +844,7 @@ static CexpCharCondCases *normalizeCharCondCases(LamCharCondCases *cases) {
     return this;
 }
 
-static CexpCondCases *normalizeCondCases(LamCondCases *cases) {
+static CexpCondCases *normalizeCondCases(MinCondCases *cases) {
     ENTER(normalizeCondCases);
     if (cases == NULL) {
         LEAVE(normalizeCondCases);
@@ -853,15 +853,15 @@ static CexpCondCases *normalizeCondCases(LamCondCases *cases) {
     CexpCondCases *res = NULL;
     int save = PROTECT(NULL);
     switch (cases->type) {
-    case LAMCONDCASES_TYPE_INTEGERS: {
+    case MINCONDCASES_TYPE_INTEGERS: {
         CexpIntCondCases *intCases =
-            normalizeIntCondCases(getLamCondCases_Integers(cases));
+            normalizeIntCondCases(getMinCondCases_Integers(cases));
         PROTECT(intCases);
         res = newCexpCondCases_IntCases(CPI(cases), intCases);
     } break;
-    case LAMCONDCASES_TYPE_CHARACTERS: {
+    case MINCONDCASES_TYPE_CHARACTERS: {
         CexpCharCondCases *charCases =
-            normalizeCharCondCases(getLamCondCases_Characters(cases));
+            normalizeCharCondCases(getMinCondCases_Characters(cases));
         PROTECT(charCases);
         res = newCexpCondCases_CharCases(CPI(cases), charCases);
     } break;
@@ -873,137 +873,137 @@ static CexpCondCases *normalizeCondCases(LamCondCases *cases) {
     return res;
 }
 
-static Aexp *replaceLamDeconstruct(LamDeconstruct *lamDeconstruct,
-                                   LamExpTable *replacements) {
-    LamPrimApp *primApp = deconstructToPrimApp(lamDeconstruct);
+static Aexp *replaceMinDeconstruct(MinDeconstruct *minDeconstruct,
+                                   MinExpTable *replacements) {
+    MinPrimApp *primApp = deconstructToPrimApp(minDeconstruct);
     int save = PROTECT(primApp);
-    Aexp *res = replaceLamPrim(primApp, replacements);
+    Aexp *res = replaceMinPrim(primApp, replacements);
     UNPROTECT(save);
     return res;
 }
 
-static Aexp *replaceLamTag(LamExp *tagged, LamExpTable *replacements) {
-    LamPrimApp *primApp = tagToPrimApp(tagged);
+static Aexp *replaceMinTag(MinExp *tagged, MinExpTable *replacements) {
+    MinPrimApp *primApp = tagToPrimApp(tagged);
     int save = PROTECT(primApp);
-    Aexp *res = replaceLamPrim(primApp, replacements);
+    Aexp *res = replaceMinPrim(primApp, replacements);
     UNPROTECT(save);
     return res;
 }
 
-static Aexp *replaceLamExp(LamExp *lamExp, LamExpTable *replacements) {
-    ENTER(replaceLamExp);
+static Aexp *replaceMinExp(MinExp *minExp, MinExpTable *replacements) {
+    ENTER(replaceMinExp);
     Aexp *res = NULL;
-    switch (lamExp->type) {
-    case LAMEXP_TYPE_LAM:
-        res = aexpNormalizeLam(getLamExp_Lam(lamExp));
+    switch (minExp->type) {
+    case MINEXP_TYPE_LAM:
+        res = aexpNormalizeMin(getMinExp_Lam(minExp));
         break;
-    case LAMEXP_TYPE_VAR:
-        res = aexpNormalizeVar(CPI(lamExp), getLamExp_Var(lamExp));
+    case MINEXP_TYPE_VAR:
+        res = aexpNormalizeVar(CPI(minExp), getMinExp_Var(minExp));
         break;
-    case LAMEXP_TYPE_BIGINTEGER:
-        res = aexpNormalizeMaybeBigInteger(CPI(lamExp),
-                                           getLamExp_BigInteger(lamExp));
+    case MINEXP_TYPE_BIGINTEGER:
+        res = aexpNormalizeMaybeBigInteger(CPI(minExp),
+                                           getMinExp_BigInteger(minExp));
         break;
-    case LAMEXP_TYPE_STDINT:
-        res = aexpNormalizeStdInteger(CPI(lamExp), getLamExp_Stdint(lamExp));
+    case MINEXP_TYPE_STDINT:
+        res = aexpNormalizeStdInteger(CPI(minExp), getMinExp_Stdint(minExp));
         break;
-    case LAMEXP_TYPE_PRIM:
-        res = replaceLamPrim(getLamExp_Prim(lamExp), replacements);
+    case MINEXP_TYPE_PRIM:
+        res = replaceMinPrim(getMinExp_Prim(minExp), replacements);
         break;
-    case LAMEXP_TYPE_MAKEVEC:
-        res = replaceLamMakeVec(getLamExp_MakeVec(lamExp), replacements);
+    case MINEXP_TYPE_MAKEVEC:
+        res = replaceMinMakeVec(getMinExp_MakeVec(minExp), replacements);
         break;
-    case LAMEXP_TYPE_CONSTRUCT:
-        res = replaceLamConstruct(getLamExp_Construct(lamExp), replacements);
+    case MINEXP_TYPE_CONSTRUCT:
+        res = replaceMinConstruct(getMinExp_Construct(minExp), replacements);
         break;
-    case LAMEXP_TYPE_TAG:
-        res = replaceLamTag(getLamExp_Tag(lamExp), replacements);
+    case MINEXP_TYPE_TAG:
+        res = replaceMinTag(getMinExp_Tag(minExp), replacements);
         break;
-    case LAMEXP_TYPE_CONSTANT:
-        res = aexpNormalizeStdInteger(CPI(lamExp),
-                                      getLamExp_Constant(lamExp)->tag);
+    case MINEXP_TYPE_CONSTANT:
+        res = aexpNormalizeStdInteger(CPI(minExp),
+                                      getMinExp_Constant(minExp)->tag);
         break;
-    case LAMEXP_TYPE_TYPEDEFS:
-        res = replaceLamCexp(getLamExp_TypeDefs(lamExp)->body, replacements);
+    case MINEXP_TYPE_TYPEDEFS:
+        res = replaceMinCexp(getMinExp_TypeDefs(minExp)->body, replacements);
         break;
-    case LAMEXP_TYPE_DECONSTRUCT:
+    case MINEXP_TYPE_DECONSTRUCT:
         res =
-            replaceLamDeconstruct(getLamExp_Deconstruct(lamExp), replacements);
+            replaceMinDeconstruct(getMinExp_Deconstruct(minExp), replacements);
         break;
-    case LAMEXP_TYPE_CHARACTER:
-        res = aexpNormalizeCharacter(CPI(lamExp), getLamExp_Character(lamExp));
+    case MINEXP_TYPE_CHARACTER:
+        res = aexpNormalizeCharacter(CPI(minExp), getMinExp_Character(minExp));
         break;
-    case LAMEXP_TYPE_LOOKUP:
-    case LAMEXP_TYPE_SEQUENCE:
-    case LAMEXP_TYPE_APPLY:
-    case LAMEXP_TYPE_IFF:
-    case LAMEXP_TYPE_CALLCC:
-    case LAMEXP_TYPE_LETREC:
-    case LAMEXP_TYPE_LET:
-    case LAMEXP_TYPE_MATCH:
-    case LAMEXP_TYPE_COND:
-    case LAMEXP_TYPE_BACK:
-    case LAMEXP_TYPE_ERROR:
-    case LAMEXP_TYPE_AMB:
-    case LAMEXP_TYPE_MAKETUPLE:
-        res = replaceLamCexp(lamExp, replacements);
+    case MINEXP_TYPE_LOOKUP:
+    case MINEXP_TYPE_SEQUENCE:
+    case MINEXP_TYPE_APPLY:
+    case MINEXP_TYPE_IFF:
+    case MINEXP_TYPE_CALLCC:
+    case MINEXP_TYPE_LETREC:
+    case MINEXP_TYPE_LET:
+    case MINEXP_TYPE_MATCH:
+    case MINEXP_TYPE_COND:
+    case MINEXP_TYPE_BACK:
+    case MINEXP_TYPE_ERROR:
+    case MINEXP_TYPE_AMB:
+    case MINEXP_TYPE_MAKETUPLE:
+        res = replaceMinCexp(minExp, replacements);
         break;
     default:
-        cant_happen("unrecognised type %s", lamExpTypeName(lamExp->type));
+        cant_happen("unrecognised type %s", minExpTypeName(minExp->type));
     }
-    LEAVE(replaceLamExp);
+    LEAVE(replaceMinExp);
     return res;
 }
 
-static bool lamExpIsLambda(LamExp *val) {
+static bool minExpIsMinbda(MinExp *val) {
     switch (val->type) {
-    case LAMEXP_TYPE_LAM:
+    case MINEXP_TYPE_LAM:
         return true;
-    case LAMEXP_TYPE_VAR:
-    case LAMEXP_TYPE_BIGINTEGER:
-    case LAMEXP_TYPE_CHARACTER:
-    case LAMEXP_TYPE_CONSTANT:
-    case LAMEXP_TYPE_CONSTRUCT:
-    case LAMEXP_TYPE_BACK:
-    case LAMEXP_TYPE_ERROR:
-    case LAMEXP_TYPE_AMB:
-    case LAMEXP_TYPE_PRIM:
-    case LAMEXP_TYPE_SEQUENCE:
-    case LAMEXP_TYPE_APPLY:
-    case LAMEXP_TYPE_IFF:
-    case LAMEXP_TYPE_CALLCC:
-    case LAMEXP_TYPE_LETREC:
-    case LAMEXP_TYPE_TYPEDEFS:
-    case LAMEXP_TYPE_LET:
-    case LAMEXP_TYPE_MATCH:
-    case LAMEXP_TYPE_COND:
-    case LAMEXP_TYPE_MAKEVEC:
-    case LAMEXP_TYPE_LOOKUP:
-    case LAMEXP_TYPE_MAKETUPLE:
-    case LAMEXP_TYPE_TUPLEINDEX:
+    case MINEXP_TYPE_VAR:
+    case MINEXP_TYPE_BIGINTEGER:
+    case MINEXP_TYPE_CHARACTER:
+    case MINEXP_TYPE_CONSTANT:
+    case MINEXP_TYPE_CONSTRUCT:
+    case MINEXP_TYPE_BACK:
+    case MINEXP_TYPE_ERROR:
+    case MINEXP_TYPE_AMB:
+    case MINEXP_TYPE_PRIM:
+    case MINEXP_TYPE_SEQUENCE:
+    case MINEXP_TYPE_APPLY:
+    case MINEXP_TYPE_IFF:
+    case MINEXP_TYPE_CALLCC:
+    case MINEXP_TYPE_LETREC:
+    case MINEXP_TYPE_TYPEDEFS:
+    case MINEXP_TYPE_LET:
+    case MINEXP_TYPE_MATCH:
+    case MINEXP_TYPE_COND:
+    case MINEXP_TYPE_MAKEVEC:
+    case MINEXP_TYPE_LOOKUP:
+    case MINEXP_TYPE_MAKETUPLE:
+    case MINEXP_TYPE_TUPLEINDEX:
         return false;
     default:
-        cant_happen("unrecognised LamExp type %s in lamExpIsLambda",
-                    lamExpTypeName(val->type));
+        cant_happen("unrecognised MinExp type %s in minExpIsMinbda",
+                    minExpTypeName(val->type));
     }
 }
 
 static CexpLetRec *normalizeLetRecBindings(CexpLetRec *cexpLetRec,
-                                           LamBindings *lamLetRecBindings) {
-    if (lamLetRecBindings == NULL) {
+                                           MinBindings *minLetRecBindings) {
+    if (minLetRecBindings == NULL) {
         return cexpLetRec;
     }
-    cexpLetRec = normalizeLetRecBindings(cexpLetRec, lamLetRecBindings->next);
+    cexpLetRec = normalizeLetRecBindings(cexpLetRec, minLetRecBindings->next);
     int save = PROTECT(cexpLetRec);
-    if (lamExpIsLambda(lamLetRecBindings->val)) {
-        Aexp *val = replaceLamExp(lamLetRecBindings->val, NULL);
+    if (minExpIsMinbda(minLetRecBindings->val)) {
+        Aexp *val = replaceMinExp(minLetRecBindings->val, NULL);
         PROTECT(val);
         cexpLetRec->bindings =
-            newAnfLetRecBindings(CPI(lamLetRecBindings), lamLetRecBindings->var,
+            newAnfLetRecBindings(CPI(minLetRecBindings), minLetRecBindings->var,
                                  val, cexpLetRec->bindings);
         cexpLetRec->nBindings++;
     } else {
-        AnfExp *val = normalize(lamLetRecBindings->val, NULL);
+        AnfExp *val = normalize(minLetRecBindings->val, NULL);
         PROTECT(val);
         AnfExp *exp = NULL;
         if (cexpLetRec->bindings != NULL) {
@@ -1014,8 +1014,8 @@ static CexpLetRec *normalizeLetRecBindings(CexpLetRec *cexpLetRec,
         } else {
             exp = cexpLetRec->body;
         }
-        AnfExpLet *expLet = newAnfExpLet(CPI(lamLetRecBindings),
-                                         lamLetRecBindings->var, val, exp);
+        AnfExpLet *expLet = newAnfExpLet(CPI(minLetRecBindings),
+                                         minLetRecBindings->var, val, exp);
         PROTECT(expLet);
         exp = newAnfExp_Let(CPI(expLet), expLet);
         PROTECT(exp);
@@ -1025,90 +1025,90 @@ static CexpLetRec *normalizeLetRecBindings(CexpLetRec *cexpLetRec,
     return cexpLetRec;
 }
 
-static Aexp *replaceLamConstruct(LamConstruct *construct,
-                                 LamExpTable *replacements) {
-    LamMakeVec *makeVec = constructToMakeVec(construct);
+static Aexp *replaceMinConstruct(MinConstruct *construct,
+                                 MinExpTable *replacements) {
+    MinMakeVec *makeVec = constructToMakeVec(construct);
     int save = PROTECT(makeVec);
-    Aexp *res = replaceLamMakeVec(makeVec, replacements);
+    Aexp *res = replaceMinMakeVec(makeVec, replacements);
     UNPROTECT(save);
     return res;
 }
 
-static Aexp *replaceLamMakeVec(LamMakeVec *makeVec, LamExpTable *replacements) {
-    ENTER(replaceLamMakeVec);
-    DEBUG("calling replaceLamArgs");
-    AexpList *aexpList = replaceLamArgs(makeVec->args, replacements);
+static Aexp *replaceMinMakeVec(MinMakeVec *makeVec, MinExpTable *replacements) {
+    ENTER(replaceMinMakeVec);
+    DEBUG("calling replaceMinArgs");
+    AexpList *aexpList = replaceMinArgs(makeVec->args, replacements);
     int save = PROTECT(aexpList);
     AexpMakeVec *aexpMakeVec =
         newAexpMakeVec(CPI(makeVec), countAexpList(aexpList), aexpList);
     PROTECT(aexpMakeVec);
     Aexp *res = newAexp_MakeVec(CPI(makeVec), aexpMakeVec);
     UNPROTECT(save);
-    LEAVE(replaceLamMakeVec);
+    LEAVE(replaceMinMakeVec);
     return res;
 }
 
-static AexpList *replaceLamArgs(LamArgs *list, LamExpTable *replacements) {
-    ENTER(replaceLamArgs);
+static AexpList *replaceMinArgs(MinArgs *list, MinExpTable *replacements) {
+    ENTER(replaceMinArgs);
     if (list == NULL) {
-        LEAVE(replaceLamArgs);
+        LEAVE(replaceMinArgs);
         return NULL;
     }
-    DEBUG("calling replaceLamArgs");
-    AexpList *next = replaceLamArgs(list->next, replacements);
+    DEBUG("calling replaceMinArgs");
+    AexpList *next = replaceMinArgs(list->next, replacements);
     int save = PROTECT(next);
-    Aexp *val = replaceLamExp(list->exp, replacements);
+    Aexp *val = replaceMinExp(list->exp, replacements);
     PROTECT(val);
     AexpList *res = newAexpList(CPI(list), val, next);
     UNPROTECT(save);
-    LEAVE(replaceLamArgs);
+    LEAVE(replaceMinArgs);
     return res;
 }
 
-static Aexp *replaceLamPrim(LamPrimApp *lamPrimApp, LamExpTable *replacements) {
-    ENTER(replaceLamPrim);
-    Aexp *exp1 = replaceLamExp(lamPrimApp->exp1, replacements);
+static Aexp *replaceMinPrim(MinPrimApp *minPrimApp, MinExpTable *replacements) {
+    ENTER(replaceMinPrim);
+    Aexp *exp1 = replaceMinExp(minPrimApp->exp1, replacements);
     int save = PROTECT(exp1);
-    Aexp *exp2 = replaceLamExp(lamPrimApp->exp2, replacements);
+    Aexp *exp2 = replaceMinExp(minPrimApp->exp2, replacements);
     PROTECT(exp2);
-    AexpPrimApp *prim = newAexpPrimApp(CPI(lamPrimApp),
-                                       mapPrimOp(lamPrimApp->type), exp1, exp2);
+    AexpPrimApp *prim = newAexpPrimApp(CPI(minPrimApp),
+                                       mapPrimOp(minPrimApp->type), exp1, exp2);
     PROTECT(prim);
     Aexp *res = newAexp_Prim(CPI(prim), prim);
     UNPROTECT(save);
-    LEAVE(replaceLamPrim);
+    LEAVE(replaceMinPrim);
     return res;
 }
 
-static AexpPrimOp mapPrimOp(LamPrimOp op) {
+static AexpPrimOp mapPrimOp(MinPrimOp op) {
     switch (op) {
-    case LAMPRIMOP_TYPE_ADD:
+    case MINPRIMOP_TYPE_ADD:
         return AEXPPRIMOP_TYPE_ADD;
-    case LAMPRIMOP_TYPE_SUB:
+    case MINPRIMOP_TYPE_SUB:
         return AEXPPRIMOP_TYPE_SUB;
-    case LAMPRIMOP_TYPE_MUL:
+    case MINPRIMOP_TYPE_MUL:
         return AEXPPRIMOP_TYPE_MUL;
-    case LAMPRIMOP_TYPE_DIV:
+    case MINPRIMOP_TYPE_DIV:
         return AEXPPRIMOP_TYPE_DIV;
-    case LAMPRIMOP_TYPE_POW:
+    case MINPRIMOP_TYPE_POW:
         return AEXPPRIMOP_TYPE_POW;
-    case LAMPRIMOP_TYPE_EQ:
+    case MINPRIMOP_TYPE_EQ:
         return AEXPPRIMOP_TYPE_EQ;
-    case LAMPRIMOP_TYPE_NE:
+    case MINPRIMOP_TYPE_NE:
         return AEXPPRIMOP_TYPE_NE;
-    case LAMPRIMOP_TYPE_GT:
+    case MINPRIMOP_TYPE_GT:
         return AEXPPRIMOP_TYPE_GT;
-    case LAMPRIMOP_TYPE_LT:
+    case MINPRIMOP_TYPE_LT:
         return AEXPPRIMOP_TYPE_LT;
-    case LAMPRIMOP_TYPE_GE:
+    case MINPRIMOP_TYPE_GE:
         return AEXPPRIMOP_TYPE_GE;
-    case LAMPRIMOP_TYPE_LE:
+    case MINPRIMOP_TYPE_LE:
         return AEXPPRIMOP_TYPE_LE;
-    case LAMPRIMOP_TYPE_VEC:
+    case MINPRIMOP_TYPE_VEC:
         return AEXPPRIMOP_TYPE_VEC;
-    case LAMPRIMOP_TYPE_MOD:
+    case MINPRIMOP_TYPE_MOD:
         return AEXPPRIMOP_TYPE_MOD;
-    case LAMPRIMOP_TYPE_CMP:
+    case MINPRIMOP_TYPE_CMP:
         return AEXPPRIMOP_TYPE_CMP;
     default:
         cant_happen("unrecognised op type %d in mapPrimOp", op);
@@ -1121,14 +1121,14 @@ static HashSymbol *freshSymbol() {
     return res;
 }
 
-static Aexp *replaceLamCexp(LamExp *apply, LamExpTable *replacements) {
-    ENTER(replaceLamCexp);
+static Aexp *replaceMinCexp(MinExp *apply, MinExpTable *replacements) {
+    ENTER(replaceMinCexp);
     if (replacements == NULL) {
-        cant_happen("replaceLamCexp called with null replacements");
+        cant_happen("replaceMinCexp called with null replacements");
     }
     HashSymbol *subst = freshSymbol();
-    setLamExpTable(replacements, subst, apply);
-    IFDEBUG(printLamExpTable(replacements, 0));
-    LEAVE(replaceLamCexp);
+    setMinExpTable(replacements, subst, apply);
+    IFDEBUG(printMinExpTable(replacements, 0));
+    LEAVE(replaceMinCexp);
     return newAexp_Var(CPI(apply), subst);
 }

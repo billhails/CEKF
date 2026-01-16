@@ -20,8 +20,8 @@
  */
 
 #include "common.h"
-#include "lambda.h"
 #include "memory.h"
+#include "minlam.h"
 #include "symbol.h"
 
 #include "cps_kont.h"
@@ -36,26 +36,26 @@
 #endif
 
 // Forward declarations
-static LamExp *cpsTcTag(LamExp *node, LamExp *c);
-static LamExp *cpsTcLamPrimApp(LamPrimApp *node, LamExp *c);
-static LamExp *cpsTcLamSequence(LamSequence *node, LamExp *c);
-static LamExp *cpsTcMakeTuple(LamArgs *node, LamExp *c);
-static LamExp *cpsTcLamApply(LamApply *node, LamExp *c);
-static LamExp *cpsTcLamLookUp(LamLookUp *node, LamExp *c);
-static LamExp *cpsTcLamConstruct(LamConstruct *node, LamExp *c);
-static LamExp *cpsTcLamDeconstruct(LamDeconstruct *node, LamExp *c);
-static LamExp *cpsTcLamTupleIndex(LamTupleIndex *node, LamExp *c);
-static LamExp *cpsTcMakeVec(LamMakeVec *node, LamExp *c);
-static LamExp *cpsTcLamIff(LamIff *node, LamExp *c);
-static LamExp *cpsTcLamCond(LamCond *node, LamExp *c);
-static LamExp *cpsTcLamMatch(LamMatch *node, LamExp *c);
-static LamExp *cpsTcLamLet(LamLet *node, LamExp *c);
-static LamExp *cpsTcLamLetStar(LamLetStar *node, LamExp *c);
-static LamExp *cpsTcLamLetRec(LamLetRec *node, LamExp *c);
-static LamExp *cpsTcLamAmb(LamAmb *node, LamExp *c);
-static LamExp *cpsTcLamTypeDefs(LamTypeDefs *node, LamExp *c);
-static LamExp *cpsTcLamExp(LamExp *node, LamExp *c);
-static LamExp *cpsTcLamNameSpaceArray(LamNameSpaceArray *node, LamExp *c);
+static MinExp *cpsTcTag(MinExp *node, MinExp *c);
+static MinExp *cpsTcMinPrimApp(MinPrimApp *node, MinExp *c);
+static MinExp *cpsTcMinSequence(MinSequence *node, MinExp *c);
+static MinExp *cpsTcMakeTuple(MinArgs *node, MinExp *c);
+static MinExp *cpsTcMinApply(MinApply *node, MinExp *c);
+static MinExp *cpsTcMinLookUp(MinLookUp *node, MinExp *c);
+static MinExp *cpsTcMinConstruct(MinConstruct *node, MinExp *c);
+static MinExp *cpsTcMinDeconstruct(MinDeconstruct *node, MinExp *c);
+static MinExp *cpsTcMinTupleIndex(MinTupleIndex *node, MinExp *c);
+static MinExp *cpsTcMakeVec(MinMakeVec *node, MinExp *c);
+static MinExp *cpsTcMinIff(MinIff *node, MinExp *c);
+static MinExp *cpsTcMinCond(MinCond *node, MinExp *c);
+static MinExp *cpsTcMinMatch(MinMatch *node, MinExp *c);
+static MinExp *cpsTcMinLet(MinLet *node, MinExp *c);
+static MinExp *cpsTcMinLetStar(MinLetStar *node, MinExp *c);
+static MinExp *cpsTcMinLetRec(MinLetRec *node, MinExp *c);
+static MinExp *cpsTcMinAmb(MinAmb *node, MinExp *c);
+static MinExp *cpsTcMinTypeDefs(MinTypeDefs *node, MinExp *c);
+static MinExp *cpsTcMinExp(MinExp *node, MinExp *c);
+static MinExp *cpsTcMinNameSpaceArray(MinNameSpaceArray *node, MinExp *c);
 
 /*
     fn M {
@@ -66,7 +66,7 @@ static LamExp *cpsTcLamNameSpaceArray(LamNameSpaceArray *node, LamExp *c);
         (x) { x }
     }
 */
-LamExp *cpsM(LamExp *node) {
+MinExp *cpsM(MinExp *node) {
     ENTER(cpsM);
     if (node == NULL) {
         LEAVE(cpsM);
@@ -74,15 +74,15 @@ LamExp *cpsM(LamExp *node) {
     }
 
     switch (node->type) {
-    case LAMEXP_TYPE_LAM: {
-        LamExp *c = makeVar(CPI(node), "k");
+    case MINEXP_TYPE_LAM: {
+        MinExp *c = makeVar(CPI(node), "k");
         int save = PROTECT(c);
-        LamVarList *args = appendLamVar(CPI(node), getLamExp_Lam(node)->args,
-                                        getLamExp_Var(c));
+        MinVarList *args = appendMinVar(CPI(node), getMinExp_Lam(node)->args,
+                                        getMinExp_Var(c));
         PROTECT(args);
-        LamExp *body = cpsTc(getLamExp_Lam(node)->exp, c);
+        MinExp *body = cpsTc(getMinExp_Lam(node)->exp, c);
         PROTECT(body);
-        LamExp *result = makeLamExp_Lam(CPI(node), args, body);
+        MinExp *result = makeMinExp_Lam(CPI(node), args, body);
         UNPROTECT(save);
         LEAVE(cpsM);
         return result;
@@ -102,23 +102,23 @@ LamExp *cpsM(LamExp *node) {
         })
     }
 */
-static LamExp *cpsTcTag(LamExp *node, LamExp *c) {
+static MinExp *cpsTcTag(MinExp *node, MinExp *c) {
     ENTER(cpsTcTag);
     CpsKont *k = makeKont_TcTag(c);
     int save = PROTECT(k);
-    LamExp *result = cpsTk(node, k);
+    MinExp *result = cpsTk(node, k);
     UNPROTECT(save);
     LEAVE(cpsTcTag);
     return result;
 }
 
-LamExp *TcTagKont(LamExp *sexpr, TcTagKontEnv *env) {
+MinExp *TcTagKont(MinExp *sexpr, TcTagKontEnv *env) {
     ENTER(TcTagKont);
-    LamExp *tagged = newLamExp_Tag(CPI(sexpr), sexpr);
+    MinExp *tagged = newMinExp_Tag(CPI(sexpr), sexpr);
     int save = PROTECT(tagged);
-    LamArgs *args = newLamArgs(CPI(tagged), tagged, NULL);
+    MinArgs *args = newMinArgs(CPI(tagged), tagged, NULL);
     PROTECT(args);
-    LamExp *result = makeLamExp_Apply(CPI(tagged), env->c, args);
+    MinExp *result = makeMinExp_Apply(CPI(tagged), env->c, args);
     UNPROTECT(save);
     LEAVE(TcTagKont);
     return result;
@@ -133,33 +133,33 @@ LamExp *TcTagKont(LamExp *sexpr, TcTagKontEnv *env) {
         })
     }
 */
-static LamExp *cpsTcLamPrimApp(LamPrimApp *node, LamExp *c) {
-    ENTER(cpsTcLamPrimApp);
+static MinExp *cpsTcMinPrimApp(MinPrimApp *node, MinExp *c) {
+    ENTER(cpsTcMinPrimApp);
     CpsKont *k = makeKont_TcPrimApp1(c, node->exp2, node->type);
     int save = PROTECT(k);
-    LamExp *result = cpsTk(node->exp1, k);
+    MinExp *result = cpsTk(node->exp1, k);
     UNPROTECT(save);
-    LEAVE(cpsTcLamPrimApp);
+    LEAVE(cpsTcMinPrimApp);
     return result;
 }
 
-LamExp *TcPrimApp1Kont(LamExp *s1, TcPrimApp1KontEnv *env) {
+MinExp *TcPrimApp1Kont(MinExp *s1, TcPrimApp1KontEnv *env) {
     ENTER(TcPrimApp1Kont);
     CpsKont *k = makeKont_TcPrimApp2(env->c, s1, env->p);
     int save = PROTECT(k);
-    LamExp *result = cpsTk(env->e2, k);
+    MinExp *result = cpsTk(env->e2, k);
     UNPROTECT(save);
     LEAVE(TcPrimApp1Kont);
     return result;
 }
 
-LamExp *TcPrimApp2Kont(LamExp *s2, TcPrimApp2KontEnv *env) {
+MinExp *TcPrimApp2Kont(MinExp *s2, TcPrimApp2KontEnv *env) {
     ENTER(TcPrimApp2Kont);
-    LamExp *primapp = makeLamExp_Prim(CPI(env->s1), env->p, env->s1, s2);
+    MinExp *primapp = makeMinExp_Prim(CPI(env->s1), env->p, env->s1, s2);
     int save = PROTECT(primapp);
-    LamArgs *args = newLamArgs(CPI(primapp), primapp, NULL);
+    MinArgs *args = newMinArgs(CPI(primapp), primapp, NULL);
     PROTECT(args);
-    LamExp *result = makeLamExp_Apply(CPI(primapp), env->c, args);
+    MinExp *result = makeMinExp_Apply(CPI(primapp), env->c, args);
     UNPROTECT(save);
     LEAVE(TcPrimApp2Kont);
     return result;
@@ -173,32 +173,32 @@ LamExp *TcPrimApp2Kont(LamExp *s2, TcPrimApp2KontEnv *env) {
         })
     }
 */
-static LamExp *cpsTcLamSequence(LamSequence *node, LamExp *c) {
-    ENTER(cpsTcLamSequence);
+static MinExp *cpsTcMinSequence(MinSequence *node, MinExp *c) {
+    ENTER(cpsTcMinSequence);
 #ifdef SAFETY_CHECKS
     if (node == NULL) {
-        cant_happen("NULL node in cpsTcLamSequence");
+        cant_happen("NULL node in cpsTcMinSequence");
     }
 #endif
-    LamExp *result = NULL;
+    MinExp *result = NULL;
     int save = PROTECT(NULL);
     if (node->next == NULL) {
-        result = cpsTcLamExp(node->exp, c);
+        result = cpsTcMinExp(node->exp, c);
     } else {
         CpsKont *kont = makeKont_TcSequence(c, node->next);
         PROTECT(kont);
         result = cpsTk(node->exp, kont);
     }
     UNPROTECT(save);
-    LEAVE(cpsTcLamSequence);
+    LEAVE(cpsTcMinSequence);
     return result;
 }
 
-LamExp *TcSequenceKont(LamExp *ignored, TcSequenceKontEnv *env) {
+MinExp *TcSequenceKont(MinExp *ignored, TcSequenceKontEnv *env) {
     ENTER(TcSequenceKont);
-    LamExp *sequence = newLamExp_Sequence(CPI(ignored), env->exprs);
+    MinExp *sequence = newMinExp_Sequence(CPI(ignored), env->exprs);
     int save = PROTECT(sequence);
-    LamExp *result = cpsTcLamExp(sequence, env->c);
+    MinExp *result = cpsTcMinExp(sequence, env->c);
     UNPROTECT(save);
     LEAVE(TcSequenceKont);
     return result;
@@ -211,25 +211,25 @@ LamExp *TcSequenceKont(LamExp *ignored, TcSequenceKontEnv *env) {
         })
     }
 */
-static LamExp *cpsTcMakeTuple(LamArgs *node, LamExp *c) {
+static MinExp *cpsTcMakeTuple(MinArgs *node, MinExp *c) {
     ENTER(cpsTcMakeTuple);
     CpsKont *kont = makeKont_TcMakeTuple(c);
     int save = PROTECT(kont);
-    LamExp *args = newLamExp_Args(CPI(node), node);
+    MinExp *args = newMinExp_Args(CPI(node), node);
     PROTECT(args);
-    LamExp *result = cpsTs_k(args, kont);
+    MinExp *result = cpsTs_k(args, kont);
     UNPROTECT(save);
     LEAVE(cpsTcMakeTuple);
     return result;
 }
 
-LamExp *TcMakeTupleKont(LamExp *sargs, TcMakeTupleKontEnv *env) {
+MinExp *TcMakeTupleKont(MinExp *sargs, TcMakeTupleKontEnv *env) {
     ENTER(TcMakeTupleKont);
-    LamExp *make_tuple = newLamExp_MakeTuple(CPI(sargs), getLamExp_Args(sargs));
+    MinExp *make_tuple = newMinExp_MakeTuple(CPI(sargs), getMinExp_Args(sargs));
     int save = PROTECT(make_tuple);
-    LamArgs *args = newLamArgs(CPI(sargs), make_tuple, NULL);
+    MinArgs *args = newMinArgs(CPI(sargs), make_tuple, NULL);
     PROTECT(args);
-    LamExp *result = makeLamExp_Apply(CPI(sargs), env->c, args);
+    MinExp *result = makeMinExp_Apply(CPI(sargs), env->c, args);
     UNPROTECT(save);
     LEAVE(TcMakeTupleKont);
     return result;
@@ -242,37 +242,37 @@ LamExp *TcMakeTupleKont(LamExp *sargs, TcMakeTupleKontEnv *env) {
         })
     }
 */
-static LamExp *cpsTcLamApply(LamApply *node, LamExp *c) {
-    ENTER(cpsTcLamApply);
+static MinExp *cpsTcMinApply(MinApply *node, MinExp *c) {
+    ENTER(cpsTcMinApply);
     if (node == NULL) {
-        LEAVE(cpsTcLamApply);
+        LEAVE(cpsTcMinApply);
         return NULL;
     }
     CpsKont *kont1 = makeKont_TcApply1(node->args, c);
     int save = PROTECT(kont1);
-    LamExp *result = cpsTk(node->function, kont1);
+    MinExp *result = cpsTk(node->function, kont1);
     UNPROTECT(save);
-    LEAVE(cpsTcLamApply);
+    LEAVE(cpsTcMinApply);
     return result;
 }
 
-LamExp *TcApply1Kont(LamExp *sf, TcApply1KontEnv *env) {
+MinExp *TcApply1Kont(MinExp *sf, TcApply1KontEnv *env) {
     ENTER(T_c_apply_1Kont);
     CpsKont *kont2 = makeKont_TcApply2(sf, env->c);
     int save = PROTECT(kont2);
-    LamExp *args = newLamExp_Args(CPI(env->c), env->es);
+    MinExp *args = newMinExp_Args(CPI(env->c), env->es);
     PROTECT(args);
-    LamExp *result = cpsTs_k(args, kont2);
+    MinExp *result = cpsTs_k(args, kont2);
     UNPROTECT(save);
     LEAVE(T_c_apply_1Kont);
     return result;
 }
 
-LamExp *TcApply2Kont(LamExp *ses, TcApply2KontEnv *env) {
+MinExp *TcApply2Kont(MinExp *ses, TcApply2KontEnv *env) {
     ENTER(TcApply2Kont);
-    LamArgs *args = appendLamArg(getLamExp_Args(ses), env->c);
+    MinArgs *args = appendMinArg(getMinExp_Args(ses), env->c);
     int save = PROTECT(args);
-    LamExp *result = makeLamExp_Apply(CPI(env->sf), env->sf, args);
+    MinExp *result = makeMinExp_Apply(CPI(env->sf), env->sf, args);
     UNPROTECT(save);
     LEAVE(TcApply2Kont);
     return result;
@@ -283,14 +283,14 @@ LamExp *TcApply2Kont(LamExp *ses, TcApply2KontEnv *env) {
         E.lookUp(name, index, T_c(expr, c))
     }
 */
-static LamExp *cpsTcLamLookUp(LamLookUp *node, LamExp *c) {
-    ENTER(cpsTcLamLookUp);
-    LamExp *expr = cpsTcLamExp(node->exp, c);
+static MinExp *cpsTcMinLookUp(MinLookUp *node, MinExp *c) {
+    ENTER(cpsTcMinLookUp);
+    MinExp *expr = cpsTcMinExp(node->exp, c);
     int save = PROTECT(expr);
-    LamExp *result =
-        makeLamExp_LookUp(CPI(node), node->nsId, node->nsSymbol, expr);
+    MinExp *result =
+        makeMinExp_LookUp(CPI(node), node->nsId, node->nsSymbol, expr);
     UNPROTECT(save);
-    LEAVE(cpsTcLamLookUp);
+    LEAVE(cpsTcMinLookUp);
     return result;
 }
 
@@ -301,26 +301,26 @@ static LamExp *cpsTcLamLookUp(LamLookUp *node, LamExp *c) {
         })
     }
 */
-static LamExp *cpsTcLamConstruct(LamConstruct *node, LamExp *c) {
-    ENTER(cpsTcLamConstruct);
-    LamExp *args = newLamExp_Args(CPI(node), node->args);
+static MinExp *cpsTcMinConstruct(MinConstruct *node, MinExp *c) {
+    ENTER(cpsTcMinConstruct);
+    MinExp *args = newMinExp_Args(CPI(node), node->args);
     int save = PROTECT(args);
     CpsKont *kont = makeKont_TcConstruct(node->name, node->tag, c);
     PROTECT(kont);
-    LamExp *result = cpsTs_k(args, kont);
+    MinExp *result = cpsTs_k(args, kont);
     UNPROTECT(save);
-    LEAVE(cpsTcLamConstruct);
+    LEAVE(cpsTcMinConstruct);
     return result;
 }
 
-LamExp *TcConstructKont(LamExp *sargs, TcConstructKontEnv *env) {
+MinExp *TcConstructKont(MinExp *sargs, TcConstructKontEnv *env) {
     ENTER(TcConstructKont);
-    LamExp *construct = makeLamExp_Construct(CPI(sargs), env->name, env->tag,
-                                             getLamExp_Args(sargs));
+    MinExp *construct = makeMinExp_Construct(CPI(sargs), env->name, env->tag,
+                                             getMinExp_Args(sargs));
     int save = PROTECT(construct);
-    LamArgs *args = newLamArgs(CPI(sargs), construct, NULL);
+    MinArgs *args = newMinArgs(CPI(sargs), construct, NULL);
     PROTECT(args);
-    LamExp *result = makeLamExp_Apply(CPI(sargs), env->c, args);
+    MinExp *result = makeMinExp_Apply(CPI(sargs), env->c, args);
     UNPROTECT(save);
     LEAVE(TcConstructKont);
     return result;
@@ -333,25 +333,25 @@ LamExp *TcConstructKont(LamExp *sargs, TcConstructKontEnv *env) {
         })
     }
 */
-static LamExp *cpsTcLamDeconstruct(LamDeconstruct *node, LamExp *c) {
-    ENTER(cpsTcLamDeconstruct);
+static MinExp *cpsTcMinDeconstruct(MinDeconstruct *node, MinExp *c) {
+    ENTER(cpsTcMinDeconstruct);
     CpsKont *kont =
         makeKont_TcDeconstruct(node->name, node->nsId, node->vec, c);
     int save = PROTECT(kont);
-    LamExp *result = cpsTk(node->exp, kont);
+    MinExp *result = cpsTk(node->exp, kont);
     UNPROTECT(save);
-    LEAVE(cpsTcLamDeconstruct);
+    LEAVE(cpsTcMinDeconstruct);
     return result;
 }
 
-LamExp *TcDeconstructKont(LamExp *sexpr, TcDeconstructKontEnv *env) {
+MinExp *TcDeconstructKont(MinExp *sexpr, TcDeconstructKontEnv *env) {
     ENTER(TcDeconstructKont);
-    LamExp *deconstruct = makeLamExp_Deconstruct(CPI(sexpr), env->name,
+    MinExp *deconstruct = makeMinExp_Deconstruct(CPI(sexpr), env->name,
                                                  env->nsId, env->vec, sexpr);
     int save = PROTECT(deconstruct);
-    LamArgs *args = newLamArgs(CPI(sexpr), deconstruct, NULL);
+    MinArgs *args = newMinArgs(CPI(sexpr), deconstruct, NULL);
     PROTECT(args);
-    LamExp *result = makeLamExp_Apply(CPI(sexpr), env->c, args);
+    MinExp *result = makeMinExp_Apply(CPI(sexpr), env->c, args);
     UNPROTECT(save);
     LEAVE(TcDeconstructKont);
     return result;
@@ -364,24 +364,24 @@ LamExp *TcDeconstructKont(LamExp *sexpr, TcDeconstructKontEnv *env) {
         })
     }
 */
-static LamExp *cpsTcLamTupleIndex(LamTupleIndex *node, LamExp *c) {
-    ENTER(cpsTcLamTupleIndex);
+static MinExp *cpsTcMinTupleIndex(MinTupleIndex *node, MinExp *c) {
+    ENTER(cpsTcMinTupleIndex);
     CpsKont *kont = makeKont_TcTupleIndex(node->size, node->vec, c);
     int save = PROTECT(kont);
-    LamExp *result = cpsTk(node->exp, kont);
+    MinExp *result = cpsTk(node->exp, kont);
     UNPROTECT(save);
-    LEAVE(cpsTcLamTupleIndex);
+    LEAVE(cpsTcMinTupleIndex);
     return result;
 }
 
-LamExp *TcTupleIndexKont(LamExp *sexpr, TcTupleIndexKontEnv *env) {
+MinExp *TcTupleIndexKont(MinExp *sexpr, TcTupleIndexKontEnv *env) {
     ENTER(TcTupleIndexKont);
-    LamExp *tuple_index =
-        makeLamExp_TupleIndex(CPI(sexpr), env->size, env->index, sexpr);
+    MinExp *tuple_index =
+        makeMinExp_TupleIndex(CPI(sexpr), env->size, env->index, sexpr);
     int save = PROTECT(tuple_index);
-    LamArgs *args = newLamArgs(CPI(sexpr), tuple_index, NULL);
+    MinArgs *args = newMinArgs(CPI(sexpr), tuple_index, NULL);
     PROTECT(args);
-    LamExp *result = makeLamExp_Apply(CPI(sexpr), env->c, args);
+    MinExp *result = makeMinExp_Apply(CPI(sexpr), env->c, args);
     UNPROTECT(save);
     LEAVE(TcTupleIndexKont);
     return result;
@@ -394,26 +394,26 @@ LamExp *TcTupleIndexKont(LamExp *sexpr, TcTupleIndexKontEnv *env) {
         })
     }
 */
-static LamExp *cpsTcMakeVec(LamMakeVec *node, LamExp *c) {
+static MinExp *cpsTcMakeVec(MinMakeVec *node, MinExp *c) {
     ENTER(cpsTcMakeVec);
     CpsKont *kont = makeKont_TcMakeVec(node->nArgs, c);
     int save = PROTECT(kont);
-    LamExp *args = newLamExp_Args(CPI(node), node->args);
+    MinExp *args = newMinExp_Args(CPI(node), node->args);
     PROTECT(args);
-    LamExp *result = cpsTs_k(args, kont);
+    MinExp *result = cpsTs_k(args, kont);
     UNPROTECT(save);
     LEAVE(cpsTcMakeVec);
     return result;
 }
 
-LamExp *TcMakeVecKont(LamExp *sargs, TcMakeVecKontEnv *env) {
+MinExp *TcMakeVecKont(MinExp *sargs, TcMakeVecKontEnv *env) {
     ENTER(TcMakeVecKont);
-    LamExp *make_vec =
-        makeLamExp_MakeVec(CPI(sargs), env->size, getLamExp_Args(sargs));
+    MinExp *make_vec =
+        makeMinExp_MakeVec(CPI(sargs), env->size, getMinExp_Args(sargs));
     int save = PROTECT(make_vec);
-    LamArgs *args = newLamArgs(CPI(sargs), make_vec, NULL);
+    MinArgs *args = newMinArgs(CPI(sargs), make_vec, NULL);
     PROTECT(args);
-    LamExp *result = makeLamExp_Apply(CPI(sargs), env->c, args);
+    MinExp *result = makeMinExp_Apply(CPI(sargs), env->c, args);
     UNPROTECT(save);
     LEAVE(TcMakeVecKont);
     return result;
@@ -430,60 +430,60 @@ LamExp *TcMakeVecKont(LamExp *sargs, TcMakeVecKontEnv *env) {
             })), [c])
     }
 */
-static LamExp *cpsTcLamIff(LamIff *node, LamExp *c) {
-    ENTER(cpsTcLamIff);
-    LamExp *sk = makeVar(CPI(node), "k");
+static MinExp *cpsTcMinIff(MinIff *node, MinExp *c) {
+    ENTER(cpsTcMinIff);
+    MinExp *sk = makeVar(CPI(node), "k");
     int save = PROTECT(sk);
     CpsKont *k = makeKont_TcIff(sk, node->consequent, node->alternative);
     PROTECT(k);
-    LamExp *body = cpsTk(node->condition, k);
+    MinExp *body = cpsTk(node->condition, k);
     PROTECT(body);
-    LamVarList *args = newLamVarList(CPI(node), getLamExp_Var(sk), NULL);
+    MinVarList *args = newMinVarList(CPI(node), getMinExp_Var(sk), NULL);
     PROTECT(args);
-    LamExp *lambda = makeLamExp_Lam(CPI(node), args, body);
+    MinExp *lambda = makeMinExp_Lam(CPI(node), args, body);
     PROTECT(lambda);
-    LamArgs *arglist = newLamArgs(CPI(node), c, NULL);
+    MinArgs *arglist = newMinArgs(CPI(node), c, NULL);
     PROTECT(arglist);
-    LamExp *result = makeLamExp_Apply(CPI(node), lambda, arglist);
+    MinExp *result = makeMinExp_Apply(CPI(node), lambda, arglist);
     UNPROTECT(save);
-    LEAVE(cpsTcLamIff);
+    LEAVE(cpsTcMinIff);
     return result;
 }
 
-LamExp *TcIffKont(LamExp *aexp, TcIffKontEnv *env) {
+MinExp *TcIffKont(MinExp *aexp, TcIffKontEnv *env) {
     ENTER(TcIffKont);
-    LamExp *then_exp = cpsTc(env->exprt, env->sk);
+    MinExp *then_exp = cpsTc(env->exprt, env->sk);
     int save = PROTECT(then_exp);
-    LamExp *else_exp = cpsTc(env->exprf, env->sk);
+    MinExp *else_exp = cpsTc(env->exprf, env->sk);
     PROTECT(else_exp);
-    LamExp *result = makeLamExp_Iff(CPI(aexp), aexp, then_exp, else_exp);
+    MinExp *result = makeMinExp_Iff(CPI(aexp), aexp, then_exp, else_exp);
     UNPROTECT(save);
     LEAVE(TcIffKont);
     return result;
 }
 
-static LamIntCondCases *mapIntCondCases(LamIntCondCases *cases, LamExp *c) {
+static MinIntCondCases *mapIntCondCases(MinIntCondCases *cases, MinExp *c) {
     if (cases == NULL)
         return NULL;
-    LamIntCondCases *next = mapIntCondCases(cases->next, c);
+    MinIntCondCases *next = mapIntCondCases(cases->next, c);
     int save = PROTECT(next);
-    LamExp *body = cpsTc(cases->body, c);
+    MinExp *body = cpsTc(cases->body, c);
     PROTECT(body);
-    LamIntCondCases *result =
-        newLamIntCondCases(CPI(cases), cases->constant, body, next);
+    MinIntCondCases *result =
+        newMinIntCondCases(CPI(cases), cases->constant, body, next);
     UNPROTECT(save);
     return result;
 }
 
-static LamCharCondCases *mapCharCondCases(LamCharCondCases *cases, LamExp *c) {
+static MinCharCondCases *mapCharCondCases(MinCharCondCases *cases, MinExp *c) {
     if (cases == NULL)
         return NULL;
-    LamCharCondCases *next = mapCharCondCases(cases->next, c);
+    MinCharCondCases *next = mapCharCondCases(cases->next, c);
     int save = PROTECT(next);
-    LamExp *body = cpsTc(cases->body, c);
+    MinExp *body = cpsTc(cases->body, c);
     PROTECT(body);
-    LamCharCondCases *result =
-        newLamCharCondCases(CPI(cases), cases->constant, body, next);
+    MinCharCondCases *result =
+        newMinCharCondCases(CPI(cases), cases->constant, body, next);
     UNPROTECT(save);
     return result;
 }
@@ -500,48 +500,48 @@ static LamCharCondCases *mapCharCondCases(LamCharCondCases *cases, LamExp *c) {
             })), [c])
     }
 */
-static LamExp *cpsTcLamCond(LamCond *node, LamExp *c) {
-    ENTER(cpsTcLamCond);
-    LamExp *sk = makeVar(CPI(node), "k");
+static MinExp *cpsTcMinCond(MinCond *node, MinExp *c) {
+    ENTER(cpsTcMinCond);
+    MinExp *sk = makeVar(CPI(node), "k");
     int save = PROTECT(sk);
     CpsKont *k = makeKont_TcCond(sk, node->cases);
     PROTECT(k);
-    LamVarList *args = newLamVarList(CPI(node), getLamExp_Var(sk), NULL);
+    MinVarList *args = newMinVarList(CPI(node), getMinExp_Var(sk), NULL);
     PROTECT(args);
-    LamExp *body = cpsTk(node->value, k);
+    MinExp *body = cpsTk(node->value, k);
     PROTECT(body);
-    LamExp *lambda = makeLamExp_Lam(CPI(node), args, body);
+    MinExp *lambda = makeMinExp_Lam(CPI(node), args, body);
     PROTECT(lambda);
-    LamArgs *arglist = newLamArgs(CPI(node), c, NULL);
+    MinArgs *arglist = newMinArgs(CPI(node), c, NULL);
     PROTECT(arglist);
-    LamExp *result = makeLamExp_Apply(CPI(node), lambda, arglist);
+    MinExp *result = makeMinExp_Apply(CPI(node), lambda, arglist);
     UNPROTECT(save);
-    LEAVE(cpsTcLamCond);
+    LEAVE(cpsTcMinCond);
     return result;
 }
 
-LamExp *TcCondKont(LamExp *atest, TcCondKontEnv *env) {
+MinExp *TcCondKont(MinExp *atest, TcCondKontEnv *env) {
     ENTER(TcCondKont);
-    LamExp *result = NULL;
-    LamCondCases *cases = NULL;
+    MinExp *result = NULL;
+    MinCondCases *cases = NULL;
     int save = PROTECT(NULL);
     switch (env->branches->type) {
-    case LAMCONDCASES_TYPE_INTEGERS: {
-        LamIntCondCases *int_cases =
-            mapIntCondCases(getLamCondCases_Integers(env->branches), env->sk);
+    case MINCONDCASES_TYPE_INTEGERS: {
+        MinIntCondCases *int_cases =
+            mapIntCondCases(getMinCondCases_Integers(env->branches), env->sk);
         PROTECT(int_cases);
-        cases = newLamCondCases_Integers(CPI(env->branches), int_cases);
+        cases = newMinCondCases_Integers(CPI(env->branches), int_cases);
         PROTECT(cases);
     } break;
-    case LAMCONDCASES_TYPE_CHARACTERS: {
-        LamCharCondCases *char_cases = mapCharCondCases(
-            getLamCondCases_Characters(env->branches), env->sk);
+    case MINCONDCASES_TYPE_CHARACTERS: {
+        MinCharCondCases *char_cases = mapCharCondCases(
+            getMinCondCases_Characters(env->branches), env->sk);
         PROTECT(char_cases);
-        cases = newLamCondCases_Characters(CPI(env->branches), char_cases);
+        cases = newMinCondCases_Characters(CPI(env->branches), char_cases);
         PROTECT(cases);
     } break;
     }
-    result = makeLamExp_Cond(CPI(env->branches), atest, cases);
+    result = makeMinExp_Cond(CPI(env->branches), atest, cases);
     UNPROTECT(save);
     LEAVE(TcCondKont);
     return result;
@@ -559,32 +559,32 @@ LamExp *TcCondKont(LamExp *atest, TcCondKontEnv *env) {
             })), [c])
     }
 */
-static LamExp *cpsTcLamMatch(LamMatch *node, LamExp *c) {
-    ENTER(cpsTcLamMatch);
-    LamExp *sk = makeVar(CPI(node), "k");
+static MinExp *cpsTcMinMatch(MinMatch *node, MinExp *c) {
+    ENTER(cpsTcMinMatch);
+    MinExp *sk = makeVar(CPI(node), "k");
     int save = PROTECT(sk);
     CpsKont *k = makeKont_TcMatch(sk, node->cases);
     PROTECT(k);
-    LamVarList *args = newLamVarList(CPI(node), getLamExp_Var(sk), NULL);
+    MinVarList *args = newMinVarList(CPI(node), getMinExp_Var(sk), NULL);
     PROTECT(args);
-    LamExp *body = cpsTk(node->index, k);
+    MinExp *body = cpsTk(node->index, k);
     PROTECT(body);
-    LamExp *lambda = makeLamExp_Lam(CPI(node), args, body);
+    MinExp *lambda = makeMinExp_Lam(CPI(node), args, body);
     PROTECT(lambda);
-    LamArgs *arglist = newLamArgs(CPI(node), c, NULL);
+    MinArgs *arglist = newMinArgs(CPI(node), c, NULL);
     PROTECT(arglist);
-    LamExp *result = makeLamExp_Apply(CPI(node), lambda, arglist);
+    MinExp *result = makeMinExp_Apply(CPI(node), lambda, arglist);
     UNPROTECT(save);
-    LEAVE(cpsTcLamMatch);
+    LEAVE(cpsTcMinMatch);
     return result;
 }
 
-LamExp *TcMatchKont(LamExp *atest, TcMatchKontEnv *env) {
+MinExp *TcMatchKont(MinExp *atest, TcMatchKontEnv *env) {
     ENTER(TcMatchKont);
-    LamMatchList *cases = mapTcOverMatchCases(env->cases, env->sk);
+    MinMatchList *cases = mapTcOverMatchCases(env->cases, env->sk);
     int save = PROTECT(cases);
     PROTECT(cases);
-    LamExp *result = makeLamExp_Match(CPI(env->cases), atest, cases);
+    MinExp *result = makeMinExp_Match(CPI(env->cases), atest, cases);
     UNPROTECT(save);
     LEAVE(TcMatchKont);
     return result;
@@ -598,19 +598,19 @@ LamExp *TcMatchKont(LamExp *atest, TcMatchKontEnv *env) {
             T_c(E.apply(E.lambda(vars, expr), exps), c)
     }
 */
-static LamExp *cpsTcLamLet(LamLet *node, LamExp *c) {
-    ENTER(cpsTcLamLet);
+static MinExp *cpsTcMinLet(MinLet *node, MinExp *c) {
+    ENTER(cpsTcMinLet);
     int save = PROTECT(NULL);
-    LamVarList *vars = NULL;
-    LamArgs *exps = NULL;
-    cpsUnzipLamBindings(node->bindings, &vars, &exps); // PROTECTED
-    LamExp *lambda = makeLamExp_Lam(CPI(node), vars, node->body);
+    MinVarList *vars = NULL;
+    MinArgs *exps = NULL;
+    cpsUnzipMinBindings(node->bindings, &vars, &exps); // PROTECTED
+    MinExp *lambda = makeMinExp_Lam(CPI(node), vars, node->body);
     PROTECT(lambda);
-    LamExp *apply = makeLamExp_Apply(CPI(node), lambda, exps);
+    MinExp *apply = makeMinExp_Apply(CPI(node), lambda, exps);
     PROTECT(apply);
-    LamExp *result = cpsTc(apply, c);
+    MinExp *result = cpsTc(apply, c);
     UNPROTECT(save);
-    LEAVE(cpsTcLamLet);
+    LEAVE(cpsTcMinLet);
     return result;
 }
 
@@ -627,13 +627,13 @@ static LamExp *cpsTcLamLet(LamLet *node, LamExp *c) {
             T_c(nest_lets(bindings, expr), c)
     }
 */
-static LamExp *cpsTcLamLetStar(LamLetStar *node, LamExp *c) {
-    ENTER(cpsTcLamLetStar);
-    LamExp *lets = cpsNestLets(node->bindings, node->body);
+static MinExp *cpsTcMinLetStar(MinLetStar *node, MinExp *c) {
+    ENTER(cpsTcMinLetStar);
+    MinExp *lets = cpsNestLets(node->bindings, node->body);
     int save = PROTECT(lets);
-    LamExp *result = cpsTc(lets, c);
+    MinExp *result = cpsTc(lets, c);
     UNPROTECT(save);
-    LEAVE(cpsTcLamLetStar);
+    LEAVE(cpsTcMinLetStar);
     return result;
 }
 
@@ -645,15 +645,15 @@ static LamExp *cpsTcLamLetStar(LamLetStar *node, LamExp *c) {
             E.letrec_expr(list.zip(vars, list.map(M, aexps)), T_c(expr, c))
     }
 */
-static LamExp *cpsTcLamLetRec(LamLetRec *node, LamExp *c) {
-    ENTER(cpsTcLamLetRec);
-    LamBindings *bindings = mapMOverBindings(node->bindings);
+static MinExp *cpsTcMinLetRec(MinLetRec *node, MinExp *c) {
+    ENTER(cpsTcMinLetRec);
+    MinBindings *bindings = mapMOverBindings(node->bindings);
     int save = PROTECT(bindings);
-    LamExp *body = cpsTc(node->body, c);
+    MinExp *body = cpsTc(node->body, c);
     PROTECT(body);
-    LamExp *result = makeLamExp_LetRec(CPI(node), bindings, body);
+    MinExp *result = makeMinExp_LetRec(CPI(node), bindings, body);
     UNPROTECT(save);
-    LEAVE(cpsTcLamLetRec);
+    LEAVE(cpsTcMinLetRec);
     return result;
 }
 
@@ -666,29 +666,29 @@ static LamExp *cpsTcLamLetRec(LamLetRec *node, LamExp *c) {
    [c])
     }
 */
-static LamExp *cpsTcLamAmb(LamAmb *node, LamExp *c) {
-    ENTER(cpsTcLamAmb);
+static MinExp *cpsTcMinAmb(MinAmb *node, MinExp *c) {
+    ENTER(cpsTcMinAmb);
     if (node == NULL) {
-        LEAVE(cpsTcLamAmb);
+        LEAVE(cpsTcMinAmb);
         return NULL;
     }
 
-    LamExp *k = makeVar(CPI(node), "k");
+    MinExp *k = makeVar(CPI(node), "k");
     int save = PROTECT(k);
-    LamExp *e1 = cpsTc(node->left, k);
+    MinExp *e1 = cpsTc(node->left, k);
     PROTECT(e1);
-    LamExp *e2 = cpsTc(node->right, k);
+    MinExp *e2 = cpsTc(node->right, k);
     PROTECT(e2);
-    LamExp *lamAmb = makeLamExp_Amb(CPI(node), e1, e2);
+    MinExp *lamAmb = makeMinExp_Amb(CPI(node), e1, e2);
     PROTECT(lamAmb);
-    LamVarList *fargs = newLamVarList(CPI(node), getLamExp_Var(k), NULL);
+    MinVarList *fargs = newMinVarList(CPI(node), getMinExp_Var(k), NULL);
     PROTECT(fargs);
-    LamExp *lambda = makeLamExp_Lam(CPI(node), fargs, lamAmb);
+    MinExp *lambda = makeMinExp_Lam(CPI(node), fargs, lamAmb);
     PROTECT(lambda);
-    LamArgs *aargs = newLamArgs(CPI(node), c, NULL);
+    MinArgs *aargs = newMinArgs(CPI(node), c, NULL);
     PROTECT(aargs);
-    LamExp *result = makeLamExp_Apply(CPI(node), lambda, aargs);
-    LEAVE(cpsTcLamAmb);
+    MinExp *result = makeMinExp_Apply(CPI(node), lambda, aargs);
+    LEAVE(cpsTcMinAmb);
     UNPROTECT(save);
     return result;
 }
@@ -698,13 +698,13 @@ static LamExp *cpsTcLamAmb(LamAmb *node, LamExp *c) {
         E.typeDefs(defs, T_c(expr, c))
     }
 */
-static LamExp *cpsTcLamTypeDefs(LamTypeDefs *node, LamExp *c) {
-    ENTER(cpsTcLamTypeDefs);
-    LamExp *body = cpsTcLamExp(node->body, c);
+static MinExp *cpsTcMinTypeDefs(MinTypeDefs *node, MinExp *c) {
+    ENTER(cpsTcMinTypeDefs);
+    MinExp *body = cpsTcMinExp(node->body, c);
     int save = PROTECT(body);
-    LamExp *result = makeLamExp_TypeDefs(CPI(node), node->typeDefs, body);
+    MinExp *result = makeMinExp_TypeDefs(CPI(node), node->typeDefs, body);
     UNPROTECT(save);
-    LEAVE(cpsTcLamTypeDefs);
+    LEAVE(cpsTcMinTypeDefs);
     return result;
 }
 
@@ -713,36 +713,36 @@ static LamExp *cpsTcLamTypeDefs(LamTypeDefs *node, LamExp *c) {
         (f (lambda (x i) (cc x))
            cc))
 */
-static LamExp *makeCallCC(ParserInfo PI) {
-    LamExp *f = makeVar(PI, "f");
+static MinExp *makeCallCC(ParserInfo PI) {
+    MinExp *f = makeVar(PI, "f");
     int save = PROTECT(f);
-    LamExp *cc = makeVar(PI, "cc");
+    MinExp *cc = makeVar(PI, "cc");
     PROTECT(cc);
-    LamExp *x = makeVar(PI, "x");
+    MinExp *x = makeVar(PI, "x");
     PROTECT(x);
-    LamExp *i = makeVar(PI, "i");
+    MinExp *i = makeVar(PI, "i");
     PROTECT(i);
-    LamArgs *args = newLamArgs(PI, x, NULL); // (x)
+    MinArgs *args = newMinArgs(PI, x, NULL); // (x)
     PROTECT(args);
-    LamExp *apply = makeLamExp_Apply(PI, cc, args); // (cc x)
+    MinExp *apply = makeMinExp_Apply(PI, cc, args); // (cc x)
     PROTECT(apply);
-    LamVarList *vars = newLamVarList(PI, getLamExp_Var(i), NULL); // (i)
+    MinVarList *vars = newMinVarList(PI, getMinExp_Var(i), NULL); // (i)
     PROTECT(vars);
-    vars = newLamVarList(PI, getLamExp_Var(x), vars); // (x i)
+    vars = newMinVarList(PI, getMinExp_Var(x), vars); // (x i)
     PROTECT(vars);
-    LamExp *lambda = makeLamExp_Lam(PI, vars, apply); // (lambda (x i) (cc x))
+    MinExp *lambda = makeMinExp_Lam(PI, vars, apply); // (lambda (x i) (cc x))
     PROTECT(lambda);
-    args = newLamArgs(PI, lambda, NULL); // ((lambda (x i) (cc x)))
+    args = newMinArgs(PI, lambda, NULL); // ((lambda (x i) (cc x)))
     PROTECT(args);
-    args = newLamArgs(PI, cc, args); // ((lambda (x i) (cc x)) cc)
+    args = newMinArgs(PI, cc, args); // ((lambda (x i) (cc x)) cc)
     PROTECT(args);
-    apply = makeLamExp_Apply(PI, f, args); // (f (lambda (x i) (cc x)) cc)
+    apply = makeMinExp_Apply(PI, f, args); // (f (lambda (x i) (cc x)) cc)
     PROTECT(apply);
-    vars = newLamVarList(PI, getLamExp_Var(cc), NULL); // (cc)
+    vars = newMinVarList(PI, getMinExp_Var(cc), NULL); // (cc)
     PROTECT(vars);
-    vars = newLamVarList(PI, getLamExp_Var(f), vars); // (f cc)
+    vars = newMinVarList(PI, getMinExp_Var(f), vars); // (f cc)
     PROTECT(vars);
-    lambda = makeLamExp_Lam(
+    lambda = makeMinExp_Lam(
         PI, vars, apply); // (lambda (f cc) (f (lambda (x i) (cc x)) cc))
     UNPROTECT(save);
     return lambda;
@@ -758,87 +758,87 @@ static LamExp *makeCallCC(ParserInfo PI) {
         })
     }
 */
-static LamExp *cpsTcCallCC(LamExp *e, LamExp *c) {
+static MinExp *cpsTcCallCC(MinExp *e, MinExp *c) {
     ENTER(cpsTcCallCC);
     CpsKont *k = makeKont_TcCallCC(c);
     int save = PROTECT(k);
-    LamExp *result = cpsTk(e, k);
+    MinExp *result = cpsTk(e, k);
     UNPROTECT(save);
     LEAVE(cpsTcCallCC);
     return result;
 }
 
-LamExp *TcCallCCKont(LamExp *sf, TcCallCCKontEnv *env) {
+MinExp *TcCallCCKont(MinExp *sf, TcCallCCKontEnv *env) {
     ENTER(TcCallCCKont);
-    LamExp *callCC = makeCallCC(CPI(sf));
+    MinExp *callCC = makeCallCC(CPI(sf));
     int save = PROTECT(callCC);
-    LamArgs *args = newLamArgs(CPI(env->c), env->c, NULL);
+    MinArgs *args = newMinArgs(CPI(env->c), env->c, NULL);
     PROTECT(args);
-    args = newLamArgs(CPI(env->c), sf, args);
+    args = newMinArgs(CPI(env->c), sf, args);
     PROTECT(args);
-    LamExp *result = makeLamExp_Apply(CPI(env->c), callCC, args);
+    MinExp *result = makeMinExp_Apply(CPI(env->c), callCC, args);
     UNPROTECT(save);
     LEAVE(TcCallCCKont);
     return result;
 }
 
-static LamExp *cpsTcLamExp(LamExp *node, LamExp *c) {
+static MinExp *cpsTcMinExp(MinExp *node, MinExp *c) {
     if (node == NULL)
         return NULL;
 
     if (isAexpr(node)) {
-        LamExp *exp = cpsM(node);
+        MinExp *exp = cpsM(node);
         int save = PROTECT(exp);
-        LamArgs *arglist = newLamArgs(CPI(node), exp, NULL);
+        MinArgs *arglist = newMinArgs(CPI(node), exp, NULL);
         PROTECT(arglist);
-        LamExp *result = makeLamExp_Apply(CPI(node), c, arglist);
+        MinExp *result = makeMinExp_Apply(CPI(node), c, arglist);
         UNPROTECT(save);
         return result;
     }
 
     switch (node->type) {
-    case LAMEXP_TYPE_AMB:
-        return cpsTcLamAmb(getLamExp_Amb(node), c);
-    case LAMEXP_TYPE_APPLY:
-        return cpsTcLamApply(getLamExp_Apply(node), c);
-    case LAMEXP_TYPE_CALLCC:
-        return cpsTcCallCC(getLamExp_CallCC(node), c);
-    case LAMEXP_TYPE_COND:
-        return cpsTcLamCond(getLamExp_Cond(node), c);
-    case LAMEXP_TYPE_CONSTRUCT:
-        return cpsTcLamConstruct(getLamExp_Construct(node), c);
-    case LAMEXP_TYPE_DECONSTRUCT:
-        return cpsTcLamDeconstruct(getLamExp_Deconstruct(node), c);
-    case LAMEXP_TYPE_IFF:
-        return cpsTcLamIff(getLamExp_Iff(node), c);
-    case LAMEXP_TYPE_LET:
-        return cpsTcLamLet(getLamExp_Let(node), c);
-    case LAMEXP_TYPE_LETSTAR:
-        return cpsTcLamLetStar(getLamExp_LetStar(node), c);
-    case LAMEXP_TYPE_LETREC:
-        return cpsTcLamLetRec(getLamExp_LetRec(node), c);
-    case LAMEXP_TYPE_LOOKUP:
-        return cpsTcLamLookUp(getLamExp_LookUp(node), c);
-    case LAMEXP_TYPE_MAKETUPLE:
-        return cpsTcMakeTuple(getLamExp_MakeTuple(node), c);
-    case LAMEXP_TYPE_MAKEVEC:
-        return cpsTcMakeVec(getLamExp_MakeVec(node), c);
-    case LAMEXP_TYPE_MATCH:
-        return cpsTcLamMatch(getLamExp_Match(node), c);
-    case LAMEXP_TYPE_NAMESPACES:
-        return cpsTcLamNameSpaceArray(getLamExp_NameSpaces(node), c);
-    case LAMEXP_TYPE_PRIM:
-        return cpsTcLamPrimApp(getLamExp_Prim(node), c);
-    case LAMEXP_TYPE_SEQUENCE:
-        return cpsTcLamSequence(getLamExp_Sequence(node), c);
-    case LAMEXP_TYPE_TAG:
-        return cpsTcTag(getLamExp_Tag(node), c);
-    case LAMEXP_TYPE_TUPLEINDEX:
-        return cpsTcLamTupleIndex(getLamExp_TupleIndex(node), c);
-    case LAMEXP_TYPE_TYPEDEFS:
-        return cpsTcLamTypeDefs(getLamExp_TypeDefs(node), c);
+    case MINEXP_TYPE_AMB:
+        return cpsTcMinAmb(getMinExp_Amb(node), c);
+    case MINEXP_TYPE_APPLY:
+        return cpsTcMinApply(getMinExp_Apply(node), c);
+    case MINEXP_TYPE_CALLCC:
+        return cpsTcCallCC(getMinExp_CallCC(node), c);
+    case MINEXP_TYPE_COND:
+        return cpsTcMinCond(getMinExp_Cond(node), c);
+    case MINEXP_TYPE_CONSTRUCT:
+        return cpsTcMinConstruct(getMinExp_Construct(node), c);
+    case MINEXP_TYPE_DECONSTRUCT:
+        return cpsTcMinDeconstruct(getMinExp_Deconstruct(node), c);
+    case MINEXP_TYPE_IFF:
+        return cpsTcMinIff(getMinExp_Iff(node), c);
+    case MINEXP_TYPE_LET:
+        return cpsTcMinLet(getMinExp_Let(node), c);
+    case MINEXP_TYPE_LETSTAR:
+        return cpsTcMinLetStar(getMinExp_LetStar(node), c);
+    case MINEXP_TYPE_LETREC:
+        return cpsTcMinLetRec(getMinExp_LetRec(node), c);
+    case MINEXP_TYPE_LOOKUP:
+        return cpsTcMinLookUp(getMinExp_LookUp(node), c);
+    case MINEXP_TYPE_MAKETUPLE:
+        return cpsTcMakeTuple(getMinExp_MakeTuple(node), c);
+    case MINEXP_TYPE_MAKEVEC:
+        return cpsTcMakeVec(getMinExp_MakeVec(node), c);
+    case MINEXP_TYPE_MATCH:
+        return cpsTcMinMatch(getMinExp_Match(node), c);
+    case MINEXP_TYPE_NAMESPACES:
+        return cpsTcMinNameSpaceArray(getMinExp_NameSpaces(node), c);
+    case MINEXP_TYPE_PRIM:
+        return cpsTcMinPrimApp(getMinExp_Prim(node), c);
+    case MINEXP_TYPE_SEQUENCE:
+        return cpsTcMinSequence(getMinExp_Sequence(node), c);
+    case MINEXP_TYPE_TAG:
+        return cpsTcTag(getMinExp_Tag(node), c);
+    case MINEXP_TYPE_TUPLEINDEX:
+        return cpsTcMinTupleIndex(getMinExp_TupleIndex(node), c);
+    case MINEXP_TYPE_TYPEDEFS:
+        return cpsTcMinTypeDefs(getMinExp_TypeDefs(node), c);
     default:
-        cant_happen("unrecognized LamExp type %s", lamExpTypeName(node->type));
+        cant_happen("unrecognized MinExp type %s", minExpTypeName(node->type));
     }
 }
 
@@ -849,35 +849,35 @@ static LamExp *cpsTcLamExp(LamExp *node, LamExp *c) {
         })
     }
 */
-static LamExp *cpsTcLamNameSpaceArray(LamNameSpaceArray *node, LamExp *c) {
-    ENTER(cpsTcLamNameSpaceArray);
-    LamExp *seq = nsaToArgs(node);
+static MinExp *cpsTcMinNameSpaceArray(MinNameSpaceArray *node, MinExp *c) {
+    ENTER(cpsTcMinNameSpaceArray);
+    MinExp *seq = nsaToArgs(node);
     int save = PROTECT(seq);
     CpsKont *k1 = makeKont_TcNameSpaces(c);
     PROTECT(k1);
-    LamExp *result = cpsTs_k(seq, k1);
+    MinExp *result = cpsTs_k(seq, k1);
     UNPROTECT(save);
-    LEAVE(cpsTcLamNameSpaceArray);
+    LEAVE(cpsTcMinNameSpaceArray);
     return result;
 }
 
-LamExp *TcNameSpacesKont(LamExp *sexprs, TcNameSpacesKontEnv *env) {
+MinExp *TcNameSpacesKont(MinExp *sexprs, TcNameSpacesKontEnv *env) {
     ENTER(TcNameSpacesKont);
-    LamNameSpaceArray *nsa = argsToNsa(sexprs);
+    MinNameSpaceArray *nsa = argsToNsa(sexprs);
     int save = PROTECT(nsa);
-    LamExp *nsaExp = newLamExp_NameSpaces(CPI(sexprs), nsa);
+    MinExp *nsaExp = newMinExp_NameSpaces(CPI(sexprs), nsa);
     PROTECT(nsaExp);
-    LamArgs *args = newLamArgs(CPI(nsaExp), nsaExp, NULL);
+    MinArgs *args = newMinArgs(CPI(nsaExp), nsaExp, NULL);
     PROTECT(args);
-    LamExp *result = makeLamExp_Apply(CPI(env->c), env->c, args);
+    MinExp *result = makeMinExp_Apply(CPI(env->c), env->c, args);
     UNPROTECT(save);
     LEAVE(TcNameSpacesKont);
     return result;
 }
 
-LamExp *cpsTc(LamExp *node, LamExp *c) {
+MinExp *cpsTc(MinExp *node, MinExp *c) {
     ENTER(cpsTc);
-    LamExp *result = cpsTcLamExp(node, c);
+    MinExp *result = cpsTcMinExp(node, c);
     LEAVE(cpsTc);
     return result;
 }

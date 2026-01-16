@@ -964,8 +964,12 @@ static MinExp *desugarLamExp_internal(LamExp *node) {
         result = newMinExp_Var(CPI(node), getLamExp_Var(node));
         break;
     }
+    case LAMEXP_TYPE_ENV: {
+        result = newMinExp_Env(CPI(node));
+        break;
+    }
     default:
-        cant_happen("unexpected LamExp type %d", node->type);
+        cant_happen("unexpected LamExp type %s", lamExpTypeName(node->type));
     }
 
     UNPROTECT(save);

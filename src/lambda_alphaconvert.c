@@ -20,104 +20,104 @@
  */
 
 #include "common.h"
-#include "lambda.h"
-#include "lambda_pp.h"
 #include "memory.h"
+#include "minlam.h"
+#include "minlam_pp.h"
 #include "symbol.h"
 
 #include "lambda_alphaconvert.h"
 
 // Forward declarations
-static LamMacroSet *visitLamMacroSet(LamMacroSet *node, LamAlphaEnv *context);
-static LamMacroArgsSet *visitLamMacroArgsSet(LamMacroArgsSet *node,
-                                             LamAlphaEnv *context);
-static LamInfoTable *visitLamInfoTable(LamInfoTable *node,
-                                       LamAlphaEnv *context);
-static LamAliasTable *visitLamAliasTable(LamAliasTable *node,
-                                         LamAlphaEnv *context);
-static LamExpTable *visitLamExpTable(LamExpTable *node, LamAlphaEnv *context);
-static LamLam *visitLamLam(LamLam *node, LamAlphaEnv *context);
-static LamVarList *visitLamVarList(LamVarList *node, LamAlphaEnv *context);
-static LamPrimApp *visitLamPrimApp(LamPrimApp *node, LamAlphaEnv *context);
-static LamSequence *visitLamSequence(LamSequence *node, LamAlphaEnv *context);
-static LamArgs *visitLamArgs(LamArgs *node, LamAlphaEnv *context);
-static LamApply *visitLamApply(LamApply *node, LamAlphaEnv *context);
-static LamLookUp *visitLamLookUp(LamLookUp *node, LamAlphaEnv *context);
-static LamLookUpSymbol *visitLamLookUpSymbol(LamLookUpSymbol *node,
-                                             LamAlphaEnv *context);
-static LamConstant *visitLamConstant(LamConstant *node, LamAlphaEnv *context);
-static LamConstruct *visitLamConstruct(LamConstruct *node,
-                                       LamAlphaEnv *context);
-static LamDeconstruct *visitLamDeconstruct(LamDeconstruct *node,
-                                           LamAlphaEnv *context);
-static LamTupleIndex *visitLamTupleIndex(LamTupleIndex *node,
-                                         LamAlphaEnv *context);
-static LamMakeVec *visitLamMakeVec(LamMakeVec *node, LamAlphaEnv *context);
-static LamIff *visitLamIff(LamIff *node, LamAlphaEnv *context);
-static LamCond *visitLamCond(LamCond *node, LamAlphaEnv *context);
-static LamIntCondCases *visitLamIntCondCases(LamIntCondCases *node,
-                                             LamAlphaEnv *context);
-static LamCharCondCases *visitLamCharCondCases(LamCharCondCases *node,
-                                               LamAlphaEnv *context);
-static LamMatch *visitLamMatch(LamMatch *node, LamAlphaEnv *context);
-static LamMatchList *visitLamMatchList(LamMatchList *node,
-                                       LamAlphaEnv *context);
-static LamIntList *visitLamIntList(LamIntList *node, LamAlphaEnv *context);
-static LamLetStar *visitLamLetStar(LamLetStar *node, LamAlphaEnv *context);
-static LamLet *visitLamLet(LamLet *node, LamAlphaEnv *context);
-static LamBindings *visitLetBindings(LamBindings *node, LamAlphaEnv *context);
-static LamBindings *visitLetStarBindings(LamBindings *node,
-                                         LamAlphaEnv *context);
-static LamLetRec *visitLamLetRec(LamLetRec *node, LamAlphaEnv *context);
-static LamContext *visitLamContext(LamContext *node, LamAlphaEnv *context);
-static LamAmb *visitLamAmb(LamAmb *node, LamAlphaEnv *context);
-static LamTypeDefs *visitLamTypeDefs(LamTypeDefs *node, LamAlphaEnv *context);
-static LamTypeDefList *visitLamTypeDefList(LamTypeDefList *node,
-                                           LamAlphaEnv *context);
-static LamTypeDef *visitLamTypeDef(LamTypeDef *node, LamAlphaEnv *context);
-static LamTypeConstructorList *
-visitLamTypeConstructorList(LamTypeConstructorList *node, LamAlphaEnv *context);
-static LamTypeSig *visitLamTypeSig(LamTypeSig *node, LamAlphaEnv *context);
-static LamTypeTags *visitLamTypeTags(LamTypeTags *node, LamAlphaEnv *context);
-static LamTypeSigArgs *visitLamTypeSigArgs(LamTypeSigArgs *node,
-                                           LamAlphaEnv *context);
-static LamTypeConstructor *visitLamTypeConstructor(LamTypeConstructor *node,
-                                                   LamAlphaEnv *context);
-static LamTypeConstructorArgs *
-visitLamTypeConstructorArgs(LamTypeConstructorArgs *node, LamAlphaEnv *context);
-static LamTypeFunction *visitLamTypeFunction(LamTypeFunction *node,
-                                             LamAlphaEnv *context);
-static LamTypeConstructorInfo *
-visitLamTypeConstructorInfo(LamTypeConstructorInfo *node, LamAlphaEnv *context);
-static LamExp *visitLamExp(LamExp *node, LamAlphaEnv *context);
-static LamLookUpOrSymbol *visitLamLookUpOrSymbol(LamLookUpOrSymbol *node,
-                                                 LamAlphaEnv *context);
-static LamCondCases *visitLamCondCases(LamCondCases *node,
-                                       LamAlphaEnv *context);
-static LamTypeConstructorType *
-visitLamTypeConstructorType(LamTypeConstructorType *node, LamAlphaEnv *context);
-static LamInfo *visitLamInfo(LamInfo *node, LamAlphaEnv *context);
-static LamNameSpaceArray *visitLamNameSpaceArray(LamNameSpaceArray *node,
-                                                 LamAlphaEnv *context);
+static MinMacroSet *visitMinMacroSet(MinMacroSet *node, MinAlphaEnv *context);
+static MinMacroArgsSet *visitMinMacroArgsSet(MinMacroArgsSet *node,
+                                             MinAlphaEnv *context);
+static MinInfoTable *visitMinInfoTable(MinInfoTable *node,
+                                       MinAlphaEnv *context);
+static MinAliasTable *visitMinAliasTable(MinAliasTable *node,
+                                         MinAlphaEnv *context);
+static MinExpTable *visitMinExpTable(MinExpTable *node, MinAlphaEnv *context);
+static MinLam *visitMinLam(MinLam *node, MinAlphaEnv *context);
+static MinVarList *visitMinVarList(MinVarList *node, MinAlphaEnv *context);
+static MinPrimApp *visitMinPrimApp(MinPrimApp *node, MinAlphaEnv *context);
+static MinSequence *visitMinSequence(MinSequence *node, MinAlphaEnv *context);
+static MinArgs *visitMinArgs(MinArgs *node, MinAlphaEnv *context);
+static MinApply *visitMinApply(MinApply *node, MinAlphaEnv *context);
+static MinLookUp *visitMinLookUp(MinLookUp *node, MinAlphaEnv *context);
+static MinLookUpSymbol *visitMinLookUpSymbol(MinLookUpSymbol *node,
+                                             MinAlphaEnv *context);
+static MinConstant *visitMinConstant(MinConstant *node, MinAlphaEnv *context);
+static MinConstruct *visitMinConstruct(MinConstruct *node,
+                                       MinAlphaEnv *context);
+static MinDeconstruct *visitMinDeconstruct(MinDeconstruct *node,
+                                           MinAlphaEnv *context);
+static MinTupleIndex *visitMinTupleIndex(MinTupleIndex *node,
+                                         MinAlphaEnv *context);
+static MinMakeVec *visitMinMakeVec(MinMakeVec *node, MinAlphaEnv *context);
+static MinIff *visitMinIff(MinIff *node, MinAlphaEnv *context);
+static MinCond *visitMinCond(MinCond *node, MinAlphaEnv *context);
+static MinIntCondCases *visitMinIntCondCases(MinIntCondCases *node,
+                                             MinAlphaEnv *context);
+static MinCharCondCases *visitMinCharCondCases(MinCharCondCases *node,
+                                               MinAlphaEnv *context);
+static MinMatch *visitMinMatch(MinMatch *node, MinAlphaEnv *context);
+static MinMatchList *visitMinMatchList(MinMatchList *node,
+                                       MinAlphaEnv *context);
+static MinIntList *visitMinIntList(MinIntList *node, MinAlphaEnv *context);
+static MinLetStar *visitMinLetStar(MinLetStar *node, MinAlphaEnv *context);
+static MinLet *visitMinLet(MinLet *node, MinAlphaEnv *context);
+static MinBindings *visitLetBindings(MinBindings *node, MinAlphaEnv *context);
+static MinBindings *visitLetStarBindings(MinBindings *node,
+                                         MinAlphaEnv *context);
+static MinLetRec *visitMinLetRec(MinLetRec *node, MinAlphaEnv *context);
+static MinContext *visitMinContext(MinContext *node, MinAlphaEnv *context);
+static MinAmb *visitMinAmb(MinAmb *node, MinAlphaEnv *context);
+static MinTypeDefs *visitMinTypeDefs(MinTypeDefs *node, MinAlphaEnv *context);
+static MinTypeDefList *visitMinTypeDefList(MinTypeDefList *node,
+                                           MinAlphaEnv *context);
+static MinTypeDef *visitMinTypeDef(MinTypeDef *node, MinAlphaEnv *context);
+static MinTypeConstructorList *
+visitMinTypeConstructorList(MinTypeConstructorList *node, MinAlphaEnv *context);
+static MinTypeSig *visitMinTypeSig(MinTypeSig *node, MinAlphaEnv *context);
+static MinTypeTags *visitMinTypeTags(MinTypeTags *node, MinAlphaEnv *context);
+static MinTypeSigArgs *visitMinTypeSigArgs(MinTypeSigArgs *node,
+                                           MinAlphaEnv *context);
+static MinTypeConstructor *visitMinTypeConstructor(MinTypeConstructor *node,
+                                                   MinAlphaEnv *context);
+static MinTypeConstructorArgs *
+visitMinTypeConstructorArgs(MinTypeConstructorArgs *node, MinAlphaEnv *context);
+static MinTypeFunction *visitMinTypeFunction(MinTypeFunction *node,
+                                             MinAlphaEnv *context);
+static MinTypeConstructorInfo *
+visitMinTypeConstructorInfo(MinTypeConstructorInfo *node, MinAlphaEnv *context);
+static MinExp *visitMinExp(MinExp *node, MinAlphaEnv *context);
+static MinLookUpOrSymbol *visitMinLookUpOrSymbol(MinLookUpOrSymbol *node,
+                                                 MinAlphaEnv *context);
+static MinCondCases *visitMinCondCases(MinCondCases *node,
+                                       MinAlphaEnv *context);
+static MinTypeConstructorType *
+visitMinTypeConstructorType(MinTypeConstructorType *node, MinAlphaEnv *context);
+static MinInfo *visitMinInfo(MinInfo *node, MinAlphaEnv *context);
+static MinNameSpaceArray *visitMinNameSpaceArray(MinNameSpaceArray *node,
+                                                 MinAlphaEnv *context);
 
 int alpha_flag = 0;
 char *alpha_conversion_function = NULL;
 
-static void addUniqueNameToContext(HashSymbol *name, LamAlphaEnv *context) {
+static void addUniqueNameToContext(HashSymbol *name, MinAlphaEnv *context) {
 #ifdef SAFETY_CHECKS
     if (context == NULL) {
         cant_happen("NULL context");
     }
 #endif
     HashSymbol *newName = genSymDollar(name->name);
-    setLamAlphaTable(context->alphaTable, name, newName);
+    setMinAlphaTable(context->alphaTable, name, newName);
 }
 
 static HashSymbol *getNameFromContext(ParserInfo PI, HashSymbol *name,
-                                      LamAlphaEnv *context) {
+                                      MinAlphaEnv *context) {
     struct HashSymbol *mappedName = NULL;
     while (context != NULL) {
-        if (getLamAlphaTable(context->alphaTable, name, &mappedName)) {
+        if (getMinAlphaTable(context->alphaTable, name, &mappedName)) {
             return mappedName;
         }
         context = context->next;
@@ -126,19 +126,19 @@ static HashSymbol *getNameFromContext(ParserInfo PI, HashSymbol *name,
                 PI.lineNo);
 }
 
-static void pushNameSpaceEnv(LamAlphaEnv *context) {
-    for (LamAlphaEnv *current = context; current != NULL;
+static void pushNameSpaceEnv(MinAlphaEnv *context) {
+    for (MinAlphaEnv *current = context; current != NULL;
          current = current->next) {
         if (current->nameSpaces != NULL) {
-            pushLamAlphaEnvArray(current->nameSpaces, context);
+            pushMinAlphaEnvArray(current->nameSpaces, context);
             return;
         }
     }
     cant_happen("no nameSpace array found in context");
 }
 
-static LamAlphaEnv *findAlphaNameSpaceEnv(LamAlphaEnv *context, Index index) {
-    for (LamAlphaEnv *current = context; current != NULL;
+static MinAlphaEnv *findAlphaNameSpaceEnv(MinAlphaEnv *context, Index index) {
+    for (MinAlphaEnv *current = context; current != NULL;
          current = current->next) {
         if (current->nameSpaces != NULL) {
             if (index < current->nameSpaces->size) {
@@ -153,7 +153,7 @@ static LamAlphaEnv *findAlphaNameSpaceEnv(LamAlphaEnv *context, Index index) {
 }
 
 // Visitor implementations
-static LamMacroSet *visitLamMacroSet(LamMacroSet *node, LamAlphaEnv *context) {
+static MinMacroSet *visitMinMacroSet(MinMacroSet *node, MinAlphaEnv *context) {
     if (node == NULL)
         return NULL;
 
@@ -161,14 +161,14 @@ static LamMacroSet *visitLamMacroSet(LamMacroSet *node, LamAlphaEnv *context) {
     // Iterate over keys (uncomment if you need to inspect/log them)
     // Index i = 0;
     // HashSymbol *key;
-    // while ((key = iterateLamMacroSet(node, &i)) != NULL) {
+    // while ((key = iterateMinMacroSet(node, &i)) != NULL) {
     //     // Inspect/log key here
     // }
     return node;
 }
 
-__attribute__((unused)) static LamMacroArgsSet *
-visitLamMacroArgsSet(LamMacroArgsSet *node, LamAlphaEnv *context) {
+__attribute__((unused)) static MinMacroArgsSet *
+visitMinMacroArgsSet(MinMacroArgsSet *node, MinAlphaEnv *context) {
     if (node == NULL)
         return NULL;
 
@@ -176,30 +176,30 @@ visitLamMacroArgsSet(LamMacroArgsSet *node, LamAlphaEnv *context) {
     // Iterate over keys (uncomment if you need to inspect/log them)
     // Index i = 0;
     // HashSymbol *key;
-    // while ((key = iterateLamMacroArgsSet(node, &i)) != NULL) {
+    // while ((key = iterateMinMacroArgsSet(node, &i)) != NULL) {
     //     // Inspect/log key here
     // }
     return node;
 }
 
-static LamInfoTable *visitLamInfoTable(LamInfoTable *node,
-                                       LamAlphaEnv *context) {
+static MinInfoTable *visitMinInfoTable(MinInfoTable *node,
+                                       MinAlphaEnv *context) {
     if (node == NULL)
         return NULL;
 
     bool changed = false;
-    LamInfoTable *result = newLamInfoTable();
+    MinInfoTable *result = newMinInfoTable();
     int save = PROTECT(result);
 
     // Iterate over all entries
     Index i = 0;
-    struct LamInfo *value;
+    struct MinInfo *value;
     HashSymbol *key;
-    while ((key = iterateLamInfoTable(node, &i, &value)) != NULL) {
-        struct LamInfo *new_value = visitLamInfo(value, context);
+    while ((key = iterateMinInfoTable(node, &i, &value)) != NULL) {
+        struct MinInfo *new_value = visitMinInfo(value, context);
         PROTECT(new_value);
         changed = changed || (new_value != value);
-        setLamInfoTable(result, key, new_value);
+        setMinInfoTable(result, key, new_value);
     }
 
     if (changed) {
@@ -211,25 +211,25 @@ static LamInfoTable *visitLamInfoTable(LamInfoTable *node,
     return node;
 }
 
-static LamAliasTable *visitLamAliasTable(LamAliasTable *node,
-                                         LamAlphaEnv *context) {
+static MinAliasTable *visitMinAliasTable(MinAliasTable *node,
+                                         MinAlphaEnv *context) {
     if (node == NULL)
         return NULL;
 
     bool changed = false;
-    LamAliasTable *result = newLamAliasTable();
+    MinAliasTable *result = newMinAliasTable();
     int save = PROTECT(result);
 
     // Iterate over all entries
     Index i = 0;
-    struct LamTypeConstructorType *value;
+    struct MinTypeConstructorType *value;
     HashSymbol *key;
-    while ((key = iterateLamAliasTable(node, &i, &value)) != NULL) {
-        struct LamTypeConstructorType *new_value =
-            visitLamTypeConstructorType(value, context);
+    while ((key = iterateMinAliasTable(node, &i, &value)) != NULL) {
+        struct MinTypeConstructorType *new_value =
+            visitMinTypeConstructorType(value, context);
         PROTECT(new_value);
         changed = changed || (new_value != value);
-        setLamAliasTable(result, key, new_value);
+        setMinAliasTable(result, key, new_value);
     }
 
     if (changed) {
@@ -241,24 +241,24 @@ static LamAliasTable *visitLamAliasTable(LamAliasTable *node,
     return node;
 }
 
-__attribute__((unused)) static LamExpTable *
-visitLamExpTable(LamExpTable *node, LamAlphaEnv *context) {
+__attribute__((unused)) static MinExpTable *
+visitMinExpTable(MinExpTable *node, MinAlphaEnv *context) {
     if (node == NULL)
         return NULL;
 
     bool changed = false;
-    LamExpTable *result = newLamExpTable();
+    MinExpTable *result = newMinExpTable();
     int save = PROTECT(result);
 
     // Iterate over all entries
     Index i = 0;
-    struct LamExp *value;
+    struct MinExp *value;
     HashSymbol *key;
-    while ((key = iterateLamExpTable(node, &i, &value)) != NULL) {
-        struct LamExp *new_value = visitLamExp(value, context);
+    while ((key = iterateMinExpTable(node, &i, &value)) != NULL) {
+        struct MinExp *new_value = visitMinExp(value, context);
         PROTECT(new_value);
         changed = changed || (new_value != value);
-        setLamExpTable(result, key, new_value);
+        setMinExpTable(result, key, new_value);
     }
 
     if (changed) {
@@ -270,24 +270,24 @@ visitLamExpTable(LamExpTable *node, LamAlphaEnv *context) {
     return node;
 }
 
-static LamLam *visitLamLam(LamLam *node, LamAlphaEnv *context) {
+static MinLam *visitMinLam(MinLam *node, MinAlphaEnv *context) {
     if (node == NULL)
         return NULL;
 
-    context = newLamAlphaEnv(context);
+    context = newMinAlphaEnv(context);
     int save = PROTECT(context);
 
     bool changed = false;
-    LamVarList *args = visitLamVarList(node->args, context);
+    MinVarList *args = visitMinVarList(node->args, context);
     PROTECT(args);
     changed = changed || (args != node->args);
-    LamExp *new_exp = visitLamExp(node->exp, context);
+    MinExp *new_exp = visitMinExp(node->exp, context);
     PROTECT(new_exp);
     changed = changed || (new_exp != node->exp);
 
     if (changed) {
         // Create new node with modified fields
-        LamLam *result = newLamLam(CPI(node), args, new_exp);
+        MinLam *result = newMinLam(CPI(node), args, new_exp);
         result->isMacro = node->isMacro;
         UNPROTECT(save);
         return result;
@@ -297,38 +297,38 @@ static LamLam *visitLamLam(LamLam *node, LamAlphaEnv *context) {
     return node;
 }
 
-static LamVarList *visitLamVarList(LamVarList *node, LamAlphaEnv *context) {
+static MinVarList *visitMinVarList(MinVarList *node, MinAlphaEnv *context) {
     if (node == NULL)
         return NULL;
 
-    LamVarList *next = visitLamVarList(node->next, context);
+    MinVarList *next = visitMinVarList(node->next, context);
     int save = PROTECT(next);
 
     addUniqueNameToContext(node->var, context);
 
-    LamVarList *result = newLamVarList(
+    MinVarList *result = newMinVarList(
         CPI(node), getNameFromContext(CPI(node), node->var, context), next);
     UNPROTECT(save);
     return result;
 }
 
-static LamPrimApp *visitLamPrimApp(LamPrimApp *node, LamAlphaEnv *context) {
+static MinPrimApp *visitMinPrimApp(MinPrimApp *node, MinAlphaEnv *context) {
     if (node == NULL)
         return NULL;
 
     bool changed = false;
-    // Pass through type (type: LamPrimOp, not memory-managed)
-    LamExp *new_exp1 = visitLamExp(node->exp1, context);
+    // Pass through type (type: MinPrimOp, not memory-managed)
+    MinExp *new_exp1 = visitMinExp(node->exp1, context);
     int save = PROTECT(new_exp1);
     changed = changed || (new_exp1 != node->exp1);
-    LamExp *new_exp2 = visitLamExp(node->exp2, context);
+    MinExp *new_exp2 = visitMinExp(node->exp2, context);
     PROTECT(new_exp2);
     changed = changed || (new_exp2 != node->exp2);
 
     if (changed) {
         // Create new node with modified fields
-        LamPrimApp *result =
-            newLamPrimApp(CPI(node), node->type, new_exp1, new_exp2);
+        MinPrimApp *result =
+            newMinPrimApp(CPI(node), node->type, new_exp1, new_exp2);
         UNPROTECT(save);
         return result;
     }
@@ -337,21 +337,21 @@ static LamPrimApp *visitLamPrimApp(LamPrimApp *node, LamAlphaEnv *context) {
     return node;
 }
 
-static LamSequence *visitLamSequence(LamSequence *node, LamAlphaEnv *context) {
+static MinSequence *visitMinSequence(MinSequence *node, MinAlphaEnv *context) {
     if (node == NULL)
         return NULL;
 
     bool changed = false;
-    LamExp *new_exp = visitLamExp(node->exp, context);
+    MinExp *new_exp = visitMinExp(node->exp, context);
     int save = PROTECT(new_exp);
     changed = changed || (new_exp != node->exp);
-    LamSequence *new_next = visitLamSequence(node->next, context);
+    MinSequence *new_next = visitMinSequence(node->next, context);
     PROTECT(new_next);
     changed = changed || (new_next != node->next);
 
     if (changed) {
         // Create new node with modified fields
-        LamSequence *result = newLamSequence(CPI(node), new_exp, new_next);
+        MinSequence *result = newMinSequence(CPI(node), new_exp, new_next);
         UNPROTECT(save);
         return result;
     }
@@ -360,21 +360,21 @@ static LamSequence *visitLamSequence(LamSequence *node, LamAlphaEnv *context) {
     return node;
 }
 
-static LamArgs *visitLamArgs(LamArgs *node, LamAlphaEnv *context) {
+static MinArgs *visitMinArgs(MinArgs *node, MinAlphaEnv *context) {
     if (node == NULL)
         return NULL;
 
     bool changed = false;
-    LamExp *new_exp = visitLamExp(node->exp, context);
+    MinExp *new_exp = visitMinExp(node->exp, context);
     int save = PROTECT(new_exp);
     changed = changed || (new_exp != node->exp);
-    LamArgs *new_next = visitLamArgs(node->next, context);
+    MinArgs *new_next = visitMinArgs(node->next, context);
     PROTECT(new_next);
     changed = changed || (new_next != node->next);
 
     if (changed) {
         // Create new node with modified fields
-        LamArgs *result = newLamArgs(CPI(node), new_exp, new_next);
+        MinArgs *result = newMinArgs(CPI(node), new_exp, new_next);
         UNPROTECT(save);
         return result;
     }
@@ -383,24 +383,24 @@ static LamArgs *visitLamArgs(LamArgs *node, LamAlphaEnv *context) {
     return node;
 }
 
-static LamApply *visitLamApply(LamApply *node, LamAlphaEnv *context) {
+static MinApply *visitMinApply(MinApply *node, MinAlphaEnv *context) {
     if (node == NULL)
         return NULL;
 
     bool changed = false;
-    LamExp *new_function = visitLamExp(node->function, context);
+    MinExp *new_function = visitMinExp(node->function, context);
     int save = PROTECT(new_function);
     if (new_function == NULL) {
-        cant_happen("visitLamApply: function is NULL");
+        cant_happen("visitMinApply: function is NULL");
     }
     changed = changed || (new_function != node->function);
-    LamArgs *new_args = visitLamArgs(node->args, context);
+    MinArgs *new_args = visitMinArgs(node->args, context);
     PROTECT(new_args);
     changed = changed || (new_args != node->args);
 
     if (changed) {
         // Create new node with modified fields
-        LamApply *result = newLamApply(CPI(node), new_function, new_args);
+        MinApply *result = newMinApply(CPI(node), new_function, new_args);
         UNPROTECT(save);
         return result;
     }
@@ -409,19 +409,19 @@ static LamApply *visitLamApply(LamApply *node, LamAlphaEnv *context) {
     return node;
 }
 
-static LamLookUp *visitLamLookUp(LamLookUp *node, LamAlphaEnv *context) {
+static MinLookUp *visitMinLookUp(MinLookUp *node, MinAlphaEnv *context) {
     if (node == NULL)
         return NULL;
 
     bool changed = false;
-    LamAlphaEnv *nsContext = findAlphaNameSpaceEnv(context, node->nsId);
-    LamExp *new_exp = visitLamExp(node->exp, nsContext);
+    MinAlphaEnv *nsContext = findAlphaNameSpaceEnv(context, node->nsId);
+    MinExp *new_exp = visitMinExp(node->exp, nsContext);
     int save = PROTECT(new_exp);
     changed = changed || (new_exp != node->exp);
 
     if (changed) {
-        LamLookUp *result =
-            newLamLookUp(CPI(node), node->nsId, node->nsSymbol, new_exp);
+        MinLookUp *result =
+            newMinLookUp(CPI(node), node->nsId, node->nsSymbol, new_exp);
         UNPROTECT(save);
         return result;
     }
@@ -430,8 +430,8 @@ static LamLookUp *visitLamLookUp(LamLookUp *node, LamAlphaEnv *context) {
     return node;
 }
 
-static LamLookUpSymbol *visitLamLookUpSymbol(LamLookUpSymbol *node,
-                                             LamAlphaEnv *context) {
+static MinLookUpSymbol *visitMinLookUpSymbol(MinLookUpSymbol *node,
+                                             MinAlphaEnv *context) {
     if (node == NULL)
         return NULL;
 
@@ -443,7 +443,7 @@ static LamLookUpSymbol *visitLamLookUpSymbol(LamLookUpSymbol *node,
     return node;
 }
 
-static LamConstant *visitLamConstant(LamConstant *node, LamAlphaEnv *context) {
+static MinConstant *visitMinConstant(MinConstant *node, MinAlphaEnv *context) {
     if (node == NULL)
         return NULL;
 
@@ -454,22 +454,22 @@ static LamConstant *visitLamConstant(LamConstant *node, LamAlphaEnv *context) {
     return node;
 }
 
-static LamConstruct *visitLamConstruct(LamConstruct *node,
-                                       LamAlphaEnv *context) {
+static MinConstruct *visitMinConstruct(MinConstruct *node,
+                                       MinAlphaEnv *context) {
     if (node == NULL)
         return NULL;
 
     bool changed = false;
     // Pass through name (type: HashSymbol, not memory-managed)
     // Pass through tag (type: int, not memory-managed)
-    LamArgs *new_args = visitLamArgs(node->args, context);
+    MinArgs *new_args = visitMinArgs(node->args, context);
     int save = PROTECT(new_args);
     changed = changed || (new_args != node->args);
 
     if (changed) {
         // Create new node with modified fields
-        LamConstruct *result =
-            newLamConstruct(CPI(node), node->name, node->tag, new_args);
+        MinConstruct *result =
+            newMinConstruct(CPI(node), node->name, node->tag, new_args);
         UNPROTECT(save);
         return result;
     }
@@ -478,8 +478,8 @@ static LamConstruct *visitLamConstruct(LamConstruct *node,
     return node;
 }
 
-static LamDeconstruct *visitLamDeconstruct(LamDeconstruct *node,
-                                           LamAlphaEnv *context) {
+static MinDeconstruct *visitMinDeconstruct(MinDeconstruct *node,
+                                           MinAlphaEnv *context) {
     if (node == NULL)
         return NULL;
 
@@ -487,13 +487,13 @@ static LamDeconstruct *visitLamDeconstruct(LamDeconstruct *node,
     // Pass through name (type: HashSymbol, not memory-managed)
     // Pass through nsId (type: int, not memory-managed)
     // Pass through vec (type: int, not memory-managed)
-    LamExp *new_exp = visitLamExp(node->exp, context);
+    MinExp *new_exp = visitMinExp(node->exp, context);
     int save = PROTECT(new_exp);
     changed = changed || (new_exp != node->exp);
 
     if (changed) {
         // Create new node with modified fields
-        LamDeconstruct *result = newLamDeconstruct(
+        MinDeconstruct *result = newMinDeconstruct(
             CPI(node), node->name, node->nsId, node->vec, new_exp);
         UNPROTECT(save);
         return result;
@@ -503,22 +503,22 @@ static LamDeconstruct *visitLamDeconstruct(LamDeconstruct *node,
     return node;
 }
 
-static LamTupleIndex *visitLamTupleIndex(LamTupleIndex *node,
-                                         LamAlphaEnv *context) {
+static MinTupleIndex *visitMinTupleIndex(MinTupleIndex *node,
+                                         MinAlphaEnv *context) {
     if (node == NULL)
         return NULL;
 
     bool changed = false;
     // Pass through vec (type: int, not memory-managed)
     // Pass through size (type: int, not memory-managed)
-    LamExp *new_exp = visitLamExp(node->exp, context);
+    MinExp *new_exp = visitMinExp(node->exp, context);
     int save = PROTECT(new_exp);
     changed = changed || (new_exp != node->exp);
 
     if (changed) {
         // Create new node with modified fields
-        LamTupleIndex *result =
-            newLamTupleIndex(CPI(node), node->vec, node->size, new_exp);
+        MinTupleIndex *result =
+            newMinTupleIndex(CPI(node), node->vec, node->size, new_exp);
         UNPROTECT(save);
         return result;
     }
@@ -527,19 +527,19 @@ static LamTupleIndex *visitLamTupleIndex(LamTupleIndex *node,
     return node;
 }
 
-static LamMakeVec *visitLamMakeVec(LamMakeVec *node, LamAlphaEnv *context) {
+static MinMakeVec *visitMinMakeVec(MinMakeVec *node, MinAlphaEnv *context) {
     if (node == NULL)
         return NULL;
 
     bool changed = false;
     // Pass through nArgs (type: int, not memory-managed)
-    LamArgs *new_args = visitLamArgs(node->args, context);
+    MinArgs *new_args = visitMinArgs(node->args, context);
     int save = PROTECT(new_args);
     changed = changed || (new_args != node->args);
 
     if (changed) {
         // Create new node with modified fields
-        LamMakeVec *result = newLamMakeVec(CPI(node), node->nArgs, new_args);
+        MinMakeVec *result = newMinMakeVec(CPI(node), node->nArgs, new_args);
         UNPROTECT(save);
         return result;
     }
@@ -548,24 +548,24 @@ static LamMakeVec *visitLamMakeVec(LamMakeVec *node, LamAlphaEnv *context) {
     return node;
 }
 
-static LamIff *visitLamIff(LamIff *node, LamAlphaEnv *context) {
+static MinIff *visitMinIff(MinIff *node, MinAlphaEnv *context) {
     if (node == NULL)
         return NULL;
 
     bool changed = false;
-    LamExp *new_condition = visitLamExp(node->condition, context);
+    MinExp *new_condition = visitMinExp(node->condition, context);
     int save = PROTECT(new_condition);
     changed = changed || (new_condition != node->condition);
-    LamExp *new_consequent = visitLamExp(node->consequent, context);
+    MinExp *new_consequent = visitMinExp(node->consequent, context);
     PROTECT(new_consequent);
     changed = changed || (new_consequent != node->consequent);
-    LamExp *new_alternative = visitLamExp(node->alternative, context);
+    MinExp *new_alternative = visitMinExp(node->alternative, context);
     PROTECT(new_alternative);
     changed = changed || (new_alternative != node->alternative);
 
     if (changed) {
         // Create new node with modified fields
-        LamIff *result = newLamIff(CPI(node), new_condition, new_consequent,
+        MinIff *result = newMinIff(CPI(node), new_condition, new_consequent,
                                    new_alternative);
         UNPROTECT(save);
         return result;
@@ -575,21 +575,21 @@ static LamIff *visitLamIff(LamIff *node, LamAlphaEnv *context) {
     return node;
 }
 
-static LamCond *visitLamCond(LamCond *node, LamAlphaEnv *context) {
+static MinCond *visitMinCond(MinCond *node, MinAlphaEnv *context) {
     if (node == NULL)
         return NULL;
 
     bool changed = false;
-    LamExp *new_value = visitLamExp(node->value, context);
+    MinExp *new_value = visitMinExp(node->value, context);
     int save = PROTECT(new_value);
     changed = changed || (new_value != node->value);
-    LamCondCases *new_cases = visitLamCondCases(node->cases, context);
+    MinCondCases *new_cases = visitMinCondCases(node->cases, context);
     PROTECT(new_cases);
     changed = changed || (new_cases != node->cases);
 
     if (changed) {
         // Create new node with modified fields
-        LamCond *result = newLamCond(CPI(node), new_value, new_cases);
+        MinCond *result = newMinCond(CPI(node), new_value, new_cases);
         UNPROTECT(save);
         return result;
     }
@@ -598,24 +598,24 @@ static LamCond *visitLamCond(LamCond *node, LamAlphaEnv *context) {
     return node;
 }
 
-static LamIntCondCases *visitLamIntCondCases(LamIntCondCases *node,
-                                             LamAlphaEnv *context) {
+static MinIntCondCases *visitMinIntCondCases(MinIntCondCases *node,
+                                             MinAlphaEnv *context) {
     if (node == NULL)
         return NULL;
 
     bool changed = false;
     // Pass through constant (type: MaybeBigInt, not memory-managed)
-    LamExp *new_body = visitLamExp(node->body, context);
+    MinExp *new_body = visitMinExp(node->body, context);
     int save = PROTECT(new_body);
     changed = changed || (new_body != node->body);
-    LamIntCondCases *new_next = visitLamIntCondCases(node->next, context);
+    MinIntCondCases *new_next = visitMinIntCondCases(node->next, context);
     PROTECT(new_next);
     changed = changed || (new_next != node->next);
 
     if (changed) {
         // Create new node with modified fields
-        LamIntCondCases *result =
-            newLamIntCondCases(CPI(node), node->constant, new_body, new_next);
+        MinIntCondCases *result =
+            newMinIntCondCases(CPI(node), node->constant, new_body, new_next);
         UNPROTECT(save);
         return result;
     }
@@ -624,24 +624,24 @@ static LamIntCondCases *visitLamIntCondCases(LamIntCondCases *node,
     return node;
 }
 
-static LamCharCondCases *visitLamCharCondCases(LamCharCondCases *node,
-                                               LamAlphaEnv *context) {
+static MinCharCondCases *visitMinCharCondCases(MinCharCondCases *node,
+                                               MinAlphaEnv *context) {
     if (node == NULL)
         return NULL;
 
     bool changed = false;
     // Pass through constant (type: character, not memory-managed)
-    LamExp *new_body = visitLamExp(node->body, context);
+    MinExp *new_body = visitMinExp(node->body, context);
     int save = PROTECT(new_body);
     changed = changed || (new_body != node->body);
-    LamCharCondCases *new_next = visitLamCharCondCases(node->next, context);
+    MinCharCondCases *new_next = visitMinCharCondCases(node->next, context);
     PROTECT(new_next);
     changed = changed || (new_next != node->next);
 
     if (changed) {
         // Create new node with modified fields
-        LamCharCondCases *result =
-            newLamCharCondCases(CPI(node), node->constant, new_body, new_next);
+        MinCharCondCases *result =
+            newMinCharCondCases(CPI(node), node->constant, new_body, new_next);
         UNPROTECT(save);
         return result;
     }
@@ -650,21 +650,21 @@ static LamCharCondCases *visitLamCharCondCases(LamCharCondCases *node,
     return node;
 }
 
-static LamMatch *visitLamMatch(LamMatch *node, LamAlphaEnv *context) {
+static MinMatch *visitMinMatch(MinMatch *node, MinAlphaEnv *context) {
     if (node == NULL)
         return NULL;
 
     bool changed = false;
-    LamExp *new_index = visitLamExp(node->index, context);
+    MinExp *new_index = visitMinExp(node->index, context);
     int save = PROTECT(new_index);
     changed = changed || (new_index != node->index);
-    LamMatchList *new_cases = visitLamMatchList(node->cases, context);
+    MinMatchList *new_cases = visitMinMatchList(node->cases, context);
     PROTECT(new_cases);
     changed = changed || (new_cases != node->cases);
 
     if (changed) {
         // Create new node with modified fields
-        LamMatch *result = newLamMatch(CPI(node), new_index, new_cases);
+        MinMatch *result = newMinMatch(CPI(node), new_index, new_cases);
         UNPROTECT(save);
         return result;
     }
@@ -673,26 +673,26 @@ static LamMatch *visitLamMatch(LamMatch *node, LamAlphaEnv *context) {
     return node;
 }
 
-static LamMatchList *visitLamMatchList(LamMatchList *node,
-                                       LamAlphaEnv *context) {
+static MinMatchList *visitMinMatchList(MinMatchList *node,
+                                       MinAlphaEnv *context) {
     if (node == NULL)
         return NULL;
 
     bool changed = false;
-    LamIntList *new_matches = visitLamIntList(node->matches, context);
+    MinIntList *new_matches = visitMinIntList(node->matches, context);
     int save = PROTECT(new_matches);
     changed = changed || (new_matches != node->matches);
-    LamExp *new_body = visitLamExp(node->body, context);
+    MinExp *new_body = visitMinExp(node->body, context);
     PROTECT(new_body);
     changed = changed || (new_body != node->body);
-    LamMatchList *new_next = visitLamMatchList(node->next, context);
+    MinMatchList *new_next = visitMinMatchList(node->next, context);
     PROTECT(new_next);
     changed = changed || (new_next != node->next);
 
     if (changed) {
         // Create new node with modified fields
-        LamMatchList *result =
-            newLamMatchList(CPI(node), new_matches, new_body, new_next);
+        MinMatchList *result =
+            newMinMatchList(CPI(node), new_matches, new_body, new_next);
         UNPROTECT(save);
         return result;
     }
@@ -701,7 +701,7 @@ static LamMatchList *visitLamMatchList(LamMatchList *node,
     return node;
 }
 
-static LamIntList *visitLamIntList(LamIntList *node, LamAlphaEnv *context) {
+static MinIntList *visitMinIntList(MinIntList *node, MinAlphaEnv *context) {
     if (node == NULL)
         return NULL;
 
@@ -709,13 +709,13 @@ static LamIntList *visitLamIntList(LamIntList *node, LamAlphaEnv *context) {
     // Pass through item (type: int, not memory-managed)
     // Pass through name (type: HashSymbol, not memory-managed)
     // Pass through nsId (type: int, not memory-managed)
-    LamIntList *new_next = visitLamIntList(node->next, context);
+    MinIntList *new_next = visitMinIntList(node->next, context);
     int save = PROTECT(new_next);
     changed = changed || (new_next != node->next);
 
     if (changed) {
         // Create new node with modified fields
-        LamIntList *result = newLamIntList(CPI(node), node->item, node->name,
+        MinIntList *result = newMinIntList(CPI(node), node->item, node->name,
                                            node->nsId, new_next);
         UNPROTECT(save);
         return result;
@@ -725,21 +725,21 @@ static LamIntList *visitLamIntList(LamIntList *node, LamAlphaEnv *context) {
     return node;
 }
 
-static LamLet *visitLamLet(LamLet *node, LamAlphaEnv *context) {
+static MinLet *visitMinLet(MinLet *node, MinAlphaEnv *context) {
     if (node == NULL)
         return NULL;
-    context = newLamAlphaEnv(context);
+    context = newMinAlphaEnv(context);
     int save = PROTECT(context);
     bool changed = false;
-    LamBindings *new_bindings = visitLetBindings(node->bindings, context);
+    MinBindings *new_bindings = visitLetBindings(node->bindings, context);
     PROTECT(new_bindings);
     changed = changed || (new_bindings != node->bindings);
-    LamExp *new_body = visitLamExp(node->body, context);
+    MinExp *new_body = visitMinExp(node->body, context);
     PROTECT(new_body);
     changed = changed || (new_body != node->body);
     if (changed) {
         // Create new node with modified fields
-        LamLet *result = newLamLet(CPI(node), new_bindings, new_body);
+        MinLet *result = newMinLet(CPI(node), new_bindings, new_body);
         UNPROTECT(save);
         return result;
     }
@@ -747,37 +747,37 @@ static LamLet *visitLamLet(LamLet *node, LamAlphaEnv *context) {
     return node;
 }
 
-static LamBindings *visitLetBindings(LamBindings *node, LamAlphaEnv *context) {
+static MinBindings *visitLetBindings(MinBindings *node, MinAlphaEnv *context) {
     if (node == NULL)
         return NULL;
-    LamExp *new_val = visitLamExp(node->val, context);
+    MinExp *new_val = visitMinExp(node->val, context);
     int save = PROTECT(new_val);
-    LamBindings *new_next = visitLetBindings(node->next, context);
+    MinBindings *new_next = visitLetBindings(node->next, context);
     PROTECT(new_next);
     addUniqueNameToContext(node->var, context);
     // Create new node with modified fields
-    LamBindings *result = newLamBindings(
+    MinBindings *result = newMinBindings(
         CPI(node), getNameFromContext(CPI(node), node->var, context), new_val,
         new_next);
     UNPROTECT(save);
     return result;
 }
 
-static LamLetStar *visitLamLetStar(LamLetStar *node, LamAlphaEnv *context) {
+static MinLetStar *visitMinLetStar(MinLetStar *node, MinAlphaEnv *context) {
     if (node == NULL)
         return NULL;
-    context = newLamAlphaEnv(context);
+    context = newMinAlphaEnv(context);
     int save = PROTECT(context);
     bool changed = false;
-    LamBindings *new_bindings = visitLetStarBindings(node->bindings, context);
+    MinBindings *new_bindings = visitLetStarBindings(node->bindings, context);
     PROTECT(new_bindings);
     changed = changed || (new_bindings != node->bindings);
-    LamExp *new_body = visitLamExp(node->body, context);
+    MinExp *new_body = visitMinExp(node->body, context);
     PROTECT(new_body);
     changed = changed || (new_body != node->body);
     if (changed) {
         // Create new node with modified fields
-        LamLetStar *result = newLamLetStar(CPI(node), new_bindings, new_body);
+        MinLetStar *result = newMinLetStar(CPI(node), new_bindings, new_body);
         UNPROTECT(save);
         return result;
     }
@@ -785,89 +785,89 @@ static LamLetStar *visitLamLetStar(LamLetStar *node, LamAlphaEnv *context) {
     return node;
 }
 
-static LamBindings *visitLetStarBindings(LamBindings *node,
-                                         LamAlphaEnv *context) {
+static MinBindings *visitLetStarBindings(MinBindings *node,
+                                         MinAlphaEnv *context) {
     if (node == NULL)
         return NULL;
-    LamExp *new_val = visitLamExp(node->val, context);
+    MinExp *new_val = visitMinExp(node->val, context);
     int save = PROTECT(new_val);
     addUniqueNameToContext(node->var, context);
-    LamBindings *new_next = visitLetStarBindings(node->next, context);
+    MinBindings *new_next = visitLetStarBindings(node->next, context);
     PROTECT(new_next);
     // Create new node with modified fields
-    LamBindings *result = newLamBindings(
+    MinBindings *result = newMinBindings(
         CPI(node), getNameFromContext(CPI(node), node->var, context), new_val,
         new_next);
     UNPROTECT(save);
     return result;
 }
 
-static LamBindings *visitLetRecValues(LamBindings *node, LamAlphaEnv *context) {
+static MinBindings *visitLetRecValues(MinBindings *node, MinAlphaEnv *context) {
     if (node == NULL)
         return NULL;
-    LamExp *new_val = visitLamExp(node->val, context);
+    MinExp *new_val = visitMinExp(node->val, context);
     int save = PROTECT(new_val);
     if (alpha_conversion_function != NULL &&
         strcmp(alpha_conversion_function, node->var->name) == 0) {
-        ppLamExp(new_val);
+        ppMinExp(new_val);
         eprintf("\n");
     }
-    LamBindings *new_next = visitLetRecValues(node->next, context);
+    MinBindings *new_next = visitLetRecValues(node->next, context);
     PROTECT(new_next);
-    LamBindings *result = newLamBindings(
+    MinBindings *result = newMinBindings(
         CPI(node), getNameFromContext(CPI(node), node->var, context), new_val,
         new_next);
     UNPROTECT(save);
     return result;
 }
 
-static void visitLetRecVariables(LamBindings *node, LamAlphaEnv *context) {
+static void visitLetRecVariables(MinBindings *node, MinAlphaEnv *context) {
     if (node == NULL)
         return;
     visitLetRecVariables(node->next, context);
     addUniqueNameToContext(node->var, context);
 }
 
-static LamLetRec *visitLamLetRec(LamLetRec *node, LamAlphaEnv *context) {
+static MinLetRec *visitMinLetRec(MinLetRec *node, MinAlphaEnv *context) {
     if (node == NULL)
         return NULL;
 
-    context = newLamAlphaEnv(context);
+    context = newMinAlphaEnv(context);
     int save = PROTECT(context);
 
     visitLetRecVariables(node->bindings, context);
-    LamBindings *new_bindings = visitLetRecValues(node->bindings, context);
+    MinBindings *new_bindings = visitLetRecValues(node->bindings, context);
     PROTECT(new_bindings);
-    LamExp *new_body = visitLamExp(node->body, context);
+    MinExp *new_body = visitMinExp(node->body, context);
     PROTECT(new_body);
 
     // Create new node with modified fields
-    LamLetRec *result = newLamLetRec(CPI(node), new_bindings, new_body);
+    MinLetRec *result = newMinLetRec(CPI(node), new_bindings, new_body);
     UNPROTECT(save);
     return result;
 }
 
-static LamContext *visitLamContext(LamContext *node, LamAlphaEnv *context) {
+static MinContext *visitMinContext(MinContext *node, MinAlphaEnv *context) {
     if (node == NULL)
         return NULL;
 
     bool changed = false;
-    LamInfoTable *new_frame = visitLamInfoTable(node->frame, context);
+    MinInfoTable *new_frame = visitMinInfoTable(node->frame, context);
     int save = PROTECT(new_frame);
     changed = changed || (new_frame != node->frame);
-    LamAliasTable *new_aliases = visitLamAliasTable(node->aliases, context);
+    MinAliasTable *new_aliases = visitMinAliasTable(node->aliases, context);
     PROTECT(new_aliases);
     changed = changed || (new_aliases != node->aliases);
-    LamMacroSet *new_macros = visitLamMacroSet(node->macros, context);
+    MinMacroSet *new_macros = visitMinMacroSet(node->macros, context);
     PROTECT(new_macros);
     changed = changed || (new_macros != node->macros);
-    LamContext *new_parent = visitLamContext(node->parent, context);
+    MinContext *new_parent = visitMinContext(node->parent, context);
     PROTECT(new_parent);
     changed = changed || (new_parent != node->parent);
 
     if (changed) {
         // Create new node with modified fields
-        LamContext *result = newLamContext(CPI(node), new_parent);
+        MinContext *result = newMinContext(CPI(node), new_parent);
         UNPROTECT(save);
         return result;
     }
@@ -876,21 +876,21 @@ static LamContext *visitLamContext(LamContext *node, LamAlphaEnv *context) {
     return node;
 }
 
-static LamAmb *visitLamAmb(LamAmb *node, LamAlphaEnv *context) {
+static MinAmb *visitMinAmb(MinAmb *node, MinAlphaEnv *context) {
     if (node == NULL)
         return NULL;
 
     bool changed = false;
-    LamExp *new_left = visitLamExp(node->left, context);
+    MinExp *new_left = visitMinExp(node->left, context);
     int save = PROTECT(new_left);
     changed = changed || (new_left != node->left);
-    LamExp *new_right = visitLamExp(node->right, context);
+    MinExp *new_right = visitMinExp(node->right, context);
     PROTECT(new_right);
     changed = changed || (new_right != node->right);
 
     if (changed) {
         // Create new node with modified fields
-        LamAmb *result = newLamAmb(CPI(node), new_left, new_right);
+        MinAmb *result = newMinAmb(CPI(node), new_left, new_right);
         UNPROTECT(save);
         return result;
     }
@@ -899,21 +899,21 @@ static LamAmb *visitLamAmb(LamAmb *node, LamAlphaEnv *context) {
     return node;
 }
 
-static LamTypeDefs *visitLamTypeDefs(LamTypeDefs *node, LamAlphaEnv *context) {
+static MinTypeDefs *visitMinTypeDefs(MinTypeDefs *node, MinAlphaEnv *context) {
     if (node == NULL)
         return NULL;
 
     bool changed = false;
-    LamTypeDefList *new_typeDefs = visitLamTypeDefList(node->typeDefs, context);
+    MinTypeDefList *new_typeDefs = visitMinTypeDefList(node->typeDefs, context);
     int save = PROTECT(new_typeDefs);
     changed = changed || (new_typeDefs != node->typeDefs);
-    LamExp *new_body = visitLamExp(node->body, context);
+    MinExp *new_body = visitMinExp(node->body, context);
     PROTECT(new_body);
     changed = changed || (new_body != node->body);
 
     if (changed) {
         // Create new node with modified fields
-        LamTypeDefs *result = newLamTypeDefs(CPI(node), new_typeDefs, new_body);
+        MinTypeDefs *result = newMinTypeDefs(CPI(node), new_typeDefs, new_body);
         UNPROTECT(save);
         return result;
     }
@@ -922,23 +922,23 @@ static LamTypeDefs *visitLamTypeDefs(LamTypeDefs *node, LamAlphaEnv *context) {
     return node;
 }
 
-static LamTypeDefList *visitLamTypeDefList(LamTypeDefList *node,
-                                           LamAlphaEnv *context) {
+static MinTypeDefList *visitMinTypeDefList(MinTypeDefList *node,
+                                           MinAlphaEnv *context) {
     if (node == NULL)
         return NULL;
 
     bool changed = false;
-    LamTypeDef *new_typeDef = visitLamTypeDef(node->typeDef, context);
+    MinTypeDef *new_typeDef = visitMinTypeDef(node->typeDef, context);
     int save = PROTECT(new_typeDef);
     changed = changed || (new_typeDef != node->typeDef);
-    LamTypeDefList *new_next = visitLamTypeDefList(node->next, context);
+    MinTypeDefList *new_next = visitMinTypeDefList(node->next, context);
     PROTECT(new_next);
     changed = changed || (new_next != node->next);
 
     if (changed) {
         // Create new node with modified fields
-        LamTypeDefList *result =
-            newLamTypeDefList(CPI(node), new_typeDef, new_next);
+        MinTypeDefList *result =
+            newMinTypeDefList(CPI(node), new_typeDef, new_next);
         UNPROTECT(save);
         return result;
     }
@@ -947,23 +947,23 @@ static LamTypeDefList *visitLamTypeDefList(LamTypeDefList *node,
     return node;
 }
 
-static LamTypeDef *visitLamTypeDef(LamTypeDef *node, LamAlphaEnv *context) {
+static MinTypeDef *visitMinTypeDef(MinTypeDef *node, MinAlphaEnv *context) {
     if (node == NULL)
         return NULL;
 
     bool changed = false;
-    LamTypeSig *new_type = visitLamTypeSig(node->type, context);
+    MinTypeSig *new_type = visitMinTypeSig(node->type, context);
     int save = PROTECT(new_type);
     changed = changed || (new_type != node->type);
-    LamTypeConstructorList *new_constructors =
-        visitLamTypeConstructorList(node->constructors, context);
+    MinTypeConstructorList *new_constructors =
+        visitMinTypeConstructorList(node->constructors, context);
     PROTECT(new_constructors);
     changed = changed || (new_constructors != node->constructors);
 
     if (changed) {
         // Create new node with modified fields
-        LamTypeDef *result =
-            newLamTypeDef(CPI(node), new_type, new_constructors);
+        MinTypeDef *result =
+            newMinTypeDef(CPI(node), new_type, new_constructors);
         UNPROTECT(save);
         return result;
     }
@@ -972,26 +972,26 @@ static LamTypeDef *visitLamTypeDef(LamTypeDef *node, LamAlphaEnv *context) {
     return node;
 }
 
-static LamTypeConstructorList *
-visitLamTypeConstructorList(LamTypeConstructorList *node,
-                            LamAlphaEnv *context) {
+static MinTypeConstructorList *
+visitMinTypeConstructorList(MinTypeConstructorList *node,
+                            MinAlphaEnv *context) {
     if (node == NULL)
         return NULL;
 
     bool changed = false;
-    LamTypeConstructor *new_constructor =
-        visitLamTypeConstructor(node->constructor, context);
+    MinTypeConstructor *new_constructor =
+        visitMinTypeConstructor(node->constructor, context);
     int save = PROTECT(new_constructor);
     changed = changed || (new_constructor != node->constructor);
-    LamTypeConstructorList *new_next =
-        visitLamTypeConstructorList(node->next, context);
+    MinTypeConstructorList *new_next =
+        visitMinTypeConstructorList(node->next, context);
     PROTECT(new_next);
     changed = changed || (new_next != node->next);
 
     if (changed) {
         // Create new node with modified fields
-        LamTypeConstructorList *result =
-            newLamTypeConstructorList(CPI(node), new_constructor, new_next);
+        MinTypeConstructorList *result =
+            newMinTypeConstructorList(CPI(node), new_constructor, new_next);
         UNPROTECT(save);
         return result;
     }
@@ -1000,19 +1000,19 @@ visitLamTypeConstructorList(LamTypeConstructorList *node,
     return node;
 }
 
-static LamTypeSig *visitLamTypeSig(LamTypeSig *node, LamAlphaEnv *context) {
+static MinTypeSig *visitMinTypeSig(MinTypeSig *node, MinAlphaEnv *context) {
     if (node == NULL)
         return NULL;
 
     bool changed = false;
     // Pass through name (type: HashSymbol, not memory-managed)
-    LamTypeSigArgs *new_args = visitLamTypeSigArgs(node->args, context);
+    MinTypeSigArgs *new_args = visitMinTypeSigArgs(node->args, context);
     int save = PROTECT(new_args);
     changed = changed || (new_args != node->args);
 
     if (changed) {
         // Create new node with modified fields
-        LamTypeSig *result = newLamTypeSig(CPI(node), node->name, new_args);
+        MinTypeSig *result = newMinTypeSig(CPI(node), node->name, new_args);
         UNPROTECT(save);
         return result;
     }
@@ -1021,19 +1021,19 @@ static LamTypeSig *visitLamTypeSig(LamTypeSig *node, LamAlphaEnv *context) {
     return node;
 }
 
-static LamTypeTags *visitLamTypeTags(LamTypeTags *node, LamAlphaEnv *context) {
+static MinTypeTags *visitMinTypeTags(MinTypeTags *node, MinAlphaEnv *context) {
     if (node == NULL)
         return NULL;
 
     bool changed = false;
     // Pass through tag (type: HashSymbol, not memory-managed)
-    LamTypeTags *new_next = visitLamTypeTags(node->next, context);
+    MinTypeTags *new_next = visitMinTypeTags(node->next, context);
     int save = PROTECT(new_next);
     changed = changed || (new_next != node->next);
 
     if (changed) {
         // Create new node with modified fields
-        LamTypeTags *result = newLamTypeTags(CPI(node), node->tag, new_next);
+        MinTypeTags *result = newMinTypeTags(CPI(node), node->tag, new_next);
         UNPROTECT(save);
         return result;
     }
@@ -1042,21 +1042,21 @@ static LamTypeTags *visitLamTypeTags(LamTypeTags *node, LamAlphaEnv *context) {
     return node;
 }
 
-static LamTypeSigArgs *visitLamTypeSigArgs(LamTypeSigArgs *node,
-                                           LamAlphaEnv *context) {
+static MinTypeSigArgs *visitMinTypeSigArgs(MinTypeSigArgs *node,
+                                           MinAlphaEnv *context) {
     if (node == NULL)
         return NULL;
 
     bool changed = false;
     // Pass through name (type: HashSymbol, not memory-managed)
-    LamTypeSigArgs *new_next = visitLamTypeSigArgs(node->next, context);
+    MinTypeSigArgs *new_next = visitMinTypeSigArgs(node->next, context);
     int save = PROTECT(new_next);
     changed = changed || (new_next != node->next);
 
     if (changed) {
         // Create new node with modified fields
-        LamTypeSigArgs *result =
-            newLamTypeSigArgs(CPI(node), node->name, new_next);
+        MinTypeSigArgs *result =
+            newMinTypeSigArgs(CPI(node), node->name, new_next);
         UNPROTECT(save);
         return result;
     }
@@ -1065,25 +1065,25 @@ static LamTypeSigArgs *visitLamTypeSigArgs(LamTypeSigArgs *node,
     return node;
 }
 
-static LamTypeConstructor *visitLamTypeConstructor(LamTypeConstructor *node,
-                                                   LamAlphaEnv *context) {
+static MinTypeConstructor *visitMinTypeConstructor(MinTypeConstructor *node,
+                                                   MinAlphaEnv *context) {
     if (node == NULL)
         return NULL;
 
     bool changed = false;
     // Pass through name (type: HashSymbol, not memory-managed)
-    LamTypeSig *new_type = visitLamTypeSig(node->type, context);
+    MinTypeSig *new_type = visitMinTypeSig(node->type, context);
     int save = PROTECT(new_type);
     changed = changed || (new_type != node->type);
-    LamTypeConstructorArgs *new_args =
-        visitLamTypeConstructorArgs(node->args, context);
+    MinTypeConstructorArgs *new_args =
+        visitMinTypeConstructorArgs(node->args, context);
     PROTECT(new_args);
     changed = changed || (new_args != node->args);
 
     if (changed) {
         // Create new node with modified fields
-        LamTypeConstructor *result =
-            newLamTypeConstructor(CPI(node), node->name, new_type, new_args);
+        MinTypeConstructor *result =
+            newMinTypeConstructor(CPI(node), node->name, new_type, new_args);
         UNPROTECT(save);
         return result;
     }
@@ -1092,26 +1092,26 @@ static LamTypeConstructor *visitLamTypeConstructor(LamTypeConstructor *node,
     return node;
 }
 
-static LamTypeConstructorArgs *
-visitLamTypeConstructorArgs(LamTypeConstructorArgs *node,
-                            LamAlphaEnv *context) {
+static MinTypeConstructorArgs *
+visitMinTypeConstructorArgs(MinTypeConstructorArgs *node,
+                            MinAlphaEnv *context) {
     if (node == NULL)
         return NULL;
 
     bool changed = false;
-    LamTypeConstructorType *new_arg =
-        visitLamTypeConstructorType(node->arg, context);
+    MinTypeConstructorType *new_arg =
+        visitMinTypeConstructorType(node->arg, context);
     int save = PROTECT(new_arg);
     changed = changed || (new_arg != node->arg);
-    LamTypeConstructorArgs *new_next =
-        visitLamTypeConstructorArgs(node->next, context);
+    MinTypeConstructorArgs *new_next =
+        visitMinTypeConstructorArgs(node->next, context);
     PROTECT(new_next);
     changed = changed || (new_next != node->next);
 
     if (changed) {
         // Create new node with modified fields
-        LamTypeConstructorArgs *result =
-            newLamTypeConstructorArgs(CPI(node), new_arg, new_next);
+        MinTypeConstructorArgs *result =
+            newMinTypeConstructorArgs(CPI(node), new_arg, new_next);
         UNPROTECT(save);
         return result;
     }
@@ -1120,24 +1120,24 @@ visitLamTypeConstructorArgs(LamTypeConstructorArgs *node,
     return node;
 }
 
-static LamTypeFunction *visitLamTypeFunction(LamTypeFunction *node,
-                                             LamAlphaEnv *context) {
+static MinTypeFunction *visitMinTypeFunction(MinTypeFunction *node,
+                                             MinAlphaEnv *context) {
     if (node == NULL)
         return NULL;
 
     bool changed = false;
-    LamLookUpOrSymbol *new_name = visitLamLookUpOrSymbol(node->name, context);
+    MinLookUpOrSymbol *new_name = visitMinLookUpOrSymbol(node->name, context);
     int save = PROTECT(new_name);
     changed = changed || (new_name != node->name);
-    LamTypeConstructorArgs *new_args =
-        visitLamTypeConstructorArgs(node->args, context);
+    MinTypeConstructorArgs *new_args =
+        visitMinTypeConstructorArgs(node->args, context);
     PROTECT(new_args);
     changed = changed || (new_args != node->args);
 
     if (changed) {
         // Create new node with modified fields
-        LamTypeFunction *result =
-            newLamTypeFunction(CPI(node), new_name, new_args);
+        MinTypeFunction *result =
+            newMinTypeFunction(CPI(node), new_name, new_args);
         UNPROTECT(save);
         return result;
     }
@@ -1146,19 +1146,19 @@ static LamTypeFunction *visitLamTypeFunction(LamTypeFunction *node,
     return node;
 }
 
-static LamTypeConstructorInfo *
-visitLamTypeConstructorInfo(LamTypeConstructorInfo *node,
-                            LamAlphaEnv *context) {
+static MinTypeConstructorInfo *
+visitMinTypeConstructorInfo(MinTypeConstructorInfo *node,
+                            MinAlphaEnv *context) {
     if (node == NULL)
         return NULL;
 
     bool changed = false;
     // Pass through name (type: HashSymbol, not memory-managed)
     // Pass through nsId (type: int, not memory-managed)
-    LamTypeConstructor *new_type = visitLamTypeConstructor(node->type, context);
+    MinTypeConstructor *new_type = visitMinTypeConstructor(node->type, context);
     int save = PROTECT(new_type);
     changed = changed || (new_type != node->type);
-    LamTypeTags *new_tags = visitLamTypeTags(node->tags, context);
+    MinTypeTags *new_tags = visitMinTypeTags(node->tags, context);
     PROTECT(new_tags);
     changed = changed || (new_tags != node->tags);
     // Pass through needsVec (type: bool, not memory-managed)
@@ -1168,7 +1168,7 @@ visitLamTypeConstructorInfo(LamTypeConstructorInfo *node,
 
     if (changed) {
         // Create new node with modified fields
-        LamTypeConstructorInfo *result = newLamTypeConstructorInfo(
+        MinTypeConstructorInfo *result = newMinTypeConstructorInfo(
             CPI(node), node->name, node->nsId, new_type, new_tags,
             node->needsVec, node->arity, node->size, node->index);
         UNPROTECT(save);
@@ -1179,124 +1179,124 @@ visitLamTypeConstructorInfo(LamTypeConstructorInfo *node,
     return node;
 }
 
-static LamExp *visitLamExp(LamExp *node, LamAlphaEnv *context) {
+static MinExp *visitMinExp(MinExp *node, MinAlphaEnv *context) {
     if (node == NULL) {
         return NULL;
     }
 
-    LamExp *result = node;
+    MinExp *result = node;
     int save = PROTECT(result);
 
     switch (node->type) {
-    case LAMEXP_TYPE_AMB: {
-        // LamAmb
-        LamAmb *variant = getLamExp_Amb(node);
-        LamAmb *new_variant = visitLamAmb(variant, context);
+    case MINEXP_TYPE_AMB: {
+        // MinAmb
+        MinAmb *variant = getMinExp_Amb(node);
+        MinAmb *new_variant = visitMinAmb(variant, context);
         if (new_variant != variant) {
             PROTECT(new_variant);
-            result = newLamExp_Amb(CPI(node), new_variant);
+            result = newMinExp_Amb(CPI(node), new_variant);
         }
         break;
     }
-    case LAMEXP_TYPE_APPLY: {
-        // LamApply
-        LamApply *variant = getLamExp_Apply(node);
-        LamApply *new_variant = visitLamApply(variant, context);
+    case MINEXP_TYPE_APPLY: {
+        // MinApply
+        MinApply *variant = getMinExp_Apply(node);
+        MinApply *new_variant = visitMinApply(variant, context);
         if (new_variant != variant) {
             PROTECT(new_variant);
-            result = newLamExp_Apply(CPI(node), new_variant);
+            result = newMinExp_Apply(CPI(node), new_variant);
         }
         break;
     }
-    case LAMEXP_TYPE_ARGS: {
-        // LamArgs
-        LamArgs *variant = getLamExp_Args(node);
-        LamArgs *new_variant = visitLamArgs(variant, context);
+    case MINEXP_TYPE_ARGS: {
+        // MinArgs
+        MinArgs *variant = getMinExp_Args(node);
+        MinArgs *new_variant = visitMinArgs(variant, context);
         if (new_variant != variant) {
             PROTECT(new_variant);
-            result = newLamExp_Args(CPI(node), new_variant);
+            result = newMinExp_Args(CPI(node), new_variant);
         }
         break;
     }
-    case LAMEXP_TYPE_BACK: {
+    case MINEXP_TYPE_BACK: {
         // void_ptr
         break;
     }
-    case LAMEXP_TYPE_BIGINTEGER: {
+    case MINEXP_TYPE_BIGINTEGER: {
         // MaybeBigInt
         break;
     }
-    case LAMEXP_TYPE_BINDINGS: {
-        // LamBindings
-        cant_happen("LamExp of type BINDINGS should not occur in the wild");
+    case MINEXP_TYPE_BINDINGS: {
+        // MinBindings
+        cant_happen("MinExp of type BINDINGS should not occur in the wild");
         break;
     }
-    case LAMEXP_TYPE_CALLCC: {
-        // LamExp
-        LamExp *variant = getLamExp_CallCC(node);
-        LamExp *new_variant = visitLamExp(variant, context);
+    case MINEXP_TYPE_CALLCC: {
+        // MinExp
+        MinExp *variant = getMinExp_CallCC(node);
+        MinExp *new_variant = visitMinExp(variant, context);
         if (new_variant != variant) {
             PROTECT(new_variant);
-            result = newLamExp_CallCC(CPI(node), new_variant);
+            result = newMinExp_CallCC(CPI(node), new_variant);
         }
         break;
     }
-    case LAMEXP_TYPE_CHARACTER: {
+    case MINEXP_TYPE_CHARACTER: {
         // character
         break;
     }
-    case LAMEXP_TYPE_COND: {
-        // LamCond
-        LamCond *variant = getLamExp_Cond(node);
-        LamCond *new_variant = visitLamCond(variant, context);
+    case MINEXP_TYPE_COND: {
+        // MinCond
+        MinCond *variant = getMinExp_Cond(node);
+        MinCond *new_variant = visitMinCond(variant, context);
         if (new_variant != variant) {
             PROTECT(new_variant);
-            result = newLamExp_Cond(CPI(node), new_variant);
+            result = newMinExp_Cond(CPI(node), new_variant);
         }
         break;
     }
-    case LAMEXP_TYPE_CONSTANT: {
-        // LamConstant
-        LamConstant *variant = getLamExp_Constant(node);
-        LamConstant *new_variant = visitLamConstant(variant, context);
+    case MINEXP_TYPE_CONSTANT: {
+        // MinConstant
+        MinConstant *variant = getMinExp_Constant(node);
+        MinConstant *new_variant = visitMinConstant(variant, context);
         if (new_variant != variant) {
             PROTECT(new_variant);
-            result = newLamExp_Constant(CPI(node), new_variant);
+            result = newMinExp_Constant(CPI(node), new_variant);
         }
         break;
     }
-    case LAMEXP_TYPE_CONSTRUCT: {
-        // LamConstruct
-        LamConstruct *variant = getLamExp_Construct(node);
-        LamConstruct *new_variant = visitLamConstruct(variant, context);
+    case MINEXP_TYPE_CONSTRUCT: {
+        // MinConstruct
+        MinConstruct *variant = getMinExp_Construct(node);
+        MinConstruct *new_variant = visitMinConstruct(variant, context);
         if (new_variant != variant) {
             PROTECT(new_variant);
-            result = newLamExp_Construct(CPI(node), new_variant);
+            result = newMinExp_Construct(CPI(node), new_variant);
         }
         break;
     }
-    case LAMEXP_TYPE_CONSTRUCTOR: {
-        // LamTypeConstructorInfo
-        LamTypeConstructorInfo *variant = getLamExp_Constructor(node);
-        LamTypeConstructorInfo *new_variant =
-            visitLamTypeConstructorInfo(variant, context);
+    case MINEXP_TYPE_CONSTRUCTOR: {
+        // MinTypeConstructorInfo
+        MinTypeConstructorInfo *variant = getMinExp_Constructor(node);
+        MinTypeConstructorInfo *new_variant =
+            visitMinTypeConstructorInfo(variant, context);
         if (new_variant != variant) {
             PROTECT(new_variant);
-            result = newLamExp_Constructor(CPI(node), new_variant);
+            result = newMinExp_Constructor(CPI(node), new_variant);
         }
         break;
     }
-    case LAMEXP_TYPE_DECONSTRUCT: {
-        // LamDeconstruct
-        LamDeconstruct *variant = getLamExp_Deconstruct(node);
-        LamDeconstruct *new_variant = visitLamDeconstruct(variant, context);
+    case MINEXP_TYPE_DECONSTRUCT: {
+        // MinDeconstruct
+        MinDeconstruct *variant = getMinExp_Deconstruct(node);
+        MinDeconstruct *new_variant = visitMinDeconstruct(variant, context);
         if (new_variant != variant) {
             PROTECT(new_variant);
-            result = newLamExp_Deconstruct(CPI(node), new_variant);
+            result = newMinExp_Deconstruct(CPI(node), new_variant);
         }
         break;
     }
-    case LAMEXP_TYPE_ENV: {
+    case MINEXP_TYPE_ENV: {
         // void_ptr
         // the `(env)` directive is a way of capturing the current
         // environment from the "body" of a nameSpace.
@@ -1309,357 +1309,357 @@ static LamExp *visitLamExp(LamExp *node, LamAlphaEnv *context) {
         pushNameSpaceEnv(context);
         break;
     }
-    case LAMEXP_TYPE_ERROR: {
+    case MINEXP_TYPE_ERROR: {
         // void_ptr
         break;
     }
-    case LAMEXP_TYPE_IFF: {
-        // LamIff
-        LamIff *variant = getLamExp_Iff(node);
-        LamIff *new_variant = visitLamIff(variant, context);
+    case MINEXP_TYPE_IFF: {
+        // MinIff
+        MinIff *variant = getMinExp_Iff(node);
+        MinIff *new_variant = visitMinIff(variant, context);
         if (new_variant != variant) {
             PROTECT(new_variant);
-            result = newLamExp_Iff(CPI(node), new_variant);
+            result = newMinExp_Iff(CPI(node), new_variant);
         }
         break;
     }
-    case LAMEXP_TYPE_LAM: {
-        // LamLam
-        LamLam *variant = getLamExp_Lam(node);
-        LamLam *new_variant = visitLamLam(variant, context);
+    case MINEXP_TYPE_LAM: {
+        // MinLam
+        MinLam *variant = getMinExp_Lam(node);
+        MinLam *new_variant = visitMinLam(variant, context);
         if (new_variant != variant) {
             PROTECT(new_variant);
-            result = newLamExp_Lam(CPI(node), new_variant);
+            result = newMinExp_Lam(CPI(node), new_variant);
         }
         break;
     }
-    case LAMEXP_TYPE_LET: {
-        // LamLet
-        LamLet *variant = getLamExp_Let(node);
-        LamLet *new_variant = visitLamLet(variant, context);
+    case MINEXP_TYPE_LET: {
+        // MinLet
+        MinLet *variant = getMinExp_Let(node);
+        MinLet *new_variant = visitMinLet(variant, context);
         if (new_variant != variant) {
             PROTECT(new_variant);
-            result = newLamExp_Let(CPI(node), new_variant);
+            result = newMinExp_Let(CPI(node), new_variant);
         }
         break;
     }
-    case LAMEXP_TYPE_LETSTAR: {
-        // LamLetStar
-        LamLetStar *variant = getLamExp_LetStar(node);
-        LamLetStar *new_variant = visitLamLetStar(variant, context);
+    case MINEXP_TYPE_LETSTAR: {
+        // MinLetStar
+        MinLetStar *variant = getMinExp_LetStar(node);
+        MinLetStar *new_variant = visitMinLetStar(variant, context);
         if (new_variant != variant) {
             PROTECT(new_variant);
-            result = newLamExp_LetStar(CPI(node), new_variant);
+            result = newMinExp_LetStar(CPI(node), new_variant);
         }
         break;
     }
-    case LAMEXP_TYPE_LETREC: {
-        // LamLetRec
-        LamLetRec *variant = getLamExp_LetRec(node);
-        LamLetRec *new_variant = visitLamLetRec(variant, context);
+    case MINEXP_TYPE_LETREC: {
+        // MinLetRec
+        MinLetRec *variant = getMinExp_LetRec(node);
+        MinLetRec *new_variant = visitMinLetRec(variant, context);
         if (new_variant != variant) {
             PROTECT(new_variant);
-            result = newLamExp_LetRec(CPI(node), new_variant);
+            result = newMinExp_LetRec(CPI(node), new_variant);
         }
         break;
     }
-    case LAMEXP_TYPE_LOOKUP: {
-        // LamLookUp
-        LamLookUp *variant = getLamExp_LookUp(node);
-        LamLookUp *new_variant = visitLamLookUp(variant, context);
+    case MINEXP_TYPE_LOOKUP: {
+        // MinLookUp
+        MinLookUp *variant = getMinExp_LookUp(node);
+        MinLookUp *new_variant = visitMinLookUp(variant, context);
         if (new_variant != variant) {
             PROTECT(new_variant);
-            result = newLamExp_LookUp(CPI(node), new_variant);
+            result = newMinExp_LookUp(CPI(node), new_variant);
         }
         break;
     }
-    case LAMEXP_TYPE_MAKETUPLE: {
-        // LamArgs
-        LamArgs *variant = getLamExp_MakeTuple(node);
-        LamArgs *new_variant = visitLamArgs(variant, context);
+    case MINEXP_TYPE_MAKETUPLE: {
+        // MinArgs
+        MinArgs *variant = getMinExp_MakeTuple(node);
+        MinArgs *new_variant = visitMinArgs(variant, context);
         if (new_variant != variant) {
             PROTECT(new_variant);
-            result = newLamExp_MakeTuple(CPI(node), new_variant);
+            result = newMinExp_MakeTuple(CPI(node), new_variant);
         }
         break;
     }
-    case LAMEXP_TYPE_MAKEVEC: {
-        // LamMakeVec
-        LamMakeVec *variant = getLamExp_MakeVec(node);
-        LamMakeVec *new_variant = visitLamMakeVec(variant, context);
+    case MINEXP_TYPE_MAKEVEC: {
+        // MinMakeVec
+        MinMakeVec *variant = getMinExp_MakeVec(node);
+        MinMakeVec *new_variant = visitMinMakeVec(variant, context);
         if (new_variant != variant) {
             PROTECT(new_variant);
-            result = newLamExp_MakeVec(CPI(node), new_variant);
+            result = newMinExp_MakeVec(CPI(node), new_variant);
         }
         break;
     }
-    case LAMEXP_TYPE_MATCH: {
-        // LamMatch
-        LamMatch *variant = getLamExp_Match(node);
-        LamMatch *new_variant = visitLamMatch(variant, context);
+    case MINEXP_TYPE_MATCH: {
+        // MinMatch
+        MinMatch *variant = getMinExp_Match(node);
+        MinMatch *new_variant = visitMinMatch(variant, context);
         if (new_variant != variant) {
             PROTECT(new_variant);
-            result = newLamExp_Match(CPI(node), new_variant);
+            result = newMinExp_Match(CPI(node), new_variant);
         }
         break;
     }
-    case LAMEXP_TYPE_NAMESPACES: {
-        // LamNameSpaceArray
-        LamNameSpaceArray *variant = getLamExp_NameSpaces(node);
-        LamNameSpaceArray *new_variant =
-            visitLamNameSpaceArray(variant, context);
+    case MINEXP_TYPE_NAMESPACES: {
+        // MinNameSpaceArray
+        MinNameSpaceArray *variant = getMinExp_NameSpaces(node);
+        MinNameSpaceArray *new_variant =
+            visitMinNameSpaceArray(variant, context);
         if (new_variant != variant) {
             PROTECT(new_variant);
-            result = newLamExp_NameSpaces(CPI(node), new_variant);
+            result = newMinExp_NameSpaces(CPI(node), new_variant);
         }
         break;
     }
-    case LAMEXP_TYPE_PRIM: {
-        // LamPrimApp
-        LamPrimApp *variant = getLamExp_Prim(node);
-        LamPrimApp *new_variant = visitLamPrimApp(variant, context);
+    case MINEXP_TYPE_PRIM: {
+        // MinPrimApp
+        MinPrimApp *variant = getMinExp_Prim(node);
+        MinPrimApp *new_variant = visitMinPrimApp(variant, context);
         if (new_variant != variant) {
             PROTECT(new_variant);
-            result = newLamExp_Prim(CPI(node), new_variant);
+            result = newMinExp_Prim(CPI(node), new_variant);
         }
         break;
     }
-    case LAMEXP_TYPE_SEQUENCE: {
-        // LamSequence
-        LamSequence *variant = getLamExp_Sequence(node);
-        LamSequence *new_variant = visitLamSequence(variant, context);
+    case MINEXP_TYPE_SEQUENCE: {
+        // MinSequence
+        MinSequence *variant = getMinExp_Sequence(node);
+        MinSequence *new_variant = visitMinSequence(variant, context);
         if (new_variant != variant) {
             PROTECT(new_variant);
-            result = newLamExp_Sequence(CPI(node), new_variant);
+            result = newMinExp_Sequence(CPI(node), new_variant);
         }
         break;
     }
-    case LAMEXP_TYPE_STDINT: {
+    case MINEXP_TYPE_STDINT: {
         // int
         break;
     }
-    case LAMEXP_TYPE_TAG: {
-        // LamExp
-        LamExp *variant = getLamExp_Tag(node);
-        LamExp *new_variant = visitLamExp(variant, context);
+    case MINEXP_TYPE_TAG: {
+        // MinExp
+        MinExp *variant = getMinExp_Tag(node);
+        MinExp *new_variant = visitMinExp(variant, context);
         if (new_variant != variant) {
             PROTECT(new_variant);
-            result = newLamExp_Tag(CPI(node), new_variant);
+            result = newMinExp_Tag(CPI(node), new_variant);
         }
         break;
     }
-    case LAMEXP_TYPE_TUPLEINDEX: {
-        // LamTupleIndex
-        LamTupleIndex *variant = getLamExp_TupleIndex(node);
-        LamTupleIndex *new_variant = visitLamTupleIndex(variant, context);
+    case MINEXP_TYPE_TUPLEINDEX: {
+        // MinTupleIndex
+        MinTupleIndex *variant = getMinExp_TupleIndex(node);
+        MinTupleIndex *new_variant = visitMinTupleIndex(variant, context);
         if (new_variant != variant) {
             PROTECT(new_variant);
-            result = newLamExp_TupleIndex(CPI(node), new_variant);
+            result = newMinExp_TupleIndex(CPI(node), new_variant);
         }
         break;
     }
-    case LAMEXP_TYPE_TYPEDEFS: {
-        // LamTypeDefs
-        LamTypeDefs *variant = getLamExp_TypeDefs(node);
-        LamTypeDefs *new_variant = visitLamTypeDefs(variant, context);
+    case MINEXP_TYPE_TYPEDEFS: {
+        // MinTypeDefs
+        MinTypeDefs *variant = getMinExp_TypeDefs(node);
+        MinTypeDefs *new_variant = visitMinTypeDefs(variant, context);
         if (new_variant != variant) {
             PROTECT(new_variant);
-            result = newLamExp_TypeDefs(CPI(node), new_variant);
+            result = newMinExp_TypeDefs(CPI(node), new_variant);
         }
         break;
     }
-    case LAMEXP_TYPE_VAR: {
+    case MINEXP_TYPE_VAR: {
         // HashSymbol
-        result = newLamExp_Var(
+        result = newMinExp_Var(
             CPI(node),
-            getNameFromContext(CPI(node), getLamExp_Var(node), context));
+            getNameFromContext(CPI(node), getMinExp_Var(node), context));
         break;
     }
     default:
-        cant_happen("unrecognized LamExp type %s", lamExpTypeName(node->type));
+        cant_happen("unrecognized MinExp type %s", minExpTypeName(node->type));
     }
 
     UNPROTECT(save);
     return result;
 }
 
-static LamLookUpOrSymbol *visitLamLookUpOrSymbol(LamLookUpOrSymbol *node,
-                                                 LamAlphaEnv *context) {
+static MinLookUpOrSymbol *visitMinLookUpOrSymbol(MinLookUpOrSymbol *node,
+                                                 MinAlphaEnv *context) {
     if (node == NULL)
         return NULL;
 
     int save = PROTECT(NULL);
-    LamLookUpOrSymbol *result = node;
+    MinLookUpOrSymbol *result = node;
 
     switch (node->type) {
-    case LAMLOOKUPORSYMBOL_TYPE_SYMBOL: {
+    case MINLOOKUPORSYMBOL_TYPE_SYMBOL: {
         // HashSymbol
         break;
     }
-    case LAMLOOKUPORSYMBOL_TYPE_LOOKUP: {
-        // LamLookUpSymbol
-        LamLookUpSymbol *variant = getLamLookUpOrSymbol_LookUp(node);
-        LamLookUpSymbol *new_variant = visitLamLookUpSymbol(variant, context);
+    case MINLOOKUPORSYMBOL_TYPE_LOOKUP: {
+        // MinLookUpSymbol
+        MinLookUpSymbol *variant = getMinLookUpOrSymbol_LookUp(node);
+        MinLookUpSymbol *new_variant = visitMinLookUpSymbol(variant, context);
         if (new_variant != variant) {
             PROTECT(new_variant);
-            result = newLamLookUpOrSymbol_LookUp(CPI(node), new_variant);
+            result = newMinLookUpOrSymbol_LookUp(CPI(node), new_variant);
         }
         break;
     }
     default:
-        cant_happen("unrecognized LamLookUpOrSymbol type %d", node->type);
+        cant_happen("unrecognized MinLookUpOrSymbol type %d", node->type);
     }
 
     UNPROTECT(save);
     return result;
 }
 
-static LamCondCases *visitLamCondCases(LamCondCases *node,
-                                       LamAlphaEnv *context) {
+static MinCondCases *visitMinCondCases(MinCondCases *node,
+                                       MinAlphaEnv *context) {
     if (node == NULL)
         return NULL;
 
     int save = PROTECT(NULL);
-    LamCondCases *result = node;
+    MinCondCases *result = node;
 
     switch (node->type) {
-    case LAMCONDCASES_TYPE_INTEGERS: {
-        // LamIntCondCases
-        LamIntCondCases *variant = getLamCondCases_Integers(node);
-        LamIntCondCases *new_variant = visitLamIntCondCases(variant, context);
+    case MINCONDCASES_TYPE_INTEGERS: {
+        // MinIntCondCases
+        MinIntCondCases *variant = getMinCondCases_Integers(node);
+        MinIntCondCases *new_variant = visitMinIntCondCases(variant, context);
         if (new_variant != variant) {
             PROTECT(new_variant);
-            result = newLamCondCases_Integers(CPI(node), new_variant);
+            result = newMinCondCases_Integers(CPI(node), new_variant);
         }
         break;
     }
-    case LAMCONDCASES_TYPE_CHARACTERS: {
-        // LamCharCondCases
-        LamCharCondCases *variant = getLamCondCases_Characters(node);
-        LamCharCondCases *new_variant = visitLamCharCondCases(variant, context);
+    case MINCONDCASES_TYPE_CHARACTERS: {
+        // MinCharCondCases
+        MinCharCondCases *variant = getMinCondCases_Characters(node);
+        MinCharCondCases *new_variant = visitMinCharCondCases(variant, context);
         if (new_variant != variant) {
             PROTECT(new_variant);
-            result = newLamCondCases_Characters(CPI(node), new_variant);
+            result = newMinCondCases_Characters(CPI(node), new_variant);
         }
         break;
     }
     default:
-        cant_happen("unrecognized LamCondCases type %d", node->type);
+        cant_happen("unrecognized MinCondCases type %d", node->type);
     }
 
     UNPROTECT(save);
     return result;
 }
 
-static LamTypeConstructorType *
-visitLamTypeConstructorType(LamTypeConstructorType *node,
-                            LamAlphaEnv *context) {
+static MinTypeConstructorType *
+visitMinTypeConstructorType(MinTypeConstructorType *node,
+                            MinAlphaEnv *context) {
     if (node == NULL)
         return NULL;
 
     int save = PROTECT(NULL);
-    LamTypeConstructorType *result = node;
+    MinTypeConstructorType *result = node;
 
     switch (node->type) {
-    case LAMTYPECONSTRUCTORTYPE_TYPE_INTEGER: {
+    case MINTYPECONSTRUCTORTYPE_TYPE_INTEGER: {
         // void_ptr
         break;
     }
-    case LAMTYPECONSTRUCTORTYPE_TYPE_CHARACTER: {
+    case MINTYPECONSTRUCTORTYPE_TYPE_CHARACTER: {
         // void_ptr
         break;
     }
-    case LAMTYPECONSTRUCTORTYPE_TYPE_VAR: {
+    case MINTYPECONSTRUCTORTYPE_TYPE_VAR: {
         // HashSymbol
         break;
     }
-    case LAMTYPECONSTRUCTORTYPE_TYPE_FUNCTION: {
-        // LamTypeFunction
-        LamTypeFunction *variant = getLamTypeConstructorType_Function(node);
-        LamTypeFunction *new_variant = visitLamTypeFunction(variant, context);
+    case MINTYPECONSTRUCTORTYPE_TYPE_FUNCTION: {
+        // MinTypeFunction
+        MinTypeFunction *variant = getMinTypeConstructorType_Function(node);
+        MinTypeFunction *new_variant = visitMinTypeFunction(variant, context);
         if (new_variant != variant) {
             PROTECT(new_variant);
-            result = newLamTypeConstructorType_Function(CPI(node), new_variant);
+            result = newMinTypeConstructorType_Function(CPI(node), new_variant);
         }
         break;
     }
-    case LAMTYPECONSTRUCTORTYPE_TYPE_TUPLE: {
-        // LamTypeConstructorArgs
-        LamTypeConstructorArgs *variant = getLamTypeConstructorType_Tuple(node);
-        LamTypeConstructorArgs *new_variant =
-            visitLamTypeConstructorArgs(variant, context);
+    case MINTYPECONSTRUCTORTYPE_TYPE_TUPLE: {
+        // MinTypeConstructorArgs
+        MinTypeConstructorArgs *variant = getMinTypeConstructorType_Tuple(node);
+        MinTypeConstructorArgs *new_variant =
+            visitMinTypeConstructorArgs(variant, context);
         if (new_variant != variant) {
             PROTECT(new_variant);
-            result = newLamTypeConstructorType_Tuple(CPI(node), new_variant);
+            result = newMinTypeConstructorType_Tuple(CPI(node), new_variant);
         }
         break;
     }
     default:
-        cant_happen("unrecognized LamTypeConstructorType type %d", node->type);
+        cant_happen("unrecognized MinTypeConstructorType type %d", node->type);
     }
 
     UNPROTECT(save);
     return result;
 }
 
-static LamInfo *visitLamInfo(LamInfo *node, LamAlphaEnv *context) {
+static MinInfo *visitMinInfo(MinInfo *node, MinAlphaEnv *context) {
     if (node == NULL)
         return NULL;
 
     int save = PROTECT(NULL);
-    LamInfo *result = node;
+    MinInfo *result = node;
 
     switch (node->type) {
-    case LAMINFO_TYPE_TYPECONSTRUCTORINFO: {
-        // LamTypeConstructorInfo
-        LamTypeConstructorInfo *variant = getLamInfo_TypeConstructorInfo(node);
-        LamTypeConstructorInfo *new_variant =
-            visitLamTypeConstructorInfo(variant, context);
+    case MININFO_TYPE_TYPECONSTRUCTORINFO: {
+        // MinTypeConstructorInfo
+        MinTypeConstructorInfo *variant = getMinInfo_TypeConstructorInfo(node);
+        MinTypeConstructorInfo *new_variant =
+            visitMinTypeConstructorInfo(variant, context);
         if (new_variant != variant) {
             PROTECT(new_variant);
-            result = newLamInfo_TypeConstructorInfo(CPI(node), new_variant);
+            result = newMinInfo_TypeConstructorInfo(CPI(node), new_variant);
         }
         break;
     }
-    case LAMINFO_TYPE_NAMESPACEINFO: {
-        // LamContext
-        LamContext *variant = getLamInfo_NameSpaceInfo(node);
-        LamContext *new_variant = visitLamContext(variant, context);
+    case MININFO_TYPE_NAMESPACEINFO: {
+        // MinContext
+        MinContext *variant = getMinInfo_NameSpaceInfo(node);
+        MinContext *new_variant = visitMinContext(variant, context);
         if (new_variant != variant) {
             PROTECT(new_variant);
-            result = newLamInfo_NameSpaceInfo(CPI(node), new_variant);
+            result = newMinInfo_NameSpaceInfo(CPI(node), new_variant);
         }
         break;
     }
-    case LAMINFO_TYPE_NSID: {
+    case MININFO_TYPE_NSID: {
         // int
         break;
     }
     default:
-        cant_happen("unrecognized LamInfo type %d", node->type);
+        cant_happen("unrecognized MinInfo type %d", node->type);
     }
 
     UNPROTECT(save);
     return result;
 }
 
-static LamNameSpaceArray *visitLamNameSpaceArray(LamNameSpaceArray *node,
-                                                 LamAlphaEnv *context) {
+static MinNameSpaceArray *visitMinNameSpaceArray(MinNameSpaceArray *node,
+                                                 MinAlphaEnv *context) {
     if (node == NULL)
         return NULL;
 
     bool changed = false;
-    LamNameSpaceArray *result = newLamNameSpaceArray();
+    MinNameSpaceArray *result = newMinNameSpaceArray();
     int save = PROTECT(result);
-    context->nameSpaces = newLamAlphaEnvArray();
+    context->nameSpaces = newMinAlphaEnvArray();
 
     // Iterate over all elements
     for (Index i = 0; i < node->size; i++) {
-        struct LamExp *element = peeknLamNameSpaceArray(node, i);
-        struct LamExp *new_element = visitLamExp(element, context);
+        struct MinExp *element = peeknMinNameSpaceArray(node, i);
+        struct MinExp *new_element = visitMinExp(element, context);
         PROTECT(new_element);
         changed = changed || (new_element != element);
-        pushLamNameSpaceArray(result, new_element);
+        pushMinNameSpaceArray(result, new_element);
     }
 
     if (changed) {
@@ -1671,19 +1671,19 @@ static LamNameSpaceArray *visitLamNameSpaceArray(LamNameSpaceArray *node,
     return node;
 }
 
-static void addBuiltInsToLamAlphaEnv(LamAlphaEnv *env, BuiltIns *b) {
+static void addBuiltInsToMinAlphaEnv(MinAlphaEnv *env, BuiltIns *b) {
     for (Index i = 0; i < b->size; i++) {
         // Bind only internal names; external names are provided by wrappers.
-        setLamAlphaTable(env->alphaTable, b->entries[i]->internalName,
+        setMinAlphaTable(env->alphaTable, b->entries[i]->internalName,
                          b->entries[i]->internalName);
     }
 }
 
-LamExp *alphaConvertLamExp(LamExp *exp, BuiltIns *builtIns) {
-    LamAlphaEnv *env = newLamAlphaEnv(NULL);
+MinExp *alphaConvertMinExp(MinExp *exp, BuiltIns *builtIns) {
+    MinAlphaEnv *env = newMinAlphaEnv(NULL);
     int save = PROTECT(env);
-    addBuiltInsToLamAlphaEnv(env, builtIns);
-    LamExp *result = visitLamExp(exp, env);
+    addBuiltInsToMinAlphaEnv(env, builtIns);
+    MinExp *result = visitMinExp(exp, env);
     UNPROTECT(save);
     return result;
 }

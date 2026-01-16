@@ -5,69 +5,69 @@
 # needs to create a closure to capture the continuation of a computation.
 #
 # Note: Only T_k transformations need continuation scaffolding.
-# T_c transformations pass LamExp* as regular function parameters.
+# T_c transformations pass MinExp* as regular function parameters.
 
 config:
   name: cps_kont
   description: "Continuation scaffolding for CPS transform"
   parserInfo: false
-  currency: LamExp
+  currency: MinExp
   includes:
-    - lambda.h
+    - minlam.h
   limited_includes:
-    - lambda_debug.h
+    - minlam_debug.h
 
 primitives: !include ../src/primitives.yaml
 
 external:
-  LamExp:
+  MinExp:
     meta:
-      brief: Lambda expressions
+      brief: Minbda expressions
     data:
-      cname: "struct LamExp *"
-      printFn: printLamExp
-      markFn: markLamExp
+      cname: "struct MinExp *"
+      printFn: printMinExp
+      markFn: markMinExp
       valued: true
-  LamArgs:
+  MinArgs:
     meta:
-      brief: List of LamExp
+      brief: List of MinExp
     data:
-      cname: "struct LamArgs *"
-      printFn: printLamArgs
-      markFn: markLamArgs
+      cname: "struct MinArgs *"
+      printFn: printMinArgs
+      markFn: markMinArgs
       valued: true
-  LamBindings:
+  MinBindings:
     meta:
-      brief: List of LamBindings
+      brief: List of MinBindings
     data:
-      cname: "struct LamBindings *"
-      printFn: printLamBindings
-      markFn: markLamBindings
+      cname: "struct MinBindings *"
+      printFn: printMinBindings
+      markFn: markMinBindings
       valued: true
-  LamCondCases:
+  MinCondCases:
     meta:
-      brief: List of LamCondCases
+      brief: List of MinCondCases
     data:
-      cname: "struct LamCondCases *"
-      printFn: printLamCondCases
-      markFn: markLamCondCases
+      cname: "struct MinCondCases *"
+      printFn: printMinCondCases
+      markFn: markMinCondCases
       valued: true
-  LamMatchList:
+  MinMatchList:
     data:
-      cname: "struct LamMatchList *"
-      printFn: printLamMatchList
-      markFn: markLamMatchList
+      cname: "struct MinMatchList *"
+      printFn: printMinMatchList
+      markFn: markMinMatchList
       valued: true
-  LamPrimOp:
+  MinPrimOp:
     data:
-      cname: "enum LamPrimOp"
+      cname: "enum MinPrimOp"
       printf: "%d"
       valued: true
-  LamSequence:
+  MinSequence:
     data:
-      cname: "struct LamSequence *"
-      printFn: printLamSequence
-      markFn: markLamSequence
+      cname: "struct MinSequence *"
+      printFn: printMinSequence
+      markFn: markMinSequence
       valued: true
 
 # Naming convention, since each kont is argument to T_k and never
@@ -95,9 +95,9 @@ continuations:
           }
       }
     free_vars:
-      c: LamExp
-      exprt: LamExp
-      exprf: LamExp
+      c: MinExp
+      exprt: MinExp
+      exprf: MinExp
 
   TcIff:
     transformer: T_k
@@ -117,9 +117,9 @@ continuations:
         }
       }
     free_vars:
-      sk: LamExp
-      exprt: LamExp
-      exprf: LamExp
+      sk: MinExp
+      exprt: MinExp
+      exprf: MinExp
 
   TcApply1:
     transformer: T_k
@@ -136,8 +136,8 @@ continuations:
           }
       }
     free_vars:
-      es: LamArgs
-      c: LamExp
+      es: MinArgs
+      c: MinExp
 
   TcApply2:
     transformer: T_k
@@ -154,8 +154,8 @@ continuations:
           }
       }
     free_vars:
-      sf: LamExp
-      c: LamExp
+      sf: MinExp
+      c: MinExp
 
   TkCond:
     transformer: T_k
@@ -177,8 +177,8 @@ continuations:
           }
       }
     free_vars:
-      c: LamExp
-      branches: LamCondCases
+      c: MinExp
+      branches: MinCondCases
 
   TcCond:
     transformer: T_k
@@ -200,8 +200,8 @@ continuations:
           }
       }
     free_vars:
-      sk: LamExp
-      branches: LamCondCases
+      sk: MinExp
+      branches: MinCondCases
 
   TkS1:
     transformer: T_k
@@ -218,7 +218,7 @@ continuations:
           }
       }
     free_vars:
-      t: LamArgs
+      t: MinArgs
       k: CpsKont
 
   TkS2:
@@ -237,7 +237,7 @@ continuations:
       }
     free_vars:
       k: CpsKont
-      hd: LamExp
+      hd: MinExp
 
   TcCallCC:
     transformer: T_k
@@ -252,7 +252,7 @@ continuations:
           })
       }
     free_vars:
-      c: LamExp
+      c: MinExp
 
   TkConstruct:
     transformer: T_k
@@ -280,7 +280,7 @@ continuations:
     free_vars:
       name: HashSymbol
       tag: int
-      c: LamExp
+      c: MinExp
 
   TkDeconstruct:
     transformer: T_k
@@ -310,7 +310,7 @@ continuations:
       name: HashSymbol
       nsId: int
       vec: int
-      c: LamExp
+      c: MinExp
 
   TkMakeTuple:
     transformer: T_k
@@ -334,7 +334,7 @@ continuations:
         })
       }
     free_vars:
-      c: LamExp
+      c: MinExp
 
   TkMakeVec:
     transformer: T_k
@@ -360,7 +360,7 @@ continuations:
       }
     free_vars:
       size: int
-      c: LamExp
+      c: MinExp
 
   TkMatch:
     transformer: T_k
@@ -377,8 +377,8 @@ continuations:
           })
         }
     free_vars:
-      c: LamExp
-      cases: LamMatchList
+      c: MinExp
+      cases: MinMatchList
 
   TcMatch:
     transformer: T_k
@@ -395,8 +395,8 @@ continuations:
           })), [c])
       }
     free_vars:
-      sk: LamExp
-      cases: LamMatchList
+      sk: MinExp
+      cases: MinMatchList
 
   TkNameSpaces:
     transformer: T_k
@@ -420,7 +420,7 @@ continuations:
         })
       }
     free_vars:
-      c: LamExp
+      c: MinExp
 
   TkPrimApp1:
     transformer: T_k
@@ -435,8 +435,8 @@ continuations:
       }
     free_vars:
       k: CpsKont
-      e2: LamExp
-      p: LamPrimOp
+      e2: MinExp
+      p: MinPrimOp
 
   TkPrimApp2:
     transformer: T_k
@@ -451,8 +451,8 @@ continuations:
       }
     free_vars:
       k: CpsKont
-      s1: LamExp
-      p: LamPrimOp
+      s1: MinExp
+      p: MinPrimOp
 
   TcPrimApp1:
     transformer: T_k
@@ -466,9 +466,9 @@ continuations:
         }) ///////////////////////////////////////////
       }
     free_vars:
-      c: LamExp
-      e2: LamExp
-      p: LamPrimOp
+      c: MinExp
+      e2: MinExp
+      p: MinPrimOp
 
   TcPrimApp2:
     transformer: T_k
@@ -482,9 +482,9 @@ continuations:
         })
       }
     free_vars:
-      c: LamExp
-      s1: LamExp
-      p: LamPrimOp
+      c: MinExp
+      s1: MinExp
+      p: MinPrimOp
 
   TkSequence:
     transformer: T_k
@@ -498,7 +498,7 @@ continuations:
       }
     free_vars:
       k: CpsKont
-      exprs: LamSequence
+      exprs: MinSequence
 
   TcSequence:
     transformer: T_k
@@ -511,8 +511,8 @@ continuations:
         })
       }
     free_vars:
-      c: LamExp
-      exprs: LamSequence
+      c: MinExp
+      exprs: MinSequence
 
   TkTag:
     transformer: T_k
@@ -536,7 +536,7 @@ continuations:
         })
       }
     free_vars:
-      c: LamExp
+      c: MinExp
 
   TkTupleIndex:
     transformer: T_k
@@ -564,4 +564,4 @@ continuations:
     free_vars:
       size: int
       index: int
-      c: LamExp
+      c: MinExp

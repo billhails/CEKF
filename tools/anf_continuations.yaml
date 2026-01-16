@@ -8,52 +8,52 @@ config:
   name: anf_kont
   description: "Continuation scaffolding for ANF normalization"
   parserInfo: false
-  currency: LamExp
+  currency: MinExp
   includes:
-    - lambda.h
+    - minlam.h
   limited_includes:
-    - lambda_debug.h
+    - minlam_debug.h
 
 primitives: !include ../src/primitives.yaml
 
 external:
-  LamExp:
+  MinExp:
     meta:
       brief: Lambda expressions
     data:
-      cname: "struct LamExp *"
-      printFn: printLamExp
-      markFn: markLamExp
+      cname: "struct MinExp *"
+      printFn: printMinExp
+      markFn: markMinExp
       valued: true
-  LamArgs:
+  MinArgs:
     meta:
-      brief: List of LamExp
+      brief: List of MinExp
     data:
-      cname: "struct LamArgs *"
-      printFn: printLamArgs
-      markFn: markLamArgs
+      cname: "struct MinArgs *"
+      printFn: printMinArgs
+      markFn: markMinArgs
       valued: true
-  LamBindings:
+  MinBindings:
     meta:
-      brief: List of LamBindings
+      brief: List of MinBindings
     data:
-      cname: "struct LamBindings *"
-      printFn: printLamBindings
-      markFn: markLamBindings
+      cname: "struct MinBindings *"
+      printFn: printMinBindings
+      markFn: markMinBindings
       valued: true
-  LamCondCases:
+  MinCondCases:
     meta:
-      brief: List of LamCondCases
+      brief: List of MinCondCases
     data:
-      cname: "struct LamCondCases *"
-      printFn: printLamCondCases
-      markFn: markLamCondCases
+      cname: "struct MinCondCases *"
+      printFn: printMinCondCases
+      markFn: markMinCondCases
       valued: true
-  LamMatchList:
+  MinMatchList:
     data:
-      cname: "struct LamMatchList *"
-      printFn: printLamMatchList
-      markFn: markLamMatchList
+      cname: "struct MinMatchList *"
+      printFn: printMinMatchList
+      markFn: markMinMatchList
       valued: true
 
 continuations:
@@ -90,7 +90,7 @@ continuations:
                       `(let ,anfbindings
                             ,(normalize body k))])))
     free_vars:
-      body: LamExp
+      body: MinExp
       k: AnfKont
 
   normalizeIff:
@@ -107,8 +107,8 @@ continuations:
                               ,(normalize-term e2)))])))
     free_vars:
       k: AnfKont
-      e1: LamExp
-      e2: LamExp
+      e1: MinExp
+      e2: MinExp
 
   normalizeApplyOuter:
     key: callOuter
@@ -122,7 +122,7 @@ continuations:
                       (normalize-names Ms
                           (λ (ts) (k `(,t . ,ts))))]))))
     free_vars:
-      Ms: LamArgs
+      Ms: MinArgs
       k: AnfKont
 
   normalizeApplyInner:
@@ -137,7 +137,7 @@ continuations:
                       (normalize-names Ms
                           [λ (ts) (k `(,t . ,ts))])))))
     free_vars:
-      t: LamExp
+      t: MinExp
       k: AnfKont
 
   normalizeNamesOuter:
@@ -151,7 +151,7 @@ continuations:
                   (normalize-names (cdr Ms) (λ (ts)
                       (k `(,t . ,ts))))]))))
     free_vars:
-      Ms: LamArgs
+      Ms: MinArgs
       k: AnfKont
 
   normalizeNamesInner:
@@ -165,7 +165,7 @@ continuations:
                   (normalize-names (cdr Ms) [λ (ts)
                       (k `(,t . ,ts))])]))))
     free_vars:
-      t: LamExp
+      t: MinExp
       k: AnfKont
 
   normalizeLetRec:
@@ -180,7 +180,7 @@ continuations:
                       `(letrec ,anfbindings
                                 ,(normalize body k))])))
     free_vars:
-      body: LamExp
+      body: MinExp
       k: AnfKont
 
   normalizeBindingsOuter:
@@ -199,7 +199,7 @@ continuations:
                           (k `((,x ,anfval) . ,anfrest))))]))))
     free_vars:
       x: HashSymbol
-      rest: LamBindings
+      rest: MinBindings
       k: AnfKont
 
   normalizeBindingsInner:
@@ -218,7 +218,7 @@ continuations:
                           (k `((,x ,anfval) . ,anfrest))])))))
     free_vars:
       x: HashSymbol
-      anfVal: LamExp
+      anfVal: MinExp
       k: AnfKont
 
   normalizeConstruct:
@@ -286,7 +286,7 @@ continuations:
                   [λ (t)
                     (k `(cond ,t ,(normalize-cases cases)))])))
     free_vars:
-      cases: LamCondCases
+      cases: MinCondCases
       k: AnfKont
 
   normalizeMatch:
@@ -301,7 +301,7 @@ continuations:
                       (k `(match-expr ,t
                                       ,(normalize-match-cases cases)))])))
     free_vars:
-      cases: LamMatchList
+      cases: MinMatchList
       k: AnfKont
 
   normalizePrimappOuter:
@@ -318,7 +318,7 @@ continuations:
                               (k `(primitive-apply ,type ,anfE1 ,anfE2))))])))
     free_vars:
       type: int
-      e2: LamExp
+      e2: MinExp
       k: AnfKont
 
   normalizePrimappInner:
@@ -335,7 +335,7 @@ continuations:
                               (k `(primitive-apply ,type ,anfE1 ,anfE2))])))))
     free_vars:
       type: int
-      anfE1: LamExp
+      anfE1: MinExp
       k: AnfKont
 
   normalizeTupleIndex:

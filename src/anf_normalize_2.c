@@ -31,8 +31,8 @@
 
 #include "anf_kont.h"
 #include "common.h"
-#include "lambda.h"
-#include "lambda_pp.h"
+#include "minlam.h"
+#include "minlam_pp.h"
 #include "symbol.h"
 #include <stdio.h>
 
@@ -49,31 +49,31 @@
 
 static ParserInfo NULLPI = (ParserInfo){.lineNo = 0, .fileName = ""};
 
-static LamExp *normalize(LamExp *exp, AnfKont *k);
+static MinExp *normalize(MinExp *exp, AnfKont *k);
 
-static inline LamExp *INVOKE(AnfKont *k, LamExp *arg) {
+static inline MinExp *INVOKE(AnfKont *k, MinExp *arg) {
     return k->wrapper(arg, k->env);
 }
 
-static LamExp *makeSingleLet(HashSymbol *y, LamExp *e, LamExp *body) {
-    LamBindings *bindings = newLamBindings(CPI(e), y, e, NULL);
+static MinExp *makeSingleLet(HashSymbol *y, MinExp *e, MinExp *body) {
+    MinBindings *bindings = newMinBindings(CPI(e), y, e, NULL);
     int save = PROTECT(bindings);
-    LamExp *res = makeLamExp_Let(CPI(e), bindings, body);
+    MinExp *res = makeMinExp_Let(CPI(e), bindings, body);
     UNPROTECT(save);
     return res;
 }
 
-static bool isValueExp(LamExp *exp) {
+static bool isValueExp(MinExp *exp) {
     switch (exp->type) {
-    case LAMEXP_TYPE_BACK:
-    case LAMEXP_TYPE_BIGINTEGER:
-    case LAMEXP_TYPE_CHARACTER:
-    case LAMEXP_TYPE_CONSTANT:
-    case LAMEXP_TYPE_CONSTRUCTOR:
-    case LAMEXP_TYPE_ENV:
-    case LAMEXP_TYPE_ERROR:
-    case LAMEXP_TYPE_STDINT:
-    case LAMEXP_TYPE_VAR:
+    case MINEXP_TYPE_BACK:
+    case MINEXP_TYPE_BIGINTEGER:
+    case MINEXP_TYPE_CHARACTER:
+    case MINEXP_TYPE_CONSTANT:
+    case MINEXP_TYPE_CONSTRUCTOR:
+    case MINEXP_TYPE_ENV:
+    case MINEXP_TYPE_ERROR:
+    case MINEXP_TYPE_STDINT:
+    case MINEXP_TYPE_VAR:
         return true;
     default:
         return false;
@@ -83,17 +83,17 @@ static bool isValueExp(LamExp *exp) {
 // (define (normalize-term e)
 //     (normalize e (λ (x) x)))
 
-static LamExp *normalize_term(LamExp *e) {
+static MinExp *normalize_term(MinExp *e) {
     ENTER(normalize_term);
     AnfKont *termKont = makeKont_normalizeTerm(); // Identity continuation
     int save = PROTECT(termKont);
-    LamExp *result = normalize(e, termKont);
+    MinExp *result = normalize(e, termKont);
     UNPROTECT(save);
     LEAVE(normalize_term);
     return result;
 }
 
-static LamExp *normalizeTermKont(LamExp *exp, NormalizeTermKontEnv *k
+static MinExp *normalizeTermKont(MinExp *exp, NormalizeTermKontEnv *k
                                  __attribute__((unused))) {
     return exp;
 }
@@ -105,25 +105,25 @@ static LamExp *normalizeTermKont(LamExp *exp, NormalizeTermKontEnv *k
 //        (let ((y (gensym)))
 //             `(let (,y ,x) ,(k y)))))))
 
-static LamExp *normalize_name(LamExp *e, AnfKont *k) {
+static MinExp *normalize_name(MinExp *e, AnfKont *k) {
     ENTER(normalize_name);
     AnfKont *nameKont = makeKont_normalizeName(k);
     int save = PROTECT(nameKont);
-    LamExp *result = normalize(e, nameKont);
+    MinExp *result = normalize(e, nameKont);
     UNPROTECT(save);
     LEAVE(normalize_name);
     return result;
 }
 
-static LamExp *normalizeNameKont(LamExp *x, NormalizeNameKontEnv *env) {
+static MinExp *normalizeNameKont(MinExp *x, NormalizeNameKontEnv *env) {
     if (isValueExp(x)) {
         return INVOKE(env->k, x);
     } else {
-        LamExp *y = newLamExp_Var(CPI(x), genSymDollar(""));
+        MinExp *y = newMinExp_Var(CPI(x), genSymDollar(""));
         int save = PROTECT(y);
-        LamExp *body = INVOKE(env->k, y);
+        MinExp *body = INVOKE(env->k, y);
         PROTECT(body);
-        LamExp *letExp = makeSingleLet(y->val.var, x, body);
+        MinExp *letExp = makeSingleLet(y->val.var, x, body);
         UNPROTECT(save);
         return letExp;
     }
@@ -136,38 +136,38 @@ static LamExp *normalizeNameKont(LamExp *x, NormalizeNameKontEnv *env) {
 //             (normalize-names (cdr Ms) [λ (ts)
 //                 (k `(,t . ,ts))])]))))
 
-static LamExp *normalize_names(LamArgs *Ms, AnfKont *k) {
+static MinExp *normalize_names(MinArgs *Ms, AnfKont *k) {
     ENTER(normalize_names);
     if (Ms == NULL) {
-        LamExp *nullArgs = newLamExp_Args(NULLPI, NULL);
+        MinExp *nullArgs = newMinExp_Args(NULLPI, NULL);
         int save = PROTECT(nullArgs);
-        LamExp *result = INVOKE(k, nullArgs);
+        MinExp *result = INVOKE(k, nullArgs);
         UNPROTECT(save);
         LEAVE(normalize_names);
         return result;
     }
     AnfKont *k1 = makeKont_normalizeNamesOuter(Ms, k);
     int save = PROTECT(k1);
-    LamExp *result = normalize_name(Ms->exp, k1);
+    MinExp *result = normalize_name(Ms->exp, k1);
     UNPROTECT(save);
     LEAVE(normalize_names);
     return result;
 }
 
-static LamExp *normalizeNamesOuterKont(LamExp *t,
+static MinExp *normalizeNamesOuterKont(MinExp *t,
                                        NormalizeNamesOuterKontEnv *env) {
     AnfKont *k2 = makeKont_normalizeNamesInner(t, env->k);
     int save = PROTECT(k2);
-    LamExp *result = normalize_names(env->Ms->next, k2);
+    MinExp *result = normalize_names(env->Ms->next, k2);
     UNPROTECT(save);
     return result;
 }
 
-static LamExp *normalizeNamesInnerKont(LamExp *ts,
+static MinExp *normalizeNamesInnerKont(MinExp *ts,
                                        NormalizeNamesInnerKontEnv *env) {
-    LamExp *newArgs = makeLamExp_Args(CPI(env->t), env->t, getLamExp_Args(ts));
+    MinExp *newArgs = makeMinExp_Args(CPI(env->t), env->t, getMinExp_Args(ts));
     int save = PROTECT(newArgs);
-    LamExp *result = INVOKE(env->k, newArgs);
+    MinExp *result = INVOKE(env->k, newArgs);
     UNPROTECT(save);
     return result;
 }
@@ -179,26 +179,26 @@ static LamExp *normalizeNamesInnerKont(LamExp *ts,
 //                     ,(normalize-term e1)
 //                     ,(normalize-term e2)))]))
 
-static LamExp *normalize_Iff(LamExp *exp, AnfKont *k) {
+static MinExp *normalize_Iff(MinExp *exp, AnfKont *k) {
     ENTER(normalize_Iff);
-    LamIff *iff = getLamExp_Iff(exp);
+    MinIff *iff = getMinExp_Iff(exp);
     AnfKont *iffKont =
         makeKont_normalizeIff(k, iff->consequent, iff->alternative);
     int save = PROTECT(iffKont);
-    LamExp *result = normalize_name(iff->condition, iffKont);
+    MinExp *result = normalize_name(iff->condition, iffKont);
     UNPROTECT(save);
     LEAVE(normalize_Iff);
     return result;
 }
 
-static LamExp *normalizeIffKont(LamExp *test, NormalizeIffKontEnv *env) {
-    LamExp *consequent = normalize_term(env->e1);
+static MinExp *normalizeIffKont(MinExp *test, NormalizeIffKontEnv *env) {
+    MinExp *consequent = normalize_term(env->e1);
     int save = PROTECT(consequent);
-    LamExp *alternative = normalize_term(env->e2);
+    MinExp *alternative = normalize_term(env->e2);
     PROTECT(alternative);
-    LamExp *ifExp = makeLamExp_Iff(CPI(test), test, consequent, alternative);
+    MinExp *ifExp = makeMinExp_Iff(CPI(test), test, consequent, alternative);
     PROTECT(ifExp);
-    LamExp *result = INVOKE(env->k, ifExp);
+    MinExp *result = INVOKE(env->k, ifExp);
     UNPROTECT(save);
     return result;
 }
@@ -209,31 +209,31 @@ static LamExp *normalizeIffKont(LamExp *test, NormalizeIffKontEnv *env) {
 //        (normalize-names Ms
 //             [λ (ts) (k `(,t . ,ts))])]))
 
-static LamExp *normalize_Apply(LamExp *exp, AnfKont *k) {
+static MinExp *normalize_Apply(MinExp *exp, AnfKont *k) {
     ENTER(normalize_Apply);
-    AnfKont *k1 = makeKont_normalizeApplyOuter(getLamExp_Apply(exp)->args, k);
+    AnfKont *k1 = makeKont_normalizeApplyOuter(getMinExp_Apply(exp)->args, k);
     int save = PROTECT(k1);
-    LamExp *result = normalize_name(getLamExp_Apply(exp)->function, k1);
+    MinExp *result = normalize_name(getMinExp_Apply(exp)->function, k1);
     UNPROTECT(save);
     LEAVE(normalize_Apply);
     return result;
 }
 
-static LamExp *normalizeApplyOuterKont(LamExp *t,
+static MinExp *normalizeApplyOuterKont(MinExp *t,
                                        NormalizeApplyOuterKontEnv *env) {
     AnfKont *k2 = makeKont_normalizeApplyInner(t, env->k);
     int save = PROTECT(k2);
-    LamExp *result = normalize_names(env->Ms, k2);
+    MinExp *result = normalize_names(env->Ms, k2);
     UNPROTECT(save);
     return result;
 }
 
-static LamExp *normalizeApplyInnerKont(LamExp *ts,
+static MinExp *normalizeApplyInnerKont(MinExp *ts,
                                        NormalizeApplyInnerKontEnv *env) {
-    LamExp *newApply =
-        makeLamExp_Apply(CPI(env->t), env->t, getLamExp_Args(ts));
+    MinExp *newApply =
+        makeMinExp_Apply(CPI(env->t), env->t, getMinExp_Args(ts));
     int save = PROTECT(newApply);
-    LamExp *result = INVOKE(env->k, newApply);
+    MinExp *result = INVOKE(env->k, newApply);
     UNPROTECT(save);
     return result;
 }
@@ -249,12 +249,12 @@ static LamExp *normalizeApplyInnerKont(LamExp *ts,
 //                 [λ (anfrest)
 //                     (k `((,x ,anfval) . ,anfrest))])]))))
 
-static LamExp *normalize_bindings(LamBindings *bindings, AnfKont *k) {
+static MinExp *normalize_bindings(MinBindings *bindings, AnfKont *k) {
     ENTER(normalize_bindings);
     if (bindings == NULL) {
-        LamExp *nilExp = newLamExp_Bindings(NULLPI, NULL);
+        MinExp *nilExp = newMinExp_Bindings(NULLPI, NULL);
         int save = PROTECT(nilExp);
-        LamExp *result = INVOKE(k, nilExp);
+        MinExp *result = INVOKE(k, nilExp);
         UNPROTECT(save);
         LEAVE(normalize_bindings);
         return result;
@@ -262,28 +262,28 @@ static LamExp *normalize_bindings(LamBindings *bindings, AnfKont *k) {
     AnfKont *bindingsKont =
         makeKont_normalizeBindingsOuter(bindings->var, bindings->next, k);
     int save = PROTECT(bindingsKont);
-    LamExp *result = normalize(bindings->val, bindingsKont);
+    MinExp *result = normalize(bindings->val, bindingsKont);
     UNPROTECT(save);
     LEAVE(normalize_bindings);
     return result;
 }
 
-static LamExp *normalizeBindingsOuterKont(LamExp *anfVal,
+static MinExp *normalizeBindingsOuterKont(MinExp *anfVal,
                                           NormalizeBindingsOuterKontEnv *env) {
     AnfKont *k = makeKont_normalizeBindingsInner(env->x, anfVal, env->k);
     int save = PROTECT(k);
-    LamExp *result = normalize_bindings(env->rest, k);
+    MinExp *result = normalize_bindings(env->rest, k);
     UNPROTECT(save);
     return result;
 }
 
-static LamExp *normalizeBindingsInnerKont(LamExp *anfrest,
+static MinExp *normalizeBindingsInnerKont(MinExp *anfrest,
                                           NormalizeBindingsInnerKontEnv *env) {
-    LamBindings *rest = getLamExp_Bindings(anfrest);
-    LamExp *bindingsExp =
-        makeLamExp_Bindings(CPI(env->anfVal), env->x, env->anfVal, rest);
+    MinBindings *rest = getMinExp_Bindings(anfrest);
+    MinExp *bindingsExp =
+        makeMinExp_Bindings(CPI(env->anfVal), env->x, env->anfVal, rest);
     int save = PROTECT(bindingsExp);
-    LamExp *result = INVOKE(env->k, bindingsExp);
+    MinExp *result = INVOKE(env->k, bindingsExp);
     UNPROTECT(save);
     return result;
 }
@@ -294,23 +294,23 @@ static LamExp *normalizeBindingsInnerKont(LamExp *anfrest,
 //             `(letrec ,anfbindings
 //                      ,(normalize body k))])))
 
-static LamExp *normalize_LetRec(LamExp *exp, AnfKont *k) {
+static MinExp *normalize_LetRec(MinExp *exp, AnfKont *k) {
     ENTER(normalize_LetRec);
-    LamLetRec *letrec = getLamExp_LetRec(exp);
+    MinLetRec *letrec = getMinExp_LetRec(exp);
     AnfKont *k1 = makeKont_normalizeLetRec(letrec->body, k);
     int save = PROTECT(k1);
-    LamExp *result = normalize_bindings(letrec->bindings, k1);
+    MinExp *result = normalize_bindings(letrec->bindings, k1);
     UNPROTECT(save);
     LEAVE(normalize_LetRec);
     return result;
 }
 
-static LamExp *normalizeLetRecKont(LamExp *anfbindings,
+static MinExp *normalizeLetRecKont(MinExp *anfbindings,
                                    NormalizeLetRecKontEnv *env) {
-    LamExp *body = normalize(env->body, env->k);
+    MinExp *body = normalize(env->body, env->k);
     int save = PROTECT(body);
-    LamExp *result = makeLamExp_LetRec(CPI(env->body),
-                                       getLamExp_Bindings(anfbindings), body);
+    MinExp *result = makeMinExp_LetRec(CPI(env->body),
+                                       getMinExp_Bindings(anfbindings), body);
     UNPROTECT(save);
     return result;
 }
@@ -321,21 +321,21 @@ static LamExp *normalizeLetRecKont(LamExp *anfbindings,
 //             `(let ,anfbindings
 //                   ,(normalize body k))])))
 
-static LamExp *normalize_Let(LamExp *exp, AnfKont *k) {
+static MinExp *normalize_Let(MinExp *exp, AnfKont *k) {
     ENTER(normalize_Let);
-    AnfKont *k1 = makeKont_normalizeLet(getLamExp_Let(exp)->body, k);
+    AnfKont *k1 = makeKont_normalizeLet(getMinExp_Let(exp)->body, k);
     int save = PROTECT(k1);
-    LamExp *result = normalize_bindings(getLamExp_Let(exp)->bindings, k1);
+    MinExp *result = normalize_bindings(getMinExp_Let(exp)->bindings, k1);
     UNPROTECT(save);
     LEAVE(normalize_Let);
     return result;
 }
 
-static LamExp *normalizeLetKont(LamExp *anfbindings, NormalizeLetKontEnv *env) {
-    LamExp *body = normalize(env->body, env->k);
+static MinExp *normalizeLetKont(MinExp *anfbindings, NormalizeLetKontEnv *env) {
+    MinExp *body = normalize(env->body, env->k);
     int save = PROTECT(body);
-    LamExp *result =
-        makeLamExp_Let(CPI(env->body), getLamExp_Bindings(anfbindings), body);
+    MinExp *result =
+        makeMinExp_Let(CPI(env->body), getMinExp_Bindings(anfbindings), body);
     UNPROTECT(save);
     return result;
 }
@@ -344,25 +344,25 @@ static LamExp *normalizeLetKont(LamExp *anfbindings, NormalizeLetKontEnv *env) {
 //     (normalize-names Ms
 //         [λ (ts) (k `(construct ,name ,tag . ,ts))]))
 
-static LamExp *normalize_Construct(LamExp *exp, AnfKont *k) {
+static MinExp *normalize_Construct(MinExp *exp, AnfKont *k) {
     ENTER(normalize_Construct);
-    LamConstruct *construct = getLamExp_Construct(exp);
+    MinConstruct *construct = getMinExp_Construct(exp);
     AnfKont *k1 =
         makeKont_normalizeConstruct(construct->name, construct->tag, k);
     int save = PROTECT(k1);
-    LamExp *result = normalize_names(construct->args, k1);
+    MinExp *result = normalize_names(construct->args, k1);
     UNPROTECT(save);
     LEAVE(normalize_Construct);
     return result;
 }
 
-static LamExp *normalizeConstructKont(LamExp *ets,
+static MinExp *normalizeConstructKont(MinExp *ets,
                                       NormalizeConstructKontEnv *env) {
-    LamArgs *ts = getLamExp_Args(ets);
-    LamExp *newConstruct =
-        makeLamExp_Construct(CPI(ets), env->name, env->tag, ts);
+    MinArgs *ts = getMinExp_Args(ets);
+    MinExp *newConstruct =
+        makeMinExp_Construct(CPI(ets), env->name, env->tag, ts);
     int save = PROTECT(newConstruct);
-    LamExp *result = INVOKE(env->k, newConstruct);
+    MinExp *result = INVOKE(env->k, newConstruct);
     UNPROTECT(save);
     return result;
 }
@@ -371,23 +371,23 @@ static LamExp *normalizeConstructKont(LamExp *ets,
 //     (normalize-names Ms
 //         [λ (ts) (k `(make-tuple . ,ts))]))
 
-static LamExp *normalize_MakeTuple(LamExp *exp, AnfKont *k) {
+static MinExp *normalize_MakeTuple(MinExp *exp, AnfKont *k) {
     ENTER(normalize_MakeTuple);
-    LamArgs *lamArgs = getLamExp_MakeTuple(exp);
+    MinArgs *minArgs = getMinExp_MakeTuple(exp);
     AnfKont *k2 = makeKont_normalizeMakeTuple(k);
     int save = PROTECT(k2);
-    LamExp *result = normalize_names(lamArgs, k2);
+    MinExp *result = normalize_names(minArgs, k2);
     UNPROTECT(save);
     LEAVE(normalize_MakeTuple);
     return result;
 }
 
-static LamExp *normalizeMakeTupleKont(LamExp *ts,
+static MinExp *normalizeMakeTupleKont(MinExp *ts,
                                       NormalizeMakeTupleKontEnv *env) {
-    LamArgs *tts = getLamExp_Args(ts);
-    LamExp *newMakeTuple = newLamExp_MakeTuple(CPI(ts), tts);
+    MinArgs *tts = getMinExp_Args(ts);
+    MinExp *newMakeTuple = newMinExp_MakeTuple(CPI(ts), tts);
     int save = PROTECT(newMakeTuple);
-    LamExp *result = INVOKE(env->k, newMakeTuple);
+    MinExp *result = INVOKE(env->k, newMakeTuple);
     UNPROTECT(save);
     return result;
 }
@@ -396,22 +396,22 @@ static LamExp *normalizeMakeTupleKont(LamExp *ts,
 //     (normalize-names Ms
 //         [λ (ts) (k `(make-vec ,nArgs . ,ts))]))
 
-static LamExp *normalize_MakeVec(LamExp *exp, AnfKont *k) {
+static MinExp *normalize_MakeVec(MinExp *exp, AnfKont *k) {
     ENTER(normalize_MakeVec);
-    LamMakeVec *makeVec = getLamExp_MakeVec(exp);
+    MinMakeVec *makeVec = getMinExp_MakeVec(exp);
     AnfKont *k2 = makeKont_normalizeMakeVec(makeVec->nArgs, k);
     int save = PROTECT(k2);
-    LamExp *result = normalize_names(makeVec->args, k2);
+    MinExp *result = normalize_names(makeVec->args, k2);
     UNPROTECT(save);
     LEAVE(normalize_MakeVec);
     return result;
 }
 
-static LamExp *normalizeMakeVecKont(LamExp *ts, NormalizeMakeVecKontEnv *env) {
-    LamArgs *tts = getLamExp_Args(ts);
-    LamExp *newMakeVec = makeLamExp_MakeVec(CPI(ts), env->nArgs, tts);
+static MinExp *normalizeMakeVecKont(MinExp *ts, NormalizeMakeVecKontEnv *env) {
+    MinArgs *tts = getMinExp_Args(ts);
+    MinExp *newMakeVec = makeMinExp_MakeVec(CPI(ts), env->nArgs, tts);
     int save = PROTECT(newMakeVec);
-    LamExp *result = INVOKE(env->k, newMakeVec);
+    MinExp *result = INVOKE(env->k, newMakeVec);
     UNPROTECT(save);
     return result;
 }
@@ -420,24 +420,24 @@ static LamExp *normalizeMakeVecKont(LamExp *ts, NormalizeMakeVecKontEnv *env) {
 //     (normalize-name e0
 //         [λ (t) (k `(deconstruct ,name ,nsId ,vec ,t))]))
 
-static LamExp *normalize_Deconstruct(LamExp *exp, AnfKont *k) {
+static MinExp *normalize_Deconstruct(MinExp *exp, AnfKont *k) {
     ENTER(normalize_Deconstruct);
-    LamDeconstruct *deconstruct = getLamExp_Deconstruct(exp);
+    MinDeconstruct *deconstruct = getMinExp_Deconstruct(exp);
     AnfKont *k2 = makeKont_normalizeDeconstruct(
         deconstruct->name, deconstruct->nsId, deconstruct->vec, k);
     int save = PROTECT(k2);
-    LamExp *result = normalize_name(deconstruct->exp, k2);
+    MinExp *result = normalize_name(deconstruct->exp, k2);
     UNPROTECT(save);
     LEAVE(normalize_Deconstruct);
     return result;
 }
 
-static LamExp *normalizeDeconstructKont(LamExp *t,
+static MinExp *normalizeDeconstructKont(MinExp *t,
                                         NormalizeDeconstructKontEnv *env) {
-    LamExp *newDeconstruct =
-        makeLamExp_Deconstruct(CPI(t), env->name, env->nsId, env->vec, t);
+    MinExp *newDeconstruct =
+        makeMinExp_Deconstruct(CPI(t), env->name, env->nsId, env->vec, t);
     int save = PROTECT(newDeconstruct);
-    LamExp *result = INVOKE(env->k, newDeconstruct);
+    MinExp *result = INVOKE(env->k, newDeconstruct);
     UNPROTECT(save);
     return result;
 }
@@ -446,78 +446,78 @@ static LamExp *normalizeDeconstructKont(LamExp *t,
 //     (normalize-name e0
 //         [λ (t) (k `(cond ,t ,(normalize-cases cases)))]))
 
-static LamExp *normalize_Cond(LamExp *exp, AnfKont *k) {
+static MinExp *normalize_Cond(MinExp *exp, AnfKont *k) {
     ENTER(normalize_Cond);
-    LamCond *cond = getLamExp_Cond(exp);
+    MinCond *cond = getMinExp_Cond(exp);
     AnfKont *k1 = makeKont_normalizeCond(cond->cases, k);
     int save = PROTECT(k1);
-    LamExp *result = normalize_name(cond->value, k1);
+    MinExp *result = normalize_name(cond->value, k1);
     UNPROTECT(save);
     LEAVE(normalize_Cond);
     return result;
 }
 
-static LamCharCondCases *normalize_char_cases(LamCharCondCases *cases) {
+static MinCharCondCases *normalize_char_cases(MinCharCondCases *cases) {
     if (cases == NULL) {
         return NULL;
     }
-    LamCharCondCases *rest = normalize_char_cases(cases->next);
+    MinCharCondCases *rest = normalize_char_cases(cases->next);
     int save = PROTECT(rest);
-    LamExp *newExp = normalize_term(cases->body);
+    MinExp *newExp = normalize_term(cases->body);
     PROTECT(newExp);
-    LamCharCondCases *newCases =
-        newLamCharCondCases(CPI(cases), cases->constant, newExp, rest);
+    MinCharCondCases *newCases =
+        newMinCharCondCases(CPI(cases), cases->constant, newExp, rest);
     UNPROTECT(save);
     return newCases;
 }
 
-static LamIntCondCases *normalize_int_cases(LamIntCondCases *cases) {
+static MinIntCondCases *normalize_int_cases(MinIntCondCases *cases) {
     if (cases == NULL) {
         return NULL;
     }
-    LamIntCondCases *rest = normalize_int_cases(cases->next);
+    MinIntCondCases *rest = normalize_int_cases(cases->next);
     int save = PROTECT(rest);
-    LamExp *newExp = normalize_term(cases->body);
+    MinExp *newExp = normalize_term(cases->body);
     PROTECT(newExp);
-    LamIntCondCases *newCases =
-        newLamIntCondCases(CPI(cases), cases->constant, newExp, rest);
+    MinIntCondCases *newCases =
+        newMinIntCondCases(CPI(cases), cases->constant, newExp, rest);
     UNPROTECT(save);
     return newCases;
 }
 
-static LamCondCases *normalize_cases(LamCondCases *cases) {
+static MinCondCases *normalize_cases(MinCondCases *cases) {
     if (cases == NULL) {
         return NULL;
     }
     switch (cases->type) {
-    case LAMCONDCASES_TYPE_CHARACTERS: {
-        LamCharCondCases *ccases =
-            normalize_char_cases(getLamCondCases_Characters(cases));
+    case MINCONDCASES_TYPE_CHARACTERS: {
+        MinCharCondCases *ccases =
+            normalize_char_cases(getMinCondCases_Characters(cases));
         int save = PROTECT(ccases);
-        LamCondCases *newCases = newLamCondCases_Characters(CPI(cases), ccases);
+        MinCondCases *newCases = newMinCondCases_Characters(CPI(cases), ccases);
         UNPROTECT(save);
         return newCases;
     }
-    case LAMCONDCASES_TYPE_INTEGERS: {
-        LamIntCondCases *icases =
-            normalize_int_cases(getLamCondCases_Integers(cases));
+    case MINCONDCASES_TYPE_INTEGERS: {
+        MinIntCondCases *icases =
+            normalize_int_cases(getMinCondCases_Integers(cases));
         int save = PROTECT(icases);
-        LamCondCases *newCases = newLamCondCases_Integers(CPI(cases), icases);
+        MinCondCases *newCases = newMinCondCases_Integers(CPI(cases), icases);
         UNPROTECT(save);
         return newCases;
     }
     default:
-        cant_happen("normalize_cases: unhandled LamCondCases type %s",
-                    lamCondCasesTypeName(cases->type));
+        cant_happen("normalize_cases: unhandled MinCondCases type %s",
+                    minCondCasesTypeName(cases->type));
     }
 }
 
-static LamExp *normalizeCondKont(LamExp *t, NormalizeCondKontEnv *env) {
-    LamCondCases *cases = normalize_cases(env->cases);
+static MinExp *normalizeCondKont(MinExp *t, NormalizeCondKontEnv *env) {
+    MinCondCases *cases = normalize_cases(env->cases);
     int save = PROTECT(cases);
-    LamExp *newCond = makeLamExp_Cond(CPI(t), t, cases);
+    MinExp *newCond = makeMinExp_Cond(CPI(t), t, cases);
     PROTECT(newCond);
-    LamExp *result = INVOKE(env->k, newCond);
+    MinExp *result = INVOKE(env->k, newCond);
     UNPROTECT(save);
     return result;
 }
@@ -528,37 +528,37 @@ static LamExp *normalizeCondKont(LamExp *t, NormalizeCondKontEnv *env) {
 //             (k `(match-expr ,t
 //                             ,(normalize-match-cases cases)))])))
 
-static LamExp *normalize_Match(LamExp *exp, AnfKont *k) {
+static MinExp *normalize_Match(MinExp *exp, AnfKont *k) {
     ENTER(normalize_Match);
-    LamMatch *match = getLamExp_Match(exp);
+    MinMatch *match = getMinExp_Match(exp);
     AnfKont *k1 = makeKont_normalizeMatch(match->cases, k);
     int save = PROTECT(k1);
-    LamExp *result = normalize_name(match->index, k1);
+    MinExp *result = normalize_name(match->index, k1);
     UNPROTECT(save);
     LEAVE(normalize_Match);
     return result;
 }
 
-static LamMatchList *normalize_match_cases(LamMatchList *cases) {
+static MinMatchList *normalize_match_cases(MinMatchList *cases) {
     if (cases == NULL) {
         return NULL;
     }
-    LamMatchList *rest = normalize_match_cases(cases->next);
+    MinMatchList *rest = normalize_match_cases(cases->next);
     int save = PROTECT(rest);
-    LamExp *newExp = normalize_term(cases->body);
+    MinExp *newExp = normalize_term(cases->body);
     PROTECT(newExp);
-    LamMatchList *newCases =
-        newLamMatchList(CPI(cases), cases->matches, newExp, rest);
+    MinMatchList *newCases =
+        newMinMatchList(CPI(cases), cases->matches, newExp, rest);
     UNPROTECT(save);
     return newCases;
 }
 
-static LamExp *normalizeMatchKont(LamExp *t, NormalizeMatchKontEnv *env) {
-    LamMatchList *cases = normalize_match_cases(env->cases);
+static MinExp *normalizeMatchKont(MinExp *t, NormalizeMatchKontEnv *env) {
+    MinMatchList *cases = normalize_match_cases(env->cases);
     int save = PROTECT(cases);
-    LamExp *newMatch = makeLamExp_Match(CPI(t), t, cases);
+    MinExp *newMatch = makeMinExp_Match(CPI(t), t, cases);
     PROTECT(newMatch);
-    LamExp *result = INVOKE(env->k, newMatch);
+    MinExp *result = INVOKE(env->k, newMatch);
     UNPROTECT(save);
     return result;
 }
@@ -570,33 +570,33 @@ static LamExp *normalizeMatchKont(LamExp *t, NormalizeMatchKontEnv *env) {
 //                 (λ (anfE2)
 //                     (k `(primitive-apply ,type ,anfE1 ,anfE2))))]))
 
-static LamExp *normalize_PrimApp(LamExp *exp, AnfKont *k) {
+static MinExp *normalize_PrimApp(MinExp *exp, AnfKont *k) {
     ENTER(normalize_PrimApp);
-    LamPrimApp *primApp = getLamExp_Prim(exp);
+    MinPrimApp *primApp = getMinExp_Prim(exp);
     AnfKont *k1 =
         makeKont_normalizePrimappOuter(primApp->type, primApp->exp2, k);
     int save = PROTECT(k1);
-    LamExp *result = normalize_name(primApp->exp1, k1);
+    MinExp *result = normalize_name(primApp->exp1, k1);
     UNPROTECT(save);
     LEAVE(normalize_PrimApp);
     return result;
 }
 
-static LamExp *normalizePrimappOuterKont(LamExp *anfE0,
+static MinExp *normalizePrimappOuterKont(MinExp *anfE0,
                                          NormalizePrimappOuterKontEnv *env) {
     AnfKont *k2 = makeKont_normalizePrimappInner(env->type, anfE0, env->k);
     int save = PROTECT(k2);
-    LamExp *result = normalize_name(env->e2, k2);
+    MinExp *result = normalize_name(env->e2, k2);
     UNPROTECT(save);
     return result;
 }
 
-static LamExp *normalizePrimappInnerKont(LamExp *anfE2,
+static MinExp *normalizePrimappInnerKont(MinExp *anfE2,
                                          NormalizePrimappInnerKontEnv *env) {
-    LamExp *newPrimApp =
-        makeLamExp_Prim(CPI(anfE2), env->type, env->anfE1, anfE2);
+    MinExp *newPrimApp =
+        makeMinExp_Prim(CPI(anfE2), env->type, env->anfE1, anfE2);
     int save = PROTECT(newPrimApp);
-    LamExp *result = INVOKE(env->k, newPrimApp);
+    MinExp *result = INVOKE(env->k, newPrimApp);
     UNPROTECT(save);
     return result;
 }
@@ -605,24 +605,24 @@ static LamExp *normalizePrimappInnerKont(LamExp *anfE2,
 //     (normalize-name e0
 //         [λ (t0) (k `(tuple-index ,vec ,size ,t0))]))
 
-static LamExp *normalize_TupleIndex(LamExp *exp, AnfKont *k) {
+static MinExp *normalize_TupleIndex(MinExp *exp, AnfKont *k) {
     ENTER(normalize_TupleIndex);
-    LamTupleIndex *tupleIndexExp = getLamExp_TupleIndex(exp);
+    MinTupleIndex *tupleIndexExp = getMinExp_TupleIndex(exp);
     AnfKont *k2 = makeKont_normalizeTupleIndex(tupleIndexExp->vec,
                                                tupleIndexExp->size, k);
     int save = PROTECT(k2);
-    LamExp *result = normalize_name(tupleIndexExp->exp, k2);
+    MinExp *result = normalize_name(tupleIndexExp->exp, k2);
     UNPROTECT(save);
     LEAVE(normalize_TupleIndex);
     return result;
 }
 
-static LamExp *normalizeTupleIndexKont(LamExp *t0,
+static MinExp *normalizeTupleIndexKont(MinExp *t0,
                                        NormalizeTupleIndexKontEnv *env) {
-    LamExp *newTupleIndex =
-        makeLamExp_TupleIndex(CPI(t0), env->vec, env->size, t0);
+    MinExp *newTupleIndex =
+        makeMinExp_TupleIndex(CPI(t0), env->vec, env->size, t0);
     int save = PROTECT(newTupleIndex);
-    LamExp *result = INVOKE(env->k, newTupleIndex);
+    MinExp *result = INVOKE(env->k, newTupleIndex);
     UNPROTECT(save);
     return result;
 }
@@ -631,21 +631,21 @@ static LamExp *normalizeTupleIndexKont(LamExp *t0,
 //     (normalize-name e0
 //         [λ (t0) (k `(tag ,t0))]))
 
-static LamExp *normalize_Tag(LamExp *exp, AnfKont *k) {
+static MinExp *normalize_Tag(MinExp *exp, AnfKont *k) {
     ENTER(normalize_Tag);
-    LamExp *tagExp = getLamExp_Tag(exp);
+    MinExp *tagExp = getMinExp_Tag(exp);
     AnfKont *k2 = makeKont_normalizeTag(k);
     int save = PROTECT(k2);
-    LamExp *result = normalize_name(tagExp, k2);
+    MinExp *result = normalize_name(tagExp, k2);
     UNPROTECT(save);
     LEAVE(normalize_Tag);
     return result;
 }
 
-static LamExp *normalizeTagKont(LamExp *t0, NormalizeTagKontEnv *env) {
-    LamExp *newTag = newLamExp_Tag(CPI(t0), t0);
+static MinExp *normalizeTagKont(MinExp *t0, NormalizeTagKontEnv *env) {
+    MinExp *newTag = newMinExp_Tag(CPI(t0), t0);
     int save = PROTECT(newTag);
-    LamExp *result = INVOKE(env->k, newTag);
+    MinExp *result = INVOKE(env->k, newTag);
     UNPROTECT(save);
     return result;
 }
@@ -654,16 +654,16 @@ static LamExp *normalizeTagKont(LamExp *t0, NormalizeTagKontEnv *env) {
 //    (k `(amb ,(normalize-term e0)
 //             ,(normalize-term e1))))
 
-static LamExp *normalize_Amb(LamExp *exp, AnfKont *k) {
+static MinExp *normalize_Amb(MinExp *exp, AnfKont *k) {
     ENTER(normalize_Amb);
-    LamAmb *ambExp = getLamExp_Amb(exp);
-    LamExp *e0 = normalize_term(ambExp->left);
+    MinAmb *ambExp = getMinExp_Amb(exp);
+    MinExp *e0 = normalize_term(ambExp->left);
     int save = PROTECT(e0);
-    LamExp *e1 = normalize_term(ambExp->right);
+    MinExp *e1 = normalize_term(ambExp->right);
     PROTECT(e1);
-    LamExp *newAmb = makeLamExp_Amb(CPI(exp), e0, e1);
+    MinExp *newAmb = makeMinExp_Amb(CPI(exp), e0, e1);
     PROTECT(newAmb);
-    LamExp *result = INVOKE(k, newAmb);
+    MinExp *result = INVOKE(k, newAmb);
     UNPROTECT(save);
     LEAVE(normalize_Amb);
     return result;
@@ -672,15 +672,15 @@ static LamExp *normalize_Amb(LamExp *exp, AnfKont *k) {
 // (`(λ ,params ,body)
 //   (k `(λ ,params ,(normalize-term body))))
 
-static LamExp *normalize_Lam(LamExp *exp, AnfKont *k) {
+static MinExp *normalize_Lam(MinExp *exp, AnfKont *k) {
     ENTER(normalize_Lam);
-    LamLam *lamExp = getLamExp_Lam(exp);
-    LamExp *newBody = normalize_term(lamExp->exp);
+    MinLam *minExp = getMinExp_Lam(exp);
+    MinExp *newBody = normalize_term(minExp->exp);
     int save = PROTECT(newBody);
-    LamExp *newLam = makeLamExp_Lam(CPI(exp), lamExp->args, newBody);
-    PROTECT(newLam);
-    getLamExp_Lam(newLam)->isMacro = lamExp->isMacro;
-    LamExp *result = INVOKE(k, newLam);
+    MinExp *newMin = makeMinExp_Lam(CPI(exp), minExp->args, newBody);
+    PROTECT(newMin);
+    getMinExp_Lam(newMin)->isMacro = minExp->isMacro;
+    MinExp *result = INVOKE(k, newMin);
     UNPROTECT(save);
     LEAVE(normalize_Lam);
     return result;
@@ -689,15 +689,15 @@ static LamExp *normalize_Lam(LamExp *exp, AnfKont *k) {
 // (`(lookUp ,name ,id ,expr)
 //     (k `(lookUp ,name ,id ,(normalize-term expr))))
 
-static LamExp *normalize_LookUp(LamExp *exp, AnfKont *k) {
+static MinExp *normalize_LookUp(MinExp *exp, AnfKont *k) {
     ENTER(normalize_LookUp);
-    LamLookUp *lookUpExp = getLamExp_LookUp(exp);
-    LamExp *newExpr = normalize_term(lookUpExp->exp);
+    MinLookUp *lookUpExp = getMinExp_LookUp(exp);
+    MinExp *newExpr = normalize_term(lookUpExp->exp);
     int save = PROTECT(newExpr);
-    LamExp *newLookUp = makeLamExp_LookUp(CPI(exp), lookUpExp->nsId,
+    MinExp *newLookUp = makeMinExp_LookUp(CPI(exp), lookUpExp->nsId,
                                           lookUpExp->nsSymbol, newExpr);
     PROTECT(newLookUp);
-    LamExp *result = INVOKE(k, newLookUp);
+    MinExp *result = INVOKE(k, newLookUp);
     UNPROTECT(save);
     LEAVE(normalize_LookUp);
     return result;
@@ -706,26 +706,26 @@ static LamExp *normalize_LookUp(LamExp *exp, AnfKont *k) {
 // (`(nameSpaces . ,Ms)
 //     (k `(nameSpaces . ,(normalize-terms Ms))))
 
-static LamNameSpaceArray *normalize_array(LamNameSpaceArray *nsArray) {
-    LamNameSpaceArray *newNsArray = newLamNameSpaceArray();
+static MinNameSpaceArray *normalize_array(MinNameSpaceArray *nsArray) {
+    MinNameSpaceArray *newNsArray = newMinNameSpaceArray();
     int save = PROTECT(newNsArray);
     for (Index i = 0; i < nsArray->size; i++) {
-        LamExp *normNs = normalize_term(nsArray->entries[i]);
+        MinExp *normNs = normalize_term(nsArray->entries[i]);
         int save = PROTECT(normNs);
-        pushLamNameSpaceArray(newNsArray, normNs);
+        pushMinNameSpaceArray(newNsArray, normNs);
         UNPROTECT(save);
     }
     UNPROTECT(save);
     return newNsArray;
 }
 
-static LamExp *normalize_NameSpaces(LamExp *exp, AnfKont *k) {
+static MinExp *normalize_NameSpaces(MinExp *exp, AnfKont *k) {
     ENTER(normalize_NameSpaces);
-    LamNameSpaceArray *nsExp = normalize_array(getLamExp_NameSpaces(exp));
+    MinNameSpaceArray *nsExp = normalize_array(getMinExp_NameSpaces(exp));
     int save = PROTECT(nsExp);
-    LamExp *newNsExp = newLamExp_NameSpaces(CPI(exp), nsExp);
+    MinExp *newNsExp = newMinExp_NameSpaces(CPI(exp), nsExp);
     PROTECT(newNsExp);
-    LamExp *result = INVOKE(k, newNsExp);
+    MinExp *result = INVOKE(k, newNsExp);
     ;
     UNPROTECT(save);
     LEAVE(normalize_NameSpaces);
@@ -736,21 +736,21 @@ static LamExp *normalize_NameSpaces(LamExp *exp, AnfKont *k) {
 //     (normalize-name e0
 //         [λ (t0) (k `(callcc ,t0))]))
 
-static LamExp *normalize_CallCC(LamExp *exp, AnfKont *k) {
+static MinExp *normalize_CallCC(MinExp *exp, AnfKont *k) {
     ENTER(normalize_CallCC);
-    LamExp *e0 = getLamExp_CallCC(exp);
+    MinExp *e0 = getMinExp_CallCC(exp);
     AnfKont *k2 = makeKont_normalizeCallCC(k);
     int save = PROTECT(k2);
-    LamExp *result = normalize_name(e0, k2);
+    MinExp *result = normalize_name(e0, k2);
     UNPROTECT(save);
     LEAVE(normalize_CallCC);
     return result;
 }
 
-static LamExp *normalizeCallCCKont(LamExp *t0, NormalizeCallCCKontEnv *env) {
-    LamExp *newCallCC = newLamExp_CallCC(CPI(t0), t0);
+static MinExp *normalizeCallCCKont(MinExp *t0, NormalizeCallCCKontEnv *env) {
+    MinExp *newCallCC = newMinExp_CallCC(CPI(t0), t0);
     int save = PROTECT(newCallCC);
-    LamExp *result = INVOKE(env->k, newCallCC);
+    MinExp *result = INVOKE(env->k, newCallCC);
     UNPROTECT(save);
     return result;
 }
@@ -758,28 +758,28 @@ static LamExp *normalizeCallCCKont(LamExp *t0, NormalizeCallCCKontEnv *env) {
 // (`(sequence . ,Ms)
 //     (k `(sequence . ,(normalize-terms Ms))))
 
-static LamSequence *_normalizeSquence(LamSequence *seq);
+static MinSequence *_normalizeSquence(MinSequence *seq);
 
-static LamExp *normalize_Sequence(LamExp *exp, AnfKont *k) {
+static MinExp *normalize_Sequence(MinExp *exp, AnfKont *k) {
     ENTER(normalize_Sequence);
-    LamSequence *normSeq = _normalizeSquence(getLamExp_Sequence(exp));
+    MinSequence *normSeq = _normalizeSquence(getMinExp_Sequence(exp));
     int save = PROTECT(normSeq);
-    LamExp *newSeqExp = newLamExp_Sequence(CPI(exp), normSeq);
+    MinExp *newSeqExp = newMinExp_Sequence(CPI(exp), normSeq);
     PROTECT(newSeqExp);
-    LamExp *result = INVOKE(k, newSeqExp);
+    MinExp *result = INVOKE(k, newSeqExp);
     UNPROTECT(save);
     LEAVE(normalize_Sequence);
     return result;
 }
 
-static LamSequence *_normalizeSquence(LamSequence *seq) {
+static MinSequence *_normalizeSquence(MinSequence *seq) {
     if (seq == NULL)
         return NULL;
-    LamSequence *rest = _normalizeSquence(seq->next);
+    MinSequence *rest = _normalizeSquence(seq->next);
     int save = PROTECT(rest);
-    LamExp *newExp = normalize_term(seq->exp);
+    MinExp *newExp = normalize_term(seq->exp);
     PROTECT(newExp);
-    LamSequence *newSeq = newLamSequence(CPI(seq), newExp, rest);
+    MinSequence *newSeq = newMinSequence(CPI(seq), newExp, rest);
     UNPROTECT(save);
     return newSeq;
 }
@@ -787,15 +787,15 @@ static LamSequence *_normalizeSquence(LamSequence *seq) {
 // (`(typeDefs ,defs ,body)
 //   (k `(typeDefs ,defs ,(normalize-term body))))
 
-static LamExp *normalize_TypeDefs(LamExp *exp, AnfKont *k) {
+static MinExp *normalize_TypeDefs(MinExp *exp, AnfKont *k) {
     ENTER(normalize_TypeDefs);
-    LamTypeDefs *typeDefsExp = getLamExp_TypeDefs(exp);
-    LamExp *newBody = normalize_term(typeDefsExp->body);
+    MinTypeDefs *typeDefsExp = getMinExp_TypeDefs(exp);
+    MinExp *newBody = normalize_term(typeDefsExp->body);
     int save = PROTECT(newBody);
-    LamExp *newTypeDefs =
-        makeLamExp_TypeDefs(CPI(exp), typeDefsExp->typeDefs, newBody);
+    MinExp *newTypeDefs =
+        makeMinExp_TypeDefs(CPI(exp), typeDefsExp->typeDefs, newBody);
     PROTECT(newTypeDefs);
-    LamExp *result = INVOKE(k, newTypeDefs);
+    MinExp *result = INVOKE(k, newTypeDefs);
     UNPROTECT(save);
     LEAVE(normalize_TypeDefs);
     return result;
@@ -805,78 +805,78 @@ static LamExp *normalize_TypeDefs(LamExp *exp, AnfKont *k) {
 //    (match e
 //       ...))
 
-static LamExp *normalize(LamExp *exp, AnfKont *k) {
+static MinExp *normalize(MinExp *exp, AnfKont *k) {
     ENTER(normalize);
-    LamExp *res = NULL;
+    MinExp *res = NULL;
     if (exp == NULL) {
         res = NULL;
     } else if (isValueExp(exp)) {
         res = INVOKE(k, exp);
     } else {
         switch (exp->type) {
-        case LAMEXP_TYPE_AMB:
+        case MINEXP_TYPE_AMB:
             res = normalize_Amb(exp, k);
             break;
-        case LAMEXP_TYPE_APPLY:
+        case MINEXP_TYPE_APPLY:
             res = normalize_Apply(exp, k);
             break;
-        case LAMEXP_TYPE_CALLCC:
+        case MINEXP_TYPE_CALLCC:
             res = normalize_CallCC(exp, k);
             break;
-        case LAMEXP_TYPE_COND:
+        case MINEXP_TYPE_COND:
             res = normalize_Cond(exp, k);
             break;
-        case LAMEXP_TYPE_CONSTRUCT:
+        case MINEXP_TYPE_CONSTRUCT:
             res = normalize_Construct(exp, k);
             break;
-        case LAMEXP_TYPE_DECONSTRUCT:
+        case MINEXP_TYPE_DECONSTRUCT:
             res = normalize_Deconstruct(exp, k);
             break;
-        case LAMEXP_TYPE_IFF:
+        case MINEXP_TYPE_IFF:
             res = normalize_Iff(exp, k);
             break;
-        case LAMEXP_TYPE_LAM:
+        case MINEXP_TYPE_LAM:
             res = normalize_Lam(exp, k);
             break;
-        case LAMEXP_TYPE_LETREC:
+        case MINEXP_TYPE_LETREC:
             res = normalize_LetRec(exp, k);
             break;
-        case LAMEXP_TYPE_LET:
+        case MINEXP_TYPE_LET:
             res = normalize_Let(exp, k);
             break;
-        case LAMEXP_TYPE_LOOKUP:
+        case MINEXP_TYPE_LOOKUP:
             res = normalize_LookUp(exp, k);
             break;
-        case LAMEXP_TYPE_MAKETUPLE:
+        case MINEXP_TYPE_MAKETUPLE:
             res = normalize_MakeTuple(exp, k);
             break;
-        case LAMEXP_TYPE_MAKEVEC:
+        case MINEXP_TYPE_MAKEVEC:
             res = normalize_MakeVec(exp, k);
             break;
-        case LAMEXP_TYPE_MATCH:
+        case MINEXP_TYPE_MATCH:
             res = normalize_Match(exp, k);
             break;
-        case LAMEXP_TYPE_NAMESPACES:
+        case MINEXP_TYPE_NAMESPACES:
             res = normalize_NameSpaces(exp, k);
             break;
-        case LAMEXP_TYPE_PRIM:
+        case MINEXP_TYPE_PRIM:
             res = normalize_PrimApp(exp, k);
             break;
-        case LAMEXP_TYPE_SEQUENCE:
+        case MINEXP_TYPE_SEQUENCE:
             res = normalize_Sequence(exp, k);
             break;
-        case LAMEXP_TYPE_TAG:
+        case MINEXP_TYPE_TAG:
             res = normalize_Tag(exp, k);
             break;
-        case LAMEXP_TYPE_TUPLEINDEX:
+        case MINEXP_TYPE_TUPLEINDEX:
             res = normalize_TupleIndex(exp, k);
             break;
-        case LAMEXP_TYPE_TYPEDEFS:
+        case MINEXP_TYPE_TYPEDEFS:
             res = normalize_TypeDefs(exp, k);
             break;
         default:
-            cant_happen("normalize: unhandled LamExp type %s",
-                        lamExpTypeName(exp->type));
+            cant_happen("normalize: unhandled MinExp type %s",
+                        minExpTypeName(exp->type));
         }
     }
     LEAVE(normalize);
@@ -886,4 +886,4 @@ static LamExp *normalize(LamExp *exp, AnfKont *k) {
 /**
  * Public entry point.
  */
-LamExp *anfNormalize2(LamExp *exp) { return normalize_term(exp); }
+MinExp *anfNormalize2(MinExp *exp) { return normalize_term(exp); }

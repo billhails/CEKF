@@ -20,4 +20,6 @@
 
 struct MinExp;
 
+#include "lambda_functions.h"
+
 #endif
