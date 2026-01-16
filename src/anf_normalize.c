@@ -80,7 +80,6 @@ static CexpCondCases *normalizeCondCases(MinCondCases *cases);
 static CexpLetRec *normalizeLetRecBindings(CexpLetRec *, MinBindings *);
 static AnfExp *normalizeMakeTuple(ParserInfo, MinArgs *, AnfExp *);
 static AnfExp *normalizeTupleIndex(MinTupleIndex *construct, AnfExp *tail);
-static AnfExp *normalizeDeconstruct(MinDeconstruct *deconstruct, AnfExp *tail);
 static AnfExp *normalizeTag(MinExp *tag, AnfExp *tail);
 static AnfExp *normalizeEnv(ParserInfo I, AnfExp *tail);
 static AnfExp *normalizeMinLookUp(MinLookUp *, AnfExp *);
@@ -123,8 +122,6 @@ static AnfExp *normalize(MinExp *minExp, AnfExp *tail) {
         return normalizeLetRec(getMinExp_LetRec(minExp), tail);
     case MINEXP_TYPE_TUPLEINDEX:
         return normalizeTupleIndex(getMinExp_TupleIndex(minExp), tail);
-    case MINEXP_TYPE_DECONSTRUCT:
-        return normalizeDeconstruct(getMinExp_Deconstruct(minExp), tail);
     case MINEXP_TYPE_TAG:
         return normalizeTag(getMinExp_Tag(minExp), tail);
     case MINEXP_TYPE_CONSTANT:
@@ -225,31 +222,12 @@ static AnfMatchList *normalizeMatchList(MinMatchList *matchList) {
     return this;
 }
 
-static MinPrimApp *deconstructToPrimApp(MinDeconstruct *deconstruct) {
-    MinExp *index = newMinExp_Stdint(CPI(deconstruct), deconstruct->vec);
-    int save = PROTECT(index);
-    MinPrimApp *res = newMinPrimApp(CPI(deconstruct), MINPRIMOP_TYPE_VEC, index,
-                                    deconstruct->exp);
-    UNPROTECT(save);
-    return res;
-}
-
 static MinPrimApp *tagToPrimApp(MinExp *tagged) {
     MinExp *index = newMinExp_Stdint(CPI(tagged), 0);
     int save = PROTECT(index);
     MinPrimApp *res =
         newMinPrimApp(CPI(tagged), MINPRIMOP_TYPE_VEC, index, tagged);
     UNPROTECT(save);
-    return res;
-}
-
-static AnfExp *normalizeDeconstruct(MinDeconstruct *deconstruct, AnfExp *tail) {
-    ENTER(noramaalizeDeconstruct);
-    MinPrimApp *primApp = deconstructToPrimApp(deconstruct);
-    int save = PROTECT(primApp);
-    AnfExp *res = normalizePrim(primApp, tail);
-    UNPROTECT(save);
-    LEAVE(noramaalizeDeconstruct);
     return res;
 }
 
@@ -787,15 +765,6 @@ static CexpCondCases *normalizeCondCases(MinCondCases *cases) {
     return res;
 }
 
-static Aexp *replaceMinDeconstruct(MinDeconstruct *minDeconstruct,
-                                   MinExpTable *replacements) {
-    MinPrimApp *primApp = deconstructToPrimApp(minDeconstruct);
-    int save = PROTECT(primApp);
-    Aexp *res = replaceMinPrim(primApp, replacements);
-    UNPROTECT(save);
-    return res;
-}
-
 static Aexp *replaceMinTag(MinExp *tagged, MinExpTable *replacements) {
     MinPrimApp *primApp = tagToPrimApp(tagged);
     int save = PROTECT(primApp);
@@ -848,10 +817,6 @@ static Aexp *replaceMinExp(MinExp *minExp, MinExpTable *replacements) {
         break;
     case MINEXP_TYPE_TYPEDEFS:
         res = replaceMinCexp(getMinExp_TypeDefs(minExp)->body, replacements);
-        break;
-    case MINEXP_TYPE_DECONSTRUCT:
-        res =
-            replaceMinDeconstruct(getMinExp_Deconstruct(minExp), replacements);
         break;
     case MINEXP_TYPE_CHARACTER:
         res = aexpNormalizeCharacter(CPI(minExp), getMinExp_Character(minExp));

@@ -46,8 +46,6 @@ static MinLookUp *visitMinLookUp(MinLookUp *node, MinAlphaEnv *context);
 static MinLookUpSymbol *visitMinLookUpSymbol(MinLookUpSymbol *node,
                                              MinAlphaEnv *context);
 static MinConstant *visitMinConstant(MinConstant *node, MinAlphaEnv *context);
-static MinDeconstruct *visitMinDeconstruct(MinDeconstruct *node,
-                                           MinAlphaEnv *context);
 static MinTupleIndex *visitMinTupleIndex(MinTupleIndex *node,
                                          MinAlphaEnv *context);
 static MinMakeVec *visitMinMakeVec(MinMakeVec *node, MinAlphaEnv *context);
@@ -444,31 +442,6 @@ static MinConstant *visitMinConstant(MinConstant *node, MinAlphaEnv *context) {
     // Pass through tag (type: int, not memory-managed)
 
     (void)context; // Unused parameter - all fields are pass-through
-    return node;
-}
-
-static MinDeconstruct *visitMinDeconstruct(MinDeconstruct *node,
-                                           MinAlphaEnv *context) {
-    if (node == NULL)
-        return NULL;
-
-    bool changed = false;
-    // Pass through name (type: HashSymbol, not memory-managed)
-    // Pass through nsId (type: int, not memory-managed)
-    // Pass through vec (type: int, not memory-managed)
-    MinExp *new_exp = visitMinExp(node->exp, context);
-    int save = PROTECT(new_exp);
-    changed = changed || (new_exp != node->exp);
-
-    if (changed) {
-        // Create new node with modified fields
-        MinDeconstruct *result = newMinDeconstruct(
-            CPI(node), node->name, node->nsId, node->vec, new_exp);
-        UNPROTECT(save);
-        return result;
-    }
-
-    UNPROTECT(save);
     return node;
 }
 
@@ -1165,16 +1138,6 @@ static MinExp *visitMinExp(MinExp *node, MinAlphaEnv *context) {
         if (new_variant != variant) {
             PROTECT(new_variant);
             result = newMinExp_Constructor(CPI(node), new_variant);
-        }
-        break;
-    }
-    case MINEXP_TYPE_DECONSTRUCT: {
-        // MinDeconstruct
-        MinDeconstruct *variant = getMinExp_Deconstruct(node);
-        MinDeconstruct *new_variant = visitMinDeconstruct(variant, context);
-        if (new_variant != variant) {
-            PROTECT(new_variant);
-            result = newMinExp_Deconstruct(CPI(node), new_variant);
         }
         break;
     }

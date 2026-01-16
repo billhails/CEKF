@@ -100,9 +100,6 @@ void ppMinExp(MinExp *exp) {
     case MINEXP_TYPE_MAKEVEC:
         ppMinMakeVec(getMinExp_MakeVec(exp));
         break;
-    case MINEXP_TYPE_DECONSTRUCT:
-        ppMinDeconstruct(getMinExp_Deconstruct(exp));
-        break;
     case MINEXP_TYPE_TAG:
         ppMinTag(getMinExp_Tag(exp));
         break;
@@ -618,14 +615,6 @@ void ppMinTag(MinExp *tag) {
 }
 
 void ppMinConstant(MinConstant *constant) { ppHashSymbol(constant->name); }
-
-void ppMinDeconstruct(MinDeconstruct *deconstruct) {
-    eprintf("(deconstruct ");
-    ppHashSymbol(deconstruct->name);
-    eprintf("[%d] ", deconstruct->vec);
-    ppMinExp(deconstruct->exp);
-    eprintf(")");
-}
 
 static inline void pad(int depth) { eprintf("%*s", depth, ""); }
 

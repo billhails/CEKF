@@ -254,36 +254,6 @@ continuations:
     free_vars:
       c: MinExp
 
-  TkDeconstruct:
-    transformer: T_k
-    key: k_deconstruct
-    context: |
-      (E.deconstruct(name, nsId, vec, expr)) {
-          T_k(expr, fn (sexpr) {
-              k(E.deconstruct(name, nsId, vec, sexpr))
-          })
-      }
-    free_vars:
-      name: HashSymbol
-      nsId: int
-      vec: int
-      k: CpsKont
-
-  TcDeconstruct:
-    transformer: T_k
-    key: c_deconstruct
-    context: |
-      (E.deconstruct(name, nsId, vec, expr)) {
-          T_k(expr, fn (sexpr) {
-              E.apply(c, [E.deconstruct(name, nsId, vec, sexpr)])
-          })
-      }
-    free_vars:
-      name: HashSymbol
-      nsId: int
-      vec: int
-      c: MinExp
-
   TkMakeTuple:
     transformer: T_k
     key: k_maketuple

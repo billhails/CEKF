@@ -368,32 +368,6 @@ static MinExp *normalizeMakeVecKont(MinExp *ts, NormalizeMakeVecKontEnv *env) {
     return result;
 }
 
-// (`(deconstruct ,name ,nsId ,vec ,e0)
-//     (normalize-name e0
-//         [λ (t) (k `(deconstruct ,name ,nsId ,vec ,t))]))
-
-static MinExp *normalize_Deconstruct(MinExp *exp, AnfKont *k) {
-    ENTER(normalize_Deconstruct);
-    MinDeconstruct *deconstruct = getMinExp_Deconstruct(exp);
-    AnfKont *k2 = makeKont_normalizeDeconstruct(
-        deconstruct->name, deconstruct->nsId, deconstruct->vec, k);
-    int save = PROTECT(k2);
-    MinExp *result = normalize_name(deconstruct->exp, k2);
-    UNPROTECT(save);
-    LEAVE(normalize_Deconstruct);
-    return result;
-}
-
-static MinExp *normalizeDeconstructKont(MinExp *t,
-                                        NormalizeDeconstructKontEnv *env) {
-    MinExp *newDeconstruct =
-        makeMinExp_Deconstruct(CPI(t), env->name, env->nsId, env->vec, t);
-    int save = PROTECT(newDeconstruct);
-    MinExp *result = INVOKE(env->k, newDeconstruct);
-    UNPROTECT(save);
-    return result;
-}
-
 // (`(cond ,e0 ,cases)
 //     (normalize-name e0
 //         [λ (t) (k `(cond ,t ,(normalize-cases cases)))]))
@@ -777,9 +751,6 @@ static MinExp *normalize(MinExp *exp, AnfKont *k) {
             break;
         case MINEXP_TYPE_COND:
             res = normalize_Cond(exp, k);
-            break;
-        case MINEXP_TYPE_DECONSTRUCT:
-            res = normalize_Deconstruct(exp, k);
             break;
         case MINEXP_TYPE_IFF:
             res = normalize_Iff(exp, k);

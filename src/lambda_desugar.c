@@ -36,6 +36,7 @@ static MinExp *desugarLamLet(LamExp *node);
 static MinExp *desugarLamLetStar(LamExp *node);
 static MinExp *desugarLamTypeOf(LamExp *node);
 static MinExp *desugarLamConstruct(LamExp *node);
+static MinExp *desugarLamDeconstruct(LamExp *node);
 
 static MinLam *desugarLamLam(LamLam *node);
 static MinVarList *desugarLamVarList(LamVarList *node);
@@ -46,7 +47,6 @@ static MinApply *desugarLamApply(LamApply *node);
 static MinLookUp *desugarLamLookUp(LamLookUp *node);
 static MinLookUpSymbol *desugarLamLookUpSymbol(LamLookUpSymbol *node);
 static MinConstant *desugarLamConstant(LamConstant *node);
-static MinDeconstruct *desugarLamDeconstruct(LamDeconstruct *node);
 static MinTupleIndex *desugarLamTupleIndex(LamTupleIndex *node);
 static MinMakeVec *desugarLamMakeVec(LamMakeVec *node);
 static MinIff *desugarLamIff(LamIff *node);
@@ -283,17 +283,22 @@ static MinExp *desugarLamConstruct(LamExp *exp) {
     return result;
 }
 
-static MinDeconstruct *desugarLamDeconstruct(LamDeconstruct *node) {
-    ENTER(desugarLamDeconstruct);
-    if (node == NULL) {
-        LEAVE(desugarLamDeconstruct);
-        return NULL;
-    }
+static LamPrimApp *deconstructToPrimApp(LamDeconstruct *deconstruct) {
+    LamExp *index = newLamExp_Stdint(CPI(deconstruct), deconstruct->vec);
+    int save = PROTECT(index);
+    LamPrimApp *res = newLamPrimApp(CPI(deconstruct), LAMPRIMOP_TYPE_VEC, index,
+                                    deconstruct->exp);
+    UNPROTECT(save);
+    return res;
+}
 
-    MinExp *new_exp = desugarLamExp_internal(node->exp);
-    int save = PROTECT(new_exp);
-    MinDeconstruct *result = newMinDeconstruct(CPI(node), node->name,
-                                               node->nsId, node->vec, new_exp);
+static MinExp *desugarLamDeconstruct(LamExp *exp) {
+    ENTER(desugarLamDeconstruct);
+    LamPrimApp *primApp = deconstructToPrimApp(getLamExp_Deconstruct(exp));
+    int save = PROTECT(primApp);
+    MinPrimApp *newApp = desugarLamPrimApp(primApp);
+    PROTECT(newApp);
+    MinExp *result = newMinExp_Prim(CPI(exp), newApp);
     UNPROTECT(save);
     LEAVE(desugarLamDeconstruct);
     return result;
@@ -872,13 +877,9 @@ static MinExp *desugarLamExp_internal(LamExp *node) {
         result = newMinExp_Constructor(CPI(node), new);
         break;
     }
-    case LAMEXP_TYPE_DECONSTRUCT: {
-        MinDeconstruct *new =
-            desugarLamDeconstruct(getLamExp_Deconstruct(node));
-        PROTECT(new);
-        result = newMinExp_Deconstruct(CPI(node), new);
+    case LAMEXP_TYPE_DECONSTRUCT:
+        result = desugarLamDeconstruct(node);
         break;
-    }
     case LAMEXP_TYPE_ERROR: {
         result = newMinExp_Error(CPI(node));
         break;

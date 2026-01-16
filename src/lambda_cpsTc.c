@@ -42,7 +42,6 @@ static MinExp *cpsTcMinSequence(MinSequence *node, MinExp *c);
 static MinExp *cpsTcMakeTuple(MinArgs *node, MinExp *c);
 static MinExp *cpsTcMinApply(MinApply *node, MinExp *c);
 static MinExp *cpsTcMinLookUp(MinLookUp *node, MinExp *c);
-static MinExp *cpsTcMinDeconstruct(MinDeconstruct *node, MinExp *c);
 static MinExp *cpsTcMinTupleIndex(MinTupleIndex *node, MinExp *c);
 static MinExp *cpsTcMakeVec(MinMakeVec *node, MinExp *c);
 static MinExp *cpsTcMinIff(MinIff *node, MinExp *c);
@@ -288,37 +287,6 @@ static MinExp *cpsTcMinLookUp(MinLookUp *node, MinExp *c) {
         makeMinExp_LookUp(CPI(node), node->nsId, node->nsSymbol, expr);
     UNPROTECT(save);
     LEAVE(cpsTcMinLookUp);
-    return result;
-}
-
-/*
-    (E.deconstruct(name, nsId, vec, expr)) {
-        T_k(expr, fn (sexpr) {
-            E.apply(c, [E.deconstruct(name, nsId, vec, sexpr)])
-        })
-    }
-*/
-static MinExp *cpsTcMinDeconstruct(MinDeconstruct *node, MinExp *c) {
-    ENTER(cpsTcMinDeconstruct);
-    CpsKont *kont =
-        makeKont_TcDeconstruct(node->name, node->nsId, node->vec, c);
-    int save = PROTECT(kont);
-    MinExp *result = cpsTk(node->exp, kont);
-    UNPROTECT(save);
-    LEAVE(cpsTcMinDeconstruct);
-    return result;
-}
-
-MinExp *TcDeconstructKont(MinExp *sexpr, TcDeconstructKontEnv *env) {
-    ENTER(TcDeconstructKont);
-    MinExp *deconstruct = makeMinExp_Deconstruct(CPI(sexpr), env->name,
-                                                 env->nsId, env->vec, sexpr);
-    int save = PROTECT(deconstruct);
-    MinArgs *args = newMinArgs(CPI(sexpr), deconstruct, NULL);
-    PROTECT(args);
-    MinExp *result = makeMinExp_Apply(CPI(sexpr), env->c, args);
-    UNPROTECT(save);
-    LEAVE(TcDeconstructKont);
     return result;
 }
 
@@ -723,8 +691,6 @@ static MinExp *cpsTcMinExp(MinExp *node, MinExp *c) {
         return cpsTcCallCC(getMinExp_CallCC(node), c);
     case MINEXP_TYPE_COND:
         return cpsTcMinCond(getMinExp_Cond(node), c);
-    case MINEXP_TYPE_DECONSTRUCT:
-        return cpsTcMinDeconstruct(getMinExp_Deconstruct(node), c);
     case MINEXP_TYPE_IFF:
         return cpsTcMinIff(getMinExp_Iff(node), c);
     case MINEXP_TYPE_LETREC:

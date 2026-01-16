@@ -42,7 +42,6 @@ static MinExp *cpsTkMakeTuple(MinArgs *node, CpsKont *k);
 static MinExp *cpsTkMinApply(MinExp *node, CpsKont *k);
 static MinExp *cpsTkMinLookUp(MinLookUp *node, CpsKont *k);
 static MinExp *cpsTkTag(MinExp *node, CpsKont *k);
-static MinExp *cpsTkMinDeconstruct(MinDeconstruct *node, CpsKont *k);
 static MinExp *cpsTkMinTupleIndex(MinTupleIndex *node, CpsKont *k);
 static MinExp *cpsTkMakeVec(MinMakeVec *node, CpsKont *k);
 static MinExp *cpsTkMinIff(MinIff *node, CpsKont *k);
@@ -339,34 +338,6 @@ static MinExp *cpsTkMinLookUp(MinLookUp *node, CpsKont *k) {
         makeMinExp_LookUp(CPI(node), node->nsId, node->nsSymbol, expr);
     UNPROTECT(save);
     LEAVE(cpsTkMinLookUp);
-    return result;
-}
-
-/*
-    (E.deconstruct(name, nsId, vec, expr)) {
-        T_k(expr, fn (sexpr) {
-            k(E.deconstruct(name, nsId, vec, sexpr))
-        })
-    }
-*/
-static MinExp *cpsTkMinDeconstruct(MinDeconstruct *node, CpsKont *k) {
-    ENTER(cpsTkMinDeconstruct);
-    CpsKont *k1 = makeKont_TkDeconstruct(node->name, node->nsId, node->vec, k);
-    int save = PROTECT(k1);
-    MinExp *result = cpsTk(node->exp, k1);
-    UNPROTECT(save);
-    LEAVE(cpsTkMinDeconstruct);
-    return result;
-}
-
-MinExp *TkDeconstructKont(MinExp *sexpr, TkDeconstructKontEnv *env) {
-    ENTER(TkDeconstructKont);
-    MinExp *deconstruct = makeMinExp_Deconstruct(CPI(sexpr), env->name,
-                                                 env->nsId, env->vec, sexpr);
-    int save = PROTECT(deconstruct);
-    MinExp *result = INVOKE(env->k, deconstruct);
-    UNPROTECT(save);
-    LEAVE(TkDeconstructKont);
     return result;
 }
 
@@ -733,8 +704,6 @@ static MinExp *cpsTkMinExp(MinExp *node, CpsKont *k) {
         return cpsTkCallCC(getMinExp_CallCC(node), k);
     case MINEXP_TYPE_COND:
         return cpsTkMinCond(getMinExp_Cond(node), k);
-    case MINEXP_TYPE_DECONSTRUCT:
-        return cpsTkMinDeconstruct(getMinExp_Deconstruct(node), k);
     case MINEXP_TYPE_IFF:
         return cpsTkMinIff(getMinExp_Iff(node), k);
     case MINEXP_TYPE_LETREC:

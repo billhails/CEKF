@@ -231,21 +231,6 @@ continuations:
       nArgs: int
       k: AnfKont
 
-  normalizeDeconstruct:
-    key: deconstruct
-    brief: "Continuation for deconstruct operation"
-    context: |
-      (match e
-          ...
-          (`(deconstruct ,name ,nsId ,vec ,e0)
-              (normalize-name e0
-                  [λ (t) (k `(deconstruct ,name ,nsId ,vec ,t))])))
-    free_vars:
-      name: HashSymbol
-      nsId: int
-      vec: int
-      k: AnfKont
-
   normalizeCond:
     key: cond
     brief: "Continuation for cond expression"

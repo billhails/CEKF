@@ -100,17 +100,6 @@ structs:
             name: HashSymbol # the name of the constructor
             tag: int         # the tag of the constructor
 
-    MinDeconstruct:
-        meta:
-            brief: A deconstruction of a constructor
-            description: >-
-                Used to extract fields from a constructed value.
-        data:
-            name: HashSymbol # name of the constructor being deconstructed
-            nsId: int        # nameSpace of the constructor being deconstructed
-            vec: int         # offset of the field in the vector
-            exp: MinExp      # expression being deconstructed
-
     MinTupleIndex:
         meta:
             brief: An index into a tuple
@@ -374,7 +363,6 @@ unions:
             cond: MinCond
             constant: MinConstant
             constructor: MinTypeConstructorInfo
-            deconstruct: MinDeconstruct
             env: void_ptr
             error: void_ptr
             iff: MinIff
