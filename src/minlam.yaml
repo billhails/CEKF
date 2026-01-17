@@ -338,7 +338,6 @@ unions:
             lam: MinLam
             letRec: MinLetRec
             lookUp: MinLookUp
-            makeTuple: MinArgs
             makeVec: MinMakeVec
             match: MinMatch
             nameSpaces: MinNameSpaceArray

@@ -78,7 +78,6 @@ static AexpIntList *convertIntList(MinIntList *list);
 static AnfExp *normalizeCond(MinCond *cond, AnfExp *tail);
 static CexpCondCases *normalizeCondCases(MinCondCases *cases);
 static CexpLetRec *normalizeLetRecBindings(CexpLetRec *, MinBindings *);
-static AnfExp *normalizeMakeTuple(ParserInfo, MinArgs *, AnfExp *);
 static AnfExp *normalizeTupleIndex(MinTupleIndex *construct, AnfExp *tail);
 static AnfExp *normalizeTag(MinExp *tag, AnfExp *tail);
 static AnfExp *normalizeEnv(ParserInfo I, AnfExp *tail);
@@ -135,9 +134,6 @@ static AnfExp *normalize(MinExp *minExp, AnfExp *tail) {
         return normalizeBack(CPI(minExp), tail);
     case MINEXP_TYPE_ERROR:
         return normalizeError(CPI(minExp), tail);
-    case MINEXP_TYPE_MAKETUPLE:
-        return normalizeMakeTuple(CPI(minExp), getMinExp_MakeTuple(minExp),
-                                  tail);
     case MINEXP_TYPE_NAMESPACES:
         return normalizeNameSpaces(CPI(minExp), getMinExp_NameSpaces(minExp),
                                    tail);
@@ -363,20 +359,6 @@ static AnfExp *normalizeMakeVec(MinMakeVec *minMakeVec, AnfExp *tail) {
     AnfExp *res = letBind(exp, replacements);
     UNPROTECT(save);
     LEAVE(normalizeMakeVec);
-    return res;
-}
-
-static MinMakeVec *tupleToMakeVec(ParserInfo PI, MinArgs *tuple) {
-    int nArgs = countMinArgs(tuple);
-    MinMakeVec *res = newMinMakeVec(PI, nArgs, tuple);
-    return res;
-}
-
-static AnfExp *normalizeMakeTuple(ParserInfo PI, MinArgs *tuple, AnfExp *tail) {
-    MinMakeVec *makeVec = tupleToMakeVec(PI, tuple);
-    int save = PROTECT(makeVec);
-    AnfExp *res = normalizeMakeVec(makeVec, tail);
-    UNPROTECT(save);
     return res;
 }
 
@@ -825,7 +807,6 @@ static Aexp *replaceMinExp(MinExp *minExp, MinExpTable *replacements) {
     case MINEXP_TYPE_BACK:
     case MINEXP_TYPE_ERROR:
     case MINEXP_TYPE_AMB:
-    case MINEXP_TYPE_MAKETUPLE:
         res = replaceMinCexp(minExp, replacements);
         break;
     default:
@@ -856,7 +837,6 @@ static bool minExpIsMinbda(MinExp *val) {
     case MINEXP_TYPE_COND:
     case MINEXP_TYPE_MAKEVEC:
     case MINEXP_TYPE_LOOKUP:
-    case MINEXP_TYPE_MAKETUPLE:
     case MINEXP_TYPE_TUPLEINDEX:
         return false;
     default:

@@ -38,7 +38,6 @@
 // Forward declarations
 static MinExp *cpsTkMinPrimApp(MinPrimApp *node, CpsKont *k);
 static MinExp *cpsTkMinSequence(MinSequence *node, CpsKont *k);
-static MinExp *cpsTkMakeTuple(MinArgs *node, CpsKont *k);
 static MinExp *cpsTkMinApply(MinExp *node, CpsKont *k);
 static MinExp *cpsTkMinLookUp(MinLookUp *node, CpsKont *k);
 static MinExp *cpsTkTag(MinExp *node, CpsKont *k);
@@ -268,35 +267,6 @@ MinExp *TkSequenceKont(MinExp *ignored, TkSequenceKontEnv *env) {
     MinExp *result = cpsTk(sequence, env->k);
     UNPROTECT(save);
     LEAVE(TkSequenceKont);
-    return result;
-}
-
-/*
-    (E.make_tuple(args)) {
-        Ts_k(args, fn (sargs) {
-            k(E.make_tuple(sargs))
-        })
-    }
-*/
-static MinExp *cpsTkMakeTuple(MinArgs *node, CpsKont *k) {
-    ENTER(cpsTkMakeTuple);
-    CpsKont *k1 = makeKont_TkMakeTuple(k);
-    int save = PROTECT(k1);
-    MinExp *exp = newMinExp_Args(CPI(node), node);
-    PROTECT(exp);
-    MinExp *result = cpsTs_k(exp, k1);
-    UNPROTECT(save);
-    LEAVE(cpsTkMakeTuple);
-    return result;
-}
-
-MinExp *TkMakeTupleKont(MinExp *sargs, TkMakeTupleKontEnv *env) {
-    ENTER(TkMakeTupleKont);
-    MinExp *make_tuple = newMinExp_MakeTuple(CPI(sargs), getMinExp_Args(sargs));
-    int save = PROTECT(make_tuple);
-    MinExp *result = INVOKE(env->k, make_tuple);
-    UNPROTECT(save);
-    LEAVE(TkMakeTupleKont);
     return result;
 }
 
@@ -708,8 +678,6 @@ static MinExp *cpsTkMinExp(MinExp *node, CpsKont *k) {
         return cpsTkMinLetRec(getMinExp_LetRec(node), k);
     case MINEXP_TYPE_LOOKUP:
         return cpsTkMinLookUp(getMinExp_LookUp(node), k);
-    case MINEXP_TYPE_MAKETUPLE:
-        return cpsTkMakeTuple(getMinExp_MakeTuple(node), k);
     case MINEXP_TYPE_MAKEVEC:
         return cpsTkMakeVec(getMinExp_MakeVec(node), k);
     case MINEXP_TYPE_MATCH:

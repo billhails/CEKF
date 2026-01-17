@@ -148,9 +148,6 @@ void ppMinExp(MinExp *exp) {
     case MINEXP_TYPE_TUPLEINDEX:
         ppMinTupleIndex(getMinExp_TupleIndex(exp));
         break;
-    case MINEXP_TYPE_MAKETUPLE:
-        ppMinMakeTuple(getMinExp_MakeTuple(exp));
-        break;
     case MINEXP_TYPE_NAMESPACES:
         ppMinNameSpaces(getMinExp_NameSpaces(exp));
         break;

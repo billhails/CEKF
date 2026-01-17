@@ -317,31 +317,6 @@ static MinExp *normalizeLetRecKont(MinExp *anfbindings,
     return result;
 }
 
-// (`(make-tuple . ,Ms)
-//     (normalize-names Ms
-//         [λ (ts) (k `(make-tuple . ,ts))]))
-
-static MinExp *normalize_MakeTuple(MinExp *exp, AnfKont *k) {
-    ENTER(normalize_MakeTuple);
-    MinArgs *minArgs = getMinExp_MakeTuple(exp);
-    AnfKont *k2 = makeKont_normalizeMakeTuple(k);
-    int save = PROTECT(k2);
-    MinExp *result = normalize_names(minArgs, k2);
-    UNPROTECT(save);
-    LEAVE(normalize_MakeTuple);
-    return result;
-}
-
-static MinExp *normalizeMakeTupleKont(MinExp *ts,
-                                      NormalizeMakeTupleKontEnv *env) {
-    MinArgs *tts = getMinExp_Args(ts);
-    MinExp *newMakeTuple = newMinExp_MakeTuple(CPI(ts), tts);
-    int save = PROTECT(newMakeTuple);
-    MinExp *result = INVOKE(env->k, newMakeTuple);
-    UNPROTECT(save);
-    return result;
-}
-
 // (`(make-vec ,nArgs . ,Ms)
 //     (normalize-names Ms
 //         [λ (ts) (k `(make-vec ,nArgs . ,ts))]))
@@ -761,9 +736,6 @@ static MinExp *normalize(MinExp *exp, AnfKont *k) {
             break;
         case MINEXP_TYPE_LOOKUP:
             res = normalize_LookUp(exp, k);
-            break;
-        case MINEXP_TYPE_MAKETUPLE:
-            res = normalize_MakeTuple(exp, k);
             break;
         case MINEXP_TYPE_MAKEVEC:
             res = normalize_MakeVec(exp, k);

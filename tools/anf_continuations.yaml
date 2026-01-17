@@ -206,18 +206,6 @@ continuations:
       anfVal: MinExp
       k: AnfKont
 
-  normalizeMakeTuple:
-    key: makeTuple
-    brief: "Continuation for tuple construction"
-    context: |
-      (match e
-          ...
-          (`(make-tuple . ,Ms)
-              (normalize-names Ms
-                  [λ (ts) (k `(make-tuple . ,ts))])))
-    free_vars:
-      k: AnfKont
-
   normalizeMakeVec:
     key: makeVec
     brief: "Continuation for vector construction"

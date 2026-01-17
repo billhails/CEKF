@@ -254,30 +254,6 @@ continuations:
     free_vars:
       c: MinExp
 
-  TkMakeTuple:
-    transformer: T_k
-    key: k_maketuple
-    context: |
-      (E.make_tuple(args)) {
-        Ts_k(args, fn (sargs) {
-          k(E.make_tuple(sargs))
-        })
-      }
-    free_vars:
-      k: CpsKont
-
-  TcMakeTuple:
-    transformer: T_k
-    key: c_maketuple
-    context: |
-      (E.make_tuple(args)) {
-        Ts_k(args, fn (sargs) {
-          E.apply(c, [E.make_tuple(sargs)])
-        })
-      }
-    free_vars:
-      c: MinExp
-
   TkMakeVec:
     transformer: T_k
     key: k_makevec

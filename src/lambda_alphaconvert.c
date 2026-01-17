@@ -951,16 +951,6 @@ static MinExp *visitMinExp(MinExp *node, MinAlphaEnv *context) {
         }
         break;
     }
-    case MINEXP_TYPE_MAKETUPLE: {
-        // MinArgs
-        MinArgs *variant = getMinExp_MakeTuple(node);
-        MinArgs *new_variant = visitMinArgs(variant, context);
-        if (new_variant != variant) {
-            PROTECT(new_variant);
-            result = newMinExp_MakeTuple(CPI(node), new_variant);
-        }
-        break;
-    }
     case MINEXP_TYPE_MAKEVEC: {
         // MinMakeVec
         MinMakeVec *variant = getMinExp_MakeVec(node);
