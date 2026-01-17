@@ -264,7 +264,6 @@ continuations:
         })
       }
     free_vars:
-      size: int
       k: CpsKont
 
   TcMakeVec:
@@ -277,7 +276,6 @@ continuations:
         })
       }
     free_vars:
-      size: int
       c: MinExp
 
   TkMatch:

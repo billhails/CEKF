@@ -288,7 +288,7 @@ static MinExp *cpsTkMinLookUp(MinLookUp *node, CpsKont *k) {
 */
 static MinExp *cpsTkMakeVec(MinArgs *node, CpsKont *k) {
     ENTER(cpsTkMakeVec);
-    CpsKont *k1 = makeKont_TkMakeVec(0, k);
+    CpsKont *k1 = makeKont_TkMakeVec(k);
     int save = PROTECT(k1);
     MinExp *args = newMinExp_Args(CPI(node), node);
     PROTECT(args);

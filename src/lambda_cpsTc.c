@@ -235,7 +235,7 @@ static MinExp *cpsTcMinLookUp(MinLookUp *node, MinExp *c) {
 */
 static MinExp *cpsTcMakeVec(MinArgs *node, MinExp *c) {
     ENTER(cpsTcMakeVec);
-    CpsKont *kont = makeKont_TcMakeVec(0, c);
+    CpsKont *kont = makeKont_TcMakeVec(c);
     int save = PROTECT(kont);
     MinExp *args = newMinExp_Args(CPI(node), node);
     PROTECT(args);

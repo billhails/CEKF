@@ -324,8 +324,7 @@ static MinExp *normalizeLetRecKont(MinExp *anfbindings,
 static MinExp *normalize_MakeVec(MinExp *exp, AnfKont *k) {
     ENTER(normalize_MakeVec);
     MinArgs *makeVec = getMinExp_MakeVec(exp);
-    Index nArgs = countMinArgs(makeVec);
-    AnfKont *k2 = makeKont_normalizeMakeVec(nArgs, k);
+    AnfKont *k2 = makeKont_normalizeMakeVec(k);
     int save = PROTECT(k2);
     MinExp *result = normalize_names(makeVec, k2);
     UNPROTECT(save);

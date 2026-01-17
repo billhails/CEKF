@@ -216,7 +216,6 @@ continuations:
               (normalize-names Ms
                   [λ (ts) (k `(make-vec ,nArgs . ,ts))])))
     free_vars:
-      nArgs: int
       k: AnfKont
 
   normalizeCond:
