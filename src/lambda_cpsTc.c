@@ -37,10 +37,10 @@
 
 // Forward declarations
 static MinExp *cpsTcMinPrimApp(MinPrimApp *node, MinExp *c);
-static MinExp *cpsTcMinSequence(MinSequence *node, MinExp *c);
+static MinExp *cpsTcMinSequence(MinExprList *node, MinExp *c);
 static MinExp *cpsTcMinApply(MinApply *node, MinExp *c);
 static MinExp *cpsTcMinLookUp(MinLookUp *node, MinExp *c);
-static MinExp *cpsTcMakeVec(MinArgs *node, MinExp *c);
+static MinExp *cpsTcMakeVec(MinExprList *node, MinExp *c);
 static MinExp *cpsTcMinIff(MinIff *node, MinExp *c);
 static MinExp *cpsTcMinCond(MinCond *node, MinExp *c);
 static MinExp *cpsTcMinMatch(MinMatch *node, MinExp *c);
@@ -120,7 +120,7 @@ MinExp *TcPrimApp2Kont(MinExp *s2, TcPrimApp2KontEnv *env) {
     ENTER(TcPrimApp2Kont);
     MinExp *primapp = makeMinExp_Prim(CPI(env->s1), env->p, env->s1, s2);
     int save = PROTECT(primapp);
-    MinArgs *args = newMinArgs(CPI(primapp), primapp, NULL);
+    MinExprList *args = newMinExprList(CPI(primapp), primapp, NULL);
     PROTECT(args);
     MinExp *result = makeMinExp_Apply(CPI(primapp), env->c, args);
     UNPROTECT(save);
@@ -136,7 +136,7 @@ MinExp *TcPrimApp2Kont(MinExp *s2, TcPrimApp2KontEnv *env) {
         })
     }
 */
-static MinExp *cpsTcMinSequence(MinSequence *node, MinExp *c) {
+static MinExp *cpsTcMinSequence(MinExprList *node, MinExp *c) {
     ENTER(cpsTcMinSequence);
 #ifdef SAFETY_CHECKS
     if (node == NULL) {
@@ -202,7 +202,7 @@ MinExp *TcApply1Kont(MinExp *sf, TcApply1KontEnv *env) {
 
 MinExp *TcApply2Kont(MinExp *ses, TcApply2KontEnv *env) {
     ENTER(TcApply2Kont);
-    MinArgs *args = appendMinArg(getMinExp_Args(ses), env->c);
+    MinExprList *args = appendMinArg(getMinExp_Args(ses), env->c);
     int save = PROTECT(args);
     MinExp *result = makeMinExp_Apply(CPI(env->sf), env->sf, args);
     UNPROTECT(save);
@@ -233,7 +233,7 @@ static MinExp *cpsTcMinLookUp(MinLookUp *node, MinExp *c) {
         })
     }
 */
-static MinExp *cpsTcMakeVec(MinArgs *node, MinExp *c) {
+static MinExp *cpsTcMakeVec(MinExprList *node, MinExp *c) {
     ENTER(cpsTcMakeVec);
     CpsKont *kont = makeKont_TcMakeVec(c);
     int save = PROTECT(kont);
@@ -249,7 +249,7 @@ MinExp *TcMakeVecKont(MinExp *sargs, TcMakeVecKontEnv *env) {
     ENTER(TcMakeVecKont);
     MinExp *make_vec = newMinExp_MakeVec(CPI(sargs), getMinExp_Args(sargs));
     int save = PROTECT(make_vec);
-    MinArgs *args = newMinArgs(CPI(sargs), make_vec, NULL);
+    MinExprList *args = newMinExprList(CPI(sargs), make_vec, NULL);
     PROTECT(args);
     MinExp *result = makeMinExp_Apply(CPI(sargs), env->c, args);
     UNPROTECT(save);
@@ -280,7 +280,7 @@ static MinExp *cpsTcMinIff(MinIff *node, MinExp *c) {
     PROTECT(args);
     MinExp *lambda = makeMinExp_Lam(CPI(node), args, body);
     PROTECT(lambda);
-    MinArgs *arglist = newMinArgs(CPI(node), c, NULL);
+    MinExprList *arglist = newMinExprList(CPI(node), c, NULL);
     PROTECT(arglist);
     MinExp *result = makeMinExp_Apply(CPI(node), lambda, arglist);
     UNPROTECT(save);
@@ -350,7 +350,7 @@ static MinExp *cpsTcMinCond(MinCond *node, MinExp *c) {
     PROTECT(body);
     MinExp *lambda = makeMinExp_Lam(CPI(node), args, body);
     PROTECT(lambda);
-    MinArgs *arglist = newMinArgs(CPI(node), c, NULL);
+    MinExprList *arglist = newMinExprList(CPI(node), c, NULL);
     PROTECT(arglist);
     MinExp *result = makeMinExp_Apply(CPI(node), lambda, arglist);
     UNPROTECT(save);
@@ -409,7 +409,7 @@ static MinExp *cpsTcMinMatch(MinMatch *node, MinExp *c) {
     PROTECT(body);
     MinExp *lambda = makeMinExp_Lam(CPI(node), args, body);
     PROTECT(lambda);
-    MinArgs *arglist = newMinArgs(CPI(node), c, NULL);
+    MinExprList *arglist = newMinExprList(CPI(node), c, NULL);
     PROTECT(arglist);
     MinExp *result = makeMinExp_Apply(CPI(node), lambda, arglist);
     UNPROTECT(save);
@@ -476,7 +476,7 @@ static MinExp *cpsTcMinAmb(MinAmb *node, MinExp *c) {
     PROTECT(fargs);
     MinExp *lambda = makeMinExp_Lam(CPI(node), fargs, lamAmb);
     PROTECT(lambda);
-    MinArgs *aargs = newMinArgs(CPI(node), c, NULL);
+    MinExprList *aargs = newMinExprList(CPI(node), c, NULL);
     PROTECT(aargs);
     MinExp *result = makeMinExp_Apply(CPI(node), lambda, aargs);
     LEAVE(cpsTcMinAmb);
@@ -498,7 +498,7 @@ static MinExp *makeCallCC(ParserInfo PI) {
     PROTECT(x);
     MinExp *i = makeVar(PI, "i");
     PROTECT(i);
-    MinArgs *args = newMinArgs(PI, x, NULL); // (x)
+    MinExprList *args = newMinExprList(PI, x, NULL); // (x)
     PROTECT(args);
     MinExp *apply = makeMinExp_Apply(PI, cc, args); // (cc x)
     PROTECT(apply);
@@ -508,9 +508,9 @@ static MinExp *makeCallCC(ParserInfo PI) {
     PROTECT(vars);
     MinExp *lambda = makeMinExp_Lam(PI, vars, apply); // (lambda (x i) (cc x))
     PROTECT(lambda);
-    args = newMinArgs(PI, lambda, NULL); // ((lambda (x i) (cc x)))
+    args = newMinExprList(PI, lambda, NULL); // ((lambda (x i) (cc x)))
     PROTECT(args);
-    args = newMinArgs(PI, cc, args); // ((lambda (x i) (cc x)) cc)
+    args = newMinExprList(PI, cc, args); // ((lambda (x i) (cc x)) cc)
     PROTECT(args);
     apply = makeMinExp_Apply(PI, f, args); // (f (lambda (x i) (cc x)) cc)
     PROTECT(apply);
@@ -548,9 +548,9 @@ MinExp *TcCallCCKont(MinExp *sf, TcCallCCKontEnv *env) {
     ENTER(TcCallCCKont);
     MinExp *callCC = makeCallCC(CPI(sf));
     int save = PROTECT(callCC);
-    MinArgs *args = newMinArgs(CPI(env->c), env->c, NULL);
+    MinExprList *args = newMinExprList(CPI(env->c), env->c, NULL);
     PROTECT(args);
-    args = newMinArgs(CPI(env->c), sf, args);
+    args = newMinExprList(CPI(env->c), sf, args);
     PROTECT(args);
     MinExp *result = makeMinExp_Apply(CPI(env->c), callCC, args);
     UNPROTECT(save);
@@ -565,7 +565,7 @@ static MinExp *cpsTcMinExp(MinExp *node, MinExp *c) {
     if (isAexpr(node)) {
         MinExp *exp = cpsM(node);
         int save = PROTECT(exp);
-        MinArgs *arglist = newMinArgs(CPI(node), exp, NULL);
+        MinExprList *arglist = newMinExprList(CPI(node), exp, NULL);
         PROTECT(arglist);
         MinExp *result = makeMinExp_Apply(CPI(node), c, arglist);
         UNPROTECT(save);
@@ -627,7 +627,7 @@ MinExp *TcNameSpacesKont(MinExp *sexprs, TcNameSpacesKontEnv *env) {
     int save = PROTECT(nsa);
     MinExp *nsaExp = newMinExp_NameSpaces(CPI(sexprs), nsa);
     PROTECT(nsaExp);
-    MinArgs *args = newMinArgs(CPI(nsaExp), nsaExp, NULL);
+    MinExprList *args = newMinExprList(CPI(nsaExp), nsaExp, NULL);
     PROTECT(args);
     MinExp *result = makeMinExp_Apply(CPI(env->c), env->c, args);
     UNPROTECT(save);

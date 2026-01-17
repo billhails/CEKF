@@ -60,7 +60,7 @@ static MinExp *makeSingleLambda(HashSymbol *y, MinExp *e, MinExp *body) {
     int save = PROTECT(fargs);
     MinExp *lam = makeMinExp_Lam(CPI(body), fargs, body);
     PROTECT(lam);
-    MinArgs *aargs = newMinArgs(CPI(e), e, NULL);
+    MinExprList *aargs = newMinExprList(CPI(e), e, NULL);
     PROTECT(aargs);
     MinExp *res = makeMinExp_Apply(CPI(e), lam, aargs);
     UNPROTECT(save);
@@ -138,7 +138,7 @@ static MinExp *normalizeNameKont(MinExp *x, NormalizeNameKontEnv *env) {
 //             (normalize-names (cdr Ms) [λ (ts)
 //                 (k `(,t . ,ts))])]))))
 
-static MinExp *normalize_names(MinArgs *Ms, AnfKont *k) {
+static MinExp *normalize_names(MinExprList *Ms, AnfKont *k) {
     ENTER(normalize_names);
     if (Ms == NULL) {
         MinExp *nullArgs = newMinExp_Args(NULLPI, NULL);
@@ -323,7 +323,7 @@ static MinExp *normalizeLetRecKont(MinExp *anfbindings,
 
 static MinExp *normalize_MakeVec(MinExp *exp, AnfKont *k) {
     ENTER(normalize_MakeVec);
-    MinArgs *makeVec = getMinExp_MakeVec(exp);
+    MinExprList *makeVec = getMinExp_MakeVec(exp);
     AnfKont *k2 = makeKont_normalizeMakeVec(k);
     int save = PROTECT(k2);
     MinExp *result = normalize_names(makeVec, k2);
@@ -333,7 +333,7 @@ static MinExp *normalize_MakeVec(MinExp *exp, AnfKont *k) {
 }
 
 static MinExp *normalizeMakeVecKont(MinExp *ts, NormalizeMakeVecKontEnv *env) {
-    MinArgs *tts = getMinExp_Args(ts);
+    MinExprList *tts = getMinExp_Args(ts);
     MinExp *newMakeVec = newMinExp_MakeVec(CPI(ts), tts);
     int save = PROTECT(newMakeVec);
     MinExp *result = INVOKE(env->k, newMakeVec);
@@ -607,11 +607,11 @@ static MinExp *normalizeCallCCKont(MinExp *t0, NormalizeCallCCKontEnv *env) {
 // (`(sequence . ,Ms)
 //     (k `(sequence . ,(normalize-terms Ms))))
 
-static MinSequence *_normalizeSquence(MinSequence *seq);
+static MinExprList *_normalizeSquence(MinExprList *seq);
 
 static MinExp *normalize_Sequence(MinExp *exp, AnfKont *k) {
     ENTER(normalize_Sequence);
-    MinSequence *normSeq = _normalizeSquence(getMinExp_Sequence(exp));
+    MinExprList *normSeq = _normalizeSquence(getMinExp_Sequence(exp));
     int save = PROTECT(normSeq);
     MinExp *newSeqExp = newMinExp_Sequence(CPI(exp), normSeq);
     PROTECT(newSeqExp);
@@ -621,14 +621,14 @@ static MinExp *normalize_Sequence(MinExp *exp, AnfKont *k) {
     return result;
 }
 
-static MinSequence *_normalizeSquence(MinSequence *seq) {
+static MinExprList *_normalizeSquence(MinExprList *seq) {
     if (seq == NULL)
         return NULL;
-    MinSequence *rest = _normalizeSquence(seq->next);
+    MinExprList *rest = _normalizeSquence(seq->next);
     int save = PROTECT(rest);
     MinExp *newExp = normalize_term(seq->exp);
     PROTECT(newExp);
-    MinSequence *newSeq = newMinSequence(CPI(seq), newExp, rest);
+    MinExprList *newSeq = newMinExprList(CPI(seq), newExp, rest);
     UNPROTECT(save);
     return newSeq;
 }

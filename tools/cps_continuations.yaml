@@ -28,13 +28,13 @@ external:
       printFn: printMinExp
       markFn: markMinExp
       valued: true
-  MinArgs:
+  MinExprList:
     meta:
       brief: List of MinExp
     data:
-      cname: "struct MinArgs *"
-      printFn: printMinArgs
-      markFn: markMinArgs
+      cname: "struct MinExprList *"
+      printFn: printMinExprList
+      markFn: markMinExprList
       valued: true
   MinBindings:
     meta:
@@ -62,12 +62,6 @@ external:
     data:
       cname: "enum MinPrimOp"
       printf: "%d"
-      valued: true
-  MinSequence:
-    data:
-      cname: "struct MinSequence *"
-      printFn: printMinSequence
-      markFn: markMinSequence
       valued: true
 
 # Naming convention, since each kont is argument to T_k and never
@@ -136,7 +130,7 @@ continuations:
           }
       }
     free_vars:
-      es: MinArgs
+      es: MinExprList
       c: MinExp
 
   TcApply2:
@@ -218,7 +212,7 @@ continuations:
           }
       }
     free_vars:
-      t: MinArgs
+      t: MinExprList
       k: CpsKont
 
   TkS2:
@@ -414,7 +408,7 @@ continuations:
       }
     free_vars:
       k: CpsKont
-      exprs: MinSequence
+      exprs: MinExprList
 
   TcSequence:
     transformer: T_k
@@ -428,4 +422,4 @@ continuations:
       }
     free_vars:
       c: MinExp
-      exprs: MinSequence
+      exprs: MinExprList

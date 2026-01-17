@@ -31,11 +31,11 @@
 static MinLam *visitMinLam(MinLam *node, MinAlphaEnv *context);
 static MinVarList *visitMinVarList(MinVarList *node, MinAlphaEnv *context);
 static MinPrimApp *visitMinPrimApp(MinPrimApp *node, MinAlphaEnv *context);
-static MinSequence *visitMinSequence(MinSequence *node, MinAlphaEnv *context);
-static MinArgs *visitMinArgs(MinArgs *node, MinAlphaEnv *context);
+static MinExprList *visitMinSequence(MinExprList *node, MinAlphaEnv *context);
+static MinExprList *visitMinArgs(MinExprList *node, MinAlphaEnv *context);
 static MinApply *visitMinApply(MinApply *node, MinAlphaEnv *context);
 static MinLookUp *visitMinLookUp(MinLookUp *node, MinAlphaEnv *context);
-static MinArgs *visitMinMakeVec(MinArgs *node, MinAlphaEnv *context);
+static MinExprList *visitMinMakeVec(MinExprList *node, MinAlphaEnv *context);
 static MinIff *visitMinIff(MinIff *node, MinAlphaEnv *context);
 static MinCond *visitMinCond(MinCond *node, MinAlphaEnv *context);
 static MinIntCondCases *visitMinIntCondCases(MinIntCondCases *node,
@@ -172,7 +172,7 @@ static MinPrimApp *visitMinPrimApp(MinPrimApp *node, MinAlphaEnv *context) {
     return node;
 }
 
-static MinSequence *visitMinSequence(MinSequence *node, MinAlphaEnv *context) {
+static MinExprList *visitMinSequence(MinExprList *node, MinAlphaEnv *context) {
     if (node == NULL)
         return NULL;
 
@@ -180,13 +180,13 @@ static MinSequence *visitMinSequence(MinSequence *node, MinAlphaEnv *context) {
     MinExp *new_exp = visitMinExp(node->exp, context);
     int save = PROTECT(new_exp);
     changed = changed || (new_exp != node->exp);
-    MinSequence *new_next = visitMinSequence(node->next, context);
+    MinExprList *new_next = visitMinSequence(node->next, context);
     PROTECT(new_next);
     changed = changed || (new_next != node->next);
 
     if (changed) {
         // Create new node with modified fields
-        MinSequence *result = newMinSequence(CPI(node), new_exp, new_next);
+        MinExprList *result = newMinExprList(CPI(node), new_exp, new_next);
         UNPROTECT(save);
         return result;
     }
@@ -195,7 +195,7 @@ static MinSequence *visitMinSequence(MinSequence *node, MinAlphaEnv *context) {
     return node;
 }
 
-static MinArgs *visitMinArgs(MinArgs *node, MinAlphaEnv *context) {
+static MinExprList *visitMinArgs(MinExprList *node, MinAlphaEnv *context) {
     if (node == NULL)
         return NULL;
 
@@ -203,13 +203,13 @@ static MinArgs *visitMinArgs(MinArgs *node, MinAlphaEnv *context) {
     MinExp *new_exp = visitMinExp(node->exp, context);
     int save = PROTECT(new_exp);
     changed = changed || (new_exp != node->exp);
-    MinArgs *new_next = visitMinArgs(node->next, context);
+    MinExprList *new_next = visitMinArgs(node->next, context);
     PROTECT(new_next);
     changed = changed || (new_next != node->next);
 
     if (changed) {
         // Create new node with modified fields
-        MinArgs *result = newMinArgs(CPI(node), new_exp, new_next);
+        MinExprList *result = newMinExprList(CPI(node), new_exp, new_next);
         UNPROTECT(save);
         return result;
     }
@@ -229,7 +229,7 @@ static MinApply *visitMinApply(MinApply *node, MinAlphaEnv *context) {
         cant_happen("visitMinApply: function is NULL");
     }
     changed = changed || (new_function != node->function);
-    MinArgs *new_args = visitMinArgs(node->args, context);
+    MinExprList *new_args = visitMinArgs(node->args, context);
     PROTECT(new_args);
     changed = changed || (new_args != node->args);
 
@@ -265,7 +265,7 @@ static MinLookUp *visitMinLookUp(MinLookUp *node, MinAlphaEnv *context) {
     return node;
 }
 
-static MinArgs *visitMinMakeVec(MinArgs *node, MinAlphaEnv *context) {
+static MinExprList *visitMinMakeVec(MinExprList *node, MinAlphaEnv *context) {
     if (node == NULL)
         return NULL;
 
@@ -546,9 +546,9 @@ static MinExp *visitMinExp(MinExp *node, MinAlphaEnv *context) {
         break;
     }
     case MINEXP_TYPE_ARGS: {
-        // MinArgs
-        MinArgs *variant = getMinExp_Args(node);
-        MinArgs *new_variant = visitMinArgs(variant, context);
+        // MinExprList
+        MinExprList *variant = getMinExp_Args(node);
+        MinExprList *new_variant = visitMinArgs(variant, context);
         if (new_variant != variant) {
             PROTECT(new_variant);
             result = newMinExp_Args(CPI(node), new_variant);
@@ -651,8 +651,8 @@ static MinExp *visitMinExp(MinExp *node, MinAlphaEnv *context) {
     }
     case MINEXP_TYPE_MAKEVEC: {
         // MinMakeVec
-        MinArgs *variant = getMinExp_MakeVec(node);
-        MinArgs *new_variant = visitMinMakeVec(variant, context);
+        MinExprList *variant = getMinExp_MakeVec(node);
+        MinExprList *new_variant = visitMinMakeVec(variant, context);
         if (new_variant != variant) {
             PROTECT(new_variant);
             result = newMinExp_MakeVec(CPI(node), new_variant);
@@ -691,9 +691,9 @@ static MinExp *visitMinExp(MinExp *node, MinAlphaEnv *context) {
         break;
     }
     case MINEXP_TYPE_SEQUENCE: {
-        // MinSequence
-        MinSequence *variant = getMinExp_Sequence(node);
-        MinSequence *new_variant = visitMinSequence(variant, context);
+        // MinExprList
+        MinExprList *variant = getMinExp_Sequence(node);
+        MinExprList *new_variant = visitMinSequence(variant, context);
         if (new_variant != variant) {
             PROTECT(new_variant);
             result = newMinExp_Sequence(CPI(node), new_variant);

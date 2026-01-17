@@ -234,7 +234,7 @@ void ppMinPrimOp(MinPrimOp type) {
     }
 }
 
-static void _ppMinSequence(MinSequence *sequence) {
+static void _ppMinSequence(MinExprList *sequence) {
     if (sequence == NULL)
         return;
     ppMinExp(sequence->exp);
@@ -244,7 +244,7 @@ static void _ppMinSequence(MinSequence *sequence) {
     }
 }
 
-static void _ppMinArgs(MinArgs *list) {
+static void _ppMinArgs(MinExprList *list) {
     if (list == NULL)
         return;
     eprintf(" ");
@@ -252,19 +252,19 @@ static void _ppMinArgs(MinArgs *list) {
     _ppMinArgs(list->next);
 }
 
-void ppMinMakeTuple(MinArgs *args) {
+void ppMinMakeTuple(MinExprList *args) {
     eprintf("(make-tuple");
     _ppMinArgs(args);
     eprintf(")");
 }
 
-void ppMinSequence(MinSequence *sequence) {
+void ppMinSequence(MinExprList *sequence) {
     eprintf("(begin ");
     _ppMinSequence(sequence);
     eprintf(")");
 }
 
-void ppMinMakeVec(MinArgs *makeVec) {
+void ppMinMakeVec(MinExprList *makeVec) {
     eprintf("(make-vec");
     _ppMinArgs(makeVec);
     eprintf(")");

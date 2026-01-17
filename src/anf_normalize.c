@@ -46,7 +46,7 @@ static AnfExp *normalizeStdInteger(ParserInfo I, int integer, AnfExp *tail);
 static AnfExp *normalizeCharacter(ParserInfo I, Character character,
                                   AnfExp *tail);
 static AnfExp *normalizeAmb(MinAmb *app, AnfExp *tail);
-static AnfExp *normalizeSequence(MinSequence *sequence, AnfExp *tail);
+static AnfExp *normalizeSequence(MinExprList *sequence, AnfExp *tail);
 static AnfExp *normalizePrim(MinPrimApp *app, AnfExp *tail);
 static AnfExp *normalizeApply(MinApply *minApply, AnfExp *tail);
 static AnfExp *normalizeBack(ParserInfo I, AnfExp *tail);
@@ -63,11 +63,12 @@ static Aexp *aexpNormalizeLam(MinLam *minMin);
 static AexpNameSpaceArray *aexpNormalizeNameSpaces(ParserInfo I,
                                                    MinNameSpaceArray *nsArray);
 static AexpVarList *convertVarList(MinVarList *args);
-static AexpList *replaceMinArgs(MinArgs *, MinExpTable *);
+static AexpList *replaceMinArgs(MinExprList *, MinExpTable *);
 static Aexp *replaceMinPrim(MinPrimApp *minPrimApp, MinExpTable *replacements);
-static Aexp *replaceMinMakeVec(MinArgs *makeVec, MinExpTable *replacements);
+static Aexp *replaceMinMakeVec(MinExprList *makeVec, MinExpTable *replacements);
 static Aexp *replaceMinCexp(MinExp *apply, MinExpTable *replacements);
-static AnfExp *normalizeMakeVec(ParserInfo PI, MinArgs *makeVec, AnfExp *tail);
+static AnfExp *normalizeMakeVec(ParserInfo PI, MinExprList *makeVec,
+                                AnfExp *tail);
 static AnfExp *wrapTail(AnfExp *exp, AnfExp *tail);
 static AnfExp *normalizeIff(MinIff *minIff, AnfExp *tail);
 static AnfExp *normalizeCallCc(MinExp *callCC, AnfExp *tail);
@@ -295,7 +296,7 @@ static AnfExp *normalizeIff(MinIff *minIff, AnfExp *tail) {
 }
 
 // args can be null so we need to pass in PI
-static AnfExp *normalizeMakeVec(ParserInfo PI, MinArgs *minMakeVec,
+static AnfExp *normalizeMakeVec(ParserInfo PI, MinExprList *minMakeVec,
                                 AnfExp *tail) {
     ENTER(normalizeMakeVec);
     MinExpTable *replacements = newMinExpTable();
@@ -340,7 +341,7 @@ static AnfExp *normalizeMakeVec(ParserInfo PI, MinArgs *minMakeVec,
 // (let (anf$123 (expr1)) (expr2 anf$123))
 // and a tail <expr3> and we want to build
 // (let (anf$123 (expr1)) (let (f (expr2 anf$123)) <expr3>))
-static AnfExp *normalizeSequence(MinSequence *sequence, AnfExp *tail) {
+static AnfExp *normalizeSequence(MinExprList *sequence, AnfExp *tail) {
     ENTER(normalizeSequence);
     if (sequence == NULL) {
         cant_happen("empty sequence in normalizeSequence");
@@ -809,7 +810,8 @@ static CexpLetRec *normalizeLetRecBindings(CexpLetRec *cexpLetRec,
     return cexpLetRec;
 }
 
-static Aexp *replaceMinMakeVec(MinArgs *makeVec, MinExpTable *replacements) {
+static Aexp *replaceMinMakeVec(MinExprList *makeVec,
+                               MinExpTable *replacements) {
     ENTER(replaceMinMakeVec);
     DEBUG("calling replaceMinArgs");
     AexpList *aexpList = replaceMinArgs(makeVec, replacements);
@@ -823,7 +825,7 @@ static Aexp *replaceMinMakeVec(MinArgs *makeVec, MinExpTable *replacements) {
     return res;
 }
 
-static AexpList *replaceMinArgs(MinArgs *list, MinExpTable *replacements) {
+static AexpList *replaceMinArgs(MinExprList *list, MinExpTable *replacements) {
     ENTER(replaceMinArgs);
     if (list == NULL) {
         LEAVE(replaceMinArgs);

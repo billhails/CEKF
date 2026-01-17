@@ -37,10 +37,10 @@
 
 // Forward declarations
 static MinExp *cpsTkMinPrimApp(MinPrimApp *node, CpsKont *k);
-static MinExp *cpsTkMinSequence(MinSequence *node, CpsKont *k);
+static MinExp *cpsTkMinSequence(MinExprList *node, CpsKont *k);
 static MinExp *cpsTkMinApply(MinExp *node, CpsKont *k);
 static MinExp *cpsTkMinLookUp(MinLookUp *node, CpsKont *k);
-static MinExp *cpsTkMakeVec(MinArgs *node, CpsKont *k);
+static MinExp *cpsTkMakeVec(MinExprList *node, CpsKont *k);
 static MinExp *cpsTkMinIff(MinIff *node, CpsKont *k);
 static MinExp *cpsTkMinCond(MinCond *node, CpsKont *k);
 static MinExp *cpsTkMinMatch(MinMatch *node, CpsKont *k);
@@ -74,12 +74,12 @@ MinExp *makeVar(ParserInfo PI, char *prefix) {
     return newMinExp_Var(PI, genSymDollar(prefix));
 }
 
-MinArgs *appendMinArg(MinArgs *args, MinExp *exp) {
+MinExprList *appendMinArg(MinExprList *args, MinExp *exp) {
     if (args == NULL)
-        return newMinArgs(CPI(exp), exp, NULL);
-    MinArgs *next = appendMinArg(args->next, exp);
+        return newMinExprList(CPI(exp), exp, NULL);
+    MinExprList *next = appendMinArg(args->next, exp);
     int save = PROTECT(next);
-    MinArgs *this = newMinArgs(CPI(args), args->exp, next);
+    MinExprList *this = newMinExprList(CPI(args), args->exp, next);
     UNPROTECT(save);
     return this;
 }
@@ -209,7 +209,7 @@ MinExp *TkPrimApp2Kont(MinExp *s2, TkPrimApp2KontEnv *env) {
         })
     }
 */
-static MinExp *cpsTkMinSequence(MinSequence *node, CpsKont *k) {
+static MinExp *cpsTkMinSequence(MinExprList *node, CpsKont *k) {
     ENTER(cpsTkMinSequence);
 #ifdef SAFETY_CHECKS
     if (node == NULL) {
@@ -286,7 +286,7 @@ static MinExp *cpsTkMinLookUp(MinLookUp *node, CpsKont *k) {
         })
     }
 */
-static MinExp *cpsTkMakeVec(MinArgs *node, CpsKont *k) {
+static MinExp *cpsTkMakeVec(MinExprList *node, CpsKont *k) {
     ENTER(cpsTkMakeVec);
     CpsKont *k1 = makeKont_TkMakeVec(k);
     int save = PROTECT(k1);
@@ -477,7 +477,7 @@ MinExp *TkMatchKont(MinExp *atest, TkMatchKontEnv *env) {
 }
 
 void cpsUnzipMinBindings(MinBindings *bindings, MinVarList **vars,
-                         MinArgs **exps) {
+                         MinExprList **exps) {
     if (bindings == NULL) {
         *vars = NULL;
         *exps = NULL;
@@ -486,7 +486,7 @@ void cpsUnzipMinBindings(MinBindings *bindings, MinVarList **vars,
     cpsUnzipMinBindings(bindings->next, vars, exps);
     *vars = newMinVarList(CPI(bindings), bindings->var, *vars);
     PROTECT(*vars);
-    *exps = newMinArgs(CPI(bindings), bindings->val, *exps);
+    *exps = newMinExprList(CPI(bindings), bindings->val, *exps);
     PROTECT(*exps);
 }
 
@@ -500,7 +500,7 @@ MinExp *cpsNestLets(MinBindings *bindings, MinExp *body) {
     PROTECT(farg);
     MinExp *lambda = makeMinExp_Lam(CPI(bindings), farg, rest);
     PROTECT(lambda);
-    MinArgs *aarg = newMinArgs(CPI(bindings), bindings->val, NULL);
+    MinExprList *aarg = newMinExprList(CPI(bindings), bindings->val, NULL);
     PROTECT(aarg);
     MinExp *apply = makeMinExp_Apply(CPI(bindings), lambda, aarg);
     UNPROTECT(save);
@@ -654,11 +654,11 @@ MinExp *TkNameSpacesKont(MinExp *sexprs, TkNameSpacesKontEnv *env) {
 
 MinExp *nsaToArgs(MinNameSpaceArray *nsa) {
     ENTER(nsaToArgs);
-    MinArgs *args = NULL;
+    MinExprList *args = NULL;
     int save = PROTECT(NULL);
     for (Index i = nsa->size; i > 0; i--) {
         MinExp *ns_exp = peeknMinNameSpaceArray(nsa, i - 1);
-        args = newMinArgs(CPI(ns_exp), ns_exp, args);
+        args = newMinExprList(CPI(ns_exp), ns_exp, args);
         PROTECT(args);
     }
     MinExp *result = newMinExp_Args(CPI(args), args);
@@ -669,10 +669,11 @@ MinExp *nsaToArgs(MinNameSpaceArray *nsa) {
 
 MinNameSpaceArray *argsToNsa(MinExp *args_exp) {
     ENTER(argsToNsa);
-    MinArgs *args = getMinExp_Args(args_exp);
+    MinExprList *args = getMinExp_Args(args_exp);
     MinNameSpaceArray *nsa = newMinNameSpaceArray();
     int save = PROTECT(nsa);
-    for (MinArgs *current = args; current != NULL; current = current->next) {
+    for (MinExprList *current = args; current != NULL;
+         current = current->next) {
         pushMinNameSpaceArray(nsa, current->exp);
     }
     UNPROTECT(save);

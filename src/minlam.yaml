@@ -36,10 +36,17 @@ structs:
 
     MinVarList:
         meta:
-            brief: Formal arguments to a lambda expression
+            brief: Formal arguments of a lambda
         data:
             var: HashSymbol
             next: MinVarList
+
+    MinExprList:
+        meta:
+            brief: A list of expressions
+        data:
+            exp: MinExp
+            next: MinExprList
 
     MinPrimApp:
         meta:
@@ -49,26 +56,12 @@ structs:
             exp1: MinExp
             exp2: MinExp
 
-    MinSequence:
-        meta:
-            brief: A sequence of lambda expressions e.g. (begin ...)
-        data:
-            exp: MinExp
-            next: MinSequence
-
-    MinArgs:
-        meta:
-            brief: Actual arguments to a MinApply.
-        data:
-            exp: MinExp
-            next: MinArgs
-
     MinApply:
         meta:
             brief: A function application.
         data:
             function: MinExp
-            args: MinArgs
+            args: MinExprList
 
     MinLookUp:
         meta:
@@ -210,7 +203,7 @@ unions:
         data:
             amb: MinAmb
             apply: MinApply
-            args: MinArgs # so that ANF normalize can be uniformly typed
+            args: MinExprList # so that ANF normalize can be uniformly typed
             back: void_ptr
             bigInteger: MaybeBigInt
             bindings: MinBindings # so that ANF normalize can be uniformly typed
@@ -223,11 +216,11 @@ unions:
             lam: MinLam
             letRec: MinLetRec
             lookUp: MinLookUp
-            makeVec: MinArgs
+            makeVec: MinExprList
             match: MinMatch
             nameSpaces: MinNameSpaceArray
             prim: MinPrimApp
-            sequence: MinSequence
+            sequence: MinExprList
             stdint: int
             var: HashSymbol
 

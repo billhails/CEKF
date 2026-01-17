@@ -22,7 +22,7 @@
 #include "minlam.h"
 
 MinExp *cpsTk(MinExp *, CpsKont *);
-MinArgs *appendMinArg(MinArgs *, MinExp *);
+MinExprList *appendMinArg(MinExprList *, MinExp *);
 MinExp *makeVar(ParserInfo, char *);
 MinVarList *appendMinVar(ParserInfo, MinVarList *, HashSymbol *);
 MinExp *cpsTs_k(MinExp *, CpsKont *);
@@ -31,7 +31,7 @@ MinExp *cpsTc(MinExp *, MinExp *);
 MinExp *cpsM(MinExp *);
 MinBindings *mapMOverBindings(MinBindings *);
 MinMatchList *mapTcOverMatchCases(MinMatchList *, MinExp *);
-void cpsUnzipMinBindings(MinBindings *, MinVarList **, MinArgs **);
+void cpsUnzipMinBindings(MinBindings *, MinVarList **, MinExprList **);
 MinExp *cpsNestLets(MinBindings *, MinExp *);
 MinExp *nsaToArgs(MinNameSpaceArray *nsa);
 MinNameSpaceArray *argsToNsa(MinExp *seq);

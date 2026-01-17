@@ -25,13 +25,13 @@ external:
       printFn: printMinExp
       markFn: markMinExp
       valued: true
-  MinArgs:
+  MinExprList:
     meta:
       brief: List of MinExp
     data:
-      cname: "struct MinArgs *"
-      printFn: printMinArgs
-      markFn: markMinArgs
+      cname: "struct MinExprList *"
+      printFn: printMinExprList
+      markFn: markMinExprList
       valued: true
   MinBindings:
     meta:
@@ -107,7 +107,7 @@ continuations:
                       (normalize-names Ms
                           (λ (ts) (k `(,t . ,ts))))]))))
     free_vars:
-      Ms: MinArgs
+      Ms: MinExprList
       k: AnfKont
 
   normalizeApplyInner:
@@ -136,7 +136,7 @@ continuations:
                   (normalize-names (cdr Ms) (λ (ts)
                       (k `(,t . ,ts))))]))))
     free_vars:
-      Ms: MinArgs
+      Ms: MinExprList
       k: AnfKont
 
   normalizeNamesInner:
