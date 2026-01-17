@@ -255,8 +255,7 @@ static MinLookUp *visitMinLookUp(MinLookUp *node, MinAlphaEnv *context) {
     changed = changed || (new_exp != node->exp);
 
     if (changed) {
-        MinLookUp *result =
-            newMinLookUp(CPI(node), node->nsId, node->nsSymbol, new_exp);
+        MinLookUp *result = newMinLookUp(CPI(node), node->nsId, new_exp);
         UNPROTECT(save);
         return result;
     }

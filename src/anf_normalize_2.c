@@ -543,8 +543,7 @@ static MinExp *normalize_LookUp(MinExp *exp, AnfKont *k) {
     MinLookUp *lookUpExp = getMinExp_LookUp(exp);
     MinExp *newExpr = normalize_term(lookUpExp->exp);
     int save = PROTECT(newExpr);
-    MinExp *newLookUp = makeMinExp_LookUp(CPI(exp), lookUpExp->nsId,
-                                          lookUpExp->nsSymbol, newExpr);
+    MinExp *newLookUp = makeMinExp_LookUp(CPI(exp), lookUpExp->nsId, newExpr);
     PROTECT(newLookUp);
     MinExp *result = INVOKE(k, newLookUp);
     UNPROTECT(save);

@@ -212,8 +212,7 @@ static MinLookUp *desugarLamLookUp(LamLookUp *node) {
 
     MinExp *exp = desugarLamExp_internal(node->exp);
     int save = PROTECT(exp);
-    MinLookUp *result =
-        newMinLookUp(CPI(node), node->nsId, node->nsSymbol, exp);
+    MinLookUp *result = newMinLookUp(CPI(node), node->nsId, exp);
     UNPROTECT(save);
     LEAVE(desugarLamLookUp);
     return result;

@@ -219,8 +219,7 @@ static MinExp *cpsTcMinLookUp(MinLookUp *node, MinExp *c) {
     ENTER(cpsTcMinLookUp);
     MinExp *expr = cpsTcMinExp(node->exp, c);
     int save = PROTECT(expr);
-    MinExp *result =
-        makeMinExp_LookUp(CPI(node), node->nsId, node->nsSymbol, expr);
+    MinExp *result = makeMinExp_LookUp(CPI(node), node->nsId, expr);
     UNPROTECT(save);
     LEAVE(cpsTcMinLookUp);
     return result;

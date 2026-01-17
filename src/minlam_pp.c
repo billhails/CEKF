@@ -154,9 +154,7 @@ void ppMinExp(MinExp *exp) {
 }
 
 void ppMinLookUp(MinLookUp *lookUp) {
-    eprintf("(lookUp %s:%d ",
-            lookUp->nsSymbol == NULL ? "" : lookUp->nsSymbol->name,
-            lookUp->nsId);
+    eprintf("(lookUp %d ", lookUp->nsId);
     ppMinExp(lookUp->exp);
     eprintf(")");
 }

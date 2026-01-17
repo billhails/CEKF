@@ -71,7 +71,6 @@ structs:
                 in a different nameSpace.
         data:
             nsId: int
-            nsSymbol: HashSymbol
             exp: MinExp
 
     MinIff:
