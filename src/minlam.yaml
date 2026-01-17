@@ -200,15 +200,6 @@ structs:
             val: MinExp
             next: MinBindings
 
-    MinContext:
-        meta:
-            brief: A context for lambda expressions
-        data:
-            frame: MinInfoTable
-            aliases: MinAliasTable
-            macros: MinMacroSet
-            parent: MinContext
-
     MinAmb:
         meta:
             brief: An amb expression
@@ -299,19 +290,6 @@ structs:
             name: MinLookUpOrSymbol
             args: MinTypeConstructorArgs
 
-    MinTypeConstructorInfo:
-        meta:
-            brief: Information about a type constructor
-        data:
-            name: HashSymbol
-            nsId: int
-            type: MinTypeConstructor
-            tags: MinTypeTags
-            needsVec: bool # does this need to be a vector?
-            arity: int # number of arguments to this constructor
-            size: int # number of alternatives
-            index: int # index into list of alternatives
-
     MinAlphaEnv:
         meta:
             brief: An environment for alpha conversion
@@ -354,7 +332,6 @@ unions:
             callCC: MinExp
             character: character
             cond: MinCond
-            constructor: MinTypeConstructorInfo
             env: void_ptr
             error: void_ptr
             iff: MinIff
@@ -403,14 +380,6 @@ unions:
             function: MinTypeFunction
             tuple: MinTypeConstructorArgs
 
-    MinInfo:
-        meta:
-            brief: Information about a symbol
-        data:
-            typeConstructorInfo: MinTypeConstructorInfo
-            nameSpaceInfo: MinContext
-            nsId: int
-
 hashes:
     MinMacroSet:
         meta:
@@ -427,14 +396,6 @@ hashes:
                 This table holds the symbols that are bound to macro arguments
                 in the current context (body of the macro).
         data: {}
-
-    MinInfoTable:
-        meta:
-            brief: Map from symbols to information about them
-            description: >-
-                This table holds information about symbols in the current context.
-        data:
-            entries: MinInfo
 
     MinAliasTable:
         meta:

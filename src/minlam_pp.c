@@ -157,9 +157,6 @@ void ppMinExp(MinExp *exp) {
     case MINEXP_TYPE_ENV:
         eprintf("env");
         break;
-    case MINEXP_TYPE_CONSTRUCTOR:
-        eprintf("constructor:%s", getMinExp_Constructor(exp)->name->name);
-        break;
     case MINEXP_TYPE_LOOKUP:
         ppMinLookUp(getMinExp_LookUp(exp));
         break;
@@ -610,43 +607,3 @@ void ppMinTag(MinExp *tag) {
     ppMinExp(tag);
     eprintf(")");
 }
-
-static inline void pad(int depth) { eprintf("%*s", depth, ""); }
-
-static void _ppMinContext(MinContext *env, int depth, bool done_nameSpaces) {
-    if (env == NULL) {
-        pad(depth);
-        eprintf("<NULL> env\n");
-        return;
-    }
-    pad(depth);
-    eprintf("{\n");
-    HashSymbol *name;
-    Index i = 0;
-    MinInfo *value;
-    while ((name = iterateMinInfoTable(env->frame, &i, &value)) != NULL) {
-        pad(depth);
-        if (value->type == MININFO_TYPE_NAMESPACEINFO) {
-            if (done_nameSpaces) {
-                eprintf(" %s => %s\n", name->name,
-                        minInfoTypeName(value->type));
-            } else {
-                eprintf(" %s => %s [\n", name->name,
-                        minInfoTypeName(value->type));
-                _ppMinContext(getMinInfo_NameSpaceInfo(value), depth + 1, true);
-                pad(depth);
-                eprintf(" ]\n");
-            }
-        } else if (value->type == MININFO_TYPE_NSID) {
-            eprintf(" %s => %s [%d]\n", name->name,
-                    minInfoTypeName(value->type), getMinInfo_NsId(value));
-        } else {
-            eprintf(" %s => %s\n", name->name, minInfoTypeName(value->type));
-        }
-    }
-    _ppMinContext(env->parent, depth + 1, done_nameSpaces);
-    pad(depth);
-    eprintf("}\n");
-}
-
-void ppMinContext(MinContext *env) { _ppMinContext(env, 0, false); }

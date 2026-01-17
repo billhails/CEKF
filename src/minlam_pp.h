@@ -44,7 +44,6 @@ void ppMinIntList(MinIntList *list);
 void ppMinMakeTuple(MinArgs *args);
 void ppMinNameSpaces(MinNameSpaceArray *arr);
 void ppMinLookUp(MinLookUp *lookUp);
-void ppMinContext(MinContext *env);
 void ppHashSymbol(HashSymbol *);
 
 #endif

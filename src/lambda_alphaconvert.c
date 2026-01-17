@@ -28,14 +28,6 @@
 #include "lambda_alphaconvert.h"
 
 // Forward declarations
-static MinMacroSet *visitMinMacroSet(MinMacroSet *node, MinAlphaEnv *context);
-static MinMacroArgsSet *visitMinMacroArgsSet(MinMacroArgsSet *node,
-                                             MinAlphaEnv *context);
-static MinInfoTable *visitMinInfoTable(MinInfoTable *node,
-                                       MinAlphaEnv *context);
-static MinAliasTable *visitMinAliasTable(MinAliasTable *node,
-                                         MinAlphaEnv *context);
-static MinExpTable *visitMinExpTable(MinExpTable *node, MinAlphaEnv *context);
 static MinLam *visitMinLam(MinLam *node, MinAlphaEnv *context);
 static MinVarList *visitMinVarList(MinVarList *node, MinAlphaEnv *context);
 static MinPrimApp *visitMinPrimApp(MinPrimApp *node, MinAlphaEnv *context);
@@ -59,7 +51,6 @@ static MinMatchList *visitMinMatchList(MinMatchList *node,
                                        MinAlphaEnv *context);
 static MinIntList *visitMinIntList(MinIntList *node, MinAlphaEnv *context);
 static MinLetRec *visitMinLetRec(MinLetRec *node, MinAlphaEnv *context);
-static MinContext *visitMinContext(MinContext *node, MinAlphaEnv *context);
 static MinAmb *visitMinAmb(MinAmb *node, MinAlphaEnv *context);
 static MinTypeDefs *visitMinTypeDefs(MinTypeDefs *node, MinAlphaEnv *context);
 static MinTypeDefList *visitMinTypeDefList(MinTypeDefList *node,
@@ -68,7 +59,6 @@ static MinTypeDef *visitMinTypeDef(MinTypeDef *node, MinAlphaEnv *context);
 static MinTypeConstructorList *
 visitMinTypeConstructorList(MinTypeConstructorList *node, MinAlphaEnv *context);
 static MinTypeSig *visitMinTypeSig(MinTypeSig *node, MinAlphaEnv *context);
-static MinTypeTags *visitMinTypeTags(MinTypeTags *node, MinAlphaEnv *context);
 static MinTypeSigArgs *visitMinTypeSigArgs(MinTypeSigArgs *node,
                                            MinAlphaEnv *context);
 static MinTypeConstructor *visitMinTypeConstructor(MinTypeConstructor *node,
@@ -77,8 +67,6 @@ static MinTypeConstructorArgs *
 visitMinTypeConstructorArgs(MinTypeConstructorArgs *node, MinAlphaEnv *context);
 static MinTypeFunction *visitMinTypeFunction(MinTypeFunction *node,
                                              MinAlphaEnv *context);
-static MinTypeConstructorInfo *
-visitMinTypeConstructorInfo(MinTypeConstructorInfo *node, MinAlphaEnv *context);
 static MinExp *visitMinExp(MinExp *node, MinAlphaEnv *context);
 static MinLookUpOrSymbol *visitMinLookUpOrSymbol(MinLookUpOrSymbol *node,
                                                  MinAlphaEnv *context);
@@ -86,7 +74,6 @@ static MinCondCases *visitMinCondCases(MinCondCases *node,
                                        MinAlphaEnv *context);
 static MinTypeConstructorType *
 visitMinTypeConstructorType(MinTypeConstructorType *node, MinAlphaEnv *context);
-static MinInfo *visitMinInfo(MinInfo *node, MinAlphaEnv *context);
 static MinNameSpaceArray *visitMinNameSpaceArray(MinNameSpaceArray *node,
                                                  MinAlphaEnv *context);
 
@@ -140,124 +127,6 @@ static MinAlphaEnv *findAlphaNameSpaceEnv(MinAlphaEnv *context, Index index) {
         }
     }
     cant_happen("no nameSpace array found in context");
-}
-
-// Visitor implementations
-static MinMacroSet *visitMinMacroSet(MinMacroSet *node, MinAlphaEnv *context) {
-    if (node == NULL)
-        return NULL;
-
-    (void)context; // Hash set has no values to visit
-    // Iterate over keys (uncomment if you need to inspect/log them)
-    // Index i = 0;
-    // HashSymbol *key;
-    // while ((key = iterateMinMacroSet(node, &i)) != NULL) {
-    //     // Inspect/log key here
-    // }
-    return node;
-}
-
-__attribute__((unused)) static MinMacroArgsSet *
-visitMinMacroArgsSet(MinMacroArgsSet *node, MinAlphaEnv *context) {
-    if (node == NULL)
-        return NULL;
-
-    (void)context; // Hash set has no values to visit
-    // Iterate over keys (uncomment if you need to inspect/log them)
-    // Index i = 0;
-    // HashSymbol *key;
-    // while ((key = iterateMinMacroArgsSet(node, &i)) != NULL) {
-    //     // Inspect/log key here
-    // }
-    return node;
-}
-
-static MinInfoTable *visitMinInfoTable(MinInfoTable *node,
-                                       MinAlphaEnv *context) {
-    if (node == NULL)
-        return NULL;
-
-    bool changed = false;
-    MinInfoTable *result = newMinInfoTable();
-    int save = PROTECT(result);
-
-    // Iterate over all entries
-    Index i = 0;
-    struct MinInfo *value;
-    HashSymbol *key;
-    while ((key = iterateMinInfoTable(node, &i, &value)) != NULL) {
-        struct MinInfo *new_value = visitMinInfo(value, context);
-        PROTECT(new_value);
-        changed = changed || (new_value != value);
-        setMinInfoTable(result, key, new_value);
-    }
-
-    if (changed) {
-        UNPROTECT(save);
-        return result;
-    }
-
-    UNPROTECT(save);
-    return node;
-}
-
-static MinAliasTable *visitMinAliasTable(MinAliasTable *node,
-                                         MinAlphaEnv *context) {
-    if (node == NULL)
-        return NULL;
-
-    bool changed = false;
-    MinAliasTable *result = newMinAliasTable();
-    int save = PROTECT(result);
-
-    // Iterate over all entries
-    Index i = 0;
-    struct MinTypeConstructorType *value;
-    HashSymbol *key;
-    while ((key = iterateMinAliasTable(node, &i, &value)) != NULL) {
-        struct MinTypeConstructorType *new_value =
-            visitMinTypeConstructorType(value, context);
-        PROTECT(new_value);
-        changed = changed || (new_value != value);
-        setMinAliasTable(result, key, new_value);
-    }
-
-    if (changed) {
-        UNPROTECT(save);
-        return result;
-    }
-
-    UNPROTECT(save);
-    return node;
-}
-
-__attribute__((unused)) static MinExpTable *
-visitMinExpTable(MinExpTable *node, MinAlphaEnv *context) {
-    if (node == NULL)
-        return NULL;
-
-    bool changed = false;
-    MinExpTable *result = newMinExpTable();
-    int save = PROTECT(result);
-
-    // Iterate over all entries
-    Index i = 0;
-    struct MinExp *value;
-    HashSymbol *key;
-    while ((key = iterateMinExpTable(node, &i, &value)) != NULL) {
-        struct MinExp *new_value = visitMinExp(value, context);
-        PROTECT(new_value);
-        changed = changed || (new_value != value);
-        setMinExpTable(result, key, new_value);
-    }
-
-    if (changed) {
-        UNPROTECT(save);
-        return result;
-    }
-
-    UNPROTECT(save);
-    return node;
 }
 
 static MinLam *visitMinLam(MinLam *node, MinAlphaEnv *context) {
@@ -700,35 +569,6 @@ static MinLetRec *visitMinLetRec(MinLetRec *node, MinAlphaEnv *context) {
     return result;
 }
 
-static MinContext *visitMinContext(MinContext *node, MinAlphaEnv *context) {
-    if (node == NULL)
-        return NULL;
-
-    bool changed = false;
-    MinInfoTable *new_frame = visitMinInfoTable(node->frame, context);
-    int save = PROTECT(new_frame);
-    changed = changed || (new_frame != node->frame);
-    MinAliasTable *new_aliases = visitMinAliasTable(node->aliases, context);
-    PROTECT(new_aliases);
-    changed = changed || (new_aliases != node->aliases);
-    MinMacroSet *new_macros = visitMinMacroSet(node->macros, context);
-    PROTECT(new_macros);
-    changed = changed || (new_macros != node->macros);
-    MinContext *new_parent = visitMinContext(node->parent, context);
-    PROTECT(new_parent);
-    changed = changed || (new_parent != node->parent);
-
-    if (changed) {
-        // Create new node with modified fields
-        MinContext *result = newMinContext(CPI(node), new_parent);
-        UNPROTECT(save);
-        return result;
-    }
-
-    UNPROTECT(save);
-    return node;
-}
-
 static MinAmb *visitMinAmb(MinAmb *node, MinAlphaEnv *context) {
     if (node == NULL)
         return NULL;
@@ -874,27 +714,6 @@ static MinTypeSig *visitMinTypeSig(MinTypeSig *node, MinAlphaEnv *context) {
     return node;
 }
 
-static MinTypeTags *visitMinTypeTags(MinTypeTags *node, MinAlphaEnv *context) {
-    if (node == NULL)
-        return NULL;
-
-    bool changed = false;
-    // Pass through tag (type: HashSymbol, not memory-managed)
-    MinTypeTags *new_next = visitMinTypeTags(node->next, context);
-    int save = PROTECT(new_next);
-    changed = changed || (new_next != node->next);
-
-    if (changed) {
-        // Create new node with modified fields
-        MinTypeTags *result = newMinTypeTags(CPI(node), node->tag, new_next);
-        UNPROTECT(save);
-        return result;
-    }
-
-    UNPROTECT(save);
-    return node;
-}
-
 static MinTypeSigArgs *visitMinTypeSigArgs(MinTypeSigArgs *node,
                                            MinAlphaEnv *context) {
     if (node == NULL)
@@ -999,39 +818,6 @@ static MinTypeFunction *visitMinTypeFunction(MinTypeFunction *node,
     return node;
 }
 
-static MinTypeConstructorInfo *
-visitMinTypeConstructorInfo(MinTypeConstructorInfo *node,
-                            MinAlphaEnv *context) {
-    if (node == NULL)
-        return NULL;
-
-    bool changed = false;
-    // Pass through name (type: HashSymbol, not memory-managed)
-    // Pass through nsId (type: int, not memory-managed)
-    MinTypeConstructor *new_type = visitMinTypeConstructor(node->type, context);
-    int save = PROTECT(new_type);
-    changed = changed || (new_type != node->type);
-    MinTypeTags *new_tags = visitMinTypeTags(node->tags, context);
-    PROTECT(new_tags);
-    changed = changed || (new_tags != node->tags);
-    // Pass through needsVec (type: bool, not memory-managed)
-    // Pass through arity (type: int, not memory-managed)
-    // Pass through size (type: int, not memory-managed)
-    // Pass through index (type: int, not memory-managed)
-
-    if (changed) {
-        // Create new node with modified fields
-        MinTypeConstructorInfo *result = newMinTypeConstructorInfo(
-            CPI(node), node->name, node->nsId, new_type, new_tags,
-            node->needsVec, node->arity, node->size, node->index);
-        UNPROTECT(save);
-        return result;
-    }
-
-    UNPROTECT(save);
-    return node;
-}
-
 static MinExp *visitMinExp(MinExp *node, MinAlphaEnv *context) {
     if (node == NULL) {
         return NULL;
@@ -1105,17 +891,6 @@ static MinExp *visitMinExp(MinExp *node, MinAlphaEnv *context) {
         if (new_variant != variant) {
             PROTECT(new_variant);
             result = newMinExp_Cond(CPI(node), new_variant);
-        }
-        break;
-    }
-    case MINEXP_TYPE_CONSTRUCTOR: {
-        // MinTypeConstructorInfo
-        MinTypeConstructorInfo *variant = getMinExp_Constructor(node);
-        MinTypeConstructorInfo *new_variant =
-            visitMinTypeConstructorInfo(variant, context);
-        if (new_variant != variant) {
-            PROTECT(new_variant);
-            result = newMinExp_Constructor(CPI(node), new_variant);
         }
         break;
     }
@@ -1399,47 +1174,6 @@ visitMinTypeConstructorType(MinTypeConstructorType *node,
     }
     default:
         cant_happen("unrecognized MinTypeConstructorType type %d", node->type);
-    }
-
-    UNPROTECT(save);
-    return result;
-}
-
-static MinInfo *visitMinInfo(MinInfo *node, MinAlphaEnv *context) {
-    if (node == NULL)
-        return NULL;
-
-    int save = PROTECT(NULL);
-    MinInfo *result = node;
-
-    switch (node->type) {
-    case MININFO_TYPE_TYPECONSTRUCTORINFO: {
-        // MinTypeConstructorInfo
-        MinTypeConstructorInfo *variant = getMinInfo_TypeConstructorInfo(node);
-        MinTypeConstructorInfo *new_variant =
-            visitMinTypeConstructorInfo(variant, context);
-        if (new_variant != variant) {
-            PROTECT(new_variant);
-            result = newMinInfo_TypeConstructorInfo(CPI(node), new_variant);
-        }
-        break;
-    }
-    case MININFO_TYPE_NAMESPACEINFO: {
-        // MinContext
-        MinContext *variant = getMinInfo_NameSpaceInfo(node);
-        MinContext *new_variant = visitMinContext(variant, context);
-        if (new_variant != variant) {
-            PROTECT(new_variant);
-            result = newMinInfo_NameSpaceInfo(CPI(node), new_variant);
-        }
-        break;
-    }
-    case MININFO_TYPE_NSID: {
-        // int
-        break;
-    }
-    default:
-        cant_happen("unrecognized MinInfo type %d", node->type);
     }
 
     UNPROTECT(save);

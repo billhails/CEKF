@@ -66,15 +66,12 @@ static MinTypeDef *desugarLamTypeDef(LamTypeDef *node);
 static MinTypeConstructorList *
 desugarLamTypeConstructorList(LamTypeConstructorList *node);
 static MinTypeSig *desugarLamTypeSig(LamTypeSig *node);
-static MinTypeTags *desugarLamTypeTags(LamTypeTags *node);
 static MinTypeSigArgs *desugarLamTypeSigArgs(LamTypeSigArgs *node);
 static MinTypeConstructor *desugarLamTypeConstructor(LamTypeConstructor *node);
 static MinTypeConstructorArgs *
 desugarLamTypeConstructorArgs(LamTypeConstructorArgs *node);
 static MinTypeFunction *desugarLamTypeFunction(LamTypeFunction *node);
 static MinTypeFunction *desugarLamTypeFunction(LamTypeFunction *node);
-static MinTypeConstructorInfo *
-desugarLamTypeConstructorInfo(LamTypeConstructorInfo *node);
 static MinExp *desugarLamExp_internal(LamExp *node);
 static MinLookUpOrSymbol *desugarLamLookUpOrSymbol(LamLookUpOrSymbol *node);
 static MinCondCases *desugarLamCondCases(LamCondCases *node);
@@ -677,21 +674,6 @@ static MinTypeSig *desugarLamTypeSig(LamTypeSig *node) {
     return result;
 }
 
-static MinTypeTags *desugarLamTypeTags(LamTypeTags *node) {
-    ENTER(desugarLamTypeTags);
-    if (node == NULL) {
-        LEAVE(desugarLamTypeTags);
-        return NULL;
-    }
-
-    MinTypeTags *next = desugarLamTypeTags(node->next);
-    int save = PROTECT(next);
-    MinTypeTags *result = newMinTypeTags(CPI(node), node->tag, next);
-    UNPROTECT(save);
-    LEAVE(desugarLamTypeTags);
-    return result;
-}
-
 static MinTypeSigArgs *desugarLamTypeSigArgs(LamTypeSigArgs *node) {
     ENTER(desugarLamTypeSigArgs);
     if (node == NULL) {
@@ -758,26 +740,6 @@ static MinTypeFunction *desugarLamTypeFunction(LamTypeFunction *node) {
     MinTypeFunction *result = newMinTypeFunction(CPI(node), name, args);
     UNPROTECT(save);
     LEAVE(desugarLamTypeFunction);
-    return result;
-}
-
-static MinTypeConstructorInfo *
-desugarLamTypeConstructorInfo(LamTypeConstructorInfo *node) {
-    ENTER(desugarLamTypeConstructorInfo);
-    if (node == NULL) {
-        LEAVE(desugarLamTypeConstructorInfo);
-        return NULL;
-    }
-
-    MinTypeConstructor *type = desugarLamTypeConstructor(node->type);
-    int save = PROTECT(type);
-    MinTypeTags *tags = desugarLamTypeTags(node->tags);
-    PROTECT(tags);
-    MinTypeConstructorInfo *result = newMinTypeConstructorInfo(
-        CPI(node), node->name, node->nsId, type, tags, node->needsVec,
-        node->arity, node->size, node->index);
-    UNPROTECT(save);
-    LEAVE(desugarLamTypeConstructorInfo);
     return result;
 }
 
@@ -862,13 +824,6 @@ static MinExp *desugarLamExp_internal(LamExp *node) {
     case LAMEXP_TYPE_CONSTRUCT:
         result = desugarLamConstruct(node);
         break;
-    case LAMEXP_TYPE_CONSTRUCTOR: {
-        MinTypeConstructorInfo *new =
-            desugarLamTypeConstructorInfo(getLamExp_Constructor(node));
-        PROTECT(new);
-        result = newMinExp_Constructor(CPI(node), new);
-        break;
-    }
     case LAMEXP_TYPE_DECONSTRUCT:
         result = desugarLamDeconstruct(node);
         break;

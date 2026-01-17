@@ -63,7 +63,6 @@ bool isAexpr(MinExp *exp) {
     case MINEXP_TYPE_VAR:
     case MINEXP_TYPE_BACK:
     case MINEXP_TYPE_CHARACTER:
-    case MINEXP_TYPE_CONSTRUCTOR:
     case MINEXP_TYPE_ENV:
     case MINEXP_TYPE_ERROR:
     case MINEXP_TYPE_LAM:
