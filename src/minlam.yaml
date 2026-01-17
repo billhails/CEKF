@@ -158,11 +158,8 @@ structs:
             brief: A list of integers
             description: >-
                 The list of integers in a MinMatchList.
-                Includes a namespace id and name (why?).
         data:
             item: int
-            name: HashSymbol
-            nsId: int
             next: MinIntList
 
     MinLetRec:

@@ -453,8 +453,7 @@ static MinIntList *visitMinIntList(MinIntList *node, MinAlphaEnv *context) {
 
     if (changed) {
         // Create new node with modified fields
-        MinIntList *result = newMinIntList(CPI(node), node->item, node->name,
-                                           node->nsId, new_next);
+        MinIntList *result = newMinIntList(CPI(node), node->item, new_next);
         UNPROTECT(save);
         return result;
     }

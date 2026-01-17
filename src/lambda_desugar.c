@@ -422,8 +422,7 @@ static MinIntList *desugarLamIntList(LamIntList *node) {
 
     MinIntList *next = desugarLamIntList(node->next);
     int save = PROTECT(next);
-    MinIntList *result =
-        newMinIntList(CPI(node), node->item, node->name, node->nsId, next);
+    MinIntList *result = newMinIntList(CPI(node), node->item, next);
     UNPROTECT(save);
     LEAVE(desugarLamIntList);
     return result;

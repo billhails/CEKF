@@ -25,6 +25,7 @@ Anyway here is a list of the desugaring operations that are desired:
 1. `tag` becomes `primApp` (see `tagToPrimApp` in `anf_normalize.c`). **done**
 1. `tupleIndex` becomes `primApp` (see `tupleIndexToPrimApp` in `anf_normalize.c`). **done**
 1. `typeDefs` stepped over and discarded (see treatment of `LAMEXP_TYPE_TYPEDEFS` in `anf_normalize.c`) **done**
+1. `intList` has its extra fields discarded (see `convertIntList` in `anf_normalize.c`) **done**
 
 More speculative desugaring:
 

@@ -425,7 +425,7 @@ void ppMinBindings(MinBindings *bindings) {
 static void _ppMinIntList(MinIntList *list) {
     if (list == NULL)
         return;
-    eprintf("%d:%s:%d", list->item, list->name->name, list->nsId);
+    eprintf("%d", list->item);
     if (list->next != NULL) {
         eprintf(" ");
         _ppMinIntList(list->next);
