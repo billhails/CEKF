@@ -526,29 +526,6 @@ static MinExp *normalizeTupleIndexKont(MinExp *t0,
     return result;
 }
 
-// (`(tag ,e0)
-//     (normalize-name e0
-//         [λ (t0) (k `(tag ,t0))]))
-
-static MinExp *normalize_Tag(MinExp *exp, AnfKont *k) {
-    ENTER(normalize_Tag);
-    MinExp *tagExp = getMinExp_Tag(exp);
-    AnfKont *k2 = makeKont_normalizeTag(k);
-    int save = PROTECT(k2);
-    MinExp *result = normalize_name(tagExp, k2);
-    UNPROTECT(save);
-    LEAVE(normalize_Tag);
-    return result;
-}
-
-static MinExp *normalizeTagKont(MinExp *t0, NormalizeTagKontEnv *env) {
-    MinExp *newTag = newMinExp_Tag(CPI(t0), t0);
-    int save = PROTECT(newTag);
-    MinExp *result = INVOKE(env->k, newTag);
-    UNPROTECT(save);
-    return result;
-}
-
 // (`(amb ,e0, e1)
 //    (k `(amb ,(normalize-term e0)
 //             ,(normalize-term e1))))
@@ -751,9 +728,6 @@ static MinExp *normalize(MinExp *exp, AnfKont *k) {
             break;
         case MINEXP_TYPE_SEQUENCE:
             res = normalize_Sequence(exp, k);
-            break;
-        case MINEXP_TYPE_TAG:
-            res = normalize_Tag(exp, k);
             break;
         case MINEXP_TYPE_TUPLEINDEX:
             res = normalize_TupleIndex(exp, k);

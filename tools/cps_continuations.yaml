@@ -432,30 +432,6 @@ continuations:
       c: MinExp
       exprs: MinSequence
 
-  TkTag:
-    transformer: T_k
-    key: k_tag
-    context: |
-      (E.tag(expr)) {
-        T_k(expr, fn (sexpr) {
-          k(E.tag(sexpr))
-        })
-      }
-    free_vars:
-      k: CpsKont
-
-  TcTag:
-    transformer: T_k
-    key: c_tag
-    context: |
-      (E.tag(expr)) {
-        T_k(expr, fn (sexpr) {
-          E.apply(c, [E.tag(sexpr)])
-        })
-      }
-    free_vars:
-      c: MinExp
-
   TkTupleIndex:
     transformer: T_k
     key: k_tupleindex

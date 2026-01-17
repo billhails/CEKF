@@ -79,7 +79,6 @@ static AnfExp *normalizeCond(MinCond *cond, AnfExp *tail);
 static CexpCondCases *normalizeCondCases(MinCondCases *cases);
 static CexpLetRec *normalizeLetRecBindings(CexpLetRec *, MinBindings *);
 static AnfExp *normalizeTupleIndex(MinTupleIndex *construct, AnfExp *tail);
-static AnfExp *normalizeTag(MinExp *tag, AnfExp *tail);
 static AnfExp *normalizeEnv(ParserInfo I, AnfExp *tail);
 static AnfExp *normalizeMinLookUp(MinLookUp *, AnfExp *);
 
@@ -121,8 +120,6 @@ static AnfExp *normalize(MinExp *minExp, AnfExp *tail) {
         return normalizeLetRec(getMinExp_LetRec(minExp), tail);
     case MINEXP_TYPE_TUPLEINDEX:
         return normalizeTupleIndex(getMinExp_TupleIndex(minExp), tail);
-    case MINEXP_TYPE_TAG:
-        return normalizeTag(getMinExp_Tag(minExp), tail);
     case MINEXP_TYPE_MATCH:
         return normalizeMatch(getMinExp_Match(minExp), tail);
     case MINEXP_TYPE_COND:
@@ -215,15 +212,6 @@ static AnfMatchList *normalizeMatchList(MinMatchList *matchList) {
     return this;
 }
 
-static MinPrimApp *tagToPrimApp(MinExp *tagged) {
-    MinExp *index = newMinExp_Stdint(CPI(tagged), 0);
-    int save = PROTECT(index);
-    MinPrimApp *res =
-        newMinPrimApp(CPI(tagged), MINPRIMOP_TYPE_VEC, index, tagged);
-    UNPROTECT(save);
-    return res;
-}
-
 static MinPrimApp *tupleIndexToPrimApp(MinTupleIndex *tupleIndex) {
     MinExp *index = newMinExp_Stdint(CPI(tupleIndex), tupleIndex->vec);
     int save = PROTECT(index);
@@ -240,16 +228,6 @@ static AnfExp *normalizeTupleIndex(MinTupleIndex *index, AnfExp *tail) {
     AnfExp *res = normalizePrim(primApp, tail);
     UNPROTECT(save);
     LEAVE(noramaalizeTupleIndex);
-    return res;
-}
-
-static AnfExp *normalizeTag(MinExp *tagged, AnfExp *tail) {
-    ENTER(noramaalizeTag);
-    MinPrimApp *primApp = tagToPrimApp(tagged);
-    int save = PROTECT(primApp);
-    AnfExp *res = normalizePrim(primApp, tail);
-    UNPROTECT(save);
-    LEAVE(noramaalizeTag);
     return res;
 }
 
@@ -744,14 +722,6 @@ static CexpCondCases *normalizeCondCases(MinCondCases *cases) {
     return res;
 }
 
-static Aexp *replaceMinTag(MinExp *tagged, MinExpTable *replacements) {
-    MinPrimApp *primApp = tagToPrimApp(tagged);
-    int save = PROTECT(primApp);
-    Aexp *res = replaceMinPrim(primApp, replacements);
-    UNPROTECT(save);
-    return res;
-}
-
 static Aexp *replaceMinTupleIndex(MinTupleIndex *tupleIndex,
                                   MinExpTable *replacements) {
     MinPrimApp *primApp = tupleIndexToPrimApp(tupleIndex);
@@ -786,9 +756,6 @@ static Aexp *replaceMinExp(MinExp *minExp, MinExpTable *replacements) {
         break;
     case MINEXP_TYPE_MAKEVEC:
         res = replaceMinMakeVec(getMinExp_MakeVec(minExp), replacements);
-        break;
-    case MINEXP_TYPE_TAG:
-        res = replaceMinTag(getMinExp_Tag(minExp), replacements);
         break;
     case MINEXP_TYPE_TYPEDEFS:
         res = replaceMinCexp(getMinExp_TypeDefs(minExp)->body, replacements);

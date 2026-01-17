@@ -39,6 +39,7 @@ static MinExp *desugarLamConstruct(LamExp *node);
 static MinExp *desugarLamDeconstruct(LamExp *node);
 static MinExp *desugarLamConstant(LamExp *node);
 static MinExp *desugarLamMakeTuple(LamExp *node);
+static MinExp *desugarLamTag(LamExp *node);
 
 static MinLam *desugarLamLam(LamLam *node);
 static MinVarList *desugarLamVarList(LamVarList *node);
@@ -776,6 +777,27 @@ static MinExp *desugarLamMakeTuple(LamExp *exp) {
     return result;
 }
 
+static LamPrimApp *tagToPrimApp(LamExp *tagged) {
+    LamExp *index = newLamExp_Stdint(CPI(tagged), 0);
+    int save = PROTECT(index);
+    LamPrimApp *res =
+        newLamPrimApp(CPI(tagged), LAMPRIMOP_TYPE_VEC, index, tagged);
+    UNPROTECT(save);
+    return res;
+}
+
+static MinExp *desugarLamTag(LamExp *exp) {
+    ENTER(desugarLamTag);
+    LamPrimApp *primApp = tagToPrimApp(getLamExp_Tag(exp));
+    int save = PROTECT(primApp);
+    MinPrimApp *newApp = desugarLamPrimApp(primApp);
+    PROTECT(newApp);
+    MinExp *result = newMinExp_Prim(CPI(exp), newApp);
+    UNPROTECT(save);
+    LEAVE(desugarLamTag);
+    return result;
+}
+
 static MinExp *desugarLamExp_internal(LamExp *node) {
     ENTER(desugarLamExp);
     if (node == NULL) {
@@ -917,16 +939,12 @@ static MinExp *desugarLamExp_internal(LamExp *node) {
         result = newMinExp_Sequence(CPI(node), new);
         break;
     }
-    case LAMEXP_TYPE_STDINT: {
+    case LAMEXP_TYPE_STDINT:
         result = newMinExp_Stdint(CPI(node), getLamExp_Stdint(node));
         break;
-    }
-    case LAMEXP_TYPE_TAG: {
-        MinExp *new = desugarLamExp_internal(getLamExp_Tag(node));
-        PROTECT(new);
-        result = newMinExp_Tag(CPI(node), new);
+    case LAMEXP_TYPE_TAG:
+        result = desugarLamTag(node);
         break;
-    }
     case LAMEXP_TYPE_TUPLEINDEX: {
         MinTupleIndex *new = desugarLamTupleIndex(getLamExp_TupleIndex(node));
         PROTECT(new);

@@ -100,9 +100,6 @@ void ppMinExp(MinExp *exp) {
     case MINEXP_TYPE_MAKEVEC:
         ppMinMakeVec(getMinExp_MakeVec(exp));
         break;
-    case MINEXP_TYPE_TAG:
-        ppMinTag(getMinExp_Tag(exp));
-        break;
     case MINEXP_TYPE_APPLY:
         ppMinApply(getMinExp_Apply(exp));
         break;

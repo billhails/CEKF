@@ -40,7 +40,6 @@ static MinExp *cpsTkMinPrimApp(MinPrimApp *node, CpsKont *k);
 static MinExp *cpsTkMinSequence(MinSequence *node, CpsKont *k);
 static MinExp *cpsTkMinApply(MinExp *node, CpsKont *k);
 static MinExp *cpsTkMinLookUp(MinLookUp *node, CpsKont *k);
-static MinExp *cpsTkTag(MinExp *node, CpsKont *k);
 static MinExp *cpsTkMinTupleIndex(MinTupleIndex *node, CpsKont *k);
 static MinExp *cpsTkMakeVec(MinMakeVec *node, CpsKont *k);
 static MinExp *cpsTkMinIff(MinIff *node, CpsKont *k);
@@ -164,33 +163,6 @@ static MinExp *kToC(ParserInfo PI, CpsKont *k) {
 }
 
 // Visitor implementations
-
-/*
-    (E.tag(expr)) {
-        T_k(expr, fn (sexpr) {
-            k(E.tag(sexpr))
-        })
-    }
-*/
-static MinExp *cpsTkTag(MinExp *node, CpsKont *k) {
-    ENTER(cpsTkTag);
-    CpsKont *k1 = makeKont_TkTag(k);
-    int save = PROTECT(k1);
-    MinExp *result = cpsTk(node, k1);
-    UNPROTECT(save);
-    LEAVE(cpsTkTag);
-    return result;
-}
-
-MinExp *TkTagKont(MinExp *sexpr, TkTagKontEnv *env) {
-    ENTER(TkTagKont);
-    MinExp *tagged = newMinExp_Tag(CPI(sexpr), sexpr);
-    int save = PROTECT(tagged);
-    MinExp *result = INVOKE(env->k, tagged);
-    UNPROTECT(save);
-    LEAVE(TkTagKont);
-    return result;
-}
 
 /*
     (E.primapp(p, e1, e2)) {
@@ -688,8 +660,6 @@ static MinExp *cpsTkMinExp(MinExp *node, CpsKont *k) {
         return cpsTkMinPrimApp(getMinExp_Prim(node), k);
     case MINEXP_TYPE_SEQUENCE:
         return cpsTkMinSequence(getMinExp_Sequence(node), k);
-    case MINEXP_TYPE_TAG:
-        return cpsTkTag(getMinExp_Tag(node), k);
     case MINEXP_TYPE_TUPLEINDEX:
         return cpsTkMinTupleIndex(getMinExp_TupleIndex(node), k);
     case MINEXP_TYPE_TYPEDEFS:

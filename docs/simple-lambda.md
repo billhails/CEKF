@@ -21,8 +21,8 @@ Anyway here is a list of the desugaring operations that are desired:
 1. `LamConstant` to integer (see the treatment of `LAMEXP_TYPE_CONSTANT` in
    `anf_normalize.c`). **done**
 1. `LamTypeConstructorInfo` reduced to `Construct` or `Constant` by `inline.c`. **done**
-1. `MakeTuple` to `makeVec` (see `tupleToMakeVec` in `anf_normalize.c`)
-1. `tag` becomes `primApp` (see `tagToPrimApp` in `anf_normalize.c`)
+1. `MakeTuple` to `makeVec` (see `tupleToMakeVec` in `anf_normalize.c`) **done**
+1. `tag` becomes `primApp` (see `tagToPrimApp` in `anf_normalize.c`). **done**
 1. `tupleIndex` becomes `primApp` (see `tupleIndexToPrimApp` in `anf_normalize.c`)
 1. `typeDefs` stepped over and discarded (see treatment of `LAMEXP_TYPE_TYPEDEFS` in `anf_normalize.c`)
 

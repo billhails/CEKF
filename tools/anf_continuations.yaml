@@ -296,18 +296,6 @@ continuations:
       size: int
       k: AnfKont
 
-  normalizeTag:
-    key: tag
-    brief: "Continuation for tag extraction"
-    context: |
-      (match e
-          ...
-          (`(tag ,e0)
-              (normalize-name e0
-                  [λ (t0) (k `(tag ,t0))])))
-    free_vars:
-      k: AnfKont
-
   normalizeCallCC:
     key: callCC
     brief: "Continuation for callCC expression"

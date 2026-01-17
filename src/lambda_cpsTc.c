@@ -36,7 +36,6 @@
 #endif
 
 // Forward declarations
-static MinExp *cpsTcTag(MinExp *node, MinExp *c);
 static MinExp *cpsTcMinPrimApp(MinPrimApp *node, MinExp *c);
 static MinExp *cpsTcMinSequence(MinSequence *node, MinExp *c);
 static MinExp *cpsTcMinApply(MinApply *node, MinExp *c);
@@ -89,35 +88,6 @@ MinExp *cpsM(MinExp *node) {
 }
 
 // Visitor implementations
-
-/*
-    (E.tag(expr)) {
-        T_k(expr, fn (sexpr) {
-            E.apply(c, [E.tag(sexpr)])
-        })
-    }
-*/
-static MinExp *cpsTcTag(MinExp *node, MinExp *c) {
-    ENTER(cpsTcTag);
-    CpsKont *k = makeKont_TcTag(c);
-    int save = PROTECT(k);
-    MinExp *result = cpsTk(node, k);
-    UNPROTECT(save);
-    LEAVE(cpsTcTag);
-    return result;
-}
-
-MinExp *TcTagKont(MinExp *sexpr, TcTagKontEnv *env) {
-    ENTER(TcTagKont);
-    MinExp *tagged = newMinExp_Tag(CPI(sexpr), sexpr);
-    int save = PROTECT(tagged);
-    MinArgs *args = newMinArgs(CPI(tagged), tagged, NULL);
-    PROTECT(args);
-    MinExp *result = makeMinExp_Apply(CPI(tagged), env->c, args);
-    UNPROTECT(save);
-    LEAVE(TcTagKont);
-    return result;
-}
 
 /*
     (E.primapp(p, e1, e2)) {
@@ -675,8 +645,6 @@ static MinExp *cpsTcMinExp(MinExp *node, MinExp *c) {
         return cpsTcMinPrimApp(getMinExp_Prim(node), c);
     case MINEXP_TYPE_SEQUENCE:
         return cpsTcMinSequence(getMinExp_Sequence(node), c);
-    case MINEXP_TYPE_TAG:
-        return cpsTcTag(getMinExp_Tag(node), c);
     case MINEXP_TYPE_TUPLEINDEX:
         return cpsTcMinTupleIndex(getMinExp_TupleIndex(node), c);
     case MINEXP_TYPE_TYPEDEFS:

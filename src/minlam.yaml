@@ -344,7 +344,6 @@ unions:
             prim: MinPrimApp
             sequence: MinSequence
             stdint: int
-            tag: MinExp
             tupleIndex: MinTupleIndex
             typeDefs: MinTypeDefs
             var: HashSymbol

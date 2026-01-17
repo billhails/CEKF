@@ -1006,16 +1006,6 @@ static MinExp *visitMinExp(MinExp *node, MinAlphaEnv *context) {
         // int
         break;
     }
-    case MINEXP_TYPE_TAG: {
-        // MinExp
-        MinExp *variant = getMinExp_Tag(node);
-        MinExp *new_variant = visitMinExp(variant, context);
-        if (new_variant != variant) {
-            PROTECT(new_variant);
-            result = newMinExp_Tag(CPI(node), new_variant);
-        }
-        break;
-    }
     case MINEXP_TYPE_TUPLEINDEX: {
         // MinTupleIndex
         MinTupleIndex *variant = getMinExp_TupleIndex(node);
