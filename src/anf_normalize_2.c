@@ -72,7 +72,6 @@ static bool isValueExp(MinExp *exp) {
     case MINEXP_TYPE_BACK:
     case MINEXP_TYPE_BIGINTEGER:
     case MINEXP_TYPE_CHARACTER:
-    case MINEXP_TYPE_CONSTANT:
     case MINEXP_TYPE_CONSTRUCTOR:
     case MINEXP_TYPE_ENV:
     case MINEXP_TYPE_ERROR:

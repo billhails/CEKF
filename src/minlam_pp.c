@@ -103,9 +103,6 @@ void ppMinExp(MinExp *exp) {
     case MINEXP_TYPE_TAG:
         ppMinTag(getMinExp_Tag(exp));
         break;
-    case MINEXP_TYPE_CONSTANT:
-        ppMinConstant(getMinExp_Constant(exp));
-        break;
     case MINEXP_TYPE_APPLY:
         ppMinApply(getMinExp_Apply(exp));
         break;
@@ -613,8 +610,6 @@ void ppMinTag(MinExp *tag) {
     ppMinExp(tag);
     eprintf(")");
 }
-
-void ppMinConstant(MinConstant *constant) { ppHashSymbol(constant->name); }
 
 static inline void pad(int depth) { eprintf("%*s", depth, ""); }
 

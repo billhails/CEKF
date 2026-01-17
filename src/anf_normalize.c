@@ -124,9 +124,6 @@ static AnfExp *normalize(MinExp *minExp, AnfExp *tail) {
         return normalizeTupleIndex(getMinExp_TupleIndex(minExp), tail);
     case MINEXP_TYPE_TAG:
         return normalizeTag(getMinExp_Tag(minExp), tail);
-    case MINEXP_TYPE_CONSTANT:
-        return normalizeStdInteger(CPI(minExp), getMinExp_Constant(minExp)->tag,
-                                   tail);
     case MINEXP_TYPE_MATCH:
         return normalizeMatch(getMinExp_Match(minExp), tail);
     case MINEXP_TYPE_COND:
@@ -811,10 +808,6 @@ static Aexp *replaceMinExp(MinExp *minExp, MinExpTable *replacements) {
     case MINEXP_TYPE_TAG:
         res = replaceMinTag(getMinExp_Tag(minExp), replacements);
         break;
-    case MINEXP_TYPE_CONSTANT:
-        res = aexpNormalizeStdInteger(CPI(minExp),
-                                      getMinExp_Constant(minExp)->tag);
-        break;
     case MINEXP_TYPE_TYPEDEFS:
         res = replaceMinCexp(getMinExp_TypeDefs(minExp)->body, replacements);
         break;
@@ -849,7 +842,6 @@ static bool minExpIsMinbda(MinExp *val) {
     case MINEXP_TYPE_VAR:
     case MINEXP_TYPE_BIGINTEGER:
     case MINEXP_TYPE_CHARACTER:
-    case MINEXP_TYPE_CONSTANT:
     case MINEXP_TYPE_BACK:
     case MINEXP_TYPE_ERROR:
     case MINEXP_TYPE_AMB:

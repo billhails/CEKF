@@ -37,6 +37,7 @@ static MinExp *desugarLamLetStar(LamExp *node);
 static MinExp *desugarLamTypeOf(LamExp *node);
 static MinExp *desugarLamConstruct(LamExp *node);
 static MinExp *desugarLamDeconstruct(LamExp *node);
+static MinExp *desugarLamConstant(LamExp *node);
 
 static MinLam *desugarLamLam(LamLam *node);
 static MinVarList *desugarLamVarList(LamVarList *node);
@@ -46,7 +47,6 @@ static MinArgs *desugarLamArgs(LamArgs *node);
 static MinApply *desugarLamApply(LamApply *node);
 static MinLookUp *desugarLamLookUp(LamLookUp *node);
 static MinLookUpSymbol *desugarLamLookUpSymbol(LamLookUpSymbol *node);
-static MinConstant *desugarLamConstant(LamConstant *node);
 static MinTupleIndex *desugarLamTupleIndex(LamTupleIndex *node);
 static MinMakeVec *desugarLamMakeVec(LamMakeVec *node);
 static MinIff *desugarLamIff(LamIff *node);
@@ -249,14 +249,9 @@ static MinLookUpSymbol *desugarLamLookUpSymbol(LamLookUpSymbol *node) {
     return result;
 }
 
-static MinConstant *desugarLamConstant(LamConstant *node) {
+static MinExp *desugarLamConstant(LamExp *exp) {
     ENTER(desugarLamConstant);
-    if (node == NULL) {
-        LEAVE(desugarLamConstant);
-        return NULL;
-    }
-
-    MinConstant *result = newMinConstant(CPI(node), node->name, node->tag);
+    MinExp *result = newMinExp_Stdint(CPI(exp), getLamExp_Constant(exp)->tag);
     LEAVE(desugarLamConstant);
     return result;
 }
@@ -861,12 +856,9 @@ static MinExp *desugarLamExp_internal(LamExp *node) {
         result = newMinExp_Cond(CPI(node), new);
         break;
     }
-    case LAMEXP_TYPE_CONSTANT: {
-        MinConstant *new = desugarLamConstant(getLamExp_Constant(node));
-        PROTECT(new);
-        result = newMinExp_Constant(CPI(node), new);
+    case LAMEXP_TYPE_CONSTANT:
+        result = desugarLamConstant(node);
         break;
-    }
     case LAMEXP_TYPE_CONSTRUCT:
         result = desugarLamConstruct(node);
         break;

@@ -45,7 +45,6 @@ static MinApply *visitMinApply(MinApply *node, MinAlphaEnv *context);
 static MinLookUp *visitMinLookUp(MinLookUp *node, MinAlphaEnv *context);
 static MinLookUpSymbol *visitMinLookUpSymbol(MinLookUpSymbol *node,
                                              MinAlphaEnv *context);
-static MinConstant *visitMinConstant(MinConstant *node, MinAlphaEnv *context);
 static MinTupleIndex *visitMinTupleIndex(MinTupleIndex *node,
                                          MinAlphaEnv *context);
 static MinMakeVec *visitMinMakeVec(MinMakeVec *node, MinAlphaEnv *context);
@@ -429,17 +428,6 @@ static MinLookUpSymbol *visitMinLookUpSymbol(MinLookUpSymbol *node,
     // Pass through nsId (type: int, not memory-managed)
     // Pass through nsSymbol (type: HashSymbol, not memory-managed)
     // Pass through symbol (type: HashSymbol, not memory-managed)
-
-    (void)context; // Unused parameter - all fields are pass-through
-    return node;
-}
-
-static MinConstant *visitMinConstant(MinConstant *node, MinAlphaEnv *context) {
-    if (node == NULL)
-        return NULL;
-
-    // Pass through name (type: HashSymbol, not memory-managed)
-    // Pass through tag (type: int, not memory-managed)
 
     (void)context; // Unused parameter - all fields are pass-through
     return node;
@@ -1117,16 +1105,6 @@ static MinExp *visitMinExp(MinExp *node, MinAlphaEnv *context) {
         if (new_variant != variant) {
             PROTECT(new_variant);
             result = newMinExp_Cond(CPI(node), new_variant);
-        }
-        break;
-    }
-    case MINEXP_TYPE_CONSTANT: {
-        // MinConstant
-        MinConstant *variant = getMinExp_Constant(node);
-        MinConstant *new_variant = visitMinConstant(variant, context);
-        if (new_variant != variant) {
-            PROTECT(new_variant);
-            result = newMinExp_Constant(CPI(node), new_variant);
         }
         break;
     }

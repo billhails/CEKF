@@ -93,13 +93,6 @@ structs:
             nsSymbol: HashSymbol
             symbol: HashSymbol
 
-    MinConstant:
-        meta:
-            brief: A constant type constructor with no arguments.
-        data:
-            name: HashSymbol # the name of the constructor
-            tag: int         # the tag of the constructor
-
     MinTupleIndex:
         meta:
             brief: An index into a tuple
@@ -361,7 +354,6 @@ unions:
             callCC: MinExp
             character: character
             cond: MinCond
-            constant: MinConstant
             constructor: MinTypeConstructorInfo
             env: void_ptr
             error: void_ptr
