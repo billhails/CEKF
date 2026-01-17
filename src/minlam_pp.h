@@ -36,7 +36,6 @@ void ppMinIff(MinIff *iff);
 void ppMinCond(MinCond *cond);
 void ppMinCallCC(MinExp *exp);
 void ppMinLetRec(MinLetRec *letRec);
-void ppMinTypeDefs(MinTypeDefs *typeDefs);
 void ppMinMatch(MinMatch *match);
 void ppMinBindings(MinBindings *bindings);
 void ppMinIntList(MinIntList *list);

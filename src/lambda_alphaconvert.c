@@ -35,8 +35,6 @@ static MinSequence *visitMinSequence(MinSequence *node, MinAlphaEnv *context);
 static MinArgs *visitMinArgs(MinArgs *node, MinAlphaEnv *context);
 static MinApply *visitMinApply(MinApply *node, MinAlphaEnv *context);
 static MinLookUp *visitMinLookUp(MinLookUp *node, MinAlphaEnv *context);
-static MinLookUpSymbol *visitMinLookUpSymbol(MinLookUpSymbol *node,
-                                             MinAlphaEnv *context);
 static MinMakeVec *visitMinMakeVec(MinMakeVec *node, MinAlphaEnv *context);
 static MinIff *visitMinIff(MinIff *node, MinAlphaEnv *context);
 static MinCond *visitMinCond(MinCond *node, MinAlphaEnv *context);
@@ -50,28 +48,9 @@ static MinMatchList *visitMinMatchList(MinMatchList *node,
 static MinIntList *visitMinIntList(MinIntList *node, MinAlphaEnv *context);
 static MinLetRec *visitMinLetRec(MinLetRec *node, MinAlphaEnv *context);
 static MinAmb *visitMinAmb(MinAmb *node, MinAlphaEnv *context);
-static MinTypeDefs *visitMinTypeDefs(MinTypeDefs *node, MinAlphaEnv *context);
-static MinTypeDefList *visitMinTypeDefList(MinTypeDefList *node,
-                                           MinAlphaEnv *context);
-static MinTypeDef *visitMinTypeDef(MinTypeDef *node, MinAlphaEnv *context);
-static MinTypeConstructorList *
-visitMinTypeConstructorList(MinTypeConstructorList *node, MinAlphaEnv *context);
-static MinTypeSig *visitMinTypeSig(MinTypeSig *node, MinAlphaEnv *context);
-static MinTypeSigArgs *visitMinTypeSigArgs(MinTypeSigArgs *node,
-                                           MinAlphaEnv *context);
-static MinTypeConstructor *visitMinTypeConstructor(MinTypeConstructor *node,
-                                                   MinAlphaEnv *context);
-static MinTypeConstructorArgs *
-visitMinTypeConstructorArgs(MinTypeConstructorArgs *node, MinAlphaEnv *context);
-static MinTypeFunction *visitMinTypeFunction(MinTypeFunction *node,
-                                             MinAlphaEnv *context);
 static MinExp *visitMinExp(MinExp *node, MinAlphaEnv *context);
-static MinLookUpOrSymbol *visitMinLookUpOrSymbol(MinLookUpOrSymbol *node,
-                                                 MinAlphaEnv *context);
 static MinCondCases *visitMinCondCases(MinCondCases *node,
                                        MinAlphaEnv *context);
-static MinTypeConstructorType *
-visitMinTypeConstructorType(MinTypeConstructorType *node, MinAlphaEnv *context);
 static MinNameSpaceArray *visitMinNameSpaceArray(MinNameSpaceArray *node,
                                                  MinAlphaEnv *context);
 
@@ -145,7 +124,6 @@ static MinLam *visitMinLam(MinLam *node, MinAlphaEnv *context) {
     if (changed) {
         // Create new node with modified fields
         MinLam *result = newMinLam(CPI(node), args, new_exp);
-        result->isMacro = node->isMacro;
         UNPROTECT(save);
         return result;
     }
@@ -284,19 +262,6 @@ static MinLookUp *visitMinLookUp(MinLookUp *node, MinAlphaEnv *context) {
     }
 
     UNPROTECT(save);
-    return node;
-}
-
-static MinLookUpSymbol *visitMinLookUpSymbol(MinLookUpSymbol *node,
-                                             MinAlphaEnv *context) {
-    if (node == NULL)
-        return NULL;
-
-    // Pass through nsId (type: int, not memory-managed)
-    // Pass through nsSymbol (type: HashSymbol, not memory-managed)
-    // Pass through symbol (type: HashSymbol, not memory-managed)
-
-    (void)context; // Unused parameter - all fields are pass-through
     return node;
 }
 
@@ -566,232 +531,6 @@ static MinAmb *visitMinAmb(MinAmb *node, MinAlphaEnv *context) {
     return node;
 }
 
-static MinTypeDefs *visitMinTypeDefs(MinTypeDefs *node, MinAlphaEnv *context) {
-    if (node == NULL)
-        return NULL;
-
-    bool changed = false;
-    MinTypeDefList *new_typeDefs = visitMinTypeDefList(node->typeDefs, context);
-    int save = PROTECT(new_typeDefs);
-    changed = changed || (new_typeDefs != node->typeDefs);
-    MinExp *new_body = visitMinExp(node->body, context);
-    PROTECT(new_body);
-    changed = changed || (new_body != node->body);
-
-    if (changed) {
-        // Create new node with modified fields
-        MinTypeDefs *result = newMinTypeDefs(CPI(node), new_typeDefs, new_body);
-        UNPROTECT(save);
-        return result;
-    }
-
-    UNPROTECT(save);
-    return node;
-}
-
-static MinTypeDefList *visitMinTypeDefList(MinTypeDefList *node,
-                                           MinAlphaEnv *context) {
-    if (node == NULL)
-        return NULL;
-
-    bool changed = false;
-    MinTypeDef *new_typeDef = visitMinTypeDef(node->typeDef, context);
-    int save = PROTECT(new_typeDef);
-    changed = changed || (new_typeDef != node->typeDef);
-    MinTypeDefList *new_next = visitMinTypeDefList(node->next, context);
-    PROTECT(new_next);
-    changed = changed || (new_next != node->next);
-
-    if (changed) {
-        // Create new node with modified fields
-        MinTypeDefList *result =
-            newMinTypeDefList(CPI(node), new_typeDef, new_next);
-        UNPROTECT(save);
-        return result;
-    }
-
-    UNPROTECT(save);
-    return node;
-}
-
-static MinTypeDef *visitMinTypeDef(MinTypeDef *node, MinAlphaEnv *context) {
-    if (node == NULL)
-        return NULL;
-
-    bool changed = false;
-    MinTypeSig *new_type = visitMinTypeSig(node->type, context);
-    int save = PROTECT(new_type);
-    changed = changed || (new_type != node->type);
-    MinTypeConstructorList *new_constructors =
-        visitMinTypeConstructorList(node->constructors, context);
-    PROTECT(new_constructors);
-    changed = changed || (new_constructors != node->constructors);
-
-    if (changed) {
-        // Create new node with modified fields
-        MinTypeDef *result =
-            newMinTypeDef(CPI(node), new_type, new_constructors);
-        UNPROTECT(save);
-        return result;
-    }
-
-    UNPROTECT(save);
-    return node;
-}
-
-static MinTypeConstructorList *
-visitMinTypeConstructorList(MinTypeConstructorList *node,
-                            MinAlphaEnv *context) {
-    if (node == NULL)
-        return NULL;
-
-    bool changed = false;
-    MinTypeConstructor *new_constructor =
-        visitMinTypeConstructor(node->constructor, context);
-    int save = PROTECT(new_constructor);
-    changed = changed || (new_constructor != node->constructor);
-    MinTypeConstructorList *new_next =
-        visitMinTypeConstructorList(node->next, context);
-    PROTECT(new_next);
-    changed = changed || (new_next != node->next);
-
-    if (changed) {
-        // Create new node with modified fields
-        MinTypeConstructorList *result =
-            newMinTypeConstructorList(CPI(node), new_constructor, new_next);
-        UNPROTECT(save);
-        return result;
-    }
-
-    UNPROTECT(save);
-    return node;
-}
-
-static MinTypeSig *visitMinTypeSig(MinTypeSig *node, MinAlphaEnv *context) {
-    if (node == NULL)
-        return NULL;
-
-    bool changed = false;
-    // Pass through name (type: HashSymbol, not memory-managed)
-    MinTypeSigArgs *new_args = visitMinTypeSigArgs(node->args, context);
-    int save = PROTECT(new_args);
-    changed = changed || (new_args != node->args);
-
-    if (changed) {
-        // Create new node with modified fields
-        MinTypeSig *result = newMinTypeSig(CPI(node), node->name, new_args);
-        UNPROTECT(save);
-        return result;
-    }
-
-    UNPROTECT(save);
-    return node;
-}
-
-static MinTypeSigArgs *visitMinTypeSigArgs(MinTypeSigArgs *node,
-                                           MinAlphaEnv *context) {
-    if (node == NULL)
-        return NULL;
-
-    bool changed = false;
-    // Pass through name (type: HashSymbol, not memory-managed)
-    MinTypeSigArgs *new_next = visitMinTypeSigArgs(node->next, context);
-    int save = PROTECT(new_next);
-    changed = changed || (new_next != node->next);
-
-    if (changed) {
-        // Create new node with modified fields
-        MinTypeSigArgs *result =
-            newMinTypeSigArgs(CPI(node), node->name, new_next);
-        UNPROTECT(save);
-        return result;
-    }
-
-    UNPROTECT(save);
-    return node;
-}
-
-static MinTypeConstructor *visitMinTypeConstructor(MinTypeConstructor *node,
-                                                   MinAlphaEnv *context) {
-    if (node == NULL)
-        return NULL;
-
-    bool changed = false;
-    // Pass through name (type: HashSymbol, not memory-managed)
-    MinTypeSig *new_type = visitMinTypeSig(node->type, context);
-    int save = PROTECT(new_type);
-    changed = changed || (new_type != node->type);
-    MinTypeConstructorArgs *new_args =
-        visitMinTypeConstructorArgs(node->args, context);
-    PROTECT(new_args);
-    changed = changed || (new_args != node->args);
-
-    if (changed) {
-        // Create new node with modified fields
-        MinTypeConstructor *result =
-            newMinTypeConstructor(CPI(node), node->name, new_type, new_args);
-        UNPROTECT(save);
-        return result;
-    }
-
-    UNPROTECT(save);
-    return node;
-}
-
-static MinTypeConstructorArgs *
-visitMinTypeConstructorArgs(MinTypeConstructorArgs *node,
-                            MinAlphaEnv *context) {
-    if (node == NULL)
-        return NULL;
-
-    bool changed = false;
-    MinTypeConstructorType *new_arg =
-        visitMinTypeConstructorType(node->arg, context);
-    int save = PROTECT(new_arg);
-    changed = changed || (new_arg != node->arg);
-    MinTypeConstructorArgs *new_next =
-        visitMinTypeConstructorArgs(node->next, context);
-    PROTECT(new_next);
-    changed = changed || (new_next != node->next);
-
-    if (changed) {
-        // Create new node with modified fields
-        MinTypeConstructorArgs *result =
-            newMinTypeConstructorArgs(CPI(node), new_arg, new_next);
-        UNPROTECT(save);
-        return result;
-    }
-
-    UNPROTECT(save);
-    return node;
-}
-
-static MinTypeFunction *visitMinTypeFunction(MinTypeFunction *node,
-                                             MinAlphaEnv *context) {
-    if (node == NULL)
-        return NULL;
-
-    bool changed = false;
-    MinLookUpOrSymbol *new_name = visitMinLookUpOrSymbol(node->name, context);
-    int save = PROTECT(new_name);
-    changed = changed || (new_name != node->name);
-    MinTypeConstructorArgs *new_args =
-        visitMinTypeConstructorArgs(node->args, context);
-    PROTECT(new_args);
-    changed = changed || (new_args != node->args);
-
-    if (changed) {
-        // Create new node with modified fields
-        MinTypeFunction *result =
-            newMinTypeFunction(CPI(node), new_name, new_args);
-        UNPROTECT(save);
-        return result;
-    }
-
-    UNPROTECT(save);
-    return node;
-}
-
 static MinExp *visitMinExp(MinExp *node, MinAlphaEnv *context) {
     if (node == NULL) {
         return NULL;
@@ -980,16 +719,6 @@ static MinExp *visitMinExp(MinExp *node, MinAlphaEnv *context) {
         // int
         break;
     }
-    case MINEXP_TYPE_TYPEDEFS: {
-        // MinTypeDefs
-        MinTypeDefs *variant = getMinExp_TypeDefs(node);
-        MinTypeDefs *new_variant = visitMinTypeDefs(variant, context);
-        if (new_variant != variant) {
-            PROTECT(new_variant);
-            result = newMinExp_TypeDefs(CPI(node), new_variant);
-        }
-        break;
-    }
     case MINEXP_TYPE_VAR: {
         // HashSymbol
         result = newMinExp_Var(
@@ -999,37 +728,6 @@ static MinExp *visitMinExp(MinExp *node, MinAlphaEnv *context) {
     }
     default:
         cant_happen("unrecognized MinExp type %s", minExpTypeName(node->type));
-    }
-
-    UNPROTECT(save);
-    return result;
-}
-
-static MinLookUpOrSymbol *visitMinLookUpOrSymbol(MinLookUpOrSymbol *node,
-                                                 MinAlphaEnv *context) {
-    if (node == NULL)
-        return NULL;
-
-    int save = PROTECT(NULL);
-    MinLookUpOrSymbol *result = node;
-
-    switch (node->type) {
-    case MINLOOKUPORSYMBOL_TYPE_SYMBOL: {
-        // HashSymbol
-        break;
-    }
-    case MINLOOKUPORSYMBOL_TYPE_LOOKUP: {
-        // MinLookUpSymbol
-        MinLookUpSymbol *variant = getMinLookUpOrSymbol_LookUp(node);
-        MinLookUpSymbol *new_variant = visitMinLookUpSymbol(variant, context);
-        if (new_variant != variant) {
-            PROTECT(new_variant);
-            result = newMinLookUpOrSymbol_LookUp(CPI(node), new_variant);
-        }
-        break;
-    }
-    default:
-        cant_happen("unrecognized MinLookUpOrSymbol type %d", node->type);
     }
 
     UNPROTECT(save);
@@ -1067,57 +765,6 @@ static MinCondCases *visitMinCondCases(MinCondCases *node,
     }
     default:
         cant_happen("unrecognized MinCondCases type %d", node->type);
-    }
-
-    UNPROTECT(save);
-    return result;
-}
-
-static MinTypeConstructorType *
-visitMinTypeConstructorType(MinTypeConstructorType *node,
-                            MinAlphaEnv *context) {
-    if (node == NULL)
-        return NULL;
-
-    int save = PROTECT(NULL);
-    MinTypeConstructorType *result = node;
-
-    switch (node->type) {
-    case MINTYPECONSTRUCTORTYPE_TYPE_INTEGER: {
-        // void_ptr
-        break;
-    }
-    case MINTYPECONSTRUCTORTYPE_TYPE_CHARACTER: {
-        // void_ptr
-        break;
-    }
-    case MINTYPECONSTRUCTORTYPE_TYPE_VAR: {
-        // HashSymbol
-        break;
-    }
-    case MINTYPECONSTRUCTORTYPE_TYPE_FUNCTION: {
-        // MinTypeFunction
-        MinTypeFunction *variant = getMinTypeConstructorType_Function(node);
-        MinTypeFunction *new_variant = visitMinTypeFunction(variant, context);
-        if (new_variant != variant) {
-            PROTECT(new_variant);
-            result = newMinTypeConstructorType_Function(CPI(node), new_variant);
-        }
-        break;
-    }
-    case MINTYPECONSTRUCTORTYPE_TYPE_TUPLE: {
-        // MinTypeConstructorArgs
-        MinTypeConstructorArgs *variant = getMinTypeConstructorType_Tuple(node);
-        MinTypeConstructorArgs *new_variant =
-            visitMinTypeConstructorArgs(variant, context);
-        if (new_variant != variant) {
-            PROTECT(new_variant);
-            result = newMinTypeConstructorType_Tuple(CPI(node), new_variant);
-        }
-        break;
-    }
-    default:
-        cant_happen("unrecognized MinTypeConstructorType type %d", node->type);
     }
 
     UNPROTECT(save);

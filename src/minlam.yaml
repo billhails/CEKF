@@ -30,13 +30,9 @@ structs:
     MinLam:
         meta:
             brief: A lambda expression
-            description: >-
-                If isMacro is true,
-                all arguments are expected to be thunked (lazy).
         data:
             args: MinVarList
             exp: MinExp
-            isMacro: bool=false
 
     MinVarList:
         meta:
@@ -84,14 +80,6 @@ structs:
             nsId: int
             nsSymbol: HashSymbol
             exp: MinExp
-
-    MinLookUpSymbol:
-        meta:
-            brief: A lookUp of a symbol (constructor) in a nameSpace.
-        data:
-            nsId: int
-            nsSymbol: HashSymbol
-            symbol: HashSymbol
 
     MinMakeVec:
         meta:
@@ -199,89 +187,6 @@ structs:
             left: MinExp
             right: MinExp
 
-    MinTypeDefs:
-        meta:
-            brief: Type definitions in a lambda expression
-            description: >-
-                This structure holds type definitions.
-                It is prepended to Each letrec and any
-                typeDefs in the letrec are hoisted into this section.
-        data:
-            typeDefs: MinTypeDefList
-            body: MinExp
-
-    MinTypeDefList:
-        meta:
-            brief: A list of type definitions
-            description: >-
-                contained by a MinTypeDefs structure.
-        data:
-            typeDef: MinTypeDef
-            next: MinTypeDefList
-
-    MinTypeDef:
-        meta:
-            brief: A single type definition
-        data:
-            type: MinTypeSig # re-use
-            constructors: MinTypeConstructorList
-
-    MinTypeConstructorList:
-        meta:
-            brief: A list of type constructors forming the body of a typedef.
-        data:
-            constructor: MinTypeConstructor
-            next: MinTypeConstructorList
-
-    MinTypeSig:
-        meta:
-            brief: A type signature
-            description: >-
-                This structure represents a type signature that includes the
-                name of the type and its argument type variables.
-        data:
-            name: HashSymbol
-            args: MinTypeSigArgs
-
-    MinTypeTags:
-        meta:
-            brief: Tags for a type constructor
-            description: >-
-                This structure holds tags that are associated with a type
-                in the type constructor info metadata.
-        data:
-            tag: HashSymbol
-            next: MinTypeTags
-
-    MinTypeSigArgs:
-        meta:
-            brief: Argument type variables for a type signature
-        data:
-            name: HashSymbol
-            next: MinTypeSigArgs
-
-    MinTypeConstructor:
-        meta:
-            brief: A type constructor as part of a typedef.
-        data:
-            name: HashSymbol
-            type: MinTypeSig
-            args: MinTypeConstructorArgs
-
-    MinTypeConstructorArgs:
-        meta:
-            brief: Formal arguments for a type constructor
-        data:
-            arg: MinTypeConstructorType
-            next: MinTypeConstructorArgs
-
-    MinTypeFunction:
-        meta:
-            brief: A type function as a formal argument to a type constructor
-        data:
-            name: MinLookUpOrSymbol
-            args: MinTypeConstructorArgs
-
     MinAlphaEnv:
         meta:
             brief: An environment for alpha conversion
@@ -336,18 +241,7 @@ unions:
             prim: MinPrimApp
             sequence: MinSequence
             stdint: int
-            typeDefs: MinTypeDefs
             var: HashSymbol
-
-    MinLookUpOrSymbol:
-        meta:
-            brief: A lookUp or symbol in a nameSpace
-            description: >-
-                Represents either a lookUp of a symbol in a
-                nameSpace or a symbol in the current nameSpace.
-        data:
-            symbol: HashSymbol
-            lookUp: MinLookUpSymbol
 
     MinCondCases:
         meta:
@@ -356,42 +250,7 @@ unions:
             integers: MinIntCondCases
             characters: MinCharCondCases
 
-    MinTypeConstructorType:
-        meta:
-            brief: A type constructor type
-            description: >-
-                Defines the different types of arguments that can
-                be passed to a type constructor.
-        data:
-            integer: void_ptr
-            character: void_ptr
-            var: HashSymbol
-            function: MinTypeFunction
-            tuple: MinTypeConstructorArgs
-
 hashes:
-    MinMacroSet:
-        meta:
-            brief: the set of symbols that are currently defined as macros
-            description: >-
-                This table holds the symbols that are bound to macros in the
-                current context.
-        data: {}
-
-    MinMacroArgsSet:
-        meta:
-            brief: the set of symbols that are currently defined as macro arguments
-            description: >-
-                This table holds the symbols that are bound to macro arguments
-                in the current context (body of the macro).
-        data: {}
-
-    MinAliasTable:
-        meta:
-            brief: Map from symbols to their types in the body of a type constructor.
-        data:
-            entries: MinTypeConstructorType
-
     MinExpTable:
         meta:
             brief: Map from symbols to lambda expressions
@@ -431,11 +290,3 @@ arrays:
             entries: MinAlphaEnv
 
 primitives: !include primitives.yaml
-
-external:
-    TcType:
-        data:
-            cname: "struct TcType *"
-            printFn: printTcType
-            markFn: markTcType
-            valued: true

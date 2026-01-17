@@ -107,8 +107,6 @@ static AnfExp *normalize(MinExp *minExp, AnfExp *tail) {
         return normalizeSequence(getMinExp_Sequence(minExp), tail);
     case MINEXP_TYPE_MAKEVEC:
         return normalizeMakeVec(getMinExp_MakeVec(minExp), tail);
-    case MINEXP_TYPE_TYPEDEFS:
-        return normalize(getMinExp_TypeDefs(minExp)->body, tail);
     case MINEXP_TYPE_APPLY:
         return normalizeApply(getMinExp_Apply(minExp), tail);
     case MINEXP_TYPE_IFF:
@@ -723,9 +721,6 @@ static Aexp *replaceMinExp(MinExp *minExp, MinExpTable *replacements) {
     case MINEXP_TYPE_MAKEVEC:
         res = replaceMinMakeVec(getMinExp_MakeVec(minExp), replacements);
         break;
-    case MINEXP_TYPE_TYPEDEFS:
-        res = replaceMinCexp(getMinExp_TypeDefs(minExp)->body, replacements);
-        break;
     case MINEXP_TYPE_CHARACTER:
         res = aexpNormalizeCharacter(CPI(minExp), getMinExp_Character(minExp));
         break;
@@ -765,7 +760,6 @@ static bool minExpIsMinbda(MinExp *val) {
     case MINEXP_TYPE_IFF:
     case MINEXP_TYPE_CALLCC:
     case MINEXP_TYPE_LETREC:
-    case MINEXP_TYPE_TYPEDEFS:
     case MINEXP_TYPE_MATCH:
     case MINEXP_TYPE_COND:
     case MINEXP_TYPE_MAKEVEC:

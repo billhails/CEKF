@@ -529,7 +529,6 @@ static MinExp *normalize_Lam(MinExp *exp, AnfKont *k) {
     int save = PROTECT(newBody);
     MinExp *newMin = makeMinExp_Lam(CPI(exp), minExp->args, newBody);
     PROTECT(newMin);
-    getMinExp_Lam(newMin)->isMacro = minExp->isMacro;
     MinExp *result = INVOKE(k, newMin);
     UNPROTECT(save);
     LEAVE(normalize_Lam);
@@ -634,23 +633,6 @@ static MinSequence *_normalizeSquence(MinSequence *seq) {
     return newSeq;
 }
 
-// (`(typeDefs ,defs ,body)
-//   (k `(typeDefs ,defs ,(normalize-term body))))
-
-static MinExp *normalize_TypeDefs(MinExp *exp, AnfKont *k) {
-    ENTER(normalize_TypeDefs);
-    MinTypeDefs *typeDefsExp = getMinExp_TypeDefs(exp);
-    MinExp *newBody = normalize_term(typeDefsExp->body);
-    int save = PROTECT(newBody);
-    MinExp *newTypeDefs =
-        makeMinExp_TypeDefs(CPI(exp), typeDefsExp->typeDefs, newBody);
-    PROTECT(newTypeDefs);
-    MinExp *result = INVOKE(k, newTypeDefs);
-    UNPROTECT(save);
-    LEAVE(normalize_TypeDefs);
-    return result;
-}
-
 // (define (normalize e k)
 //    (match e
 //       ...))
@@ -702,9 +684,6 @@ static MinExp *normalize(MinExp *exp, AnfKont *k) {
             break;
         case MINEXP_TYPE_SEQUENCE:
             res = normalize_Sequence(exp, k);
-            break;
-        case MINEXP_TYPE_TYPEDEFS:
-            res = normalize_TypeDefs(exp, k);
             break;
         default:
             cant_happen("normalize: unhandled MinExp type %s",

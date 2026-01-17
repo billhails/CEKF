@@ -109,9 +109,6 @@ void ppMinExp(MinExp *exp) {
     case MINEXP_TYPE_CALLCC:
         ppMinCallCC(getMinExp_CallCC(exp)); // MinExp
         break;
-    case MINEXP_TYPE_TYPEDEFS:
-        ppMinTypeDefs(getMinExp_TypeDefs(exp));
-        break;
     case MINEXP_TYPE_LETREC:
         ppMinLetRec(getMinExp_LetRec(exp));
         break;
@@ -375,22 +372,6 @@ void ppMinLetRec(MinLetRec *letRec) {
     eprintf(")");
 }
 
-void ppMinTypeDefList(MinTypeDefList *typeDefList);
-
-void ppMinTypeDefs(MinTypeDefs *typeDefs) {
-    if (typeDefs == NULL) {
-        eprintf("<NULL typeDefs>");
-        return;
-    }
-    eprintf("(typedefs ");
-    ppMinTypeDefList(typeDefs->typeDefs);
-    if (typeDefs->body != NULL) {
-        eprintf(" ");
-        ppMinExp(typeDefs->body);
-    }
-    eprintf(")");
-}
-
 static void _ppMinMatchList(MinMatchList *cases) {
     if (cases == NULL)
         return;
@@ -438,132 +419,6 @@ static void _ppMinBindings(MinBindings *bindings) {
 void ppMinBindings(MinBindings *bindings) {
     eprintf("(");
     _ppMinBindings(bindings);
-    eprintf(")");
-}
-
-static void _ppMinTypeSigArgs(MinTypeSigArgs *args) {
-    if (args == NULL)
-        return;
-    eprintf(" ");
-    ppHashSymbol(args->name);
-    _ppMinTypeSigArgs(args->next);
-}
-
-static void _ppMinTypeSig(MinTypeSig *type) {
-    if (type->args == NULL) {
-        ppHashSymbol(type->name);
-        return;
-    }
-    eprintf("(");
-    ppHashSymbol(type->name);
-    _ppMinTypeSigArgs(type->args);
-    eprintf(")");
-}
-
-static void ppLookUpSymbol(MinLookUpSymbol *ls) {
-    eprintf("(lookUp %s:%d %s)", ls->nsSymbol->name, ls->nsId,
-            ls->symbol->name);
-}
-
-static void ppLookUpOrSymbol(MinLookUpOrSymbol *los) {
-    switch (los->type) {
-    case MINLOOKUPORSYMBOL_TYPE_SYMBOL:
-        ppHashSymbol(getMinLookUpOrSymbol_Symbol(los));
-        break;
-    case MINLOOKUPORSYMBOL_TYPE_LOOKUP:
-        ppLookUpSymbol(getMinLookUpOrSymbol_LookUp(los));
-        break;
-    default:
-        cant_happen("unrecognised %s", minLookUpOrSymbolTypeName(los->type));
-    }
-}
-
-static void _ppMinTypeConstructorArgs(MinTypeConstructorArgs *args);
-
-static void _ppMinTypeFunction(MinTypeFunction *function) {
-    eprintf("(");
-    ppLookUpOrSymbol(function->name);
-    _ppMinTypeConstructorArgs(function->args);
-    eprintf(")");
-}
-
-static void _ppMinTypeTuple(MinTypeConstructorArgs *args) {
-    eprintf("#(");
-    _ppMinTypeConstructorArgs(args);
-    eprintf(")");
-}
-
-static void _ppMinTypeConstructorType(MinTypeConstructorType *type) {
-    switch (type->type) {
-    case MINTYPECONSTRUCTORTYPE_TYPE_INTEGER:
-        eprintf("int");
-        break;
-    case MINTYPECONSTRUCTORTYPE_TYPE_CHARACTER:
-        eprintf("char");
-        break;
-    case MINTYPECONSTRUCTORTYPE_TYPE_VAR:
-        ppHashSymbol(getMinTypeConstructorType_Var(type));
-        break;
-    case MINTYPECONSTRUCTORTYPE_TYPE_FUNCTION:
-        _ppMinTypeFunction(getMinTypeConstructorType_Function(type));
-        break;
-    case MINTYPECONSTRUCTORTYPE_TYPE_TUPLE:
-        _ppMinTypeTuple(getMinTypeConstructorType_Tuple(type));
-        break;
-    default:
-        cant_happen("unrecognised type %s in _ppMinTypeConstructorType",
-                    minTypeConstructorTypeTypeName(type->type));
-    }
-}
-
-static void _ppMinTypeConstructorArgs(MinTypeConstructorArgs *args) {
-    if (args == NULL)
-        return;
-    eprintf(" ");
-    _ppMinTypeConstructorType(args->arg);
-    _ppMinTypeConstructorArgs(args->next);
-}
-
-static void _ppMinTypeConstructor(MinTypeConstructor *constructor) {
-    // deliberately don't print the type
-    if (constructor->args == NULL) {
-        ppHashSymbol(constructor->name);
-        return;
-    }
-    eprintf("(");
-    ppHashSymbol(constructor->name);
-    _ppMinTypeConstructorArgs(constructor->args);
-    eprintf(")");
-}
-
-static void _ppMinTypeConstructorList(MinTypeConstructorList *list) {
-    if (list == NULL)
-        return;
-    eprintf(" ");
-    _ppMinTypeConstructor(list->constructor);
-    _ppMinTypeConstructorList(list->next);
-}
-
-void ppMinTypeDef(MinTypeDef *typeDef) {
-    eprintf("(");
-    _ppMinTypeSig(typeDef->type);
-    _ppMinTypeConstructorList(typeDef->constructors);
-    eprintf(")");
-}
-
-static void _ppMinTypeDefList(MinTypeDefList *list) {
-    if (list == NULL)
-        return;
-    ppMinTypeDef(list->typeDef);
-    if (list->next) {
-        eprintf(" ");
-        _ppMinTypeDefList(list->next);
-    }
-}
-
-void ppMinTypeDefList(MinTypeDefList *typeDefList) {
-    eprintf("(");
-    _ppMinTypeDefList(typeDefList);
     eprintf(")");
 }
 

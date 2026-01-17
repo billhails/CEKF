@@ -46,7 +46,6 @@ static MinExp *cpsTkMinCond(MinCond *node, CpsKont *k);
 static MinExp *cpsTkMinMatch(MinMatch *node, CpsKont *k);
 static MinExp *cpsTkMinLetRec(MinLetRec *node, CpsKont *k);
 static MinExp *cpsTkMinAmb(MinAmb *node, CpsKont *k);
-static MinExp *cpsTkMinTypeDefs(MinTypeDefs *node, CpsKont *k);
 static MinExp *cpsTkMinExp(MinExp *node, CpsKont *k);
 static MinExp *cpsTkMinNameSpaceArray(MinNameSpaceArray *node, CpsKont *k);
 
@@ -562,21 +561,6 @@ static MinExp *cpsTkMinAmb(MinAmb *node, CpsKont *k) {
 }
 
 /*
-    (E.typeDefs(defs, expr)) {
-        E.typeDefs(defs, T_k(expr, k))
-    }
-*/
-static MinExp *cpsTkMinTypeDefs(MinTypeDefs *node, CpsKont *k) {
-    ENTER(cpsTkMinTypeDefs);
-    MinExp *expr = cpsTk(node->body, k);
-    int save = PROTECT(expr);
-    MinExp *result = makeMinExp_TypeDefs(CPI(node), node->typeDefs, expr);
-    UNPROTECT(save);
-    LEAVE(cpsTkMinTypeDefs);
-    return result;
-}
-
-/*
     (E.callCC_expr(e)) {
         let
             c = kToC(k);
@@ -631,8 +615,6 @@ static MinExp *cpsTkMinExp(MinExp *node, CpsKont *k) {
         return cpsTkMinPrimApp(getMinExp_Prim(node), k);
     case MINEXP_TYPE_SEQUENCE:
         return cpsTkMinSequence(getMinExp_Sequence(node), k);
-    case MINEXP_TYPE_TYPEDEFS:
-        return cpsTkMinTypeDefs(getMinExp_TypeDefs(node), k);
     default:
         cant_happen("unrecognized MinExp type %s [%s %d]",
                     minExpTypeName(node->type), CPI(node).fileName,

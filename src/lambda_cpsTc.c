@@ -46,7 +46,6 @@ static MinExp *cpsTcMinCond(MinCond *node, MinExp *c);
 static MinExp *cpsTcMinMatch(MinMatch *node, MinExp *c);
 static MinExp *cpsTcMinLetRec(MinLetRec *node, MinExp *c);
 static MinExp *cpsTcMinAmb(MinAmb *node, MinExp *c);
-static MinExp *cpsTcMinTypeDefs(MinTypeDefs *node, MinExp *c);
 static MinExp *cpsTcMinExp(MinExp *node, MinExp *c);
 static MinExp *cpsTcMinNameSpaceArray(MinNameSpaceArray *node, MinExp *c);
 
@@ -487,21 +486,6 @@ static MinExp *cpsTcMinAmb(MinAmb *node, MinExp *c) {
 }
 
 /*
-    (E.typeDefs(defs, expr)) {
-        E.typeDefs(defs, T_c(expr, c))
-    }
-*/
-static MinExp *cpsTcMinTypeDefs(MinTypeDefs *node, MinExp *c) {
-    ENTER(cpsTcMinTypeDefs);
-    MinExp *body = cpsTcMinExp(node->body, c);
-    int save = PROTECT(body);
-    MinExp *result = makeMinExp_TypeDefs(CPI(node), node->typeDefs, body);
-    UNPROTECT(save);
-    LEAVE(cpsTcMinTypeDefs);
-    return result;
-}
-
-/*
     (lambda (f cc)
         (f (lambda (x i) (cc x))
            cc))
@@ -614,8 +598,6 @@ static MinExp *cpsTcMinExp(MinExp *node, MinExp *c) {
         return cpsTcMinPrimApp(getMinExp_Prim(node), c);
     case MINEXP_TYPE_SEQUENCE:
         return cpsTcMinSequence(getMinExp_Sequence(node), c);
-    case MINEXP_TYPE_TYPEDEFS:
-        return cpsTcMinTypeDefs(getMinExp_TypeDefs(node), c);
     default:
         cant_happen("unrecognized MinExp type %s", minExpTypeName(node->type));
     }

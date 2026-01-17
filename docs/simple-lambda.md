@@ -24,11 +24,11 @@ Anyway here is a list of the desugaring operations that are desired:
 1. `MakeTuple` to `makeVec` (see `tupleToMakeVec` in `anf_normalize.c`) **done**
 1. `tag` becomes `primApp` (see `tagToPrimApp` in `anf_normalize.c`). **done**
 1. `tupleIndex` becomes `primApp` (see `tupleIndexToPrimApp` in `anf_normalize.c`). **done**
-1. `typeDefs` stepped over and discarded (see treatment of `LAMEXP_TYPE_TYPEDEFS` in `anf_normalize.c`)
+1. `typeDefs` stepped over and discarded (see treatment of `LAMEXP_TYPE_TYPEDEFS` in `anf_normalize.c`) **done**
 
 More speculative desugaring:
 
-1. There should only be `LamLookUp`, `LamLookUpSymbol` etc are redundant.
+1. There should only be `LamLookUp`, `LamLookUpSymbol` etc are redundant. Actually they are only used by typedefs. **done**
 1. `LamPrimApp` becomes `apply` of a primOp.
 1. ...
 
