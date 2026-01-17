@@ -65,9 +65,9 @@ static AexpNameSpaceArray *aexpNormalizeNameSpaces(ParserInfo I,
 static AexpVarList *convertVarList(MinVarList *args);
 static AexpList *replaceMinArgs(MinArgs *, MinExpTable *);
 static Aexp *replaceMinPrim(MinPrimApp *minPrimApp, MinExpTable *replacements);
-static Aexp *replaceMinMakeVec(MinMakeVec *makeVec, MinExpTable *replacements);
+static Aexp *replaceMinMakeVec(MinArgs *makeVec, MinExpTable *replacements);
 static Aexp *replaceMinCexp(MinExp *apply, MinExpTable *replacements);
-static AnfExp *normalizeMakeVec(MinMakeVec *makeVec, AnfExp *tail);
+static AnfExp *normalizeMakeVec(ParserInfo PI, MinArgs *makeVec, AnfExp *tail);
 static AnfExp *wrapTail(AnfExp *exp, AnfExp *tail);
 static AnfExp *normalizeIff(MinIff *minIff, AnfExp *tail);
 static AnfExp *normalizeCallCc(MinExp *callCC, AnfExp *tail);
@@ -106,7 +106,7 @@ static AnfExp *normalize(MinExp *minExp, AnfExp *tail) {
     case MINEXP_TYPE_SEQUENCE:
         return normalizeSequence(getMinExp_Sequence(minExp), tail);
     case MINEXP_TYPE_MAKEVEC:
-        return normalizeMakeVec(getMinExp_MakeVec(minExp), tail);
+        return normalizeMakeVec(CPI(minExp), getMinExp_MakeVec(minExp), tail);
     case MINEXP_TYPE_APPLY:
         return normalizeApply(getMinExp_Apply(minExp), tail);
     case MINEXP_TYPE_IFF:
@@ -294,17 +294,18 @@ static AnfExp *normalizeIff(MinIff *minIff, AnfExp *tail) {
     return res;
 }
 
-static AnfExp *normalizeMakeVec(MinMakeVec *minMakeVec, AnfExp *tail) {
+// args can be null so we need to pass in PI
+static AnfExp *normalizeMakeVec(ParserInfo PI, MinArgs *minMakeVec,
+                                AnfExp *tail) {
     ENTER(normalizeMakeVec);
     MinExpTable *replacements = newMinExpTable();
     int save = PROTECT(replacements);
     DEBUG("calling replaceMinArgs");
-    AexpList *args = replaceMinArgs(minMakeVec->args, replacements);
+    AexpList *args = replaceMinArgs(minMakeVec, replacements);
     int save2 = PROTECT(args);
-    AexpMakeVec *aexpMakeVec =
-        newAexpMakeVec(CPI(minMakeVec), countAexpList(args), args);
+    AexpMakeVec *aexpMakeVec = newAexpMakeVec(PI, countAexpList(args), args);
     REPLACE_PROTECT(save2, aexpMakeVec);
-    Aexp *aexp = newAexp_MakeVec(CPI(aexpMakeVec), aexpMakeVec);
+    Aexp *aexp = newAexp_MakeVec(PI, aexpMakeVec);
     REPLACE_PROTECT(save2, aexp);
     AnfExp *exp = wrapAexp(aexp);
     REPLACE_PROTECT(save2, exp);
@@ -808,10 +809,10 @@ static CexpLetRec *normalizeLetRecBindings(CexpLetRec *cexpLetRec,
     return cexpLetRec;
 }
 
-static Aexp *replaceMinMakeVec(MinMakeVec *makeVec, MinExpTable *replacements) {
+static Aexp *replaceMinMakeVec(MinArgs *makeVec, MinExpTable *replacements) {
     ENTER(replaceMinMakeVec);
     DEBUG("calling replaceMinArgs");
-    AexpList *aexpList = replaceMinArgs(makeVec->args, replacements);
+    AexpList *aexpList = replaceMinArgs(makeVec, replacements);
     int save = PROTECT(aexpList);
     AexpMakeVec *aexpMakeVec =
         newAexpMakeVec(CPI(makeVec), countAexpList(aexpList), aexpList);

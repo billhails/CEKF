@@ -30,7 +30,7 @@ void ppMinExp(MinExp *exp);
 void ppMinPrimApp(MinPrimApp *primApp);
 void ppMinPrimOp(MinPrimOp type);
 void ppMinSequence(MinSequence *sequence);
-void ppMinMakeVec(MinMakeVec *makeVec);
+void ppMinMakeVec(MinArgs *args);
 void ppMinApply(MinApply *apply);
 void ppMinIff(MinIff *iff);
 void ppMinCond(MinCond *cond);

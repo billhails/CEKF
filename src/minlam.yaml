@@ -81,16 +81,6 @@ structs:
             nsSymbol: HashSymbol
             exp: MinExp
 
-    MinMakeVec:
-        meta:
-            brief: A vector constructor
-            description: >-
-                This structure represents the internal construction of a
-                type instance (represented as a vector) from a list of arguments.
-        data:
-            nArgs: int
-            args: MinArgs
-
     MinIff:
         meta:
             brief: An if-then-else expression
@@ -233,7 +223,7 @@ unions:
             lam: MinLam
             letRec: MinLetRec
             lookUp: MinLookUp
-            makeVec: MinMakeVec
+            makeVec: MinArgs
             match: MinMatch
             nameSpaces: MinNameSpaceArray
             prim: MinPrimApp

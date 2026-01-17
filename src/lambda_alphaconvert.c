@@ -35,7 +35,7 @@ static MinSequence *visitMinSequence(MinSequence *node, MinAlphaEnv *context);
 static MinArgs *visitMinArgs(MinArgs *node, MinAlphaEnv *context);
 static MinApply *visitMinApply(MinApply *node, MinAlphaEnv *context);
 static MinLookUp *visitMinLookUp(MinLookUp *node, MinAlphaEnv *context);
-static MinMakeVec *visitMinMakeVec(MinMakeVec *node, MinAlphaEnv *context);
+static MinArgs *visitMinMakeVec(MinArgs *node, MinAlphaEnv *context);
 static MinIff *visitMinIff(MinIff *node, MinAlphaEnv *context);
 static MinCond *visitMinCond(MinCond *node, MinAlphaEnv *context);
 static MinIntCondCases *visitMinIntCondCases(MinIntCondCases *node,
@@ -265,25 +265,11 @@ static MinLookUp *visitMinLookUp(MinLookUp *node, MinAlphaEnv *context) {
     return node;
 }
 
-static MinMakeVec *visitMinMakeVec(MinMakeVec *node, MinAlphaEnv *context) {
+static MinArgs *visitMinMakeVec(MinArgs *node, MinAlphaEnv *context) {
     if (node == NULL)
         return NULL;
 
-    bool changed = false;
-    // Pass through nArgs (type: int, not memory-managed)
-    MinArgs *new_args = visitMinArgs(node->args, context);
-    int save = PROTECT(new_args);
-    changed = changed || (new_args != node->args);
-
-    if (changed) {
-        // Create new node with modified fields
-        MinMakeVec *result = newMinMakeVec(CPI(node), node->nArgs, new_args);
-        UNPROTECT(save);
-        return result;
-    }
-
-    UNPROTECT(save);
-    return node;
+    return visitMinArgs(node, context);
 }
 
 static MinIff *visitMinIff(MinIff *node, MinAlphaEnv *context) {
@@ -665,8 +651,8 @@ static MinExp *visitMinExp(MinExp *node, MinAlphaEnv *context) {
     }
     case MINEXP_TYPE_MAKEVEC: {
         // MinMakeVec
-        MinMakeVec *variant = getMinExp_MakeVec(node);
-        MinMakeVec *new_variant = visitMinMakeVec(variant, context);
+        MinArgs *variant = getMinExp_MakeVec(node);
+        MinArgs *new_variant = visitMinMakeVec(variant, context);
         if (new_variant != variant) {
             PROTECT(new_variant);
             result = newMinExp_MakeVec(CPI(node), new_variant);

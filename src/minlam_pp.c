@@ -264,13 +264,9 @@ void ppMinSequence(MinSequence *sequence) {
     eprintf(")");
 }
 
-void ppMinMakeVec(MinMakeVec *makeVec) {
-    if (makeVec == NULL) {
-        eprintf("<NULL makeVec>");
-        return;
-    }
+void ppMinMakeVec(MinArgs *makeVec) {
     eprintf("(make-vec");
-    _ppMinArgs(makeVec->args);
+    _ppMinArgs(makeVec);
     eprintf(")");
 }
 

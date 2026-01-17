@@ -40,7 +40,7 @@ static MinExp *cpsTcMinPrimApp(MinPrimApp *node, MinExp *c);
 static MinExp *cpsTcMinSequence(MinSequence *node, MinExp *c);
 static MinExp *cpsTcMinApply(MinApply *node, MinExp *c);
 static MinExp *cpsTcMinLookUp(MinLookUp *node, MinExp *c);
-static MinExp *cpsTcMakeVec(MinMakeVec *node, MinExp *c);
+static MinExp *cpsTcMakeVec(MinArgs *node, MinExp *c);
 static MinExp *cpsTcMinIff(MinIff *node, MinExp *c);
 static MinExp *cpsTcMinCond(MinCond *node, MinExp *c);
 static MinExp *cpsTcMinMatch(MinMatch *node, MinExp *c);
@@ -233,11 +233,11 @@ static MinExp *cpsTcMinLookUp(MinLookUp *node, MinExp *c) {
         })
     }
 */
-static MinExp *cpsTcMakeVec(MinMakeVec *node, MinExp *c) {
+static MinExp *cpsTcMakeVec(MinArgs *node, MinExp *c) {
     ENTER(cpsTcMakeVec);
-    CpsKont *kont = makeKont_TcMakeVec(node->nArgs, c);
+    CpsKont *kont = makeKont_TcMakeVec(0, c);
     int save = PROTECT(kont);
-    MinExp *args = newMinExp_Args(CPI(node), node->args);
+    MinExp *args = newMinExp_Args(CPI(node), node);
     PROTECT(args);
     MinExp *result = cpsTs_k(args, kont);
     UNPROTECT(save);
@@ -247,8 +247,7 @@ static MinExp *cpsTcMakeVec(MinMakeVec *node, MinExp *c) {
 
 MinExp *TcMakeVecKont(MinExp *sargs, TcMakeVecKontEnv *env) {
     ENTER(TcMakeVecKont);
-    MinExp *make_vec =
-        makeMinExp_MakeVec(CPI(sargs), env->size, getMinExp_Args(sargs));
+    MinExp *make_vec = newMinExp_MakeVec(CPI(sargs), getMinExp_Args(sargs));
     int save = PROTECT(make_vec);
     MinArgs *args = newMinArgs(CPI(sargs), make_vec, NULL);
     PROTECT(args);

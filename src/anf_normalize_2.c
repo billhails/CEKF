@@ -323,10 +323,11 @@ static MinExp *normalizeLetRecKont(MinExp *anfbindings,
 
 static MinExp *normalize_MakeVec(MinExp *exp, AnfKont *k) {
     ENTER(normalize_MakeVec);
-    MinMakeVec *makeVec = getMinExp_MakeVec(exp);
-    AnfKont *k2 = makeKont_normalizeMakeVec(makeVec->nArgs, k);
+    MinArgs *makeVec = getMinExp_MakeVec(exp);
+    Index nArgs = countMinArgs(makeVec);
+    AnfKont *k2 = makeKont_normalizeMakeVec(nArgs, k);
     int save = PROTECT(k2);
-    MinExp *result = normalize_names(makeVec->args, k2);
+    MinExp *result = normalize_names(makeVec, k2);
     UNPROTECT(save);
     LEAVE(normalize_MakeVec);
     return result;
@@ -334,7 +335,7 @@ static MinExp *normalize_MakeVec(MinExp *exp, AnfKont *k) {
 
 static MinExp *normalizeMakeVecKont(MinExp *ts, NormalizeMakeVecKontEnv *env) {
     MinArgs *tts = getMinExp_Args(ts);
-    MinExp *newMakeVec = makeMinExp_MakeVec(CPI(ts), env->nArgs, tts);
+    MinExp *newMakeVec = newMinExp_MakeVec(CPI(ts), tts);
     int save = PROTECT(newMakeVec);
     MinExp *result = INVOKE(env->k, newMakeVec);
     UNPROTECT(save);
