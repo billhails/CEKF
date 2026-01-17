@@ -282,20 +282,6 @@ continuations:
       anfE1: MinExp
       k: AnfKont
 
-  normalizeTupleIndex:
-    key: tupleIndex
-    brief: "Continuation for tuple access"
-    context: |
-      (match e
-          ...
-          (`(tuple-index ,vec ,size ,e0)
-              (normalize-name e0
-                  [λ (t0) (k `(tuple-index ,vec ,size ,t0))])))
-    free_vars:
-      vec: int
-      size: int
-      k: AnfKont
-
   normalizeCallCC:
     key: callCC
     brief: "Continuation for callCC expression"

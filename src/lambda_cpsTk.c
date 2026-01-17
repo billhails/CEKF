@@ -40,7 +40,6 @@ static MinExp *cpsTkMinPrimApp(MinPrimApp *node, CpsKont *k);
 static MinExp *cpsTkMinSequence(MinSequence *node, CpsKont *k);
 static MinExp *cpsTkMinApply(MinExp *node, CpsKont *k);
 static MinExp *cpsTkMinLookUp(MinLookUp *node, CpsKont *k);
-static MinExp *cpsTkMinTupleIndex(MinTupleIndex *node, CpsKont *k);
 static MinExp *cpsTkMakeVec(MinMakeVec *node, CpsKont *k);
 static MinExp *cpsTkMinIff(MinIff *node, CpsKont *k);
 static MinExp *cpsTkMinCond(MinCond *node, CpsKont *k);
@@ -278,34 +277,6 @@ static MinExp *cpsTkMinLookUp(MinLookUp *node, CpsKont *k) {
         makeMinExp_LookUp(CPI(node), node->nsId, node->nsSymbol, expr);
     UNPROTECT(save);
     LEAVE(cpsTkMinLookUp);
-    return result;
-}
-
-/*
-    (E.tuple_index(size, index, expr)) {
-        T_k(expr, fn (sexpr) {
-            k(E.tuple_index(size, index, sexpr))
-        })
-    }
-*/
-static MinExp *cpsTkMinTupleIndex(MinTupleIndex *node, CpsKont *k) {
-    ENTER(cpsTkMinTupleIndex);
-    CpsKont *k1 = makeKont_TkTupleIndex(node->size, node->vec, k);
-    int save = PROTECT(k1);
-    MinExp *result = cpsTk(node->exp, k1);
-    UNPROTECT(save);
-    LEAVE(cpsTkMinTupleIndex);
-    return result;
-}
-
-MinExp *TkTupleIndexKont(MinExp *sexpr, TkTupleIndexKontEnv *env) {
-    ENTER(TkTupleIndexKont);
-    MinExp *tuple_index =
-        makeMinExp_TupleIndex(CPI(sexpr), env->size, env->index, sexpr);
-    int save = PROTECT(tuple_index);
-    MinExp *result = INVOKE(env->k, tuple_index);
-    UNPROTECT(save);
-    LEAVE(TkTupleIndexKont);
     return result;
 }
 
@@ -660,8 +631,6 @@ static MinExp *cpsTkMinExp(MinExp *node, CpsKont *k) {
         return cpsTkMinPrimApp(getMinExp_Prim(node), k);
     case MINEXP_TYPE_SEQUENCE:
         return cpsTkMinSequence(getMinExp_Sequence(node), k);
-    case MINEXP_TYPE_TUPLEINDEX:
-        return cpsTkMinTupleIndex(getMinExp_TupleIndex(node), k);
     case MINEXP_TYPE_TYPEDEFS:
         return cpsTkMinTypeDefs(getMinExp_TypeDefs(node), k);
     default:

@@ -142,9 +142,6 @@ void ppMinExp(MinExp *exp) {
     case MINEXP_TYPE_AMB:
         ppMinAmb(getMinExp_Amb(exp));
         break;
-    case MINEXP_TYPE_TUPLEINDEX:
-        ppMinTupleIndex(getMinExp_TupleIndex(exp));
-        break;
     case MINEXP_TYPE_NAMESPACES:
         ppMinNameSpaces(getMinExp_NameSpaces(exp));
         break;
@@ -421,16 +418,6 @@ void ppMinMatch(MinMatch *match) {
         eprintf(" ");
         _ppMinMatchList(match->cases);
     }
-    eprintf(")");
-}
-
-void ppMinTupleIndex(MinTupleIndex *index) {
-    if (index == NULL) {
-        eprintf("<NULL tuple index>");
-        return;
-    }
-    eprintf("(index %d ", index->vec);
-    ppMinExp(index->exp);
     eprintf(")");
 }
 

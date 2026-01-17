@@ -37,8 +37,6 @@ static MinApply *visitMinApply(MinApply *node, MinAlphaEnv *context);
 static MinLookUp *visitMinLookUp(MinLookUp *node, MinAlphaEnv *context);
 static MinLookUpSymbol *visitMinLookUpSymbol(MinLookUpSymbol *node,
                                              MinAlphaEnv *context);
-static MinTupleIndex *visitMinTupleIndex(MinTupleIndex *node,
-                                         MinAlphaEnv *context);
 static MinMakeVec *visitMinMakeVec(MinMakeVec *node, MinAlphaEnv *context);
 static MinIff *visitMinIff(MinIff *node, MinAlphaEnv *context);
 static MinCond *visitMinCond(MinCond *node, MinAlphaEnv *context);
@@ -299,30 +297,6 @@ static MinLookUpSymbol *visitMinLookUpSymbol(MinLookUpSymbol *node,
     // Pass through symbol (type: HashSymbol, not memory-managed)
 
     (void)context; // Unused parameter - all fields are pass-through
-    return node;
-}
-
-static MinTupleIndex *visitMinTupleIndex(MinTupleIndex *node,
-                                         MinAlphaEnv *context) {
-    if (node == NULL)
-        return NULL;
-
-    bool changed = false;
-    // Pass through vec (type: int, not memory-managed)
-    // Pass through size (type: int, not memory-managed)
-    MinExp *new_exp = visitMinExp(node->exp, context);
-    int save = PROTECT(new_exp);
-    changed = changed || (new_exp != node->exp);
-
-    if (changed) {
-        // Create new node with modified fields
-        MinTupleIndex *result =
-            newMinTupleIndex(CPI(node), node->vec, node->size, new_exp);
-        UNPROTECT(save);
-        return result;
-    }
-
-    UNPROTECT(save);
     return node;
 }
 
@@ -1004,16 +978,6 @@ static MinExp *visitMinExp(MinExp *node, MinAlphaEnv *context) {
     }
     case MINEXP_TYPE_STDINT: {
         // int
-        break;
-    }
-    case MINEXP_TYPE_TUPLEINDEX: {
-        // MinTupleIndex
-        MinTupleIndex *variant = getMinExp_TupleIndex(node);
-        MinTupleIndex *new_variant = visitMinTupleIndex(variant, context);
-        if (new_variant != variant) {
-            PROTECT(new_variant);
-            result = newMinExp_TupleIndex(CPI(node), new_variant);
-        }
         break;
     }
     case MINEXP_TYPE_TYPEDEFS: {

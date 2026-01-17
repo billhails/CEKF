@@ -93,14 +93,6 @@ structs:
             nsSymbol: HashSymbol
             symbol: HashSymbol
 
-    MinTupleIndex:
-        meta:
-            brief: An index into a tuple
-        data:
-            vec: int         # offset of the field in the untagged tuple vector
-            size: int        # size of the tuple
-            exp: MinExp      # expression being accessed
-
     MinMakeVec:
         meta:
             brief: A vector constructor
@@ -344,7 +336,6 @@ unions:
             prim: MinPrimApp
             sequence: MinSequence
             stdint: int
-            tupleIndex: MinTupleIndex
             typeDefs: MinTypeDefs
             var: HashSymbol
 

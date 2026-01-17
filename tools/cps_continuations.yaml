@@ -431,31 +431,3 @@ continuations:
     free_vars:
       c: MinExp
       exprs: MinSequence
-
-  TkTupleIndex:
-    transformer: T_k
-    key: k_tupleindex
-    context: |
-      (E.tuple_index(size, index, expr)) {
-        T_k(expr, fn (sexpr) {
-          k(E.tuple_index(size, index, sexpr))
-        })
-      }
-    free_vars:
-      size: int
-      index: int
-      k: CpsKont
-
-  TcTupleIndex:
-    transformer: T_k
-    key: c_tupleindex
-    context: |
-      (E.tuple_index(size, index, expr)) {
-        T_k(expr, fn (sexpr) {
-          E.apply(c, [E.tuple_index(size, index, sexpr)])
-        })
-      }
-    free_vars:
-      size: int
-      index: int
-      c: MinExp

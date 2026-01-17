@@ -500,32 +500,6 @@ static MinExp *normalizePrimappInnerKont(MinExp *anfE2,
     return result;
 }
 
-// (`(tuple-index ,vec ,size ,e0)
-//     (normalize-name e0
-//         [λ (t0) (k `(tuple-index ,vec ,size ,t0))]))
-
-static MinExp *normalize_TupleIndex(MinExp *exp, AnfKont *k) {
-    ENTER(normalize_TupleIndex);
-    MinTupleIndex *tupleIndexExp = getMinExp_TupleIndex(exp);
-    AnfKont *k2 = makeKont_normalizeTupleIndex(tupleIndexExp->vec,
-                                               tupleIndexExp->size, k);
-    int save = PROTECT(k2);
-    MinExp *result = normalize_name(tupleIndexExp->exp, k2);
-    UNPROTECT(save);
-    LEAVE(normalize_TupleIndex);
-    return result;
-}
-
-static MinExp *normalizeTupleIndexKont(MinExp *t0,
-                                       NormalizeTupleIndexKontEnv *env) {
-    MinExp *newTupleIndex =
-        makeMinExp_TupleIndex(CPI(t0), env->vec, env->size, t0);
-    int save = PROTECT(newTupleIndex);
-    MinExp *result = INVOKE(env->k, newTupleIndex);
-    UNPROTECT(save);
-    return result;
-}
-
 // (`(amb ,e0, e1)
 //    (k `(amb ,(normalize-term e0)
 //             ,(normalize-term e1))))
@@ -728,9 +702,6 @@ static MinExp *normalize(MinExp *exp, AnfKont *k) {
             break;
         case MINEXP_TYPE_SEQUENCE:
             res = normalize_Sequence(exp, k);
-            break;
-        case MINEXP_TYPE_TUPLEINDEX:
-            res = normalize_TupleIndex(exp, k);
             break;
         case MINEXP_TYPE_TYPEDEFS:
             res = normalize_TypeDefs(exp, k);

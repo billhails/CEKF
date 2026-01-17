@@ -38,7 +38,6 @@ void ppMinCallCC(MinExp *exp);
 void ppMinLetRec(MinLetRec *letRec);
 void ppMinTypeDefs(MinTypeDefs *typeDefs);
 void ppMinMatch(MinMatch *match);
-void ppMinTupleIndex(MinTupleIndex *index);
 void ppMinBindings(MinBindings *bindings);
 void ppMinIntList(MinIntList *list);
 void ppMinMakeTuple(MinArgs *args);

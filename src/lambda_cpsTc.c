@@ -40,7 +40,6 @@ static MinExp *cpsTcMinPrimApp(MinPrimApp *node, MinExp *c);
 static MinExp *cpsTcMinSequence(MinSequence *node, MinExp *c);
 static MinExp *cpsTcMinApply(MinApply *node, MinExp *c);
 static MinExp *cpsTcMinLookUp(MinLookUp *node, MinExp *c);
-static MinExp *cpsTcMinTupleIndex(MinTupleIndex *node, MinExp *c);
 static MinExp *cpsTcMakeVec(MinMakeVec *node, MinExp *c);
 static MinExp *cpsTcMinIff(MinIff *node, MinExp *c);
 static MinExp *cpsTcMinCond(MinCond *node, MinExp *c);
@@ -225,36 +224,6 @@ static MinExp *cpsTcMinLookUp(MinLookUp *node, MinExp *c) {
         makeMinExp_LookUp(CPI(node), node->nsId, node->nsSymbol, expr);
     UNPROTECT(save);
     LEAVE(cpsTcMinLookUp);
-    return result;
-}
-
-/*
-    (E.tuple_index(size, index, expr)) {
-        T_k(expr, fn (sexpr) {
-            E.apply(c, [E.tuple_index(size, index, sexpr)])
-        })
-    }
-*/
-static MinExp *cpsTcMinTupleIndex(MinTupleIndex *node, MinExp *c) {
-    ENTER(cpsTcMinTupleIndex);
-    CpsKont *kont = makeKont_TcTupleIndex(node->size, node->vec, c);
-    int save = PROTECT(kont);
-    MinExp *result = cpsTk(node->exp, kont);
-    UNPROTECT(save);
-    LEAVE(cpsTcMinTupleIndex);
-    return result;
-}
-
-MinExp *TcTupleIndexKont(MinExp *sexpr, TcTupleIndexKontEnv *env) {
-    ENTER(TcTupleIndexKont);
-    MinExp *tuple_index =
-        makeMinExp_TupleIndex(CPI(sexpr), env->size, env->index, sexpr);
-    int save = PROTECT(tuple_index);
-    MinArgs *args = newMinArgs(CPI(sexpr), tuple_index, NULL);
-    PROTECT(args);
-    MinExp *result = makeMinExp_Apply(CPI(sexpr), env->c, args);
-    UNPROTECT(save);
-    LEAVE(TcTupleIndexKont);
     return result;
 }
 
@@ -645,8 +614,6 @@ static MinExp *cpsTcMinExp(MinExp *node, MinExp *c) {
         return cpsTcMinPrimApp(getMinExp_Prim(node), c);
     case MINEXP_TYPE_SEQUENCE:
         return cpsTcMinSequence(getMinExp_Sequence(node), c);
-    case MINEXP_TYPE_TUPLEINDEX:
-        return cpsTcMinTupleIndex(getMinExp_TupleIndex(node), c);
     case MINEXP_TYPE_TYPEDEFS:
         return cpsTcMinTypeDefs(getMinExp_TypeDefs(node), c);
     default:

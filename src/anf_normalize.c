@@ -78,7 +78,6 @@ static AexpIntList *convertIntList(MinIntList *list);
 static AnfExp *normalizeCond(MinCond *cond, AnfExp *tail);
 static CexpCondCases *normalizeCondCases(MinCondCases *cases);
 static CexpLetRec *normalizeLetRecBindings(CexpLetRec *, MinBindings *);
-static AnfExp *normalizeTupleIndex(MinTupleIndex *construct, AnfExp *tail);
 static AnfExp *normalizeEnv(ParserInfo I, AnfExp *tail);
 static AnfExp *normalizeMinLookUp(MinLookUp *, AnfExp *);
 
@@ -118,8 +117,6 @@ static AnfExp *normalize(MinExp *minExp, AnfExp *tail) {
         return normalizeCallCc(getMinExp_CallCC(minExp), tail);
     case MINEXP_TYPE_LETREC:
         return normalizeLetRec(getMinExp_LetRec(minExp), tail);
-    case MINEXP_TYPE_TUPLEINDEX:
-        return normalizeTupleIndex(getMinExp_TupleIndex(minExp), tail);
     case MINEXP_TYPE_MATCH:
         return normalizeMatch(getMinExp_Match(minExp), tail);
     case MINEXP_TYPE_COND:
@@ -210,25 +207,6 @@ static AnfMatchList *normalizeMatchList(MinMatchList *matchList) {
     UNPROTECT(save);
     LEAVE(normalizeMatchList);
     return this;
-}
-
-static MinPrimApp *tupleIndexToPrimApp(MinTupleIndex *tupleIndex) {
-    MinExp *index = newMinExp_Stdint(CPI(tupleIndex), tupleIndex->vec);
-    int save = PROTECT(index);
-    MinPrimApp *res = newMinPrimApp(CPI(tupleIndex), MINPRIMOP_TYPE_VEC, index,
-                                    tupleIndex->exp);
-    UNPROTECT(save);
-    return res;
-}
-
-static AnfExp *normalizeTupleIndex(MinTupleIndex *index, AnfExp *tail) {
-    ENTER(noramaalizeTupleIndex);
-    MinPrimApp *primApp = tupleIndexToPrimApp(index);
-    int save = PROTECT(primApp);
-    AnfExp *res = normalizePrim(primApp, tail);
-    UNPROTECT(save);
-    LEAVE(noramaalizeTupleIndex);
-    return res;
 }
 
 static AnfExp *normalizeLetRec(MinLetRec *minLetRec, AnfExp *tail) {
@@ -722,22 +700,10 @@ static CexpCondCases *normalizeCondCases(MinCondCases *cases) {
     return res;
 }
 
-static Aexp *replaceMinTupleIndex(MinTupleIndex *tupleIndex,
-                                  MinExpTable *replacements) {
-    MinPrimApp *primApp = tupleIndexToPrimApp(tupleIndex);
-    int save = PROTECT(primApp);
-    Aexp *res = replaceMinPrim(primApp, replacements);
-    UNPROTECT(save);
-    return res;
-}
-
 static Aexp *replaceMinExp(MinExp *minExp, MinExpTable *replacements) {
     ENTER(replaceMinExp);
     Aexp *res = NULL;
     switch (minExp->type) {
-    case MINEXP_TYPE_TUPLEINDEX:
-        res = replaceMinTupleIndex(getMinExp_TupleIndex(minExp), replacements);
-        break;
     case MINEXP_TYPE_LAM:
         res = aexpNormalizeLam(getMinExp_Lam(minExp));
         break;
@@ -804,7 +770,6 @@ static bool minExpIsMinbda(MinExp *val) {
     case MINEXP_TYPE_COND:
     case MINEXP_TYPE_MAKEVEC:
     case MINEXP_TYPE_LOOKUP:
-    case MINEXP_TYPE_TUPLEINDEX:
         return false;
     default:
         cant_happen("unrecognised MinExp type %s in minExpIsMinbda",
