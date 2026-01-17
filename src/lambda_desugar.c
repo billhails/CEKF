@@ -21,6 +21,7 @@
 #include "lambda.h"
 #include "memory.h"
 #include "minlam.h"
+#include "minlam_pp.h"
 
 #include "lambda_desugar.h"
 
@@ -64,6 +65,9 @@ static MinAmb *desugarLamAmb(LamAmb *node);
 static MinExp *desugarLamExp_internal(LamExp *node);
 static MinCondCases *desugarLamCondCases(LamCondCases *node);
 static MinNameSpaceArray *desugarLamNameSpaceArray(LamNameSpaceArray *node);
+
+char *desugar_conversion_function = NULL;
+int desugar_flag = 0;
 
 // Visitor implementations
 static MinVarList *desugarLamVarList(LamVarList *node) {
@@ -529,6 +533,12 @@ static MinBindings *desugarLamBindings(LamBindings *node) {
     MinBindings *next = desugarLamBindings(node->next);
     PROTECT(next);
     MinBindings *result = newMinBindings(CPI(node), node->var, val, next);
+    if (desugar_conversion_function != NULL &&
+        strcmp(node->var->name, desugar_conversion_function) == 0) {
+        ppMinExp(result->val);
+        eprintf("\n");
+        exit(0);
+    }
     UNPROTECT(save);
     LEAVE(desugarLamBindings);
     return result;

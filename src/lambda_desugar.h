@@ -23,4 +23,7 @@
 
 MinExp *desugarLamExp(LamExp *node);
 
+extern char *desugar_conversion_function;
+extern int desugar_flag;
+
 #endif
