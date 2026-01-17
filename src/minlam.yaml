@@ -174,7 +174,7 @@ structs:
 
     MinBindings:
         meta:
-            brief: Bindings in a let or letrec expression
+            brief: Bindings in a letrec expression
         data:
             var: HashSymbol
             val: MinExp
@@ -195,6 +195,7 @@ structs:
             alphaTable: MinAlphaTable
             next: MinAlphaEnv
             nameSpaces: MinAlphaEnvArray=NULL
+
 enums:
     MinPrimOp:
         meta:
@@ -218,7 +219,7 @@ enums:
 unions:
     MinExp:
         meta:
-            brief: A lambda expression
+            brief: An expression
         data:
             amb: MinAmb
             apply: MinApply
@@ -263,7 +264,7 @@ hashes:
 
     MinAlphaTable:
         meta:
-            brief: Map from symbols to their substitutes
+            brief: Map from symbols to their replacements
             description: >-
                 Table for alpha conversion, mapping from original symbols
                 to their unique replacements.
