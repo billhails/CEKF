@@ -7,6 +7,7 @@ More of a wish-list than a hard and fast plan.
 * Clean Up.
   * Create a shared yaml file for common structures: vector of char, list of int, set of symbol, map of symbol etc.
   * Migrate bespoke structs like Opaque and AgnosticFileId to code generation.
+  * Hunt down all occurences of malloc/free outside of the standard memory management.
 * More numbers:
   * NaN for division by Zero etc.
   * Matrices.
