@@ -149,7 +149,7 @@ void ppMinExp(MinExp *exp) {
         ppMinLookUp(getMinExp_LookUp(exp));
         break;
     default:
-        cant_happen("unrecognized type %s", minExpTypeName(exp->type));
+        eprintf("<unrecognised expression type %s>", minExpTypeName(exp->type));
     }
 }
 
@@ -186,49 +186,49 @@ void ppMinPrimApp(MinPrimApp *primApp) {
 void ppMinPrimOp(MinPrimOp type) {
     switch (type) {
     case MINPRIMOP_TYPE_ADD:
-        eprintf("add");
+        eprintf("+");
         break;
     case MINPRIMOP_TYPE_SUB:
-        eprintf("sub");
+        eprintf("-");
         break;
     case MINPRIMOP_TYPE_MUL:
-        eprintf("mul");
+        eprintf("*");
         break;
     case MINPRIMOP_TYPE_DIV:
-        eprintf("div");
+        eprintf("/");
         break;
     case MINPRIMOP_TYPE_EQ:
-        eprintf("eq");
+        eprintf("==");
         break;
     case MINPRIMOP_TYPE_NE:
-        eprintf("ne");
+        eprintf("!=");
         break;
     case MINPRIMOP_TYPE_GT:
-        eprintf("gt");
+        eprintf(">");
         break;
     case MINPRIMOP_TYPE_LT:
-        eprintf("lt");
+        eprintf("<");
         break;
     case MINPRIMOP_TYPE_GE:
-        eprintf("ge");
+        eprintf(">=");
         break;
     case MINPRIMOP_TYPE_LE:
-        eprintf("le");
+        eprintf("<=");
         break;
     case MINPRIMOP_TYPE_VEC:
         eprintf("vec");
         break;
     case MINPRIMOP_TYPE_MOD:
-        eprintf("mod");
+        eprintf("%%");
         break;
     case MINPRIMOP_TYPE_POW:
-        eprintf("pow");
+        eprintf("**");
         break;
     case MINPRIMOP_TYPE_CMP:
-        eprintf("cmp");
+        eprintf("<=>");
         break;
     default:
-        cant_happen("unrecognised type %d in ppMinPrimOp", type);
+        eprintf("<unrecognised prim op %s>", minPrimOpName(type));
     }
 }
 
@@ -324,7 +324,8 @@ static void _ppMinCondCases(MinCondCases *cases) {
         _ppMinCharCondCases(getMinCondCases_Characters(cases));
         break;
     default:
-        cant_happen("unrecognised type %d in _ppMinCondCases", cases->type);
+        eprintf("<unrecognised case type %s>",
+                minCondCasesTypeName(cases->type));
     }
 }
 
