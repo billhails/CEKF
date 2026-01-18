@@ -4,6 +4,9 @@ More of a wish-list than a hard and fast plan.
 
 * Target LLVM
 * `syntax` construct that allows large-scale syntactic structures to be defined by the user.
+* Clean Up.
+  * Create a shared yaml file for common structures: vector of char, list of int, set of symbol, map of symbol etc.
+  * Migrate bespoke structs like Opaque and AgnosticFileId to code generation.
 * More numbers:
   * NaN for division by Zero etc.
   * Matrices.
