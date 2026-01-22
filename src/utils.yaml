@@ -33,7 +33,7 @@ structs:
         data:
             stDev: device
             stIno: inode
-            fileName: string
+            fileName: SCharVec
 
 hashes:
     SymbolSet:

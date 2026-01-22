@@ -212,7 +212,11 @@ static PrattNsOpsArray *nsOpsCache = NULL;
 FileId *makeFileId(char *fileName) {
     struct stat stats;
     if (stat(fileName, &stats) == 0) {
-        FileId *res = newFileId(stats.st_dev, stats.st_ino, fileName);
+        SCharVec *mbStr = newSCharVec(strlen(fileName) + 1);
+        int save = PROTECT(mbStr);
+        strcpy(mbStr->entries, fileName);
+        FileId *res = newFileId(stats.st_dev, stats.st_ino, mbStr);
+        UNPROTECT(save);
         return res;
     } else {
         return NULL;
@@ -377,15 +381,14 @@ makeAstCompositeFunction(AstAltFunction *functions,
  * does not exist.
  */
 static FileId *tryFile(char *prefix, char *file) {
-    char *buf = malloc(sizeof(char) * (strlen(prefix) + 1 + strlen(file) + 10));
+    char *buf = malloc(sizeof(char) * (strlen(prefix) + strlen(file) + 2));
     if (buf == NULL) {
         perror("out of memory");
         exit(1);
     }
     sprintf(buf, "%s/%s", prefix, file);
     FileId *result = makeFileId(buf);
-    if (result == NULL)
-        free(buf);
+    free(buf);
     return result;
 }
 
@@ -436,9 +439,7 @@ static char *currentPrattFile(PrattParser *parser) {
  */
 static FileId *calculatePath(unsigned char *file, PrattParser *parser) {
     if (*file == '/') {
-        // Take ownership of the fileName by duplicating it so the
-        // FileId can free it during GC finalization.
-        return makeFileId(safeStrdup((char *)file));
+        return makeFileId((char *)file);
     }
     char *currentFile = currentPrattFile(parser);
     if (currentFile == NULL) {
@@ -877,7 +878,7 @@ static AstNameSpace *parseLink(PrattParser *parser, unsigned char *fileName,
     // check for a recursive include
     if (fileIdInArray(fileId, fileIdStack)) {
         parserError(parser, "recursive include detected for %s",
-                    fileId->fileName);
+                    fileId->fileName->entries);
         AstNameSpace *ns =
             newAstNameSpace(BUFPI(parser->lexer->bufList), symbol, -1);
         UNPROTECT(save);
@@ -890,7 +891,7 @@ static AstNameSpace *parseLink(PrattParser *parser, unsigned char *fileName,
     // careful, 2 pushes in a row could realloc the save stack on push 1
     int save2 = PROTECT(fileId);
     AstDefinitions *definitions =
-        prattParseLink(parser, fileId->fileName, &resultParser);
+        prattParseLink(parser, fileId->fileName->entries, &resultParser);
     REPLACE_PROTECT(save2, resultParser);
     PROTECT(definitions);
     // save the new nameSpace and its parser
