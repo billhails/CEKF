@@ -54,6 +54,10 @@ class Primitive(Base):
                 self.eqFn = data['eqFn']
             else:
                 self.eqFn = None
+            if 'cmpFn' in data:
+                self.cmpFn = data['cmpFn']
+            else:
+                self.cmpFn = None
             if 'copyFn' in data:
                 self.copyFn = data['copyFn']
             else:
@@ -120,10 +124,13 @@ class Primitive(Base):
         pad(depth)
         a = '.' if isInline else '->'
         # use the custom equality function if provided
-        if self.eqFn is None:
-            print(f"if (a{a}{prefix}{field} != b{a}{prefix}{field}) return false; {c}")
-        else:
+        if self.eqFn is not None:
             print(f"if (!{self.eqFn}(a{a}{prefix}{field}, b{a}{prefix}{field})) return false; {c}")
+        elif self.cmpFn is not None:
+            # cmpFn returns enum Cmp, so compare with CMP_EQ
+            print(f"if ({self.cmpFn}(a{a}{prefix}{field}, b{a}{prefix}{field}) != CMP_EQ) return false; {c}")
+        else:
+            print(f"if (a{a}{prefix}{field} != b{a}{prefix}{field}) return false; {c}")
 
     def printPrintHashField(self, depth):
         c = self.comment('printPrintHashField')
