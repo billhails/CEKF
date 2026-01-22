@@ -1,52 +1,53 @@
 """
-Compare Helper - Utilities for handling extra comparison arguments.
+Eq Helper - Utilities for handling extra equality function arguments.
 
-This module provides utilities for managing extra comparison function parameters
+This module provides utilities for managing extra equality function parameters
 that some types need (e.g., comparing arrays may need size information).
 """
 
-class CompareHelper:
+class EqHelper:
     """
-    Utilities for generating extra comparison function parameters.
+    Utilities for generating extra equality function parameters.
     
-    Some entity types can have additional arguments for their comparison functions
-    defined via the extraCmpArgs dictionary in their YAML.
+    Some entity types can have additional arguments for their equality functions
+    defined via the extraEqArgs dictionary in their YAML.
     """
     
     @staticmethod
-    def get_extra_formal_args(extra_cmp_args, get_ctype_fn):
+    def get_extra_formal_args(extra_eq_args, get_ctype_fn):
         """
-        Generate formal parameter string for extra comparison arguments.
+        Generate formal parameter string for extra equality arguments.
         
         Args:
-            extra_cmp_args: Dictionary mapping arg names to type names
+            extra_eq_args: Dictionary mapping arg names to type names
             get_ctype_fn: Function to convert type name to C type declaration
             
         Returns:
             String like ", Type1 arg1, Type2 arg2" or "" if no extra args
         """
         extra = []
-        for name in extra_cmp_args:
-            ctype = get_ctype_fn(extra_cmp_args[name])
+        for name in extra_eq_args:
+            ctype = get_ctype_fn(extra_eq_args[name])
             extra.append(f"{ctype}{name}")
         if len(extra) > 0:
             return ", " + ", ".join(extra)
         return ""
     
     @staticmethod
-    def get_extra_actual_args(extra_cmp_args):
+    def get_extra_actual_args(extra_eq_args):
         """
-        Generate actual argument string for extra comparison arguments.
+        Generate actual argument string for extra equality arguments.
         
         Args:
-            extra_cmp_args: Dictionary mapping arg names to type names
+            extra_eq_args: Dictionary mapping arg names to type names
             
         Returns:
             String like ", arg1, arg2" or "" if no extra args
         """
         extra = []
-        for name in extra_cmp_args:
+        for name in extra_eq_args:
             extra.append(name)
         if len(extra) > 0:
             return ", " + ", ".join(extra)
         return ""
+

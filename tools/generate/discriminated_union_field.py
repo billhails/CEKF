@@ -222,12 +222,12 @@ class DiscriminatedUnionField(EnumField):
         obj = catalog.get(self.typeName)
         obj.printProtectField(isInline, self.name, 3, 'val.')
 
-    def printCompareCase(self, isInline, catalog):
-        c = self.comment('printCompareCase')
+    def printEqCase(self, isInline, catalog):
+        c = self.comment('printEqCase')
         typeName = self.makeTypeName()
         print(f"        case {typeName}: {c}")
         obj = catalog.get(self.typeName)
-        obj.printCompareField(catalog, isInline, self.name, 3, 'val.')
+        obj.printEqField(catalog, isInline, self.name, 3, 'val.')
         print(f"            break; {c}")
 
     def printPrintCase(self, catalog, isInline):

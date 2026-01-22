@@ -50,10 +50,10 @@ class Primitive(Base):
             else:
                 self.printFn = data['printFn']
             self.valued = data['valued']
-            if 'compareFn' in data:
-                self.compareFn = data['compareFn']
+            if 'eqFn' in data:
+                self.eqFn = data['eqFn']
             else:
-                self.compareFn = None
+                self.eqFn = None
             if 'copyFn' in data:
                 self.copyFn = data['copyFn']
             else:
@@ -115,14 +115,15 @@ class Primitive(Base):
     def getTypeDeclaration(self, catalog):
         return TypeHelper.primitive_type(self.cname)
 
-    def printCompareField(self, catalog, isInline, field, depth, prefix=''):
-        c = self.comment('printCompareField')
+    def printEqField(self, catalog, isInline, field, depth, prefix=''):
+        c = self.comment('printEqField')
         pad(depth)
         a = '.' if isInline else '->'
-        if self.compareFn is None:
+        # use the custom equality function if provided
+        if self.eqFn is None:
             print(f"if (a{a}{prefix}{field} != b{a}{prefix}{field}) return false; {c}")
         else:
-            print(f"if (!{self.compareFn}(a{a}{prefix}{field}, b{a}{prefix}{field})) return false; {c}")
+            print(f"if (!{self.eqFn}(a{a}{prefix}{field}, b{a}{prefix}{field})) return false; {c}")
 
     def printPrintHashField(self, depth):
         c = self.comment('printPrintHashField')

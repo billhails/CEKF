@@ -311,5 +311,5 @@ external:
             printFn: printWCharArray
             markFn: markWCharArray
             newFn: newWCharArray
-            compareFn: eqWCharArray
+            eqFn: eqWCharArray
             valued: true

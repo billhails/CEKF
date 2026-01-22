@@ -45,18 +45,18 @@ class Catalog:
         if t in self.contents:
             self.contents[t].tag()
 
-    def noteExtraCmpArgs(self, args):
+    def noteExtraEqArgs(self, args):
         for key in self.contents:
-            self.contents[key].noteExtraCmpArgs(args)
+            self.contents[key].noteExtraEqArgs(args)
 
     def noteParserInfo(self):
         self.parserInfo = True
 
-    def noteBespokeCmpImplementation(self, name):
+    def noteBespokeEqImplementation(self, name):
         if name in self.contents:
-            self.contents[name].noteBespokeCmpImplementation()
+            self.contents[name].noteBespokeEqImplementation()
         else:
-            raise Exception("bespoke cmp implementation declared for nonexistant entry " + name)
+            raise Exception("bespoke eq implementation declared for nonexistant entry " + name)
 
     def get(self, key):
         key = key.strip()
@@ -300,14 +300,14 @@ class Catalog:
     def printPrintFunctions(self):
         self._dispatch('printPrintFunction', self)
 
-    def printCompareFunctions(self):
-        self._dispatch('printCompareFunction', self)
+    def printEqFunctions(self):
+        self._dispatch('printEqFunction', self)
 
     def printPrintDeclarations(self):
         self._dispatch('printPrintDeclaration', self)
 
-    def printCompareDeclarations(self):
-        self._dispatch('printCompareDeclaration', self)
+    def printEqDeclarations(self):
+        self._dispatch('printEqDeclaration', self)
 
     def printDefines(self):
         self._dispatch('printDefines', self)

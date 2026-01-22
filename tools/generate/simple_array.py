@@ -14,7 +14,7 @@ from .comment_gen import CommentGen
 from .type_helper import TypeHelper
 from .signature_helper import SignatureHelper
 from .accessor_helper import AccessorHelper
-from .compare_helper import CompareHelper
+from .compare_helper import EqHelper
 from .objtype_helper import ObjectTypeHelper
 
 
@@ -55,13 +55,13 @@ class SimpleArray(Base):
     def getTypeDeclaration(self, catalog):
         return TypeHelper.struct_type(self.getName(), self.isInline(catalog))
 
-    def printCompareField(self, catalog, isInline, field, depth, prefix=''):
+    def printEqField(self, catalog, isInline, field, depth, prefix=''):
         myName=self.getName()
-        extraCmpArgs = self.getExtraCmpAargs(catalog)
+        extraEqArgs = self.getExtraEqAargs(catalog)
         a = AccessorHelper.accessor(isInline)
-        c = self.comment('printCompareField')
+        c = self.comment('printEqField')
         pad(depth)
-        print(f"if (!eq{myName}(a{a}{prefix}{field}, b{a}{prefix}{field}{extraCmpArgs})) return false; {c}")
+        print(f"if (!eq{myName}(a{a}{prefix}{field}, b{a}{prefix}{field}{extraEqArgs})) return false; {c}")
 
     def printCopyField(self, isInline, field, depth, prefix=''):
         myName=self.getName()
@@ -701,9 +701,9 @@ class SimpleArray(Base):
         decl=self.getPrintSignature(catalog)
         print(f"{decl}; {c}")
 
-    def printCompareDeclaration(self, catalog):
-        c = self.comment('printCompareDeclaration')
-        decl=self.getCompareSignature(catalog)
+    def printEqDeclaration(self, catalog):
+        c = self.comment('printEqDeclaration')
+        decl=self.getEqSignature(catalog)
         print(f"{decl}; {c}")
 
     def getPrintSignature(self, catalog):
@@ -726,27 +726,27 @@ class SimpleArray(Base):
         print(f'}} {c}')
         print('')
 
-    def getExtraCmpFargs(self, catalog):
-        return CompareHelper.get_extra_formal_args(self.extraCmpArgs, lambda t: self.getCtype(t, catalog))
+    def getExtraEqFargs(self, catalog):
+        return EqHelper.get_extra_formal_args(self.extraEqArgs, lambda t: self.getCtype(t, catalog))
 
-    def getExtraCmpAargs(self, catalog):
-        return CompareHelper.get_extra_actual_args(self.extraCmpArgs)
+    def getExtraEqAargs(self, catalog):
+        return EqHelper.get_extra_actual_args(self.extraEqArgs)
 
-    def getCompareSignature(self, catalog):
+    def getEqSignature(self, catalog):
         myType = self.getTypeDeclaration(catalog)
         myName = self.getName()
-        extraCmpArgs = self.getExtraCmpFargs(catalog)
-        return SignatureHelper.compare_signature(myName, myType, extraCmpArgs)
+        extraEqArgs = self.getExtraEqFargs(catalog)
+        return SignatureHelper.eq_signature(myName, myType, extraEqArgs)
 
-    def printCompareFunction(self, catalog):
-        c = self.comment('printCompareFunction')
-        if self.bespokeCmpImplementation:
+    def printEqFunction(self, catalog):
+        c = self.comment('printEqFunction')
+        if self.bespokeEqImplementation:
             print("// Bespoke implementation required for")
-            print("// {decl}".format(decl=self.getCompareSignature(catalog)))
+            print("// {decl}".format(decl=self.getEqSignature(catalog)))
             print("")
             return
         myName = self.getName()
-        decl = self.getCompareSignature(catalog)
+        decl = self.getEqSignature(catalog)
         a = AccessorHelper.accessor(self.isInline(catalog))
         print(f"/**")
         print(f" * @brief Deep compare two {myName} objects for equality.")
@@ -758,12 +758,12 @@ class SimpleArray(Base):
         if self.dimension == 1:
             print(f"    if (a{a}size != b{a}size) return false; {c}")
             print(f"    for (Index i = 0; i < a{a}size; i++) {{ {c}")
-            self.entries.printCompareArrayLine(self.isInline(catalog), catalog, "i", 2)
+            self.entries.printEqArrayLine(self.isInline(catalog), catalog, "i", 2)
             print(f"    }} {c}")
         else:
             print(f"    if (a{a}width != b{a}width || a{a}height != b{a}height) return false; {c}")
             print(f"    for (Index i = 0; i < (a{a}width * a{a}height); i++) {{ {c}")
-            self.entries.printCompareArrayLine(self.isInline(catalog), catalog, "i", 2)
+            self.entries.printEqArrayLine(self.isInline(catalog), catalog, "i", 2)
             print(f"    }} {c}")
         print(f"    return true; {c}")
         print(f"}} {c}\n")

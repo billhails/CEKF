@@ -130,10 +130,10 @@ def main():
 
     if "cmp" in document:
         if "extraArgs" in document["cmp"]:
-            catalog.noteExtraCmpArgs(document["cmp"]["extraArgs"])
+            catalog.noteExtraEqArgs(document["cmp"]["extraArgs"])
         if "bespokeImplementation" in document["cmp"]:
             for bespoke in document["cmp"]["bespokeImplementation"]:
-                catalog.noteBespokeCmpImplementation(bespoke)
+                catalog.noteBespokeEqImplementation(bespoke)
 
     # For continuation YAML, add generated structs/unions to catalog
     if "continuations" in document:
@@ -250,8 +250,8 @@ def generate_header(args, catalog, document, typeName, includes, limited_include
     catalog.printGetterDeclarations()
     printSection("discriminated union setter declarations")
     catalog.printSetterDeclarations()
-    printSection("compare declarations")
-    catalog.printCompareDeclarations()
+    printSection("eq declarations")
+    catalog.printEqDeclarations()
     print("")
     print("#endif")
 
@@ -326,8 +326,8 @@ def generate_implementation(args, catalog, document, typeName):
     catalog.printNameFunctionBodies()
     printSection("protect functions")
     catalog.printProtectFunctions()
-    printSection("compare functions")
-    catalog.printCompareFunctions()
+    printSection("eq functions")
+    catalog.printEqFunctions()
 
 
 def generate_debug_header(args, catalog, document, typeName, includes, limited_includes):

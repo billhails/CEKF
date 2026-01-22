@@ -33,8 +33,8 @@ class Base:
     def __init__(self, name, body):
         self.name = name
         self.tagged = False
-        self.bespokeCmpImplementation = False
-        self.extraCmpArgs = {}
+        self.bespokeEqImplementation = False
+        self.extraEqArgs = {}
         self.hasDocs = False
         self.brief = None
         self.description = None
@@ -113,8 +113,8 @@ class Base:
     def isSelfInitializing(self):
         return False
 
-    def noteExtraCmpArgs(self, args):
-        self.extraCmpArgs = args
+    def noteExtraEqArgs(self, args):
+        self.extraEqArgs = args
 
     def objTypeArray(self):
         return []
@@ -192,13 +192,13 @@ class Base:
     def printPrintDeclaration(self, catalog):
         pass
 
-    def printCompareDeclaration(self, catalog):
+    def printEqDeclaration(self, catalog):
         pass
 
     def printPrintFunction(self, catalog):
         pass
 
-    def printCompareFunction(self, catalog):
+    def printEqFunction(self, catalog):
         pass
 
     def printMarkObjCase(self, catalog):
@@ -315,8 +315,8 @@ class Base:
     def isVector(self):
         return False
 
-    def noteBespokeCmpImplementation(self):
-        self.bespokeCmpImplementation = True
+    def noteBespokeEqImplementation(self):
+        self.bespokeEqImplementation = True
 
     def makeCopyCommand(self, arg, catalog):
         return arg

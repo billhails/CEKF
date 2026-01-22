@@ -14,7 +14,7 @@ from .comment_gen import CommentGen
 from .type_helper import TypeHelper
 from .signature_helper import SignatureHelper
 from .accessor_helper import AccessorHelper
-from .compare_helper import CompareHelper
+from .compare_helper import EqHelper
 from .objtype_helper import ObjectTypeHelper
 
 

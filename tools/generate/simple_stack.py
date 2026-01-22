@@ -14,7 +14,7 @@ from .comment_gen import CommentGen
 from .type_helper import TypeHelper
 from .signature_helper import SignatureHelper
 from .accessor_helper import AccessorHelper
-from .compare_helper import CompareHelper
+from .compare_helper import EqHelper
 from .objtype_helper import ObjectTypeHelper
 
 
@@ -545,10 +545,10 @@ class SimpleStack(SimpleArray):
         print(f'}} {c}')
         print('')
 
-    def printCompareFunction(self, catalog):
-        c = self.comment('printCompareFunction')
-        decl = self.getCompareSignature(catalog)
-        if self.bespokeCmpImplementation:
+    def printEqFunction(self, catalog):
+        c = self.comment('printEqFunction')
+        decl = self.getEqSignature(catalog)
+        if self.bespokeEqImplementation:
             print(f"// Bespoke implementation required for {decl}")
             print("")
             return
@@ -567,7 +567,7 @@ class SimpleStack(SimpleArray):
         print(f"        if (a->frames[i].offset != b->frames[i].offset) return false; {c}")
         print(f"    }} {c}")
         print(f"    for (Index i = 0; i < a->frame + a->offset; i++) {{ {c}")
-        self.entries.printCompareArrayLine(self.isInline(catalog), catalog, "i", 2)
+        self.entries.printEqArrayLine(self.isInline(catalog), catalog, "i", 2)
         print(f"    }} {c}")
         print(f"    return true; {c}")
         print(f"}} {c}")
