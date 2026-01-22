@@ -4,11 +4,10 @@ Term Pattern Matching Compiler types
 
 ```mermaid
 flowchart LR
-TpmcSubstitutionTable --entries--> HashSymbol
 TpmcPatternTable --entries--> TpmcPattern
 TpmcStateTable --entries--> TpmcState
 TpmcMatchRules --rules--> TpmcMatchRuleArray
-TpmcMatchRules --rootVariables--> TpmcVariableArray
+TpmcMatchRules --rootVariables--> SymbolArray
 TpmcMatchRule --action--> TpmcState
 TpmcMatchRule --patterns--> TpmcPatternArray
 TpmcComparisonPattern --previous--> TpmcPattern
@@ -47,11 +46,9 @@ TpmcStateValue --test--> TpmcTestState
 TpmcStateValue --final--> TpmcFinalState
 TpmcStateValue --error--> void_ptr
 TpmcMatchRuleArray["TpmcMatchRuleArray[]"] --entries--> TpmcMatchRule
-TpmcVariableArray["TpmcVariableArray[]"] --entries--> HashSymbol
 TpmcPatternArray["TpmcPatternArray[]"] --entries--> TpmcPattern
 TpmcStateArray["TpmcStateArray[]"] --entries--> TpmcState
 TpmcArcArray["TpmcArcArray[]"] --entries--> TpmcArc
-TpmcIntArray["TpmcIntArray[]"] --entries--> int
 TpmcMatrix["TpmcMatrix[][]"] --entries--> TpmcPattern
 ```
 

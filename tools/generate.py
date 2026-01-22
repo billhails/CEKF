@@ -250,6 +250,8 @@ def generate_header(args, catalog, document, typeName, includes, limited_include
     catalog.printGetterDeclarations()
     printSection("discriminated union setter declarations")
     catalog.printSetterDeclarations()
+    printSection("compare declarations")
+    catalog.printCompareDeclarations()
     print("")
     print("#endif")
 
@@ -324,6 +326,8 @@ def generate_implementation(args, catalog, document, typeName):
     catalog.printNameFunctionBodies()
     printSection("protect functions")
     catalog.printProtectFunctions()
+    printSection("compare functions")
+    catalog.printCompareFunctions()
 
 
 def generate_debug_header(args, catalog, document, typeName, includes, limited_includes):
@@ -339,8 +343,6 @@ def generate_debug_header(args, catalog, document, typeName, includes, limited_i
         print(f'#include "{include}"')
     printSection("print declarations")
     catalog.printPrintDeclarations()
-    printSection("compare declarations")
-    catalog.printCompareDeclarations()
     print("")
     print("#endif")
 
@@ -358,8 +360,6 @@ def generate_debug_implementation(args, catalog, document, typeName, limited_inc
     print('static void pad(int depth) { eprintf("%*s", depth * PAD_WIDTH, ""); }')
     printSection("print functions")
     catalog.printPrintFunctions()
-    printSection("compare functions")
-    catalog.printCompareFunctions()
 
 
 def generate_documentation(args, catalog, typeName, description):
