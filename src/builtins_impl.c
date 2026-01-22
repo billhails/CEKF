@@ -255,7 +255,7 @@ Value builtin_args(Vec *args) {
 }
 
 Value builtin_getenv(Vec *args) {
-    CharVec *name = listToUtf8(args->entries[0]);
+    SCharVec *name = listToUtf8(args->entries[0]);
     int save = PROTECT(name);
     char *value = getenv(name->entries);
     if (value == NULL) {

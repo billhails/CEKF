@@ -288,7 +288,7 @@ static HashSymbol *symbolFromBuffer(PrattBuffer *buffer) {
  * @brief Creates a new PrattToken from a string.
  * Uses the PrattBufList to provide ParserInfo context for the token.
  */
-static PrattToken *tokenFromString(PrattBufList *bufList, PrattUnicode *string,
+static PrattToken *tokenFromString(PrattBufList *bufList, WCharArray *string,
                                    HashSymbol *tokenType) {
     PrattValue *value = newPrattValue_String(string);
     int save = PROTECT(value);
@@ -716,7 +716,7 @@ static PrattToken *parseString(PrattParser *parser, bool parsingSingleChar,
                                Character sep) {
     PrattLexer *lexer = parser->lexer;
     PrattBuffer *buffer = lexer->bufList->buffer;
-    PrattUnicode *string = newPrattUnicode();
+    WCharArray *string = newWCharArray();
     int save = PROTECT(string);
     PrattStringState state = PRATTSTRINGSTATE_TYPE_START;
     Character uni = 0;
@@ -763,7 +763,7 @@ static PrattToken *parseString(PrattParser *parser, bool parsingSingleChar,
                         state = PRATTSTRINGSTATE_TYPE_END;
                         break;
                     default:
-                        pushPrattUnicode(string, buffer->start[buffer->offset]);
+                        pushWCharArray(string, buffer->start[buffer->offset]);
                         ++buffer->offset;
                         state = parsingSingleChar ? PRATTSTRINGSTATE_TYPE_CHR
                                                   : PRATTSTRINGSTATE_TYPE_STR;
@@ -782,7 +782,7 @@ static PrattToken *parseString(PrattParser *parser, bool parsingSingleChar,
                     state = PRATTSTRINGSTATE_TYPE_END;
                     break;
                 default:
-                    pushPrattUnicode(string, buffer->start[buffer->offset]);
+                    pushWCharArray(string, buffer->start[buffer->offset]);
                     ++buffer->offset;
                     state = parsingSingleChar ? PRATTSTRINGSTATE_TYPE_CHR
                                               : PRATTSTRINGSTATE_TYPE_STR;
@@ -803,13 +803,13 @@ static PrattToken *parseString(PrattParser *parser, bool parsingSingleChar,
                 state = PRATTSTRINGSTATE_TYPE_UNI;
                 break;
             case L'n':
-                pushPrattUnicode(string, L'\n');
+                pushWCharArray(string, L'\n');
                 ++buffer->offset;
                 state = parsingSingleChar ? PRATTSTRINGSTATE_TYPE_CHR
                                           : PRATTSTRINGSTATE_TYPE_STR;
                 break;
             case L't':
-                pushPrattUnicode(string, L'\t');
+                pushWCharArray(string, L'\t');
                 ++buffer->offset;
                 state = parsingSingleChar ? PRATTSTRINGSTATE_TYPE_CHR
                                           : PRATTSTRINGSTATE_TYPE_STR;
@@ -874,7 +874,7 @@ static PrattToken *parseString(PrattParser *parser, bool parsingSingleChar,
                     parserError(parser,
                                 "Empty Unicode escape while parsing string");
                 } else {
-                    pushPrattUnicode(string, uni);
+                    pushWCharArray(string, uni);
                 }
                 state = parsingSingleChar ? PRATTSTRINGSTATE_TYPE_CHR
                                           : PRATTSTRINGSTATE_TYPE_STR;
@@ -908,7 +908,7 @@ static PrattToken *parseString(PrattParser *parser, bool parsingSingleChar,
             cant_happen("end state in loop");
         }
     }
-    pushPrattUnicode(string, '\0');
+    pushWCharArray(string, '\0');
     PrattToken *token = tokenFromString(
         lexer->bufList, string, parsingSingleChar ? TOK_CHAR() : TOK_STRING());
     advance(buffer);

@@ -69,7 +69,7 @@ static void opaque_sqlite3_finalize(Opaque *data) {
 }
 
 static Value builtin_sqlite3_open(Vec *v) {
-    CharVec *buf = listToUtf8(v->entries[0]);
+    SCharVec *buf = listToUtf8(v->entries[0]);
     int save = PROTECT(buf);
     sqlite3 *ppDb = NULL;
     int status = sqlite3_open(buf->entries, &ppDb);
@@ -121,7 +121,7 @@ static Value builtin_sqlite3_prepare(Vec *vec) {
     }
 #endif
     Opaque *data = vec->entries[0].val.opaque;
-    CharVec *string = listToUtf8(vec->entries[1]);
+    SCharVec *string = listToUtf8(vec->entries[1]);
     int save = PROTECT(string);
     sqlite3_stmt *stmt = NULL;
     int res = sqlite3_prepare_v2(data->data, string->entries, -1, &stmt, NULL);
@@ -176,7 +176,7 @@ static int helper_bind_number(sqlite3_stmt *stmt, int index, Value number) {
 }
 
 static int helper_bind_string(sqlite3_stmt *stmt, int index, Value string) {
-    CharVec *buf = listToUtf8(string);
+    SCharVec *buf = listToUtf8(string);
     return sqlite3_bind_text(stmt, index, buf->entries, strlen(buf->entries),
                              helper_free_str);
 }

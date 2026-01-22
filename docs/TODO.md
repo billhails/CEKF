@@ -8,6 +8,12 @@ More of a wish-list than a hard and fast plan.
   * Create a shared yaml file for common structures: vector of char, list of int, set of symbol, map of symbol etc.
   * Migrate bespoke structs like Opaque and AgnosticFileId to code generation.
   * Hunt down all occurences of malloc/free outside of the standard memory management.
+  * Generate
+    * Move all signatures into `signature_helper.py`, not just the shared ones.
+    * Rename `compare` methods to `eq` methods and ensure they are all `bool` signatures with `eq*` generated function names.
+    * Add equivalent `cmp` generators that output `Cmp cmp*` functions.
+    * Simplify all the `eq` functions to call the `cmp` functions.
+    * Move the `eq` and `cmp` generated functions out of the `*_debug.[ch]` files.
 * More numbers:
   * NaN for division by Zero etc.
   * Matrices.

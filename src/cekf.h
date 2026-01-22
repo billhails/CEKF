@@ -31,6 +31,7 @@
 #include "common.h"
 #include "memory.h"
 #include "types.h"
+#include "utils.h"
 #include "value.h"
 
 Vec *snapshotNameSpace(Stack *s);
@@ -65,7 +66,7 @@ void dumpStack(Stack *stack);
 void dumpFrame(Frame *frame);
 #endif
 
-CharVec *listToUtf8(Value v);
+SCharVec *listToUtf8(Value v);
 Value utf8ToList(const char *utf8);
 Value makeNull(void);
 Value makePair(Value car, Value cdr);

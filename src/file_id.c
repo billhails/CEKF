@@ -28,7 +28,7 @@
 
 /**
  * Print an agnostic file id for debugging.
- * 
+ *
  * @param id the agnostic file id
  * @param depth the depth for pretty-printing
  */
@@ -36,38 +36,42 @@ void printAgnosticFileId(AgnosticFileId *id, int depth) {
     if (id == NULL) {
         eprintf("%*sFileId(<NULL>)", depth * PAD_WIDTH, "");
     } else {
-        eprintf("%*sFileId(%u:%u, %lu, \"%s\")",
-                depth * PAD_WIDTH, "", major(id->st_dev), minor(id->st_dev), id->st_ino, id->name);
+        eprintf("%*sFileId(%u:%u, %lu, \"%s\")", depth * PAD_WIDTH, "",
+                major(id->st_dev), minor(id->st_dev), id->st_ino, id->fileName);
     }
 }
 
 /**
  * Mark an agnostic file id for gc protection.
- * 
+ *
  * @param id the agnostic file id
  */
 void markAgnosticFileId(AgnosticFileId *id) {
-    if (id == NULL) return;
-    if (MARKED(id)) return;
+    if (id == NULL)
+        return;
+    if (MARKED(id))
+        return;
     MARK(id);
 }
 
 /**
  * Free an agnostic file id.
- * 
+ *
  * @param id the agnostic file id
  */
 void freeAgnosticFileId(AgnosticFileId *id) {
-    if (id == NULL) return;
+    if (id == NULL)
+        return;
     // 'name' is owned by this object (allocated via malloc/strdup in callers),
     // so free it here before freeing the object itself.
-    if (id->name) free(id->name);
+    if (id->fileName != NULL)
+        free(id->fileName);
     FREE(id, AgnosticFileId);
 }
 
 /**
  * Compare two agnostic file ids.
- * 
+ *
  * @param a the first agnostic file id
  * @param b the second agnostic file id
  * @return the comparison result
@@ -96,7 +100,7 @@ Cmp cmpAgnosticFileId(AgnosticFileId *a, AgnosticFileId *b) {
 
 /**
  * Create an agnostic file id from a fileName.
- * 
+ *
  * @param fileName the fileName
  * @return the agnostic file id, or NULL if the file does not exist
  */
@@ -106,7 +110,7 @@ AgnosticFileId *makeAgnosticFileId(char *fileName) {
         AgnosticFileId *res = NEW(AgnosticFileId, OBJTYPE_AGNOSTICFILEID);
         res->st_dev = stats.st_dev;
         res->st_ino = stats.st_ino;
-        res->name = fileName;
+        res->fileName = fileName;
         return res;
     } else {
         return NULL;

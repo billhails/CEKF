@@ -35,6 +35,7 @@ struct Header;
 #include "tc_objtypes.h"
 #include "tpmc_objtypes.h"
 #include "types.h"
+#include "utils_objtypes.h"
 
 // Definition of all object types for garbage collection
 typedef enum {
@@ -67,6 +68,7 @@ typedef enum {
     PRATT_OBJTYPES(),
     ANF_KONT_OBJTYPES(),
     CPS_KONT_OBJTYPES(),
+    UTILS_OBJTYPES(),
 } ObjType;
 
 typedef struct Header {

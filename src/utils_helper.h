@@ -1,8 +1,8 @@
-#ifndef cekf_lambda_substitution_h
-#define cekf_lambda_substitution_h
+#ifndef cekf_utils_helper_h
+#define cekf_utils_helper_h
 /*
  * CEKF - VM supporting amb
- * Copyright (C) 2022-2023  Bill Hails
+ * Copyright (C) 2022-2026  Bill Hails
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,9 +18,6 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "ast.h"
-#include "lambda.h"
-#include "tpmc.h"
+#include "utils.h"
 
-LamExp *lamPerformSubstitutions(LamExp *exp, SymbolMap *substitutions);
 #endif

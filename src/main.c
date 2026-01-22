@@ -52,6 +52,7 @@
 #include "tc_analyze.h"
 #include "tc_debug.h"
 #include "tpmc_mermaid.h"
+#include "utils.h"
 #include "wrapper_synthesis.h"
 #ifdef UNIT_TESTS
 #include "tests.h"
@@ -85,7 +86,7 @@ static char *binary_output_file = NULL;
 static char *binary_input_file = NULL;
 static char *snippet = NULL;
 
-extern AstStringArray *include_paths;
+extern StringArray *include_paths;
 
 /**
  * Report the build mode, i.e. the value of the BUILD_MODE macro when compiled.
@@ -262,7 +263,7 @@ static int processArgs(int argc, char *argv[]) {
         }
 
         if (c == 'i') {
-            pushAstStringArray(include_paths, strdup(optarg));
+            pushStringArray(include_paths, strdup(optarg));
         }
 
         if (c == '?' || c == 'h') {
@@ -304,7 +305,7 @@ static AstProg *parseFile(char *file) {
         exit(1);
     }
     if (ast_flag) {
-        AstUTF8 *dest = newAstUTF8();
+        SCharArray *dest = newSCharArray();
         PROTECT(dest);
         ppAstProg(dest, prog);
         printf("%s\n", dest->entries);
@@ -326,7 +327,7 @@ static AstProg *parseString(char *string) {
         exit(1);
     }
     if (ast_flag) {
-        AstUTF8 *dest = newAstUTF8();
+        SCharArray *dest = newSCharArray();
         PROTECT(dest);
         ppAstProg(dest, prog);
         printf("%s\n", dest->entries);
@@ -458,7 +459,7 @@ static void report(char *prog, clock_t begin, clock_t compiled, clock_t end) {
 int main(int argc, char *argv[]) {
     clock_t begin = clock();
     initAll();
-    include_paths = newAstStringArray();
+    include_paths = newStringArray();
     int save = PROTECT(include_paths);
     int nextargc = processArgs(argc, argv);
     BuiltIns *builtIns = registerBuiltIns(

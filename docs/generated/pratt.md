@@ -53,7 +53,7 @@ PrattFixityConfig --export--> bool
 PrattFixityConfig --pattern--> PrattMixfixPattern
 PrattFixityConfig --importNsRef--> int
 PrattFixityConfig --importNsSymbol--> HashSymbol
-PrattValue --string--> PrattUnicode
+PrattValue --string--> WCharArray
 PrattValue --number--> MaybeBigInt
 PrattValue --character--> character
 PrattValue --atom--> HashSymbol
@@ -61,9 +61,8 @@ PrattAssoc["enum PrattAssoc"]
 PrattNumberState["enum PrattNumberState"]
 PrattStringState["enum PrattStringState"]
 PrattFixity["enum PrattFixity"]
-PrattStrings["PrattStrings[]"] --entries--> PrattUnicode
+PrattStrings["PrattStrings[]"] --entries--> WCharArray
 PrattParsers["PrattParsers[]"] --entries--> PrattParser
-PrattUnicode["PrattUnicode[]"] --entries--> character
 PrattNsOpsArray["PrattNsOpsArray[]"] --entries--> PrattExportedOps
 ```
 

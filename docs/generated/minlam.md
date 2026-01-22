@@ -5,7 +5,6 @@ Minimal AST after desugaring
 ```mermaid
 flowchart LR
 MinExpTable --entries--> MinExp
-MinAlphaTable --entries--> HashSymbol
 MinLam --args--> MinVarList
 MinLam --exp--> MinExp
 MinVarList --var--> HashSymbol
@@ -44,7 +43,7 @@ MinBindings --val--> MinExp
 MinBindings --next--> MinBindings
 MinAmb --left--> MinExp
 MinAmb --right--> MinExp
-MinAlphaEnv --alphaTable--> MinAlphaTable
+MinAlphaEnv --alphaTable--> SymbolMap
 MinAlphaEnv --next--> MinAlphaEnv
 MinAlphaEnv --nameSpaces--> MinAlphaEnvArray
 MinExp --amb--> MinAmb

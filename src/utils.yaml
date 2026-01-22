@@ -1,0 +1,96 @@
+#
+# CEKF - VM supporting amb
+# Copyright (C) 2022-2025  Bill Hails
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#
+
+config:
+    name: utils
+    description: Common utility structures
+    parserInfo: false
+    limited_includes:
+    - ast_helper.h
+
+hashes:
+    SymbolSet:
+        meta:
+            brief: A set of Symbols
+        data: {}
+
+    IntMap:
+        meta:
+            brief: Map from Symbol to Integer
+        data:
+            entries: int
+
+    SymbolMap:
+        meta:
+            brief: Map from Symbol to Symbol
+        data:
+            entries: HashSymbol
+
+arrays:
+    StringArray:
+        meta:
+            brief: AST String Array
+            description: >-
+                A simple array of strings.
+        data:
+            entries: string
+
+    WCharArray:
+        meta:
+            brief: A UTF-8 encoded string.
+        data:
+            entries: character
+
+    UCharArray:
+        meta:
+            brief: An array of bytes
+        data:
+            entries: byte
+
+    SCharArray:
+        meta:
+            brief: An array of bytes
+        data:
+            entries: schar
+
+    SymbolArray:
+        meta:
+            brief: Array of Symbols
+        data:
+            entries: HashSymbol
+
+    IntArray:
+        meta:
+            brief: integer array
+        data:
+            entries: int
+
+vectors:
+    SCharVec:
+        meta:
+            brief: A vector of signed chars
+        data:
+            entries: schar
+
+    WCharVec:
+        meta:
+            brief: A vector of wide chars
+        data:
+            entries: character
+
+primitives: !include primitives.yaml

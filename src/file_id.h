@@ -1,5 +1,5 @@
 #ifndef cekf_file_id_h
-#  define cekf_file_id_h
+#define cekf_file_id_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2023  Bill Hails
@@ -23,17 +23,16 @@
  * POSIX-specific.
  */
 
-
 #include <sys/stat.h>
 
-#include "memory.h"
 #include "cmp.h"
+#include "memory.h"
 
 typedef struct AgnosticFileId {
     Header header;
     dev_t st_dev;
     ino_t st_ino;
-    char *name;
+    char *fileName;
 } AgnosticFileId;
 
 void printAgnosticFileId(AgnosticFileId *, int);

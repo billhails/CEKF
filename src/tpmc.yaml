@@ -21,9 +21,11 @@ config:
     description: Term Pattern Matching Compiler types
     includes:
     - lambda.h
+    - utils.h
     limited_includes:
     - lambda_pp.h
     - bigint.h
+    - utils_debug.h
 
 structs:
     TpmcMatchRules:
@@ -35,7 +37,7 @@ structs:
                 and the first matching rule determines the action to be taken.
         data:
             rules: TpmcMatchRuleArray
-            rootVariables: TpmcVariableArray
+            rootVariables: SymbolArray
 
     TpmcMatchRule:
         meta:
@@ -119,7 +121,7 @@ structs:
         data:
             refCount: int=0
             stamp: int
-            freeVariables: TpmcVariableTable=NULL
+            freeVariables: SymbolSet=NULL
             state: TpmcStateValue
 
     TpmcArc:
@@ -131,7 +133,7 @@ structs:
         data:
             state: TpmcState
             test: TpmcPattern
-            freeVariables: TpmcVariableTable
+            freeVariables: SymbolSet
 
     TpmcArcList:
         meta:
@@ -154,22 +156,6 @@ structs:
             next: TpmcIntList
 
 hashes:
-    TpmcVariableTable:
-        meta:
-            brief: TPMC variable table
-            description: >-
-                A set of variables.
-        data: {}
-
-    TpmcSubstitutionTable:
-        meta:
-            brief: TPMC substitution table
-            description: >-
-                A set of substitutions, mapping variables to their corresponding
-                patterns or values.
-        data:
-            entries: HashSymbol
-
     TpmcPatternTable:
         meta:
             brief: TPMC pattern table
@@ -233,15 +219,6 @@ arrays:
         data:
             entries: TpmcMatchRule
 
-    TpmcVariableArray:
-        meta:
-            brief: TPMC variable array
-            description: >-
-                An array of variables used in the term pattern matching process.
-                Variables can be used in patterns to match against terms.
-        data:
-            entries: HashSymbol
-
     TpmcPatternArray:
         meta:
             brief: TPMC pattern array
@@ -272,15 +249,6 @@ arrays:
         data:
             entries: TpmcArc
 
-    TpmcIntArray:
-        meta:
-            brief: TPMC integer array
-            description: >-
-                An array of integers used in the term pattern matching process.
-                This can be used for various purposes, such as storing indices or counts.
-        data:
-            entries: int
-
     TpmcMatrix:
         meta:
             brief: TPMC matrix
@@ -310,3 +278,36 @@ external:
             copyFn: copyLamTypeConstructorInfo
             valued: true
 
+    SymbolSet:
+        data:
+            cname: "SymbolSet *"
+            printFn: printSymbolSet
+            markFn: markHashTable
+            copyFn: copyHashTable
+            newFn: newSymbolSet
+            valued: true
+
+    SymbolMap:
+        data:
+            cname: "SymbolMap *"
+            printFn: printSymbolMap
+            markFn: markHashTable
+            copyFn: copyHashTable
+            newFn: newSymbolMap
+            valued: true
+
+    SymbolArray:
+        data:
+            cname: "SymbolArray *"
+            printFn: printSymbolArray
+            markFn: markSymbolArray
+            copyFn: copySymbolArray
+            valued: true
+
+    IntArray:
+        data:
+            cname: "IntArray *"
+            printFn: printIntArray
+            markFn: markIntArray
+            copyFn: copyIntArray
+            valued: true

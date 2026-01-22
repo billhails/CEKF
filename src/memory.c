@@ -122,6 +122,8 @@ __attribute__((unused)) static const char *typeName(ObjType type) {
         return typenameAnf_kontObj(type);
         CPS_KONT_OBJTYPE_CASES()
         return typenameCps_kontObj(type);
+        UTILS_OBJTYPE_CASES()
+        return typenameUtilsObj(type);
     default: {
         static char buf[64];
         snprintf(buf, sizeof(buf), "%d", type);
@@ -401,6 +403,9 @@ void markObj(Header *h, Index i) {
         CPS_KONT_OBJTYPE_CASES()
         markCps_kontObj(h);
         break;
+        UTILS_OBJTYPE_CASES()
+        markUtilsObj(h);
+        break;
     default:
         cant_happen("unrecognised ObjType %d in markObj at [%d]", h->type, i);
     }
@@ -469,6 +474,9 @@ void freeObj(Header *h) {
         break;
         CPS_KONT_OBJTYPE_CASES()
         freeCps_kontObj(h);
+        break;
+        UTILS_OBJTYPE_CASES()
+        freeUtilsObj(h);
         break;
     default:
         cant_happen("unrecognised ObjType %d in freeObj at %p", h->type,

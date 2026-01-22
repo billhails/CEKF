@@ -21,9 +21,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "common.h"
 #include "anf_pp.h"
+#include "common.h"
 #include "hash.h"
+#include "utils.h"
 
 void ppAnfEnv(AnfEnv *env) {
     eprintf("[\n");
@@ -34,7 +35,7 @@ void ppAnfEnv(AnfEnv *env) {
     Index i = 0;
     HashSymbol *key;
     int value;
-    while ((key = iterateAnfIntTable(env->table, &i, &value)) != NULL) {
+    while ((key = iterateIntMap(env->table, &i, &value)) != NULL) {
         eprintf("%s: %d\n", key->name, value);
     }
     ppAnfEnv(env->next);
@@ -62,24 +63,22 @@ void ppAexpVarList(AexpVarList *x) {
 }
 
 static void ppChar(char c) {
-    switch(c) {
-        case '\n':
-            eprintf("\"\\n\"");
-            break;
-        case '\t':
-            eprintf("\"\\t\"");
-            break;
-        case '\"':
-            eprintf("\"\\\"\"");
-            break;
-        default:
-            eprintf("\"%c\"", c);
+    switch (c) {
+    case '\n':
+        eprintf("\"\\n\"");
+        break;
+    case '\t':
+        eprintf("\"\\t\"");
+        break;
+    case '\"':
+        eprintf("\"\\\"\"");
+        break;
+    default:
+        eprintf("\"%c\"", c);
     }
 }
 
-void ppAexpVar(HashSymbol *x) {
-    eprintf("%s", x->name);
-}
+void ppAexpVar(HashSymbol *x) { eprintf("%s", x->name); }
 
 void ppAexpAnnotatedVar(AexpAnnotatedVar *x) {
     // ppAexpVar(x->var);
@@ -92,50 +91,50 @@ void ppAexpAnnotatedVar(AexpAnnotatedVar *x) {
 void ppAexpPrimApp(AexpPrimApp *x) {
     eprintf("(");
     switch (x->type) {
-        case AEXPPRIMOP_TYPE_ADD:
-            eprintf("add ");
-            break;
-        case AEXPPRIMOP_TYPE_SUB:
-            eprintf("sub ");
-            break;
-        case AEXPPRIMOP_TYPE_MUL:
-            eprintf("mul ");
-            break;
-        case AEXPPRIMOP_TYPE_DIV:
-            eprintf("div ");
-            break;
-        case AEXPPRIMOP_TYPE_EQ:
-            eprintf("eq ");
-            break;
-        case AEXPPRIMOP_TYPE_NE:
-            eprintf("ne ");
-            break;
-        case AEXPPRIMOP_TYPE_GT:
-            eprintf("gt ");
-            break;
-        case AEXPPRIMOP_TYPE_LT:
-            eprintf("lt ");
-            break;
-        case AEXPPRIMOP_TYPE_GE:
-            eprintf("ge ");
-            break;
-        case AEXPPRIMOP_TYPE_LE:
-            eprintf("le ");
-            break;
-        case AEXPPRIMOP_TYPE_VEC:
-            eprintf("vec ");
-            break;
-        case AEXPPRIMOP_TYPE_MOD:
-            eprintf("mod ");
-            break;
-        case AEXPPRIMOP_TYPE_CMP:
-            eprintf("cmp ");
-            break;
-        case AEXPPRIMOP_TYPE_POW:
-            eprintf("pow ");
-            break;
-        default:
-            cant_happen("unrecognized op %s", aexpPrimOpName(x->type));
+    case AEXPPRIMOP_TYPE_ADD:
+        eprintf("add ");
+        break;
+    case AEXPPRIMOP_TYPE_SUB:
+        eprintf("sub ");
+        break;
+    case AEXPPRIMOP_TYPE_MUL:
+        eprintf("mul ");
+        break;
+    case AEXPPRIMOP_TYPE_DIV:
+        eprintf("div ");
+        break;
+    case AEXPPRIMOP_TYPE_EQ:
+        eprintf("eq ");
+        break;
+    case AEXPPRIMOP_TYPE_NE:
+        eprintf("ne ");
+        break;
+    case AEXPPRIMOP_TYPE_GT:
+        eprintf("gt ");
+        break;
+    case AEXPPRIMOP_TYPE_LT:
+        eprintf("lt ");
+        break;
+    case AEXPPRIMOP_TYPE_GE:
+        eprintf("ge ");
+        break;
+    case AEXPPRIMOP_TYPE_LE:
+        eprintf("le ");
+        break;
+    case AEXPPRIMOP_TYPE_VEC:
+        eprintf("vec ");
+        break;
+    case AEXPPRIMOP_TYPE_MOD:
+        eprintf("mod ");
+        break;
+    case AEXPPRIMOP_TYPE_CMP:
+        eprintf("cmp ");
+        break;
+    case AEXPPRIMOP_TYPE_POW:
+        eprintf("pow ");
+        break;
+    default:
+        cant_happen("unrecognized op %s", aexpPrimOpName(x->type));
     }
     ppAexp(x->exp1);
     if (x->exp2 != NULL) {
@@ -274,14 +273,14 @@ void ppCexpCharCondCases(CexpCharCondCases *x) {
 
 void ppCexpCondCases(CexpCondCases *x) {
     switch (x->type) {
-        case CEXPCONDCASES_TYPE_INTCASES:
-            ppCexpIntCondCases(x->val.intCases);
-            break;
-        case CEXPCONDCASES_TYPE_CHARCASES:
-            ppCexpCharCondCases(x->val.charCases);
-            break;
-        default:
-            cant_happen("unrecognised type %d in ppCexpCondCases", x->type);
+    case CEXPCONDCASES_TYPE_INTCASES:
+        ppCexpIntCondCases(x->val.intCases);
+        break;
+    case CEXPCONDCASES_TYPE_CHARCASES:
+        ppCexpCharCondCases(x->val.charCases);
+        break;
+    default:
+        cant_happen("unrecognised type %d in ppCexpCondCases", x->type);
     }
 }
 
@@ -353,100 +352,100 @@ void ppAnfExpLookUp(AnfExpLookUp *x) {
 
 void ppAexp(Aexp *x) {
     switch (x->type) {
-        case AEXP_TYPE_LAM:
-            ppAexpLam(x->val.lam);
-            break;
-        case AEXP_TYPE_VAR:
-            ppAexpVar(x->val.var);
-            break;
-        case AEXP_TYPE_ANNOTATEDVAR:
-            ppAexpAnnotatedVar(x->val.annotatedVar);
-            break;
-        case AEXP_TYPE_BIGINTEGER:
-            fprintMaybeBigInt(errout, x->val.bigInteger);
-            break;
-        case AEXP_TYPE_LITTLEINTEGER:
-            eprintf("%d", x->val.littleInteger);
-            break;
-        case AEXP_TYPE_CHARACTER:
-            ppChar(x->val.character);
-            break;
-        case AEXP_TYPE_PRIM:
-            ppAexpPrimApp(x->val.prim);
-            break;
-        case AEXP_TYPE_MAKEVEC:
-            ppAexpMakeVec(x->val.makeVec);
-            break;
-        case AEXP_TYPE_NAMESPACES:
-            ppAexpNameSpaces(x->val.nameSpaces);
-            break;
-        default:
-            cant_happen("unrecognised aexp %s", aexpTypeName(x->type));
+    case AEXP_TYPE_LAM:
+        ppAexpLam(x->val.lam);
+        break;
+    case AEXP_TYPE_VAR:
+        ppAexpVar(x->val.var);
+        break;
+    case AEXP_TYPE_ANNOTATEDVAR:
+        ppAexpAnnotatedVar(x->val.annotatedVar);
+        break;
+    case AEXP_TYPE_BIGINTEGER:
+        fprintMaybeBigInt(errout, x->val.bigInteger);
+        break;
+    case AEXP_TYPE_LITTLEINTEGER:
+        eprintf("%d", x->val.littleInteger);
+        break;
+    case AEXP_TYPE_CHARACTER:
+        ppChar(x->val.character);
+        break;
+    case AEXP_TYPE_PRIM:
+        ppAexpPrimApp(x->val.prim);
+        break;
+    case AEXP_TYPE_MAKEVEC:
+        ppAexpMakeVec(x->val.makeVec);
+        break;
+    case AEXP_TYPE_NAMESPACES:
+        ppAexpNameSpaces(x->val.nameSpaces);
+        break;
+    default:
+        cant_happen("unrecognised aexp %s", aexpTypeName(x->type));
     }
 }
 
 void ppCexp(Cexp *x) {
     switch (x->type) {
-        case CEXP_TYPE_APPLY:
-            ppCexpApply(x->val.apply);
-            break;
-        case CEXP_TYPE_IFF:
-            ppCexpIf(x->val.iff);
-            break;
-        case CEXP_TYPE_COND:
-            ppCexpCond(x->val.cond);
-            break;
-        case CEXP_TYPE_CALLCC:
-            eprintf("(call/cc ");
-            ppAexp(x->val.callCC);
-            eprintf(")");
-            break;
-        case CEXP_TYPE_LETREC:
-            ppCexpLetRec(x->val.letRec);
-            break;
-        case CEXP_TYPE_AMB:
-            ppCexpAmb(x->val.amb);
-            break;
-        case CEXP_TYPE_CUT:
-            ppCexpCut(x->val.cut);
-            break;
-        case CEXP_TYPE_MATCH:
-            ppCexpMatch(x->val.match);
-            break;
-        case CEXP_TYPE_BACK:
-            eprintf("(back)");
-            break;
-        case CEXP_TYPE_ERROR:
-            eprintf("(error)");
-            break;
-        default:
-            cant_happen("unrecognised cexp %d in ppCexp", x->type);
+    case CEXP_TYPE_APPLY:
+        ppCexpApply(x->val.apply);
+        break;
+    case CEXP_TYPE_IFF:
+        ppCexpIf(x->val.iff);
+        break;
+    case CEXP_TYPE_COND:
+        ppCexpCond(x->val.cond);
+        break;
+    case CEXP_TYPE_CALLCC:
+        eprintf("(call/cc ");
+        ppAexp(x->val.callCC);
+        eprintf(")");
+        break;
+    case CEXP_TYPE_LETREC:
+        ppCexpLetRec(x->val.letRec);
+        break;
+    case CEXP_TYPE_AMB:
+        ppCexpAmb(x->val.amb);
+        break;
+    case CEXP_TYPE_CUT:
+        ppCexpCut(x->val.cut);
+        break;
+    case CEXP_TYPE_MATCH:
+        ppCexpMatch(x->val.match);
+        break;
+    case CEXP_TYPE_BACK:
+        eprintf("(back)");
+        break;
+    case CEXP_TYPE_ERROR:
+        eprintf("(error)");
+        break;
+    default:
+        cant_happen("unrecognised cexp %d in ppCexp", x->type);
     }
 }
 
 void ppAnfExp(AnfExp *x) {
     switch (x->type) {
-        case ANFEXP_TYPE_AEXP:
-            ppAexp(x->val.aexp);
-            break;
-        case ANFEXP_TYPE_CEXP:
-            ppCexp(x->val.cexp);
-            break;
-        case ANFEXP_TYPE_LET:
-            ppAnfExpLet(x->val.let);
-            break;
-        case ANFEXP_TYPE_DONE:
-            eprintf("<DONE>");
-            break;
-        case ANFEXP_TYPE_ENV:
-            eprintf("ENV");
-            break;
-        case ANFEXP_TYPE_LOOKUP:
-            ppAnfExpLookUp(x->val.lookUp);
-            break;
-        default:
-            eprintf("<unrecognised exp %s>", anfExpTypeName(x->type));
-            exit(1);
+    case ANFEXP_TYPE_AEXP:
+        ppAexp(x->val.aexp);
+        break;
+    case ANFEXP_TYPE_CEXP:
+        ppCexp(x->val.cexp);
+        break;
+    case ANFEXP_TYPE_LET:
+        ppAnfExpLet(x->val.let);
+        break;
+    case ANFEXP_TYPE_DONE:
+        eprintf("<DONE>");
+        break;
+    case ANFEXP_TYPE_ENV:
+        eprintf("ENV");
+        break;
+    case ANFEXP_TYPE_LOOKUP:
+        ppAnfExpLookUp(x->val.lookUp);
+        break;
+    default:
+        eprintf("<unrecognised exp %s>", anfExpTypeName(x->type));
+        exit(1);
     }
 }
 

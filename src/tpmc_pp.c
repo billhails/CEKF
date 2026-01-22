@@ -61,30 +61,30 @@ void ppTpmcPatternValue(TpmcPatternValue *patternValue) {
         return;
     }
     switch (patternValue->type) {
-        case TPMCPATTERNVALUE_TYPE_VAR:
-            ppTpmcSymbol(patternValue->val.var);
-            break;
-        case TPMCPATTERNVALUE_TYPE_COMPARISON:
-            ppTpmcComparisonPattern(patternValue->val.comparison);
-            break;
-        case TPMCPATTERNVALUE_TYPE_ASSIGNMENT:
-            ppTpmcAssignmentPattern(patternValue->val.assignment);
-            break;
-        case TPMCPATTERNVALUE_TYPE_WILDCARD:
-            eprintf("_");
-            break;
-        case TPMCPATTERNVALUE_TYPE_CHARACTER:
-            eprintf("'%c'", patternValue->val.character);
-            break;
-        case TPMCPATTERNVALUE_TYPE_BIGINTEGER:
-            fprintMaybeBigInt(errout, patternValue->val.bigInteger);
-            break;
-        case TPMCPATTERNVALUE_TYPE_TUPLE:
-            ppTpmcTuplePattern(patternValue->val.tuple);
-            break;
-        case TPMCPATTERNVALUE_TYPE_CONSTRUCTOR:
-            ppTpmcConstructorPattern(patternValue->val.constructor);
-            break;
+    case TPMCPATTERNVALUE_TYPE_VAR:
+        ppTpmcSymbol(patternValue->val.var);
+        break;
+    case TPMCPATTERNVALUE_TYPE_COMPARISON:
+        ppTpmcComparisonPattern(patternValue->val.comparison);
+        break;
+    case TPMCPATTERNVALUE_TYPE_ASSIGNMENT:
+        ppTpmcAssignmentPattern(patternValue->val.assignment);
+        break;
+    case TPMCPATTERNVALUE_TYPE_WILDCARD:
+        eprintf("_");
+        break;
+    case TPMCPATTERNVALUE_TYPE_CHARACTER:
+        eprintf("'%c'", patternValue->val.character);
+        break;
+    case TPMCPATTERNVALUE_TYPE_BIGINTEGER:
+        fprintMaybeBigInt(errout, patternValue->val.bigInteger);
+        break;
+    case TPMCPATTERNVALUE_TYPE_TUPLE:
+        ppTpmcTuplePattern(patternValue->val.tuple);
+        break;
+    case TPMCPATTERNVALUE_TYPE_CONSTRUCTOR:
+        ppTpmcConstructorPattern(patternValue->val.constructor);
+        break;
     }
 }
 
@@ -125,14 +125,14 @@ void ppTpmcMatrix(TpmcMatrix *matrix) {
 
 static char getTpmcStateType(TpmcState *state) {
     switch (state->state->type) {
-        case TPMCSTATEVALUE_TYPE_TEST:
-            return 'T';
-        case TPMCSTATEVALUE_TYPE_FINAL:
-            return 'F';
-        case TPMCSTATEVALUE_TYPE_ERROR:
-            return 'E';
-        default:
-            return '?';
+    case TPMCSTATEVALUE_TYPE_TEST:
+        return 'T';
+    case TPMCSTATEVALUE_TYPE_FINAL:
+        return 'F';
+    case TPMCSTATEVALUE_TYPE_ERROR:
+        return 'E';
+    default:
+        return '?';
     }
 }
 
@@ -144,16 +144,16 @@ void ppTpmcState(TpmcState *state) {
     ppTpmcStateValue(state->state);
 }
 
-void ppTpmcVariableTable(TpmcVariableTable *table) {
+void ppTpmcVariableTable(SymbolSet *table) {
     eprintf("[");
     if (table != NULL) {
         Index i = 0;
         Index count = 0;
         HashSymbol *symbol;
-        while ((symbol = iterateTpmcVariableTable(table, &i)) != NULL) {
+        while ((symbol = iterateSymbolSet(table, &i)) != NULL) {
             ppTpmcSymbol(symbol);
             count++;
-            if (count < countTpmcVariableTable(table)) {
+            if (count < countSymbolSet(table)) {
                 eprintf(", ");
             }
         }
@@ -161,21 +161,19 @@ void ppTpmcVariableTable(TpmcVariableTable *table) {
     eprintf("]");
 }
 
-void ppTpmcSymbol(HashSymbol *symbol) {
-    eprintf("%s", symbol->name);
-}
+void ppTpmcSymbol(HashSymbol *symbol) { eprintf("%s", symbol->name); }
 
 void ppTpmcStateValue(TpmcStateValue *value) {
     switch (value->type) {
-        case TPMCSTATEVALUE_TYPE_TEST:
-            ppTpmcTestState(value->val.test);
-            break;
-        case TPMCSTATEVALUE_TYPE_FINAL:
-            ppTpmcFinalState(value->val.final);
-            break;
-        case TPMCSTATEVALUE_TYPE_ERROR:
-            eprintf("ERROR");
-            break;
+    case TPMCSTATEVALUE_TYPE_TEST:
+        ppTpmcTestState(value->val.test);
+        break;
+    case TPMCSTATEVALUE_TYPE_FINAL:
+        ppTpmcFinalState(value->val.final);
+        break;
+    case TPMCSTATEVALUE_TYPE_ERROR:
+        eprintf("ERROR");
+        break;
     }
 }
 
@@ -208,16 +206,14 @@ void ppTpmcArc(TpmcArc *arc) {
     eprintf(")");
 }
 
-void ppTpmcFinalState(TpmcFinalState *final) {
-    ppLamExp(final->action);
-}
+void ppTpmcFinalState(TpmcFinalState *final) { ppLamExp(final->action); }
 
-void ppTpmcIntArray(TpmcIntArray *array) {
+void ppTpmcIntArray(IntArray *array) {
     eprintf("[");
     Index i = 0;
     int entry;
     bool more;
-    while (iterateTpmcIntArray(array, &i, &entry, &more)) {
+    while (iterateIntArray(array, &i, &entry, &more)) {
         eprintf("%d%s", entry, more ? ", " : "");
     }
     eprintf("]");

@@ -20,6 +20,8 @@ config:
     name: minlam
     description: Minimal AST after desugaring
     parserInfo: true
+    includes:
+    - utils.h
     limited_includes:
     - bigint.h
     - tc.h
@@ -164,7 +166,7 @@ structs:
             brief: An environment for alpha conversion
         parserInfo: false
         data:
-            alphaTable: MinAlphaTable
+            alphaTable: SymbolMap
             next: MinAlphaEnv
             nameSpaces: MinAlphaEnvArray=NULL
 
@@ -234,15 +236,6 @@ hashes:
         data:
             entries: MinExp
 
-    MinAlphaTable:
-        meta:
-            brief: Map from symbols to their replacements
-            description: >-
-                Table for alpha conversion, mapping from original symbols
-                to their unique replacements.
-        data:
-            entries: HashSymbol
-
 arrays:
     MinNameSpaceArray:
         meta:
@@ -262,3 +255,12 @@ arrays:
             entries: MinAlphaEnv
 
 primitives: !include primitives.yaml
+
+external:
+    SymbolMap:
+        data:
+            cname: "struct SymbolMap *"
+            printFn: printSymbolMap
+            markFn: markHashTable
+            newFn: newSymbolMap
+            valued: true

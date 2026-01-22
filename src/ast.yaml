@@ -560,15 +560,6 @@ unions:
             assertion: AstExpression
             error: AstExpression
 
-hashes:
-    AstIntTable:
-        meta:
-            brief: AST Integer Table
-            description: >-
-                A hash table mapping symbols to integers.
-        data:
-            entries: int
-
 arrays:
     AstNameSpaceArray:
         meta:
@@ -588,14 +579,6 @@ arrays:
         data:
             entries: file_id
 
-    AstStringArray:
-        meta:
-            brief: AST String Array
-            description: >-
-                A simple array of strings.
-        data:
-            entries: string
-
     AstExpressionArray:
         meta:
             brief: AST Expression Array
@@ -603,11 +586,5 @@ arrays:
                 A simple array of AST expressions, used by the Pratt parser.
         data:
             entries: AstExpression
-
-    AstUTF8:
-        meta:
-            brief: A UTF-8 encoded string.
-        data:
-            entries: uchar
 
 primitives: !include primitives.yaml

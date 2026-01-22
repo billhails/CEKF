@@ -4,7 +4,6 @@ Term Pattern Matching Compiler types
 
 ```mermaid
 flowchart LR
-TpmcVariableTable --entries--> NULL
 TpmcSubstitutionTable --entries--> HashSymbol
 TpmcPatternTable --entries--> TpmcPattern
 TpmcStateTable --entries--> TpmcState
@@ -27,11 +26,11 @@ TpmcTestState --arcs--> TpmcArcArray
 TpmcFinalState --action--> LamExp
 TpmcState --refCount--> int
 TpmcState --stamp--> int
-TpmcState --freeVariables--> TpmcVariableTable
+TpmcState --freeVariables--> SymbolSet
 TpmcState --state--> TpmcStateValue
 TpmcArc --state--> TpmcState
 TpmcArc --test--> TpmcPattern
-TpmcArc --freeVariables--> TpmcVariableTable
+TpmcArc --freeVariables--> SymbolSet
 TpmcArcList --arc--> TpmcArc
 TpmcArcList --next--> TpmcArcList
 TpmcIntList --integer--> int

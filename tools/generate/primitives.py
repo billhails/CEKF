@@ -40,6 +40,10 @@ class Primitive(Base):
                 self.markFn = data['markFn']
             else:
                 self.markFn = None
+            if 'newFn' in data:
+                self.newFn = data['newFn']
+            else:
+                self.newFn = None
             if 'printf' in data:
                 self.printFn = 'printf'
                 self.printf = data['printf']
@@ -94,7 +98,10 @@ class Primitive(Base):
             markFn=self.markFn
             pad(depth)
             a = '.' if isInline else '->'
-            print(f"{markFn}(_x{a}{prefix}{field}); {c}")
+            if markFn == 'markHashTable':
+                print(f'{markFn}((HashTable *)(_x{a}{prefix}{field})); {c}')
+            else:
+                print(f"{markFn}(_x{a}{prefix}{field}); {c}")
 
     def printProtectField(self, isInline, field, depth, prefix=''):
         c = self.comment('printProtectField')
@@ -115,7 +122,7 @@ class Primitive(Base):
         if self.compareFn is None:
             print(f"if (a{a}{prefix}{field} != b{a}{prefix}{field}) return false; {c}")
         else:
-            print(f"if ({self.compareFn}(a{a}{prefix}{field}, b{a}{prefix}{field})) return false; {c}")
+            print(f"if (!{self.compareFn}(a{a}{prefix}{field}, b{a}{prefix}{field})) return false; {c}")
 
     def printPrintHashField(self, depth):
         c = self.comment('printPrintHashField')
@@ -146,6 +153,9 @@ class Primitive(Base):
         a = '.' if isInline else '->'
         if self.copyFn is None:
             print(f"_x{a}{prefix}{field} = o{a}{prefix}{field}; {c}")
+        elif self.copyFn == 'copyHashTable':
+            print(f'_x{a}{prefix}{field} = {self.newFn}(); {c}')
+            print(f'copyHashTable((HashTable *)_x{a}{prefix}{field}, (HashTable *)o{a}{prefix}{field}); {c}')
         else:
             print(f"_x{a}{prefix}{field} = {self.copyFn}(o{a}{prefix}{field}); {c}")
 
@@ -154,3 +164,11 @@ class Primitive(Base):
 
     def getDefineArg(self):
         return '_x' if self.valued else ''
+
+    def isSelfInitializing(self):
+        return self.newFn is not None
+    
+    def getConstructorName(self):
+        if self.newFn is None:
+            raise ValueError(f"Primitive {self.name} has no known constructor")
+        return self.newFn

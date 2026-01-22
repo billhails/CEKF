@@ -1,5 +1,5 @@
 #ifndef cekf_tpmc_pp_h
-#  define cekf_tpmc_pp_h
+#define cekf_tpmc_pp_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2023  Bill Hails
@@ -18,7 +18,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#  include "tpmc.h"
+#include "tpmc.h"
 
 void ppTpmcMatrix(TpmcMatrix *matrix);
 void ppTpmcPattern(TpmcPattern *pattern);
@@ -28,14 +28,14 @@ void ppTpmcAssignmentPattern(TpmcAssignmentPattern *assignmentPattern);
 void ppTpmcConstructorPattern(TpmcConstructorPattern *constructorPattern);
 void ppTpmcPatternArray(TpmcPatternArray *patternArray);
 void ppTpmcState(TpmcState *state);
-void ppTpmcVariableTable(TpmcVariableTable *table);
+void ppTpmcVariableTable(SymbolSet *table);
 void ppTpmcSymbol(HashSymbol *symbol);
 void ppTpmcStateValue(TpmcStateValue *value);
 void ppTpmcTestState(TpmcTestState *test);
 void ppTpmcArcArray(TpmcArcArray *arcs);
 void ppTpmcArc(TpmcArc *arc);
 void ppTpmcFinalState(TpmcFinalState *final);
-void ppTpmcIntArray(TpmcIntArray *array);
+void ppTpmcIntArray(IntArray *array);
 void ppTpmcStateArray(TpmcStateArray *array);
 
 #endif

@@ -24,6 +24,7 @@
 #include "minlam.h"
 #include "minlam_pp.h"
 #include "symbol.h"
+#include "utils.h"
 
 #include "lambda_alphaconvert.h"
 
@@ -64,14 +65,14 @@ static void addUniqueNameToContext(HashSymbol *name, MinAlphaEnv *context) {
     }
 #endif
     HashSymbol *newName = genSymDollar(name->name);
-    setMinAlphaTable(context->alphaTable, name, newName);
+    setSymbolMap(context->alphaTable, name, newName);
 }
 
 static HashSymbol *getNameFromContext(ParserInfo PI, HashSymbol *name,
                                       MinAlphaEnv *context) {
     struct HashSymbol *mappedName = NULL;
     while (context != NULL) {
-        if (getMinAlphaTable(context->alphaTable, name, &mappedName)) {
+        if (getSymbolMap(context->alphaTable, name, &mappedName)) {
             return mappedName;
         }
         context = context->next;
@@ -786,8 +787,8 @@ static MinNameSpaceArray *visitMinNameSpaceArray(MinNameSpaceArray *node,
 static void addBuiltInsToMinAlphaEnv(MinAlphaEnv *env, BuiltIns *b) {
     for (Index i = 0; i < b->size; i++) {
         // Bind only internal names; external names are provided by wrappers.
-        setMinAlphaTable(env->alphaTable, b->entries[i]->internalName,
-                         b->entries[i]->internalName);
+        setSymbolMap(env->alphaTable, b->entries[i]->internalName,
+                     b->entries[i]->internalName);
     }
 }
 

@@ -20,6 +20,8 @@ config:
     name: anf
     description: A-Normal Form (ANF) structures to be converted to bytecode.
     parserInfo: true
+    includes:
+    - utils.h
     limited_includes:
     - bigint.h
     - ast_helper.h
@@ -37,7 +39,7 @@ structs:
             isNameSpace: bool = false
             nBindings: int = 0
             nsEnvs: AnfEnvArray = NULL
-            table: AnfIntTable
+            table: IntMap
             next: AnfEnv
 
     AexpLam:
@@ -310,20 +312,6 @@ enums:
         - MOD
         - CMP
 
-hashes:
-    AnfSymbolTable:
-        meta:
-            brief: A set of ANF Symbols
-            description: A hash table set of symbols used in ANF.
-        data: {}
-
-    AnfIntTable:
-        meta:
-            brief: ANF Compile Time Integer Table
-            description: A hash table of integers used in ANF.
-        data:
-            entries: int
-
 arrays:
     AexpNameSpaceArray:
         meta:
@@ -350,4 +338,13 @@ external:
             cname: "struct TcType *"
             printFn: printTcType
             markFn: markTcType
+            valued: true
+    IntMap:
+        meta:
+            brief: Map from symbol to Integer.
+        data:
+            cname: "struct IntMap *"
+            printFn: printIntMap
+            markFn: markHashTable
+            newFn: newIntMap
             valued: true

@@ -39,6 +39,7 @@
 #include "print_generator.h"
 #include "symbols.h"
 #include "unicode.h"
+#include "utils.h"
 #include "wrapper_synthesis.h"
 
 #ifdef DEBUG_PRATT_PARSER
@@ -65,7 +66,7 @@
 // right associative infix operators parse the rhs with prec - 1
 // pareslets for grouping know their own matching close brace
 
-AstStringArray *include_paths = NULL;
+StringArray *include_paths = NULL;
 
 static AstAltArgs *altArgs(PrattParser *);
 static AstAltFunction *altFunction(PrattParser *);
@@ -182,8 +183,8 @@ static HashSymbol *symbol(PrattParser *);
 static HashSymbol *typeVariable(PrattParser *);
 static PrattRecord *fetchRecord(PrattParser *, HashSymbol *);
 static PrattTrie *makePrattTrie(PrattParser *, PrattTrie *);
-static PrattUnicode *rawString(PrattParser *);
-static PrattUnicode *str(PrattParser *);
+static WCharArray *rawString(PrattParser *);
+static WCharArray *str(PrattParser *);
 static void storeNameSpace(PrattParser *, AstNameSpace *);
 static void synchronize(PrattParser *parser);
 static PrattExportedOps *captureNameSpaceOperatorExports(PrattParser *parser);
@@ -203,7 +204,7 @@ void disablePrattDebug(void) { DEBUGGING_OFF(); }
 static PrattParsers *parserStack = NULL;
 static PrattNsOpsArray *nsOpsCache = NULL;
 
-static HashSymbol *unicodeToSymbol(PrattUnicode *unicode) {
+static HashSymbol *unicodeToSymbol(WCharArray *unicode) {
     size_t len = wcstombs(NULL, unicode->entries, 0);
     PrattCVec *mbStr = newPrattCVec(len + 1);
     int save = PROTECT(mbStr);
@@ -860,7 +861,8 @@ static AstNameSpace *parseLink(PrattParser *parser, unsigned char *fileName,
     }
     // check for a recursive include
     if (fileIdInArray(fileId, fileIdStack)) {
-        parserError(parser, "recursive include detected for %s", fileId->name);
+        parserError(parser, "recursive include detected for %s",
+                    fileId->fileName);
         AstNameSpace *ns =
             newAstNameSpace(BUFPI(parser->lexer->bufList), symbol, -1);
         UNPROTECT(save);
@@ -873,10 +875,10 @@ static AstNameSpace *parseLink(PrattParser *parser, unsigned char *fileName,
     // careful, 2 pushes in a row could realloc the save stack on push 1
     int save2 = PROTECT(fileId);
     AstDefinitions *definitions =
-        prattParseLink(parser, fileId->name, &resultParser);
+        prattParseLink(parser, fileId->fileName, &resultParser);
     REPLACE_PROTECT(save2, resultParser);
     PROTECT(definitions);
-    // save the new nameSpace and it's parser
+    // save the new nameSpace and its parser
     AstNameSpaceImpl *impl =
         newAstNameSpaceImpl(BUFPI(parser->lexer->bufList), fileId, definitions);
     PROTECT(impl);
@@ -1179,9 +1181,9 @@ static AstDefinitions *definitions(PrattParser *parser, HashSymbol *terminal) {
  * - It cannot contain whitespace.
  *
  * @param parser The PrattParser to report errors to.
- * @param operator The PrattUnicode operator string to validate.
+ * @param operator The WCharArray operator string to validate.
  */
-static bool validateOperator(PrattParser *parser, PrattUnicode *operator) {
+static bool validateOperator(PrattParser *parser, WCharArray *operator) {
     if (wcslen(operator->entries) == 0) {
         parserError(parser, "operator cannot be empty string");
         return false;
@@ -1312,12 +1314,12 @@ static AstDefinition *makeHygienicNaryOperatorDef(ParserInfo PI, int arity,
  * @param associativity The associativity type of the operator (left, right,
  * none).
  * @param precedence The precedence level of the operator.
- * @param operator The PrattUnicode representation of the operator.
+ * @param operator The WCharArray representation of the operator.
  * @param impl The AstExpression implementation of the operator.
  */
 static AstDefinition *addOperator(PrattParser *parser, PrattFixity fixity,
                                   PrattAssoc associativity, int precedence,
-                                  PrattUnicode *operator, AstExpression *impl) {
+                                  WCharArray *operator, AstExpression *impl) {
     HashSymbol *op = unicodeToSymbol(operator);
     // Only look for an existing operator in the current (local) parser scope.
     // This allows inner scopes to shadow operators defined in outer scopes.
@@ -1451,7 +1453,7 @@ AstExpression *userMixfix(PrattRecord *record, PrattParser *parser,
         arity--;
         if (arity > 0 || !(pattern->endsWithHole)) {
             // Consume the next keyword
-            PrattUnicode *kw = keywords->entries[kwIndex++];
+            WCharArray *kw = keywords->entries[kwIndex++];
             PrattToken *nextTok = peek(parser);
             HashSymbol *nextSym = unicodeToSymbol(kw);
             if (!isAtomSymbol(nextTok, nextSym)) {
@@ -1541,7 +1543,7 @@ static AstDefinition *addMixfixOperator(PrattParser *parser,
         parser->trie = insertPrattTrie(parser->trie, inner);
     }
     PrattFixity fixity = getFixityFromPattern(pattern);
-    PrattUnicode *operator = pattern->keywords->entries[0];
+    WCharArray *operator = pattern->keywords->entries[0];
     (void)addOperator(parser, fixity, associativity, precedence, operator,
                       impl);
     HashSymbol *op = unicodeToSymbol(operator);
@@ -1723,14 +1725,13 @@ static PrattParser *meldParsers(PrattParser *to, PrattParser *from) {
     }
 }
 
-static PrattUnicode *prattUnicodeSubstr(PrattUnicode *str, Index start,
-                                        Index end) {
-    PrattUnicode *res = newPrattUnicode();
+static WCharArray *prattUnicodeSubstr(WCharArray *str, Index start, Index end) {
+    WCharArray *res = newWCharArray();
     int save = PROTECT(res);
     for (Index i = start; i < end; i++) {
-        pushPrattUnicode(res, str->entries[i]);
+        pushWCharArray(res, str->entries[i]);
     }
-    pushPrattUnicode(res, '\0');
+    pushWCharArray(res, '\0');
     UNPROTECT(save);
     return res;
 }
@@ -1774,7 +1775,7 @@ static int patternStateTable[11][3] = {
 };
 
 static PrattMixfixPattern *
-parseMixfixPattern(ParserInfo PI, PrattParser *parser, PrattUnicode *str) {
+parseMixfixPattern(ParserInfo PI, PrattParser *parser, WCharArray *str) {
     // A mixfix pattern is a sequence of keywords and holes.
     // A hole is represented by an underscore character '_'.
     PrattStrings *strings = newPrattStrings();
@@ -1800,7 +1801,7 @@ parseMixfixPattern(ParserInfo PI, PrattParser *parser, PrattUnicode *str) {
         case PATTERN_STATE_C:
             break;
         case PATTERN_STATE_CU: {
-            PrattUnicode *kw = prattUnicodeSubstr(str, start, i);
+            WCharArray *kw = prattUnicodeSubstr(str, start, i);
             int save = PROTECT(kw);
             pushPrattStrings(strings, kw);
             UNPROTECT(save);
@@ -1814,7 +1815,7 @@ parseMixfixPattern(ParserInfo PI, PrattParser *parser, PrattUnicode *str) {
         case PATTERN_STATE_UC:
             break;
         case PATTERN_STATE_UCU: {
-            PrattUnicode *kw = prattUnicodeSubstr(str, start, i);
+            WCharArray *kw = prattUnicodeSubstr(str, start, i);
             int save = PROTECT(kw);
             pushPrattStrings(strings, kw);
             UNPROTECT(save);
@@ -1823,13 +1824,13 @@ parseMixfixPattern(ParserInfo PI, PrattParser *parser, PrattUnicode *str) {
         case PATTERN_STATE_CUF:
             break;
         case PATTERN_STATE_CCF: {
-            PrattUnicode *kw = prattUnicodeSubstr(str, start, i);
+            WCharArray *kw = prattUnicodeSubstr(str, start, i);
             int save = PROTECT(kw);
             pushPrattStrings(strings, kw);
             UNPROTECT(save);
         } break;
         case PATTERN_STATE_UCF: {
-            PrattUnicode *kw = prattUnicodeSubstr(str, start, i);
+            WCharArray *kw = prattUnicodeSubstr(str, start, i);
             int save = PROTECT(kw);
             pushPrattStrings(strings, kw);
             UNPROTECT(save);
@@ -1933,7 +1934,7 @@ static AstDefinition *operator(PrattParser *parser) {
     ENTER(operator);
     PrattToken *tok = peek(parser);
     int save = PROTECT(tok);
-    PrattUnicode *str = rawString(parser);
+    WCharArray *str = rawString(parser);
     PROTECT(str);
     PrattMixfixPattern *pattern = parseMixfixPattern(TOKPI(tok), parser, str);
     PROTECT(pattern);
@@ -2091,7 +2092,7 @@ static AstDefinition *exportOp(PrattParser *parser) {
         // <implementation>; Parse the pattern string first
         PrattToken *opTok = peek(parser);
         PROTECT(opTok);
-        PrattUnicode *str = rawString(parser);
+        WCharArray *str = rawString(parser);
         PROTECT(str);
         PrattMixfixPattern *pattern =
             parseMixfixPattern(TOKPI(opTok), parser, str);
@@ -2221,7 +2222,7 @@ static AstDefinition *importOp(PrattParser *parser) {
         }
     } else if (match(parser, TOK_OPERATOR())) {
         // import <ns> operator <pattern>;
-        PrattUnicode *str = rawString(parser);
+        WCharArray *str = rawString(parser);
         PROTECT(str);
         PrattMixfixPattern *pattern =
             parseMixfixPattern(TOKPI(tok), parser, str);
@@ -3259,7 +3260,7 @@ static AstTypeSymbols *typeVariables(PrattParser *parser) {
  */
 static AstDefinition *link(PrattParser *parser) {
     ENTER(link);
-    PrattUnicode *path = rawString(parser);
+    WCharArray *path = rawString(parser);
     int save = PROTECT(path);
     AstDefinition *res = NULL;
     if (path == NULL) {
@@ -3286,7 +3287,7 @@ static AstDefinition *link(PrattParser *parser) {
 /**
  * @brief parses a raw double-quoted string for a link directive.
  */
-static PrattUnicode *rawString(PrattParser *parser) {
+static WCharArray *rawString(PrattParser *parser) {
     ENTER(rawString);
     PrattToken *tok = next(parser);
     validateLastAlloc();
@@ -3300,9 +3301,9 @@ static PrattUnicode *rawString(PrattParser *parser) {
         return tok->value->val.string;
     } else {
         parserError(parser, "expected string, got %s", tok->type->name);
-        PrattUnicode *err = newPrattUnicode();
+        WCharArray *err = newWCharArray();
         int save = PROTECT(err);
-        pushPrattUnicode(err, 0);
+        pushWCharArray(err, 0);
         LEAVE(rawString);
         UNPROTECT(save);
         return err;
@@ -3312,13 +3313,13 @@ static PrattUnicode *rawString(PrattParser *parser) {
 /**
  * @brief parses a subsequent string, appending it to the current.
  */
-static void appendString(PrattParser *parser, PrattUnicode *this) {
+static void appendString(PrattParser *parser, WCharArray *this) {
     ENTER(appendString);
-    PrattUnicode *next = rawString(parser);
+    WCharArray *next = rawString(parser);
     int save = PROTECT(next);
     this->size--; // backup over '\0'
     for (Index i = 0; i < next->size; i++) {
-        pushPrattUnicode(this, next->entries[i]);
+        pushWCharArray(this, next->entries[i]);
     }
     UNPROTECT(save);
     if (check(parser, TOK_STRING())) {
@@ -3330,9 +3331,9 @@ static void appendString(PrattParser *parser, PrattUnicode *this) {
 /**
  * @brief parses any sequence of adjacent strings into a single string.
  */
-static PrattUnicode *str(PrattParser *parser) {
+static WCharArray *str(PrattParser *parser) {
     ENTER(str);
-    PrattUnicode *this = rawString(parser);
+    WCharArray *this = rawString(parser);
     int save = PROTECT(this);
     if (check(parser, TOK_STRING())) {
         appendString(parser, this);
@@ -4163,7 +4164,7 @@ static AstExpression *makeChar(PrattRecord *record __attribute__((unused)),
 /**
  * @brief utility to convert a string to a nested list of conses of characters.
  */
-static AstFunCall *makeStringList(ParserInfo PI, PrattUnicode *str) {
+static AstFunCall *makeStringList(ParserInfo PI, WCharArray *str) {
     AstExpression *nil = newAstExpression_Symbol(PI, nilSymbol());
     int save = PROTECT(nil);
     AstFunCall *res = newAstFunCall(PI, nil, NULL);
@@ -4205,7 +4206,7 @@ static AstExpression *makeString(PrattRecord *record __attribute__((unused)),
     }
 #endif
     enqueueToken(parser->lexer, tok);
-    PrattUnicode *uni = str(parser);
+    WCharArray *uni = str(parser);
     int save = PROTECT(uni);
     AstFunCall *list = makeStringList(TOKPI(tok), uni);
     PROTECT(list);
