@@ -28,7 +28,6 @@
 
 #include "ast.h"
 #include "bigint.h"
-#include "file_id.h"
 #include "memory.h"
 #include "pratt.h"
 #include "pratt_debug.h"
@@ -204,6 +203,22 @@ void disablePrattDebug(void) { DEBUGGING_OFF(); }
 static PrattParsers *parserStack = NULL;
 static PrattNsOpsArray *nsOpsCache = NULL;
 
+/**
+ * Create a file id from a fileName.
+ *
+ * @param fileName the fileName
+ * @return the agnostic file id, or NULL if the file does not exist
+ */
+FileId *makeFileId(char *fileName) {
+    struct stat stats;
+    if (stat(fileName, &stats) == 0) {
+        FileId *res = newFileId(stats.st_dev, stats.st_ino, fileName);
+        return res;
+    } else {
+        return NULL;
+    }
+}
+
 static HashSymbol *unicodeToSymbol(WCharArray *unicode) {
     size_t len = wcstombs(NULL, unicode->entries, 0);
     PrattCVec *mbStr = newPrattCVec(len + 1);
@@ -350,25 +365,25 @@ makeAstCompositeFunction(AstAltFunction *functions,
 }
 
 /**
- * @brief Try to create an AgnosticFileId from a prefix and a file name.
+ * @brief Try to create a FileId from a prefix and a file name.
  *
  * This function constructs a file path by concatenating the prefix and file
- * name, and then attempts to create an AgnosticFileId from that path. If the
- * AgnosticFileId creation fails, it frees the allocated buffer.
+ * name, and then attempts to create a FileId from that path. If the
+ * FileId creation fails, it frees the allocated buffer.
  *
  * @param prefix The prefix path to prepend to the file name.
  * @param file The file name to append to the prefix.
- * @return A pointer to the AgnosticFileId if successful, or NULL if the file
+ * @return A pointer to the FileId if successful, or NULL if the file
  * does not exist.
  */
-static AgnosticFileId *tryFile(char *prefix, char *file) {
+static FileId *tryFile(char *prefix, char *file) {
     char *buf = malloc(sizeof(char) * (strlen(prefix) + 1 + strlen(file) + 10));
     if (buf == NULL) {
         perror("out of memory");
         exit(1);
     }
     sprintf(buf, "%s/%s", prefix, file);
-    AgnosticFileId *result = makeAgnosticFileId(buf);
+    FileId *result = makeFileId(buf);
     if (result == NULL)
         free(buf);
     return result;
@@ -382,10 +397,10 @@ static AgnosticFileId *tryFile(char *prefix, char *file) {
  *
  * @param initialPrefix The initial prefix to use for the search.
  * @param fileToFind The name of the file to search for.
- * @return A pointer to the AgnosticFileId if found, or NULL if not found.
+ * @return A pointer to the FileId if found, or NULL if not found.
  */
-static AgnosticFileId *searchForFile(char *initialPrefix, char *fileToFind) {
-    AgnosticFileId *result = NULL;
+static FileId *searchForFile(char *initialPrefix, char *fileToFind) {
+    FileId *result = NULL;
     result = tryFile(initialPrefix, fileToFind);
     if (result != NULL)
         return result;
@@ -419,11 +434,11 @@ static char *currentPrattFile(PrattParser *parser) {
 /**
  * @brief Calculate the path for a file based on the current parser's context.
  */
-static AgnosticFileId *calculatePath(unsigned char *file, PrattParser *parser) {
+static FileId *calculatePath(unsigned char *file, PrattParser *parser) {
     if (*file == '/') {
         // Take ownership of the fileName by duplicating it so the
-        // AgnosticFileId can free it during GC finalization.
-        return makeAgnosticFileId(safeStrdup((char *)file));
+        // FileId can free it during GC finalization.
+        return makeFileId(safeStrdup((char *)file));
     }
     char *currentFile = currentPrattFile(parser);
     if (currentFile == NULL) {
@@ -436,7 +451,7 @@ static AgnosticFileId *calculatePath(unsigned char *file, PrattParser *parser) {
         return searchForFile(".", (char *)file);
     }
     *slash = '\0';
-    AgnosticFileId *result = searchForFile(currentFile, (char *)file);
+    FileId *result = searchForFile(currentFile, (char *)file);
     free(currentFile);
     return result;
 }
@@ -444,16 +459,16 @@ static AgnosticFileId *calculatePath(unsigned char *file, PrattParser *parser) {
 /**
  * @brief Check if a file ID is already in the file ID stack.
  *
- * This function checks if the given AgnosticFileId is already present in the
+ * This function checks if the given FileId is already present in the
  * AstFileIdArray.
  *
- * @param id The AgnosticFileId to check.
+ * @param id The FileId to check.
  * @param array The AstFileIdArray to search in.
  * @return true if the file ID is found, false otherwise.
  */
-static bool fileIdInArray(AgnosticFileId *id, AstFileIdArray *array) {
+static bool fileIdInArray(FileId *id, AstFileIdArray *array) {
     for (Index i = 0; i < array->size; ++i) {
-        if (cmpAgnosticFileId(id, array->entries[i]) == CMP_EQ)
+        if (eqFileId(id, array->entries[i]))
             return true;
     }
     return false;
@@ -842,7 +857,7 @@ static void mergeFixityImport(PrattParser *parser, PrattRecord *target,
 static AstNameSpace *parseLink(PrattParser *parser, unsigned char *fileName,
                                HashSymbol *symbol) {
     // check the file exists
-    AgnosticFileId *fileId = calculatePath(fileName, parser);
+    FileId *fileId = calculatePath(fileName, parser);
     int save = PROTECT(fileId);
     if (fileId == NULL) {
         parserError(parser, "cannot find file \"%s\"", fileName);

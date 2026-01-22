@@ -25,7 +25,6 @@
 #include "ast.h"
 #include "ast_pp.h"
 #include "bigint.h"
-#include "file_id.h"
 #include "pratt.h"
 #include "pratt_debug.h"
 #include "pratt_functions.h"
@@ -94,8 +93,8 @@ void ppAstNest(SCharArray *dest, AstNest *nest) {
 }
 
 void ppAstNameSpaceImpl(SCharArray *dest, AstNameSpaceImpl *impl) {
-    psprintf(dest, "\"%u:%u:%lu\": {", major(impl->id->st_dev),
-             minor(impl->id->st_dev), impl->id->st_ino);
+    psprintf(dest, "\"%u:%u:%lu\": {", major(impl->id->stDev),
+             minor(impl->id->stDev), impl->id->stIno);
     ppAstDefinitions(dest, impl->definitions);
     psprintf(dest, "}");
 }

@@ -7,6 +7,9 @@ flowchart LR
 SymbolSet --entries--> NULL
 IntMap --entries--> int
 SymbolMap --entries--> HashSymbol
+FileId --stDev--> device
+FileId --stIno--> inode
+FileId --fileName--> string
 SCharVec["(SCharVec)"] --entries--> schar
 WCharVec["(WCharVec)"] --entries--> character
 StringArray["StringArray[]"] --entries--> string

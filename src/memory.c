@@ -361,9 +361,6 @@ void markObj(Header *h, Index i) {
     case OBJTYPE_BIGINT:
         markBigInt((BigInt *)h);
         break;
-    case OBJTYPE_AGNOSTICFILEID:
-        markAgnosticFileId((AgnosticFileId *)h);
-        break;
     case OBJTYPE_HASHTABLE:
         markHashTableObj(h);
         break;
@@ -432,9 +429,6 @@ void freeObj(Header *h) {
         break;
     case OBJTYPE_MAYBEBIGINT:
         freeMaybeBigInt((MaybeBigInt *)h);
-        break;
-    case OBJTYPE_AGNOSTICFILEID:
-        freeAgnosticFileId((AgnosticFileId *)h);
         break;
     case OBJTYPE_HASHTABLE:
         freeHashTableObj(h);

@@ -23,7 +23,6 @@ config:
     includes:
     - utils.h
     limited_includes:
-    - file_id.h
     - ast_helper.h
     - ast_debug.h
     - pratt_functions.h

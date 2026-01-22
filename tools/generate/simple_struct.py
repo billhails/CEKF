@@ -228,8 +228,14 @@ class SimpleStruct(Base):
             field.printMarkLine(self.isInline(catalog), catalog, 1)
 
     def printEqFunctionBody(self, catalog):
+        c = self.comment('printEqFunctionBody')
         for field in self.fields:
-            field.printEqLine(self.isInline(catalog), catalog, 1)
+            # Check if this field should be ignored in equality comparison
+            if field.getName() in self.eqIgnore:
+                pad(1)
+                print(f"// field '{field.getName()}' deliberately ignored in equality comparison {c}")
+            else:
+                field.printEqLine(self.isInline(catalog), catalog, 1)
 
     def printCopyFunctionBody(self, catalog):
         for field in self.fields:

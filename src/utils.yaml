@@ -22,6 +22,18 @@ config:
     parserInfo: false
     limited_includes:
     - ast_helper.h
+    - sys/stat.h
+
+structs:
+    FileId:
+        meta:
+            brief: Unambiguous File Identifier
+            eqIgnore:
+            - fileName
+        data:
+            stDev: device
+            stIno: inode
+            fileName: string
 
 hashes:
     SymbolSet:

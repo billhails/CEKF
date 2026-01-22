@@ -62,10 +62,10 @@ byte:
 
 file_id:
     data:
-        cname: "struct AgnosticFileId *"
-        printFn: printAgnosticFileId
-        cmpFn: cmpAgnosticFileId
-        markFn: markAgnosticFileId
+        cname: "struct FileId *"
+        printFn: printFileId
+        eqFn: eqFileId
+        markFn: markFileId
         valued: true
 
 opaque:
@@ -163,3 +163,14 @@ size:
         printf: "%zu"
         valued: true
 
+device:
+    data:
+        cname: dev_t
+        printf: "%lu"
+        valued: true
+
+inode:
+    data:
+        cname: ino_t
+        printf: "%lu"
+        valued: true
