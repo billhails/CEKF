@@ -263,6 +263,22 @@ class SimpleArray(Base):
         decl=self.getCopySignature(catalog)
         print(f"{decl}; {c}")
 
+    def printAppendDeclaration(self, catalog):
+        if self.dimension == 1:
+            name = self.getName()
+            myType = self.getTypeDeclaration(catalog)
+            a = '*' if self.isInline(catalog) else ''
+            c = self.comment('printAppendDeclaration')
+            print(f"void append{name}({myType} {a}dest, {myType} {a}src); {c}")
+
+    def printAddDeclaration(self, catalog):
+        if self.dimension == 1:
+            name = self.getName()
+            myType = self.getTypeDeclaration(catalog)
+            a = '*' if self.isInline(catalog) else ''
+            c = self.comment('printAddDeclaration')
+            print(f"void add{name}({myType} {a}obj, Index size); {c}")
+
     def printExtendDeclaration(self, catalog):
         if self.dimension == 1:
             name = self.getName()
@@ -387,6 +403,43 @@ class SimpleArray(Base):
             a = '*' if self.isInline(catalog) else ''
             c = self.comment('printPokeDeclaration')
             print(f"void poke{name}({myType} {a}obj, int offset, {entryType} val); {c}")
+
+    def printAppendFunction(self, catalog):
+        if self.dimension == 1:
+            name = self.getName()
+            myType = self.getTypeDeclaration(catalog)
+            entryType = self.entries.getTypeDeclaration(catalog)
+            c = self.comment('printAppendFunction')
+            a = '*' if self.isInline(catalog) else ''
+            print(f"/**")
+            print(f" * Appends all entries from `src` to the end of `dest`,")
+            print(f" * extending `dest` if required.")
+            print(f" */")
+            print(f"void append{name}({myType} {a}dest, {myType} {a}src) {{ {c}")
+            print(f'    DEBUG("append{name}(%p, %p)", dest, src);')
+            print(f"    if (src->size > 0) {{ {c}")
+            print(f"        add{name}(dest, src->size); {c}")
+            print(f"        for (Index i = 0; i < src->size; i++) {{ {c}")
+            print(f"            push{name}(dest, src->entries[i]); {c}")
+            print(f"        }} {c}")
+            print(f"    }} {c}")
+            print(f"}} {c}\n")
+
+    def printAddFunction(self, catalog):
+        if self.dimension == 1:
+            name = self.getName()
+            myType = self.getTypeDeclaration(catalog)
+            c = self.comment('printAddFunction')
+            a = '*' if self.isInline(catalog) else ''
+            print(f"/**")
+            print(f" * Adds at least `size` capacity to the {myType} `_x`.")
+            print(f" * additional capacity is calculated from the current size,")
+            print(f" * not the current capacity.")
+            print(f" */")
+            print(f"void add{name}({myType} {a}_x, Index size) {{ {c}")
+            print(f'    DEBUG("add{name}(%p, %u)", _x, size);')
+            print(f"    extend{name}(_x, _x->size + size); {c}")
+            print(f"}} {c}\n")
 
     def printExtendFunction(self, catalog):
         if self.dimension == 1:

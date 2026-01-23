@@ -76,7 +76,7 @@ arrays:
 
     SCharArray:
         meta:
-            brief: An array of bytes
+            brief: An array of schar
         data:
             entries: schar
 

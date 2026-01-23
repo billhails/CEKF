@@ -79,13 +79,23 @@ class SimpleStack(SimpleArray):
         print(f"    _x->frames = NEW_ARRAY(StackFrame, 8); {c}")
         print(f"    _x->frames_capacity = 8; {c}")
 
+    def printAddDeclaration(self, catalog):
+        if self.dimension == 1:
+            name = self.getName()
+            myType = self.getTypeDeclaration(catalog)
+            a = '*' if self.isInline(catalog) else ''
+            c = self.comment('printAddDeclaration')
+            print(f"void add{name}Entries({myType} {a}obj, Index size); {c}")
+            print(f"void add{name}Frames({myType} {a}obj, Index size); {c}")
+
     def printExtendDeclaration(self, catalog):
-        name = self.getName()
-        myType = self.getTypeDeclaration(catalog)
-        a = '*' if self.isInline(catalog) else ''
-        c = self.comment('printExtendDeclaration')
-        print(f"void extend{name}Entries({myType} {a}obj, Index size); {c}")
-        print(f"void extend{name}Frames({myType} {a}obj, Index size); {c}")
+        if self.dimension == 1:
+            name = self.getName()
+            myType = self.getTypeDeclaration(catalog)
+            a = '*' if self.isInline(catalog) else ''
+            c = self.comment('printExtendDeclaration')
+            print(f"void extend{name}Entries({myType} {a}obj, Index size); {c}")
+            print(f"void extend{name}Frames({myType} {a}obj, Index size); {c}")
 
     def printSizeDeclaration(self, catalog):
         name = self.getName()
@@ -143,6 +153,36 @@ class SimpleStack(SimpleArray):
             c = self.comment('printClearDeclaration')
             print(f"static inline void clear{name}Entries({myType} {a}_x) {{ _x->offset = 0; }}; {c}")
             print(f"static inline void clear{name}Frames({myType} {a}_x) {{ _x->frames_index = _x->offset = _x->frame = 0; }}; {c}")
+
+    def printAppendDeclaration(self, catalog):
+        pass
+
+    def printAppendFunction(self, catalog):
+        pass
+
+    def printAddFunction(self, catalog):
+        if self.dimension == 1:
+            name = self.getName()
+            myType = self.getTypeDeclaration(catalog)
+            c = self.comment('printAddFunction')
+            a = '*' if self.isInline(catalog) else ''
+            print(f"/**")
+            print(f" * Adds at leat `size` capacity to the {myType}.")
+            print(f" */")
+            print(f"void add{name}Entries({myType} {a}_x, Index size) {{ {c}")
+            print(f'    DEBUG("add{name}Entries(%p, %u)", _x, size);')
+            print(f"    extend{name}Entries(_x, _x->entries_capacity + size); {c}")
+            print(f"}} {c}")
+            print(f"")
+            print(f"/**")
+            print(f" * Adds at least `size` capacity to the {myType} frames.")
+            print(f" */")
+            print(f"void add{name}Frames({myType} {a}_x, Index size) {{ {c}")
+            print(f'    DEBUG("add{name}Frames(%p, %u)", _x, size);')
+            print(f"    extend{name}Frames(_x, _x->frames_capacity + size); {c}")
+            print(f"}} {c}")
+            print(f"")
+            
 
     def printExtendFunction(self, catalog):
         if self.dimension == 1:

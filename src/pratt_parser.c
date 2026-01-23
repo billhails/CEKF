@@ -209,14 +209,10 @@ static PrattNsOpsArray *nsOpsCache = NULL;
  * @param fileName the fileName
  * @return the agnostic file id, or NULL if the file does not exist
  */
-FileId *makeFileId(char *fileName) {
+FileId *makeFileId(SCharVec *mbStr) {
     struct stat stats;
-    if (stat(fileName, &stats) == 0) {
-        SCharVec *mbStr = newSCharVec(strlen(fileName) + 1);
-        int save = PROTECT(mbStr);
-        strcpy(mbStr->entries, fileName);
+    if (stat(mbStr->entries, &stats) == 0) {
         FileId *res = newFileId(stats.st_dev, stats.st_ino, mbStr);
-        UNPROTECT(save);
         return res;
     } else {
         return NULL;
@@ -381,14 +377,11 @@ makeAstCompositeFunction(AstAltFunction *functions,
  * does not exist.
  */
 static FileId *tryFile(char *prefix, char *file) {
-    char *buf = malloc(sizeof(char) * (strlen(prefix) + strlen(file) + 2));
-    if (buf == NULL) {
-        perror("out of memory");
-        exit(1);
-    }
-    sprintf(buf, "%s/%s", prefix, file);
-    FileId *result = makeFileId(buf);
-    free(buf);
+    SCharVec *mbStr = newSCharVec(strlen(prefix) + strlen(file) + 2);
+    int save = PROTECT(mbStr);
+    sprintf(mbStr->entries, "%s/%s", prefix, file);
+    FileId *result = makeFileId(mbStr);
+    UNPROTECT(save);
     return result;
 }
 
@@ -439,7 +432,12 @@ static char *currentPrattFile(PrattParser *parser) {
  */
 static FileId *calculatePath(unsigned char *file, PrattParser *parser) {
     if (*file == '/') {
-        return makeFileId((char *)file);
+        SCharVec *mbStr = newSCharVec(strlen((char *)file) + 1);
+        int save = PROTECT(mbStr);
+        strcpy(mbStr->entries, (char *)file);
+        FileId *result = makeFileId(mbStr);
+        UNPROTECT(save);
+        return result;
     }
     char *currentFile = currentPrattFile(parser);
     if (currentFile == NULL) {

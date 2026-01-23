@@ -212,9 +212,11 @@ TcType *makeFTypeType(void) { return makeNamedType("ftype_type"); }
 static TcType *analyzeTypeOf(LamExp *exp, TcEnv *env, TcNg *ng) {
     TcType *type = analyzeExp(getLamExp_TypeOf(exp)->exp, env, ng);
     int save = PROTECT(type);
-    char *typeString = tcTypeToString(prune(type));
-    getLamExp_TypeOf(exp)->typeString = stringToLamArgs(CPI(exp), typeString);
-    free(typeString);
+    SCharArray *typeName = tcTypeToSCharArray(prune(type));
+    PROTECT(typeName);
+    pushSCharArray(typeName, '\0');
+    getLamExp_TypeOf(exp)->typeString =
+        stringToLamArgs(CPI(exp), typeName->entries);
     TcType *stringType = makeStringType();
     UNPROTECT(save);
     return stringType;
@@ -872,44 +874,29 @@ static void processLetRecBinding(LamBindings *bindings, TcEnv *env, TcNg *ng) {
     UNPROTECT(save);
 }
 
-// Helper to capture a snapshot of all binding types as a single string
+// Helper to capture a snapshot of all binding types as a single SCharArray
 // Used to detect convergence in iterative type checking
-static char *snapshotBindingTypes(LamBindings *bindings, TcEnv *env) {
-    int capacity = 256;
-    int size = 0;
-    char *snapshot = malloc(capacity);
+static SCharArray *snapshotBindingTypes(LamBindings *bindings, TcEnv *env) {
+    SCharArray *snapshot = newSCharArray();
+    int save = PROTECT(snapshot);
 
     for (LamBindings *b = bindings; b != NULL; b = b->next) {
         if (isLambdaBinding(b)) {
             TcType *type = NULL;
             if (getFromTcEnv(env, b->var, &type)) {
                 TcType *pruned = prune(type);
-                char *typeStr = tcTypeToString(pruned);
-                int nameLen = strlen(b->var->name);
-                int typeLen = strlen(typeStr);
-                int needed = size + nameLen + typeLen + 3; // "::" + ";"
-
-                if (needed >= capacity) {
-                    capacity = needed * 2;
-                    char *newSnapshot = malloc(capacity);
-                    memcpy(newSnapshot, snapshot, size);
-                    free(snapshot);
-                    snapshot = newSnapshot;
-                }
-
-                memcpy(snapshot + size, b->var->name, nameLen);
-                size += nameLen;
-                snapshot[size++] = ':';
-                snapshot[size++] = ':';
-                memcpy(snapshot + size, typeStr, typeLen);
-                size += typeLen;
-                snapshot[size++] = ';';
-
-                free(typeStr); // tcTypeToString uses malloc, so we use free
+                SCharArray *typeStr = tcTypeToSCharArray(pruned);
+                int save2 = PROTECT(typeStr);
+                appendStringToSCharArray(snapshot, b->var->name);
+                pushSCharArray(snapshot, ':');
+                pushSCharArray(snapshot, ':');
+                appendSCharArray(snapshot, typeStr);
+                pushSCharArray(snapshot, ';');
+                UNPROTECT(save2);
             }
         }
     }
-    snapshot[size] = '\0';
+    UNPROTECT(save);
     return snapshot;
 }
 
@@ -941,7 +928,8 @@ static TcType *analyzeLetRec(LamLetRec *letRec, TcEnv *env, TcNg *ng) {
     // recursion might need more.
     const int MAX_PASSES = 10;
     int passCount __attribute__((unused)) = 1;
-    char *prevSnapshot = NULL;
+    SCharArray *prevSnapshot = NULL;
+    int save2 = PROTECT(ng); // just reserving a slot on the protection stack
 
     for (int pass = 2; pass <= MAX_PASSES && !hadErrors(); pass++) {
         passCount = pass;
@@ -954,27 +942,20 @@ static TcType *analyzeLetRec(LamLetRec *letRec, TcEnv *env, TcNg *ng) {
         }
 
         // Check if types have converged
-        char *currentSnapshot = snapshotBindingTypes(letRec->bindings, env);
+        SCharArray *currentSnapshot =
+            snapshotBindingTypes(letRec->bindings, env);
+        int save3 = PROTECT(currentSnapshot);
+
         if (prevSnapshot != NULL &&
-            strcmp(prevSnapshot, currentSnapshot) == 0) {
+            eqSCharArray(prevSnapshot, currentSnapshot)) {
             // No changes this pass - we've converged!
             DEBUGN("analyzeLetRec converged after %d passes\n", passCount);
-            free(currentSnapshot);
-            free(prevSnapshot);
-            prevSnapshot = NULL;
             break;
         }
 
-        if (prevSnapshot != NULL) {
-            // eprintf("snapshot %s != %s\n", prevSnapshot, currentSnapshot);
-            free(prevSnapshot);
-        }
         prevSnapshot = currentSnapshot;
-    }
-
-    if (prevSnapshot != NULL) {
-        // eprintf("analyzeLetRec completed after %d passes\n", passCount);
-        free(prevSnapshot);
+        REPLACE_PROTECT(save2, prevSnapshot);
+        UNPROTECT(save3);
     }
 
     TcType *res = analyzeExp(letRec->body, env, ng);

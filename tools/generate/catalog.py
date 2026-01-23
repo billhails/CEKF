@@ -219,6 +219,12 @@ class Catalog:
     def printPokeDeclarations(self):
         self._dispatch('printPokeDeclaration', self)
 
+    def printAppendDeclarations(self):
+        self._dispatch('printAppendDeclaration', self)
+
+    def printAddDeclarations(self):
+        self._dispatch('printAddDeclaration', self)
+
     def printExtendDeclarations(self):
         self._dispatch('printExtendDeclaration', self)
 
@@ -254,6 +260,12 @@ class Catalog:
 
     def printPokeFunctions(self):
         self._dispatch('printPokeFunction', self)
+
+    def printAppendFunctions(self):
+        self._dispatch('printAppendFunction', self)
+
+    def printAddFunctions(self):
+        self._dispatch('printAddFunction', self)
 
     def printExtendFunctions(self):
         self._dispatch('printExtendFunction', self)

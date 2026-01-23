@@ -261,6 +261,12 @@ class Base:
     def printExtendDeclaration(self, catalog):
         pass
 
+    def printAppendDeclaration(self, catalog):
+        pass
+
+    def printAddDeclaration(self, catalog):
+        pass
+
     def printSizeDeclaration(self, catalog):
         pass
 
@@ -292,6 +298,12 @@ class Base:
         pass
 
     def printPokeFunction(self, catalog):
+        pass
+
+    def printAppendFunction(self, catalog):
+        pass
+
+    def printAddFunction(self, catalog):
         pass
 
     def printExtendFunction(self, catalog):
