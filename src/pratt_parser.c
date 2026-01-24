@@ -219,12 +219,6 @@ FileId *makeFileId(SCharVec *mbStr) {
     }
 }
 
-static SCharVec *strToSCharVec(char *str) {
-    SCharVec *vec = newSCharVec(strlen(str) + 1);
-    strcpy(vec->entries, str);
-    return vec;
-}
-
 static HashSymbol *unicodeToSymbol(WCharArray *unicode) {
     size_t len = wcstombs(NULL, unicode->entries, 0);
     SCharVec *mbStr = newSCharVec(len + 1);
@@ -409,7 +403,7 @@ static FileId *searchForFile(SCharVec *initialPrefix, SCharVec *fileToFind) {
         return result;
     if (include_paths != NULL) {
         for (Index i = 0; i < include_paths->size; i++) {
-            SCharVec *vec = strToSCharVec(include_paths->entries[i]);
+            SCharVec *vec = stringToSCharVec(include_paths->entries[i]);
             int save = PROTECT(vec);
             result = tryFile(vec, fileToFind);
             UNPROTECT(save);

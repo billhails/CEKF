@@ -20,4 +20,11 @@
 
 #include "utils.h"
 
+SCharVec *stringToSCharVec(char *str);     // keeps null terminator
+SCharArray *stringToSCharArray(char *str); // drops null terminator
+void appendStringToSCharArray(SCharArray *array,
+                              char *str);     // drops null terminator
+SCharVec *sCharArrayToVec(SCharArray *array); // adds null terminator
+SCharArray *sCharVecToArray(SCharVec *vec);   // drops null terminator
+
 #endif

@@ -10,7 +10,7 @@ PrattTrie --character--> character
 PrattTrie --terminal--> HashSymbol
 PrattTrie --siblings--> PrattTrie
 PrattTrie --children--> PrattTrie
-PrattBuffer --data--> PrattWVec
+PrattBuffer --data--> WCharVec
 PrattBuffer --start--> wstring
 PrattBuffer --offset--> int
 PrattBufList --lineNo--> int
@@ -42,7 +42,6 @@ PrattMixfixPattern --arity--> int
 PrattMixfixPattern --associativity--> PrattAssoc
 PrattMixfixPattern --startsWithHole--> bool
 PrattMixfixPattern --endsWithHole--> bool
-PrattWVec["(PrattWVec)"] --entries--> character
 PrattFixityConfig --op--> PrattParselet
 PrattFixityConfig --prec--> int
 PrattFixityConfig --originalImpl--> AstExpression

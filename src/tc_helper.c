@@ -215,15 +215,6 @@ static void _ppTcEnv(TcEnv *env, int depth, bool done_nameSpaces) {
 
 void ppTcEnv(TcEnv *env) { _ppTcEnv(env, 0, false); }
 
-// Helper function to append to a dynamically growing buffer
-void appendStringToSCharArray(SCharArray *buffer, char *str) {
-    int len = strlen(str);
-    addSCharArray(buffer, len);
-    for (char *p = str; *p; p++) {
-        pushSCharArray(buffer, *p);
-    }
-}
-
 // Forward declarations for string conversion
 static void tcTypeToStringHelper(TcType *type, SCharArray *buffer);
 static void tcFunctionToString(TcFunction *function, SCharArray *buffer);
