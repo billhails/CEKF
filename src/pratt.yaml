@@ -52,7 +52,7 @@ structs:
                 A buffer of wide characters that is both used during parsing
                 and returned by the token parser (like yytext).
         data:
-            data: PrattWVec
+            data: WCharVec
             start: wstring=NULL
             offset: int=0
 
@@ -146,21 +146,6 @@ structs:
             associativity: PrattAssoc=PRATTASSOC_TYPE_NONE
             startsWithHole: bool
             endsWithHole: bool
-
-vectors:
-    PrattWVec:
-        meta:
-            brief: A fixed-length wchar_t string.
-            description: >-
-        data:
-            entries: character
-
-    PrattCVec:
-        meta:
-            brief: A fixed-length char string.
-            description: >-
-        data:
-            entries: schar
 
 enums:
     PrattAssoc:
@@ -311,4 +296,12 @@ external:
             markFn: markWCharArray
             newFn: newWCharArray
             eqFn: eqWCharArray
+            valued: true
+
+    WCharVec:
+        data:
+            cname: "struct WCharVec *"
+            printFn: printWCharVec
+            markFn: markWCharVec
+            eqFn: eqWCharVec
             valued: true

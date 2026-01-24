@@ -43,7 +43,6 @@ PrattMixfixPattern --associativity--> PrattAssoc
 PrattMixfixPattern --startsWithHole--> bool
 PrattMixfixPattern --endsWithHole--> bool
 PrattWVec["(PrattWVec)"] --entries--> character
-PrattCVec["(PrattCVec)"] --entries--> schar
 PrattFixityConfig --op--> PrattParselet
 PrattFixityConfig --prec--> int
 PrattFixityConfig --originalImpl--> AstExpression

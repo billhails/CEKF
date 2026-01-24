@@ -164,7 +164,7 @@ static AstExpressions *statements(PrattParser *, HashSymbol *);
 static AstFileIdArray *fileIdStack = NULL;
 static AstFunCall *switchFC(PrattParser *parser);
 static AstLookUpOrSymbol *scopedSymbol(PrattParser *);
-static AstNameSpace *parseLink(PrattParser *, unsigned char *, HashSymbol *);
+static AstNameSpace *parseLink(PrattParser *, SCharVec *, HashSymbol *);
 static AstNest *nestBody(PrattParser *, HashSymbol *);
 static AstNest *childNest(PrattParser *, HashSymbol *);
 static AstNest *nest(PrattParser *);
@@ -219,9 +219,15 @@ FileId *makeFileId(SCharVec *mbStr) {
     }
 }
 
+static SCharVec *strToSCharVec(char *str) {
+    SCharVec *vec = newSCharVec(strlen(str) + 1);
+    strcpy(vec->entries, str);
+    return vec;
+}
+
 static HashSymbol *unicodeToSymbol(WCharArray *unicode) {
     size_t len = wcstombs(NULL, unicode->entries, 0);
-    PrattCVec *mbStr = newPrattCVec(len + 1);
+    SCharVec *mbStr = newSCharVec(len + 1);
     int save = PROTECT(mbStr);
     wcstombs(mbStr->entries, unicode->entries, len + 1);
     HashSymbol *res = newSymbol(mbStr->entries);
@@ -376,10 +382,11 @@ makeAstCompositeFunction(AstAltFunction *functions,
  * @return A pointer to the FileId if successful, or NULL if the file
  * does not exist.
  */
-static FileId *tryFile(char *prefix, char *file) {
-    SCharVec *mbStr = newSCharVec(strlen(prefix) + strlen(file) + 2);
+static FileId *tryFile(SCharVec *prefix, SCharVec *file) {
+    SCharVec *mbStr = newSCharVec(prefix->size + file->size); // assumes null
+                                                              // terminator
     int save = PROTECT(mbStr);
-    sprintf(mbStr->entries, "%s/%s", prefix, file);
+    sprintf(mbStr->entries, "%s/%s", prefix->entries, file->entries);
     FileId *result = makeFileId(mbStr);
     UNPROTECT(save);
     return result;
@@ -395,19 +402,32 @@ static FileId *tryFile(char *prefix, char *file) {
  * @param fileToFind The name of the file to search for.
  * @return A pointer to the FileId if found, or NULL if not found.
  */
-static FileId *searchForFile(char *initialPrefix, char *fileToFind) {
+static FileId *searchForFile(SCharVec *initialPrefix, SCharVec *fileToFind) {
     FileId *result = NULL;
     result = tryFile(initialPrefix, fileToFind);
     if (result != NULL)
         return result;
     if (include_paths != NULL) {
         for (Index i = 0; i < include_paths->size; i++) {
-            result = tryFile(include_paths->entries[i], fileToFind);
-            if (result != NULL)
+            SCharVec *vec = strToSCharVec(include_paths->entries[i]);
+            int save = PROTECT(vec);
+            result = tryFile(vec, fileToFind);
+            UNPROTECT(save);
+            if (result != NULL) {
                 return result;
+            }
         }
     }
     return NULL;
+}
+
+static SCharVec *symbolToVec(HashSymbol *symbol) {
+    size_t len = strlen(symbol->name);
+    SCharVec *mbStr = newSCharVec(len + 1);
+    int save = PROTECT(mbStr);
+    strcpy(mbStr->entries, symbol->name);
+    UNPROTECT(save);
+    return mbStr;
 }
 
 /**
@@ -416,42 +436,48 @@ static FileId *searchForFile(char *initialPrefix, char *fileToFind) {
  * @param parser The PrattParser.
  * @return The name of the current file, or "no_file" if not available.
  */
-static char *currentPrattFile(PrattParser *parser) {
-    char *no_file = "no_file";
+static SCharVec *currentPrattFile(PrattParser *parser) {
     if (parser == NULL)
-        return no_file;
+        return NULL;
     if (parser->lexer == NULL)
-        return no_file;
+        return NULL;
     if (parser->lexer->bufList == NULL)
-        return no_file;
-    return parser->lexer->bufList->fileName->name;
+        return NULL;
+    return symbolToVec(parser->lexer->bufList->fileName);
 }
 
 /**
  * @brief Calculate the path for a file based on the current parser's context.
  */
-static FileId *calculatePath(unsigned char *file, PrattParser *parser) {
-    if (*file == '/') {
-        SCharVec *mbStr = newSCharVec(strlen((char *)file) + 1);
-        int save = PROTECT(mbStr);
-        strcpy(mbStr->entries, (char *)file);
-        FileId *result = makeFileId(mbStr);
+static FileId *calculatePath(SCharVec *file, PrattParser *parser) {
+    if (*file->entries == '/') {
+        return makeFileId(file);
+    }
+    FileId *result = NULL;
+    SCharVec *dot = newSCharVec(2);
+    int save = PROTECT(dot);
+    strcpy(dot->entries, ".");
+    SCharVec *currentFile = currentPrattFile(parser);
+    if (currentFile == NULL) {
+        result = searchForFile(dot, file);
         UNPROTECT(save);
         return result;
     }
-    char *currentFile = currentPrattFile(parser);
-    if (currentFile == NULL) {
-        return searchForFile(".", (char *)file);
-    }
-    currentFile = strdup(currentFile);
-    char *slash = strrchr(currentFile, '/');
+    PROTECT(currentFile);
+    char *slash = strrchr(currentFile->entries, '/');
     if (slash == NULL) {
-        free(currentFile);
-        return searchForFile(".", (char *)file);
+        result = searchForFile(dot, file);
+        UNPROTECT(save);
+        return result;
     }
-    *slash = '\0';
-    FileId *result = searchForFile(currentFile, (char *)file);
-    free(currentFile);
+    // *slash = '\0';
+    size_t prefixLen = slash - currentFile->entries;
+    SCharVec *prefix = newSCharVec(prefixLen + 1);
+    PROTECT(prefix);
+    strncpy(prefix->entries, currentFile->entries, prefixLen);
+    prefix->entries[prefixLen] = '\0';
+    result = searchForFile(prefix, file);
+    UNPROTECT(save);
     return result;
 }
 
@@ -853,13 +879,13 @@ static void mergeFixityImport(PrattParser *parser, PrattRecord *target,
  * @param symbol The HashSymbol representing the nameSpace symbol.
  * @return An AstNameSpace containing the parsed nameSpace or an error.
  */
-static AstNameSpace *parseLink(PrattParser *parser, unsigned char *fileName,
+static AstNameSpace *parseLink(PrattParser *parser, SCharVec *fileName,
                                HashSymbol *symbol) {
     // check the file exists
     FileId *fileId = calculatePath(fileName, parser);
     int save = PROTECT(fileId);
     if (fileId == NULL) {
-        parserError(parser, "cannot find file \"%s\"", fileName);
+        parserError(parser, "cannot find file \"%s\"", fileName->entries);
         AstNameSpace *ns =
             newAstNameSpace(BUFPI(parser->lexer->bufList), symbol, -1);
         UNPROTECT(save);
@@ -3284,11 +3310,10 @@ static AstDefinition *link(PrattParser *parser) {
         HashSymbol *name = symbol(parser);
         // Convert wide character path to multibyte
         size_t len = wcstombs(NULL, path->entries, 0);
-        PrattCVec *mbPath = newPrattCVec(len + 1);
+        SCharVec *mbPath = newSCharVec(len + 1);
         PROTECT(mbPath);
         wcstombs(mbPath->entries, path->entries, len + 1);
-        AstNameSpace *ns =
-            parseLink(parser, (unsigned char *)mbPath->entries, name);
+        AstNameSpace *ns = parseLink(parser, mbPath, name);
         PROTECT(ns);
         storeNameSpace(parser, ns);
         res = newAstDefinition_Blank(CPI(ns));

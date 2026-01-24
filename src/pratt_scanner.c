@@ -165,7 +165,7 @@ void parserErrorAt(ParserInfo PI, PrattParser *parser, const char *message,
     can_happen(" at +%d %s", PI.lineNo, PI.fileName);
 }
 
-static PrattCVec *readFileBytes(char *path) {
+static SCharVec *readFileBytes(char *path) {
     FILE *file = fopen(path, "rb");
     if (file == NULL) {
         perror(path); // FIXME shouldn't need to exit here
@@ -174,7 +174,7 @@ static PrattCVec *readFileBytes(char *path) {
     fseek(file, 0L, SEEK_END);
     size_t fileSize = ftell(file);
     rewind(file);
-    PrattCVec *bytes = newPrattCVec(fileSize + 1);
+    SCharVec *bytes = newSCharVec(fileSize + 1);
     int save = PROTECT(bytes);
     size_t bytes_read = fread(bytes->entries, sizeof(char), fileSize, file);
     bytes->entries[bytes_read] = '\0';
@@ -186,18 +186,18 @@ static PrattCVec *readFileBytes(char *path) {
 /**
  * @brief Reads the contents of a file into a dynamically allocated string.
  */
-static PrattWVec *readFile(char *path) {
-    PrattCVec *bytes = readFileBytes(path);
+static WCharVec *readFile(char *path) {
+    SCharVec *bytes = readFileBytes(path);
     int save = PROTECT(bytes);
     size_t wideSize = mbstowcs(NULL, bytes->entries, 0);
     if (wideSize == (size_t)-1) {
         can_happen("invalid encoding in file %s", path);
-        PrattWVec *data = newPrattWVec(1);
+        WCharVec *data = newWCharVec(1);
         data->entries[0] = L'\0';
         UNPROTECT(save);
         return data;
     }
-    PrattWVec *data = newPrattWVec(wideSize + 1);
+    WCharVec *data = newWCharVec(wideSize + 1);
     PROTECT(data);
     mbstowcs(data->entries, bytes->entries, wideSize + 1);
     UNPROTECT(save);
@@ -262,9 +262,9 @@ static PrattToken *tokenFromBigInt(PrattBufList *bufList, MaybeBigInt *bi,
     return token;
 }
 
-static PrattCVec *wVecToCVec(PrattWVec *wvec) {
+static SCharVec *wVecToCVec(WCharVec *wvec) {
     size_t needed = wcstombs(NULL, wvec->entries, 0);
-    PrattCVec *cvec = newPrattCVec(needed + 1);
+    SCharVec *cvec = newSCharVec(needed + 1);
     wcstombs(cvec->entries, wvec->entries, needed + 1);
     return cvec;
 }
@@ -273,11 +273,11 @@ static PrattCVec *wVecToCVec(PrattWVec *wvec) {
  * @brief Converts a PrattBuffer to a HashSymbol.
  */
 static HashSymbol *symbolFromBuffer(PrattBuffer *buffer) {
-    PrattWVec *data = newPrattWVec(buffer->offset + 1);
+    WCharVec *data = newWCharVec(buffer->offset + 1);
     int save = PROTECT(data);
     memcpy(data->entries, buffer->start, buffer->offset * sizeof(Character));
     data->entries[buffer->offset] = L'\0';
-    PrattCVec *bytes = wVecToCVec(data);
+    SCharVec *bytes = wVecToCVec(data);
     PROTECT(bytes);
     HashSymbol *symbol = newSymbol(bytes->entries);
     UNPROTECT(save);
@@ -1097,7 +1097,7 @@ PrattTrie *insertPrattTrie(PrattTrie *current, HashSymbol *symbol) {
         return current; // skip internal tokens
     }
     size_t len = mbstowcs(NULL, symbol->name, 0) + 1;
-    PrattWVec *chars = newPrattWVec(len);
+    WCharVec *chars = newWCharVec(len);
     int save = PROTECT(chars);
     mbstowcs(chars->entries, symbol->name, len);
     PrattTrie *this = insertTrie(current, symbol, chars->entries);
@@ -1122,7 +1122,7 @@ static PrattBuffer *prattBufferFromString(char *string) {
     if (len == (size_t)-1) {
         return NULL;
     }
-    PrattWVec *data = newPrattWVec(len + 1);
+    WCharVec *data = newWCharVec(len + 1);
     int save = PROTECT(data);
     mbstowcs(data->entries, string, len + 1);
     PrattBuffer *res = newPrattBuffer(data);
@@ -1140,7 +1140,7 @@ static PrattBuffer *prattBufferFromString(char *string) {
  * @return A pointer to the newly created PrattBuffer.
  */
 static PrattBuffer *prattBufferFromFileName(char *path) {
-    PrattWVec *content = readFile(path);
+    WCharVec *content = readFile(path);
     int save = PROTECT(content);
     PrattBuffer *res = newPrattBuffer(content);
     UNPROTECT(save);
