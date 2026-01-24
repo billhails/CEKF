@@ -59,9 +59,9 @@ static SCharVec *mermaidStateName(TpmcState *state, SymbolSet *seen) {
     case TPMCSTATEVALUE_TYPE_TEST:
         sprintf(buf, "T%d", state->stamp);
         if (!seenName(buf, seen)) {
-            printf("%s(\"%s\\n", buf, state->state->val.test->path->name);
+            printf("%s(\"%s<br/>", buf, state->state->val.test->path->name);
             mermaidFreeVariables(state->freeVariables);
-            printf("\\n(arcs %d)\")\n",
+            printf("<br/>(arcs %d)\")\n",
                    countTpmcArcArray(state->state->val.test->arcs));
         }
         break;
@@ -70,7 +70,7 @@ static SCharVec *mermaidStateName(TpmcState *state, SymbolSet *seen) {
         if (!seenName(buf, seen)) {
             printf("%s(\"", buf);
             ppLamExp(state->state->val.final->action);
-            printf("\\n");
+            printf("<br/>");
             mermaidFreeVariables(state->freeVariables);
             printf("\")\n");
         }
@@ -138,7 +138,7 @@ static void mermaidPattern(TpmcPattern *pattern) {
 static void mermaidArcLabel(TpmcArc *arc) {
     printf("\"");
     mermaidPattern(arc->test);
-    printf("\\n");
+    printf("<br/>");
     mermaidFreeVariables(arc->freeVariables);
     printf("\"");
 }
