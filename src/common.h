@@ -1,5 +1,5 @@
 #ifndef cekf_common_h
-#  define cekf_common_h
+#define cekf_common_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2023  Bill Hails
@@ -18,15 +18,15 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#  include <stdio.h>
-#  include <stdbool.h>
-#  include <stdint.h>
-#  include <stdlib.h>
-#  include <string.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-#  define NS_GLOBAL -1
+#define NS_GLOBAL -1
 
-#  ifndef PRODUCTION_BUILD
+#ifndef PRODUCTION_BUILD
 // #    define DEBUG_ALLOC
 // #    define DEBUG_ANF
 // #    define DEBUG_ANF_NORMALIZE
@@ -36,7 +36,7 @@
 // #    define DEBUG_BYTECODE
 // #    define DEBUG_CEKFS
 // #    define DEBUG_DESUGARING
-#    define DEBUG_DUMP_CORE
+#define DEBUG_DUMP_CORE
 // #    define DEBUG_HASHTABLE
 // #    define DEBUG_LAMBDA_CONVERT
 // #    define DEBUG_LAMBDA_SUBSTITUTE
@@ -49,10 +49,10 @@
 // #    define DEBUG_SLOW_STEP
 // #    define DEBUG_SQLITE
 // #    define DEBUG_STACK
-// #    define DEBUG_STEP
-#    ifndef NO_DEBUG_STRESS_GC
-#      define DEBUG_STRESS_GC
-#    endif
+// #define DEBUG_STEP
+#ifndef NO_DEBUG_STRESS_GC
+#define DEBUG_STRESS_GC
+#endif
 // #    define DEBUG_TC
 // #    define DEBUG_TIN_INSTANTIATION
 // #    define DEBUG_TIN_SUBSTITUTION
@@ -61,31 +61,31 @@
 // #    define DEBUG_TPMC_LOGIC
 // #    define DEBUG_TPMC_MATCH
 // #    define DEBUG_TPMC_TRANSLATE
-#    define SAFETY_CHECKS
-#  endif
+#define SAFETY_CHECKS
+#endif
 
-#  ifndef __GNUC__
-#    define __attribute__(x)
-#  endif
+#ifndef __GNUC__
+#define __attribute__(x)
+#endif
 
-#  define errout stdout
+#define errout stdout
 
 void _cant_happen(char *file, int line, const char *message, ...)
     __attribute__((noreturn, format(printf, 3, 4)));
-void can_happen(const char *message, ...)
-    __attribute__((format(printf, 1, 2)));
+void can_happen(const char *message, ...) __attribute__((format(printf, 1, 2)));
 void eprintf(const char *message, ...) __attribute__((format(printf, 1, 2)));
 bool hadErrors(void);
 void clearErrors(void);
 
 #define cant_happen(...) _cant_happen(__FILE__, __LINE__, __VA_ARGS__)
 
-#  define PAD_WIDTH 2
+#define PAD_WIDTH 2
 
-#define ASSERT(assertion) do {\
-    if (!(assertion)) { \
-        cant_happen("assertion failed " #assertion); \
-    } \
-} while (0);
+#define ASSERT(assertion)                                                      \
+    do {                                                                       \
+        if (!(assertion)) {                                                    \
+            cant_happen("assertion failed " #assertion);                       \
+        }                                                                      \
+    } while (0);
 
 #endif

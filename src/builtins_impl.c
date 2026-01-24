@@ -154,6 +154,10 @@ Value builtin_unicode_category(Vec *args) {
     }
 }
 
+Value builtin_getdec(Vec *args) {
+    return value_Stdint(unicode_getdec(args->entries[0].val.character));
+}
+
 Value builtin_isalnum(Vec *args) {
     return unicode_isalnum(args->entries[0].val.character) ? vTrue : vFalse;
 }

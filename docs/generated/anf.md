@@ -6,6 +6,7 @@ A-Normal Form (ANF) structures to be converted to bytecode.
 flowchart LR
 AnfEnv --isLocal--> bool
 AnfEnv --isNameSpace--> bool
+AnfEnv --isCapturing--> bool
 AnfEnv --nBindings--> int
 AnfEnv --nsEnvs--> AnfEnvArray
 AnfEnv --table--> IntMap

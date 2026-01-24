@@ -37,6 +37,7 @@ structs:
         data:
             isLocal: bool
             isNameSpace: bool = false
+            isCapturing: bool = false
             nBindings: int = 0
             nsEnvs: AnfEnvArray = NULL
             table: IntMap

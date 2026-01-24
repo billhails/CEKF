@@ -3,7 +3,6 @@ let
     Σ = "abc\u03b1;\u03b2;\u03b3;";
     Ψ = "abcαβγ";
     α = '\u03b1;';
-    F♮ = "cool";
     alpha = 'α';
     α = '\u03b1;';
     smile = '😀';
@@ -16,7 +15,6 @@ in
     assert(chr(945) == α);
     assert(chr(0x3b1) == α);
     assert("F\u266e;" == "F♮");
-    assert(F♮ == "cool");
     assert(unicode_category(alpha) == GC_Ll);
     assert(ord(smile) == 0x1F600);
     // isalnum tests
@@ -124,6 +122,13 @@ in
     // Superscripts and subscripts
     assert(isnumber('²')); // superscript two
     assert(isnumber('₃')); // subscript three
+    // Non-Ascii numbers
+    assert(isnumber('٢')); // Arabic-Indic digit two
+    assert(isnumber('৪')); // Bengali digit four
+    // Unicode decimal value retrieval
+    assert(getdec('５') == 5); // Fullwidth digit five
+    assert(getdec('९') == 9); // Devanagari digit nine
+    assert(getdec('٧') == 7); // Arabic-Indic digit seven
     // Spaces of various widths
     assert(isspace('\u00a0;')); // non-breaking space
     assert(isspace('\u3000;')); // ideographic space

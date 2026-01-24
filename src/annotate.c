@@ -80,9 +80,9 @@ static AnfEnv *annotateAexpLam(AexpLam *x, AnfEnv *env) {
         populateAnfEnv(env, args->var);
         args = args->next;
     }
-    annotateExp(x->exp, env);
+    AnfEnv *env2 = annotateExp(x->exp, env);
     UNPROTECT(save);
-    return env;
+    return env2->isCapturing ? env2 : env;
 }
 
 static AexpAnnotatedVar *annotateAexpVar(ParserInfo I, HashSymbol *x,
@@ -146,9 +146,11 @@ static AnfEnv *annotateCexpApply(CexpApply *x, AnfEnv *env) {
     ppAnfEnv(env);
     eprintf("\n");
 #endif
-    annotateAexp(x->function, env);
+    AnfEnv *env2 = annotateAexp(x->function, env);
+    int save = PROTECT(env2);
     annotateAexpList(x->args, env);
-    return env;
+    UNPROTECT(save);
+    return env2->isCapturing ? env2 : env;
 }
 
 static AnfEnv *annotateCexpIf(CexpIf *x, AnfEnv *env) {
@@ -321,19 +323,20 @@ static HashSymbol *makeNsName(Index index) {
     return newSymbol(buf);
 }
 
-static AnfEnv *annotateAexpNameSpaceArray(AexpNameSpaceArray *x, AnfEnv *env) {
-    AnfEnvArray *nsEnvs = getNsEnvs(env);
-    for (Index i = 0; i < x->size; ++i) {
+static AnfEnv *annotateAexpNameSpaceArray(AexpNameSpaceArray *nsa,
+                                          AnfEnv *env) {
+    for (Index i = 0; i < nsa->size; ++i) {
         HashSymbol *nsName = makeNsName(i);
         populateAnfEnv(env, nsName);
     }
-    for (Index i = 0; i < x->size; ++i) {
-        AnfEnv *env2 = newAnfEnv(CPI(x->entries[i]->body), true, env);
+    AnfEnvArray *nsEnvs = getNsEnvs(env);
+    for (Index i = 0; i < nsa->size; ++i) {
+        AnfEnv *env2 = newAnfEnv(CPI(nsa->entries[i]->body), true, env);
         int save = PROTECT(env2);
         env2->isNameSpace = true;
-        AnfEnv *env3 = annotateExp(x->entries[i]->body, env2);
+        AnfEnv *env3 = annotateExp(nsa->entries[i]->body, env2);
         PROTECT(env3);
-        x->entries[i]->nBindings = env2->nBindings;
+        nsa->entries[i]->nBindings = env2->nBindings;
         pushAnfEnvArray(nsEnvs, env3);
         UNPROTECT(save);
     }
@@ -456,6 +459,7 @@ static AnfEnv *annotateCexp(Cexp *x, AnfEnv *env) {
 static AnfEnv *annotateExpEnv(AnfEnv *env) {
     int nBindings = 0;
     AnfEnv *orig = env;
+    orig->isCapturing = true;
     while (env != NULL) {
         nBindings += countIntMap(env->table);
         if (env->isNameSpace) {

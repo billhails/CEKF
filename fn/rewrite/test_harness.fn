@@ -20,4 +20,4 @@ in
             puts(tab);
             E.print_expr(CC.flat_closure_convert(cexpr));
             puts("\n\n")
-    }, Samples.data);
+    }, Samples.data());

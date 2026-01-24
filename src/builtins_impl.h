@@ -53,6 +53,7 @@ Value builtin_issymbol(Vec *args);
 Value builtin_isupper(Vec *args);
 Value builtin_isvalid(Vec *args);
 Value builtin_isxdigit(Vec *args);
+Value builtin_getdec(Vec *args);
 void builtin_exit(Vec *args);
 
 extern int builtin_args_argc;
