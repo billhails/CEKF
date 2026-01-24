@@ -53,9 +53,6 @@ typedef enum {
     OBJTYPE_BIGINT,
     OBJTYPE_MAYBEBIGINT,
 
-    // file id type used to track linked nameSpaces
-    OBJTYPE_AGNOSTICFILEID,
-
     // various generated object types
     ANF_OBJTYPES(),
     AST_OBJTYPES(),

@@ -5,14 +5,8 @@ More of a wish-list than a hard and fast plan.
 * Target LLVM
 * `syntax` construct that allows large-scale syntactic structures to be defined by the user.
 * Clean Up.
-  * Migrate bespoke structs like Opaque and AgnosticFileId to code generation. They can live in `utils.yaml`.
-  * Hunt down all occurences of malloc/free outside of the standard memory management and replace with memory-managed alternatives.
   * Generate
     * Move all signatures into `signature_helper.py`, not just the shared ones.
-    * Rename `compare` methods to `eq` methods and ensure they are all `bool` signatures with `eq*` generated function names.
-    * Add equivalent `cmp` generators that output `Cmp cmp*` functions.
-    * Simplify all the `eq` functions to call the `cmp` functions.
-    * Move the `eq` and `cmp` generated functions out of the `*_debug.[ch]` files.
 * More numbers:
   * NaN for division by Zero etc.
   * Matrices.

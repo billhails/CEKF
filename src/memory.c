@@ -96,8 +96,6 @@ __attribute__((unused)) static const char *typeName(ObjType type) {
         return "protection";
     case OBJTYPE_BIGINT:
         return "bigint";
-    case OBJTYPE_AGNOSTICFILEID:
-        return "file_id";
     case OBJTYPE_MAYBEBIGINT:
         return "maybebigint";
         ANF_OBJTYPE_CASES()
