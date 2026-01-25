@@ -1,7 +1,7 @@
 # Namespace Let-to-Lambda Bytecode Control Flow Issue
 
 This document captures the investigation into why desugared `let`/`let*` in namespaces
-causes early program exit, even after fixing the annotation issue in `import-data.md`.
+causes early program exit after fixing the annotation issue in `import-data.md`.
 
 ## Problem Statement
 
@@ -294,7 +294,7 @@ In `writeCexpApply`, detect when the function is an immediate lambda (not a vari
 and emit `LET`-style bytecode instead:
 
 ```c
-if (x->function->type == AEXP_TYPE_LAM && /* single arg */) {
+if (x->function->type == AEXP_TYPE_LAM && x->nArgs == 1) {
     // Emit LET-style code instead of APPLY
     addByte(b, BYTECODES_TYPE_LET);
     Control patch = reserveWord(b);
@@ -402,10 +402,52 @@ exists).
 
 ## Recommendation
 
-Option 2 is attractive because:
+~~Option 2 is attractive because:~~
 
-1. It's a localized fix in `writeCexpApply` - no changes to earlier passes
-2. It naturally handles arbitrary nesting depth
-3. It's semantically correct - immediate lambda applications ARE let bindings
-4. It doesn't require re-introducing `Let` as a separate ANF construct
-5. TCO is preserved - the continuation stack is restored before the body executes
+1. ~~It's a localized fix in `writeCexpApply` - no changes to earlier passes~~
+2. ~~It naturally handles arbitrary nesting depth~~
+3. ~~It's semantically correct - immediate lambda applications ARE let bindings~~
+4. ~~It doesn't require re-introducing `Let` as a separate ANF construct~~
+5. ~~TCO is preserved - the continuation stack is restored before the body executes~~
+
+### Option 2 Implementation Attempt (Failed)
+
+Option 2 was attempted but failed. The bytecode-only fix breaks the correspondence
+between what annotation calculates and what bytecode produces:
+
+- **Annotation phase** calculates `nBindings` by counting bindings in the environment
+  chain, which includes the lambda's parameter (e.g., `data$0`)
+- **Bytecode phase** (with the fix) skips the lambda entirely, just pushing the value
+
+The `NS_END` instruction uses `nBindings` to calculate where to poke the namespace
+value on the stack, and `NS_PUSHSTACK` uses offsets calculated during annotation.
+These no longer match the actual stack layout when bytecode skips the lambda.
+
+Fixing this would require coordinating changes across both annotation and bytecode
+generation, significantly increasing complexity.
+
+### Option 5: Disallow non-lambda bindings in namespaces
+
+The simplest solution is to disallow plain data bindings in namespaces entirely.
+Namespaces would only allow:
+
+- Function definitions (`fn name(...) { ... }`)
+- Type definitions (`typedef ...`)
+- Operator definitions (`operator ...`)
+- Links to other namespaces (`link "..." as ...`)
+
+**Rationale:**
+
+1. Namespaces are primarily for organizing code - functions, types, operators
+2. Data can still be exposed via nullary functions: `fn data() { 1 }` instead of `data = 1`
+3. It's a clean semantic restriction at the source level rather than a compiler hack
+4. Keeps the implementation simpler and behavior predictable
+5. The `letrec` structure is preserved, which works correctly with namespace bytecode
+
+**Implementation:** Check in `lambda_conversion.c` during `lamConvert` - if processing
+a namespace and `varDefsList` is non-NULL after `separateLambdas`, emit an error.
+
+## Current Status
+
+Option 5 is the recommended approach. The restriction is reasonable and avoids
+the complexity of coordinating changes across multiple compiler phases.

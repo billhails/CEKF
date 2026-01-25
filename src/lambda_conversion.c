@@ -64,7 +64,7 @@ static LamTypeConstructorArgs *
 convertAstTypeConstructorArgs(AstTypeConstructorArgs *, LamContext *);
 static LamExp *convertNest(AstNest *, LamContext *);
 static LamExp *lamConvert(AstDefinitions *, AstNameSpaceArray *,
-                          AstExpressions *, LamContext *);
+                          AstExpressions *, LamContext *, bool isNameSpaceBody);
 static LamExp *convertSymbol(ParserInfo, HashSymbol *, LamContext *);
 static LamExp *convertAnnotatedSymbol(AstAnnotatedSymbol *, LamContext *);
 
@@ -185,8 +185,8 @@ LamExp *lamConvertProg(AstProg *prog) {
         prog->_yy_parser_info.fileName, CPI(prog), prog->preamble);
     PROTECT(preambleWithCurrentFile);
 
-    LamExp *result =
-        lamConvert(preambleWithCurrentFile, prog->nameSpaces, prog->body, env);
+    LamExp *result = lamConvert(preambleWithCurrentFile, prog->nameSpaces,
+                                prog->body, env, false);
     UNPROTECT(save);
     LEAVE(lamConvertProg);
     return result;
@@ -204,7 +204,7 @@ static LamExp *convertNest(AstNest *nest, LamContext *env) {
     env = newLamContext(CPI(nest), env);
     int save = PROTECT(env);
     LamExp *result =
-        lamConvert(nest->definitions, NULL, nest->expressions, env);
+        lamConvert(nest->definitions, NULL, nest->expressions, env, false);
     PROTECT(result);
     UNPROTECT(save);
     LEAVE(convertNest);
@@ -276,7 +276,7 @@ static void convertNameSpace(AstNameSpaceArray *nsArray, Index i,
     AstExpressions *body = newAstExpressions(CPI(nameSpace), envToken, NULL);
     PROTECT(body);
     LamExp *lamNameSpace =
-        lamConvert(nameSpace->definitions, NULL, body, nsEnv);
+        lamConvert(nameSpace->definitions, NULL, body, nsEnv, true);
     PROTECT(lamNameSpace);
     pushLamNameSpaceArray(nameSpaces, lamNameSpace);
     addNameSpaceInfoToLamContext(env, nsEnv, i);
@@ -341,7 +341,8 @@ hoistFunctionDefinitions(LamBindings *funcDefs) {
  */
 static LamExp *lamConvert(AstDefinitions *definitions,
                           AstNameSpaceArray *nsArray,
-                          AstExpressions *expressions, LamContext *env) {
+                          AstExpressions *expressions, LamContext *env,
+                          bool isNameSpaceBody) {
     ENTER(lamConvert);
 
     // record aliases in env
@@ -364,6 +365,18 @@ static LamExp *lamConvert(AstDefinitions *definitions,
     separateLambdas(defsList, &funcDefsList, &varDefsList); // PROTECTS them
     // defsList = hoistFunctionDefinitions(defsList);
     // PROTECT(defsList);
+
+    // namespaces can only contain function definitions, not variable bindings
+    // (because bytecode for non-lambda letrec entries skips NS_END)
+    if (varDefsList != NULL && isNameSpaceBody) {
+        for (LamBindings *b = varDefsList; b != NULL; b = b->next) {
+            conversionError(
+                CPI(b),
+                "namespaces cannot contain non-function bindings: '%s' "
+                "(you can wrap data in functions that return it)",
+                b->var->name);
+        }
+    }
 
     // prepend print functions:
     // [printers] [funcs]
