@@ -1,4 +1,4 @@
 let
     link "import_data.fn" as Data;
 in
-    Data.data;
+    print Data.data;
