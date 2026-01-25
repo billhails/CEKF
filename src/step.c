@@ -89,9 +89,8 @@ static unsigned long apply_staged_steps =
     0; // number of staged extra arg applications
 
 // Centralized arity error reporting for APPLY paths
-static inline void arity_error(const char *kind, int expected, int got)
-    __attribute__((unused));
-static inline void arity_error(const char *kind, int expected, int got) {
+__attribute__((unused)) static inline void arity_error(const char *kind,
+                                                       int expected, int got) {
 #ifdef SAFETY_CHECKS
     cant_happen("arity error (%s): expected %d, got %d at %04lx", kind,
                 expected, got, state.C);
@@ -923,7 +922,8 @@ static void step() {
             Value v = pop();
             int save = protectValue(v);
             for (int C = 0; C < size; C++) {
-                switch (readCurrentByte()) {
+                enum ByteCodes type = readCurrentByte();
+                switch (type) {
                 case BYTECODES_TYPE_BIGINT: {
                     BigInt *bigInt = readCurrentBigInt();
                     PROTECT(bigInt);
@@ -954,7 +954,8 @@ static void step() {
                     }
                 } break;
                 default:
-                    cant_happen("expected int or bigint in INTCOND cases");
+                    cant_happen("unexpected %s in INTCOND cases",
+                                byteCodesName(type));
                 }
             }
         FINISHED_INTCOND:
@@ -999,7 +1000,8 @@ static void step() {
                 }
                 break;
             default:
-                cant_happen("unexpected type %d for CHARCOND value", v.type);
+                cant_happen("unexpected type %s for CHARCOND value",
+                            valueTypeName(v.type));
             }
         } break;
 
@@ -1013,7 +1015,8 @@ static void step() {
                 if (v.type == VALUE_TYPE_CLO) {
                     patchClo(v.val.clo, state.S);
                 } else {
-                    cant_happen("non-lambda value (%d) for letrec", v.type);
+                    cant_happen("non-lambda value (%s) for letrec",
+                                valueTypeName(v.type));
                 }
             }
         } break;
@@ -1191,7 +1194,8 @@ static void step() {
                 Value ns = peek(-i);
 #ifdef SAFETY_CHECKS
                 if (ns.type != VALUE_TYPE_NAMESPACE) {
-                    cant_happen("expected nameSpace, got %d", ns.type);
+                    cant_happen("expected VALUE_TYPE_NAMESPACE, got %s",
+                                valueTypeName(ns.type));
                 }
 #endif
                 patch(ns, num);
@@ -1204,7 +1208,8 @@ static void step() {
             Value v = peek(offset);
 #ifdef SAFETY_CHECKS
             if (v.type != VALUE_TYPE_NAMESPACE) {
-                cant_happen("expected nameSpace, got type %d", v.type);
+                cant_happen("expected VALUE_TYPE_NAMESPACE, got %s",
+                            valueTypeName(v.type));
             }
 #endif
             // new empty stack frame
@@ -1220,7 +1225,8 @@ static void step() {
             Value v = lookUp(frame, offset);
 #ifdef SAFETY_CHECKS
             if (v.type != VALUE_TYPE_NAMESPACE) {
-                cant_happen("expected nameSpace, got type %d", v.type);
+                cant_happen("expected VALUE_TYPE_NAMESPACE, got %s",
+                            valueTypeName(v.type));
             }
 #endif
             // new empty stack frame
@@ -1252,7 +1258,8 @@ static void step() {
         } break;
 
         default:
-            cant_happen("unrecognised bytecode %d in step()", bytecode);
+            cant_happen("unrecognised bytecode %s in step()",
+                        byteCodesName(bytecode));
         }
         // Resume staged over-application if active and a callable result is on
         // stack
