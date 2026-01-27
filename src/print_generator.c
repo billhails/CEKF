@@ -236,9 +236,7 @@ static LamExp *putsExp(ParserInfo I, LamExp *string) {
     int save = PROTECT(puts);
     LamArgs *args = newLamArgs(I, string, NULL);
     PROTECT(args);
-    LamApply *apply = newLamApply(I, puts, args);
-    PROTECT(apply);
-    LamExp *res = newLamExp_Apply(I, apply);
+    LamExp *res = makeLamExp_Apply(I, puts, args);
     UNPROTECT(save);
     return res;
 }
@@ -437,9 +435,7 @@ static LamExp *makePrintTypeFunction(ParserInfo I, LamTypeFunction *function) {
         UNPROTECT(save);
         return exp;
     }
-    LamApply *apply = newLamApply(I, exp, args);
-    PROTECT(apply);
-    LamExp *res = newLamExp_Apply(I, apply);
+    LamExp *res = makeLamExp_Apply(I, exp, args);
     UNPROTECT(save);
     return res;
 }
@@ -450,23 +446,17 @@ static LamExp *makePrintTypeFunction(ParserInfo I, LamTypeFunction *function) {
  */
 static LamExp *makePrintTuple(ParserInfo I, LamTypeConstructorArgs *tuple) {
     int size = countLamTypeConstructorArgs(tuple);
-    HashSymbol *name = NULL;
-    if (size <= 4) {
-        char buf[64];
-        sprintf(buf, "%d", size);
-        name = makePrintName("print$tuple_", buf);
-    } else {
-        name = newSymbol("print$");
-        LamExp *exp = newLamExp_Var(I, name);
-        return exp;
+    if (size > 4) {
+        return newLamExp_Var(I, newSymbol("print$"));
     }
+    char buf[64];
+    sprintf(buf, "%d", size);
+    HashSymbol *name = makePrintName("print$tuple_", buf);
     LamExp *exp = newLamExp_Var(I, name);
     int save = PROTECT(exp);
     LamArgs *args = makeAargs(I, tuple);
     PROTECT(args);
-    LamApply *apply = newLamApply(I, exp, args);
-    PROTECT(apply);
-    LamExp *res = newLamExp_Apply(I, apply);
+    LamExp *res = makeLamExp_Apply(I, exp, args);
     UNPROTECT(save);
     return res;
 }
@@ -532,9 +522,7 @@ static LamExp *makeIndexedApplication(ParserInfo I,
     PROTECT(printer);
     LamArgs *args = newLamArgs(I, accessor, NULL);
     PROTECT(args);
-    LamApply *apply = newLamApply(I, printer, args);
-    PROTECT(apply);
-    LamExp *res = newLamExp_Apply(I, apply);
+    LamExp *res = makeLamExp_Apply(I, printer, args);
     UNPROTECT(save);
     return res;
 }

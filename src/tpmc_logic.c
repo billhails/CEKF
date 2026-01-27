@@ -248,9 +248,7 @@ static TpmcMatchRule *convertSingle(AstFargList *argList, LamExp *body,
                                     LamContext *env) {
     TpmcPatternArray *patterns = convertArgList(argList, env);
     int save = PROTECT(patterns);
-    TpmcFinalState *finalState = newTpmcFinalState(body);
-    PROTECT(finalState);
-    TpmcStateValue *stateVal = newTpmcStateValue_Final(finalState);
+    TpmcStateValue *stateVal = makeTpmcStateValue_Final(body);
     PROTECT(stateVal);
     TpmcState *state = tpmcMakeState(stateVal);
     PROTECT(state);
@@ -392,10 +390,8 @@ static TpmcPattern *replaceVarPattern(TpmcPattern *pattern,
             can_happen("cannot compare assignment (var %s)",
                        pattern->pattern->val.var->name);
         }
-        TpmcComparisonPattern *comp = newTpmcComparisonPattern(other, pattern);
-        int save = PROTECT(comp);
-        TpmcPatternValue *val = newTpmcPatternValue_Comparison(comp);
-        PROTECT(val);
+        TpmcPatternValue *val = makeTpmcPatternValue_Comparison(other, pattern);
+        int save = PROTECT(val);
         TpmcPattern *result = newTpmcPattern(val);
         UNPROTECT(save);
         return result;

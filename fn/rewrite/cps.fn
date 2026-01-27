@@ -202,7 +202,7 @@ namespace
                 (E.callcc_expr(e)) {
                     T_k(e, fn (sf) {
                         E.apply(
-                            E.parse("(lambda (f cc) (f (lambda (x i) (cc x)) cc))"),
+                            E.parse("(λ (f cc) (f (λ (x i) (cc x)) cc))"),
                             [sf, c]
                         )
                     })

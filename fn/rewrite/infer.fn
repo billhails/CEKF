@@ -149,7 +149,7 @@ let
     fn funType(dom, cod) { operType("->", [dom, cod]) }
 
     fn analyzeExp {
-        (ExpClass(ide), envt, ng) { retrieve(ide, envt, ng) }
+        (ideClass(ide), envt, ng) { retrieve(ide, envt, ng) }
         (condClass(test, cons, alt), envt, ng) {
             unifyType(test, boolType) and
             unifyType(analyzeExp(cons, envt, ng), analyzeExp(alt, envt, ng))

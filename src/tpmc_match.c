@@ -119,9 +119,7 @@ static int findFirstConstructorColumn(TpmcMatrix *matrix) {
 static TpmcState *makeEmptyTestState(HashSymbol *path) {
     TpmcArcArray *arcs = newTpmcArcArray();
     int save = PROTECT(arcs);
-    TpmcTestState *test = newTpmcTestState(path, arcs);
-    PROTECT(test);
-    TpmcStateValue *val = newTpmcStateValue_Test(test);
+    TpmcStateValue *val = makeTpmcStateValue_Test(path, arcs);
     PROTECT(val);
     TpmcState *testState = tpmcMakeState(val);
     UNPROTECT(save);

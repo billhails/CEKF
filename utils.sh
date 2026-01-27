@@ -103,3 +103,5 @@ new_visitor () {
     new_h "$1_$2" &&
     python3 tools/generate.py --target "$2" src/$1.yaml visitor > $cfile
 }
+
+export PATH=./bin:$PATH

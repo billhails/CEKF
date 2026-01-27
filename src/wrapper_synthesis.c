@@ -1,20 +1,19 @@
 #include "wrapper_synthesis.h"
-#include "memory.h"
-#include "symbol.h"
 #include "ast.h"
+#include "memory.h"
 #include "parser_info.h"
+#include "symbol.h"
 #include <stdio.h>
 
 AstDefinitions *generatedBuiltins = NULL;
-void markGeneratedBuiltins(void) {
-    markAstDefinitions(generatedBuiltins);
-}
+void markGeneratedBuiltins(void) { markAstDefinitions(generatedBuiltins); }
 
 /*
  * Build a formal argument list (AstFargList) and parallel actual argument list
  * (AstExpressions) for n arguments named a$0 .. a$(n-1).
  */
-static void makeArgLists(ParserInfo PI, int n, AstFargList **formalOut, AstExpressions **actualOut) {
+static void makeArgLists(ParserInfo PI, int n, AstFargList **formalOut,
+                         AstExpressions **actualOut) {
     AstFargList *formals = NULL;
     AstExpressions *actuals = NULL;
     int saveFormals = PROTECT(NULL);
@@ -42,18 +41,18 @@ static void makeArgLists(ParserInfo PI, int n, AstFargList **formalOut, AstExpre
  * Create wrapper definition AST for one builtin.
  */
 static AstDefinition *makeWrapper(ParserInfo PI, BuiltIn *builtin) {
-    int arity = (int) builtin->args->size;
+    int arity = (int)builtin->args->size;
     AstFargList *formals = NULL;
     AstExpressions *actuals = NULL;
     makeArgLists(PI, arity, &formals, &actuals);
     // reference internal symbol
     int save = PROTECT(formals);
     PROTECT(actuals);
-    AstExpression *internalSym = newAstExpression_Symbol(PI, builtin->internalName);
+    AstExpression *internalSym =
+        newAstExpression_Symbol(PI, builtin->internalName);
     PROTECT(internalSym);
-    AstFunCall *call = newAstFunCall(PI, internalSym, actuals);
-    PROTECT(call);
-    AstExpression *bodyExpr = newAstExpression_FunCall(PI, call);
+    AstExpression *bodyExpr =
+        makeAstExpression_FunCall(PI, internalSym, actuals);
     PROTECT(bodyExpr);
     AstExpressions *bodyExprs = newAstExpressions(PI, bodyExpr, NULL);
     PROTECT(bodyExprs);
@@ -61,19 +60,17 @@ static AstDefinition *makeWrapper(ParserInfo PI, BuiltIn *builtin) {
     PROTECT(nest);
     AstFunction *func = newAstFunction(PI, formals, nest);
     PROTECT(func);
-    AstCompositeFunction *comp = newAstCompositeFunction(PI, func, NULL);
-    PROTECT(comp);
-    AstExpression *funExpr = newAstExpression_Fun(PI, comp);
+    AstExpression *funExpr = makeAstExpression_Fun(PI, func, NULL);
     PROTECT(funExpr);
-    AstDefine *define = newAstDefine(PI, builtin->externalName, funExpr);
-    PROTECT(define);
-    AstDefinition *def = newAstDefinition_Define(PI, define);
+    AstDefinition *def =
+        makeAstDefinition_Define(PI, builtin->externalName, funExpr);
     UNPROTECT(save);
     return def;
 }
 
 void generateBuiltinWrappers(BuiltIns *builtIns) {
-    if (builtIns == NULL) return;
+    if (builtIns == NULL)
+        return;
 #ifdef SAFETY_CHECKS
     if (generatedBuiltins != NULL)
         cant_happen("generateBuiltinWrappers called twice");
@@ -84,12 +81,14 @@ void generateBuiltinWrappers(BuiltIns *builtIns) {
     PI.fileName = "<builtin-wrapper>";
     PI.lineNo = 0;
     // Prepend wrappers so external names are resolved during type checking of
-    // preamble functions/macros that reference them (e.g. assertion, puts, etc.)
+    // preamble functions/macros that reference them (e.g. assertion, puts,
+    // etc.)
     for (Index i = 0; i < builtIns->size; i++) {
         BuiltIn *bi = builtIns->entries[i];
         AstDefinition *wrapper = makeWrapper(PI, bi);
         int save = PROTECT(wrapper);
-        generatedBuiltins = newAstDefinitions(CPI(wrapper), wrapper, generatedBuiltins);
+        generatedBuiltins =
+            newAstDefinitions(CPI(wrapper), wrapper, generatedBuiltins);
         UNPROTECT(save);
     }
 }

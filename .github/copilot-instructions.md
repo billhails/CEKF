@@ -2,34 +2,34 @@
 
 ## Project Overview
 
-CEKF is a **bytecode-based functional programming language VM** implementing a CEK machine (Control, Environment, Kontinuation) plus "F" for failure continuation supporting `amb` non-deterministic programming. Written in C with Python code generation tools.
-
-**Core Innovation**: Backtracking via failure continuations. The `amb` operator (spelled `then` in the language) creates decision points; `back` backtracks to try alternatives. See `fn/barrels.fn` for a canonical example.
+CEKF, a.k.a.  F♮ is a **bytecode-based functional programming language VM** Written in C with Python code generation tools.
 
 ## Architecture Pipeline
 
 Source flows through these stages (see README.md flowchart):
 
-1. **Scanner** (`src/pratt_scanner.c`) (text → [`PrattToken`](../src/pratt.yaml)) — *see [docs/agent/pratt-parser.md](../docs/agent/pratt-parser.md)*
-2. **Pratt Parser** (`src/pratt_parser.c`) → AST  (`PrattToken*` → [`AstNode*`](../src/ast.yaml)) — *see [docs/agent/pratt-parser.md](../docs/agent/pratt-parser.md)*
+1. **Scanner** (`src/pratt_scanner.c`) (text → [`PrattToken`](../src/pratt.yaml)) — *see [pratt-parser.md](../docs/agent/pratt-parser.md)*
+2. **Pratt Parser** (`src/pratt_parser.c`) → AST  (`PrattToken*` → [`AstNode*`](../src/ast.yaml)) — *see [pratt-parser.md](../docs/agent/pratt-parser.md)*
 3. **Lambda Conversion** (`src/lambda_conversion.c`) → Plain Lambda Form  (`AstNode*` → [`LamExp*`](../src/lambda.yaml))
-   - Includes **TPMC** (Term Pattern Matching Compiler, `src/tpmc_*.c`) — *see [docs/agent/tpmc.md](../docs/agent/tpmc.md)*
+   - Includes **TPMC** (Term Pattern Matching Compiler, `src/tpmc_*.c`) — *see [tpmc.md](../docs/agent/tpmc.md)*
    - **Macro Expansion** (`src/macro_substitution.c`)
    - **Print Generator** (`src/print_generator.c`)
 4. **Type Checking** (`src/tc_analyze.c`) - Hindley-Milner Algorithm W using Prolog-style logical variables  (`LamExp*` → [`TcType*`](../src/tc.yaml))
 5. **Constructor Inlining** (`src/inline.c`) (`LamExp*` → `LamExp*`)
 6. **Desugaring** (`src/lambda_desugar.c`) - Simplifies syntactic sugar (`LamExp*` → [`MinExp*`](../src/minlam.yaml))
 7. **Alpha Conversion** (`src/lambda_alphaconvert.c`) - Renames variables to avoid capture (`MinExp*` → `MinExp*`)
-8. **ANF Conversion** (`src/anf_normalize.c`) → A-Normal Form (`MinExp*` → [`AnfExp*`](../src/anf.yaml)) — *see [docs/agent/anf.md](../docs/agent/anf.md)*
+8. **ANF Conversion** (`src/anf_normalize.c`) → A-Normal Form (`MinExp*` → [`AnfExp*`](../src/anf.yaml)) — *see [anf.md](../docs/agent/anf.md)*
 9. **Lexical Analysis** (`src/annotate.c`) - De Bruijn indexing for fast variable lookup (`AnfExp*` → `AnfExp*`)
 10. **Bytecode Compiler** (`src/bytecode.c`) → Bytecode (`AnfExp*` → [`ByteCodeArray`](../src/cekfs.yaml))
 11. **CEKF Runtime** (`src/step.c`) - The virtual machine
 
 ## Build System
 
+The system uses GNU make, and targets CLang or GCC.
+
 ### Code Generation
 
-The build depends heavily on Python code generation (`tools/generate.py`). Do not manually edit files in `generated/`. See [docs/agent/code-generation.md](../docs/agent/code-generation.md) for details.
+The build depends heavily on code generation. Do not manually edit files in `generated/`. See [code-generation.md](../docs/agent/code-generation.md) for details.
 
 ### Build Modes
 
@@ -37,15 +37,14 @@ The build depends heavily on Python code generation (`tools/generate.py`). Do no
 
 ```bash
 make                    # default MODE=debug: -g, enables `--stress-gc` flag which forces GC on every malloc
-make MODE=testing       # -g without aggressive GC
-make MODE=unit          # enables UNIT_TESTS
+make MODE=testing       # -g without aggressive GC option
 make MODE=production    # -O2, all safety checks disabled
 ```
 
 ### Key Make Targets
 
 ```bash
-make test              # Runs C unit tests + all tests/fn/test_*.fn files
+make test              # Builds then runs C unit tests + all tests/fn/test_*.fn files
 make profile           # Builds then runs callgrind profiling
 make leak-check        # Runs valgrind memory leak detection
 make docs              # Generates Mermaid diagrams from YAML schemas
@@ -59,7 +58,7 @@ make docs              # Generates Mermaid diagrams from YAML schemas
 - `PROTECT(obj)` pushes `obj` onto protection stack and returns the previous stack pointer
 - `UNPROTECT(save)` restores the stack pointer to `save` (previous result of `PROTECT()`)
 - Pattern: `int save = PROTECT(obj); /* allocating code */ UNPROTECT(save);`
-- **Never use literal numbers with UNPROTECT** - only values returned by `PROTECT()`
+- Never use literal numbers with UNPROTECT - only values returned by `PROTECT()`
 
 ### HashSymbol objects must never be PROTECT'ed
 
@@ -88,7 +87,6 @@ make docs              # Generates Mermaid diagrams from YAML schemas
 ### Pointer comparisons
 
 - Always use explicit NULL comparisons: `if (ptr != NULL)` or `if (ptr == NULL)`
-- Never test pointer "truthiness": Don't use `if (ptr)` or `if (!ptr)`
 
 ### Naming Conventions
 
@@ -117,8 +115,10 @@ make docs              # Generates Mermaid diagrams from YAML schemas
 
 ### Command-line flags
 
-`--dump-ast`, `--dump-lambda`, `--dump-anf`, `--dump-bytecode` etc.
-`--help` shows all.
+- `--dump-ast`, `--dump-lambda`, `--dump-anf`, `--dump-bytecode` etc.
+- `--exec="<snippet>"` to run code snippet directly
+- `--stress-gc` forces GC on every allocation
+- `--help` shows all.
 
 ## Common Patterns
 
@@ -156,7 +156,7 @@ make docs              # Generates Mermaid diagrams from YAML schemas
 
 ## Testing
 
-- **C Unit Tests**: `tests/src/*.c` (enabled with `MODE=unit`)
+- **C Unit Tests**: `tests/src/*.c` - alternative `main()` functions.
 - **Language Tests**: `tests/fn/test_*.fn` run with `--assertions-accumulate`
 - Tests automatically run via `make test`
 
@@ -164,11 +164,11 @@ make docs              # Generates Mermaid diagrams from YAML schemas
 
 For detailed information on specific compiler stages, see:
 
-- [docs/agent/code-generation.md](docs/agent/code-generation.md) - YAML schemas and generated code
-- [docs/agent/pratt-parser.md](docs/agent/pratt-parser.md) - Parser, operators, syntactic extension
-- [docs/agent/tpmc.md](docs/agent/tpmc.md) - Pattern matching compilation
-- [docs/agent/anf.md](docs/agent/anf.md) - A-Normal Form conversion
-- [docs/agent/language-syntax.md](docs/agent/language-syntax.md) - F♮ language reference
+- [code-generation.md](../docs/agent/code-generation.md) - YAML schemas and generated code
+- [pratt-parser.md](../docs/agent/pratt-parser.md) - Parser, operators, syntactic extension
+- [tpmc.md](../docs/agent/tpmc.md) - Pattern matching compilation
+- [anf.md](../docs/agent/anf.md) - A-Normal Form conversion
+- [language-syntax.md](../docs/agent/language-syntax.md) - F♮ language reference
 
 ## When Reading Code
 

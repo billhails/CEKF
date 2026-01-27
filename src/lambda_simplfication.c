@@ -1,33 +1,33 @@
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2024  Bill Hails
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include <stdio.h>
-#include <stdlib.h>
 #include "common.h"
+#include "lambda_debug.h"
+#include "lambda_pp.h"
 #include "lambda_simplification.h"
 #include "symbol.h"
-#include "lambda_pp.h"
-#include "lambda_debug.h"
+#include <stdio.h>
+#include <stdlib.h>
 
 #ifdef DEBUG_LAMBDA_SIMPLIFICATION
-#  include "debugging_on.h"
+#include "debugging_on.h"
 #else
-#  include "debugging_off.h"
+#include "debugging_off.h"
 #endif
 
 static LamExp *performLamSimplifications(LamLam *lam) {
@@ -51,9 +51,7 @@ static LamExp *performLamSimplifications(LamLam *lam) {
     return newLamExp_Lam(CPI(lam), lam);
 }
 
-static HashSymbol *performVarSimplifications(HashSymbol *var) {
-    return var;
-}
+static HashSymbol *performVarSimplifications(HashSymbol *var) { return var; }
 
 static LamPrimApp *performPrimSimplifications(LamPrimApp *prim) {
     ENTER(performPrimSimplifications);
@@ -69,8 +67,7 @@ static LamSequence *_performSequenceSimplifications(LamSequence *sequence) {
         LEAVE(_performSequenceSimplifications);
         return NULL;
     }
-    sequence->next =
-        _performSequenceSimplifications(sequence->next);
+    sequence->next = _performSequenceSimplifications(sequence->next);
     sequence->exp = lamPerformSimplifications(sequence->exp);
     LEAVE(_performSequenceSimplifications);
     return sequence;
@@ -78,7 +75,8 @@ static LamSequence *_performSequenceSimplifications(LamSequence *sequence) {
 
 #define SIMPLIFY_SINGLE_SEQUENCE
 
-static LamExp *performSequenceSimplifications(ParserInfo I, LamSequence *sequence) {
+static LamExp *performSequenceSimplifications(ParserInfo I,
+                                              LamSequence *sequence) {
     sequence = _performSequenceSimplifications(sequence);
 #ifdef SIMPLIFY_SINGLE_SEQUENCE
     if (countLamSequence(sequence) == 1) {
@@ -103,7 +101,8 @@ static LamArgs *performArgsSimplifications(LamArgs *list) {
     return list;
 }
 
-static LamTupleIndex *performTupleIndexSimplifications(LamTupleIndex *tupleIndex) {
+static LamTupleIndex *
+performTupleIndexSimplifications(LamTupleIndex *tupleIndex) {
     tupleIndex->exp = lamPerformSimplifications(tupleIndex->exp);
     return tupleIndex;
 }
@@ -134,7 +133,8 @@ static LamMakeVec *performMakeVecSimplifications(LamMakeVec *makeVec) {
     return makeVec;
 }
 
-static LamDeconstruct *performDeconstructSimplifications(LamDeconstruct *deconstruct) {
+static LamDeconstruct *
+performDeconstructSimplifications(LamDeconstruct *deconstruct) {
     ENTER(performDeconstructSimplifications);
     deconstruct->exp = lamPerformSimplifications(deconstruct->exp);
     LEAVE(performDeconstructSimplifications);
@@ -148,7 +148,8 @@ static LamConstruct *performConstructSimplifications(LamConstruct *construct) {
     return construct;
 }
 
-static LamBindings *makeLetBindings(ParserInfo I, LamArgs *aargs, LamVarList *fargs) {
+static LamBindings *makeLetBindings(ParserInfo I, LamArgs *aargs,
+                                    LamVarList *fargs) {
     ENTER(makeLetBindings);
     if (aargs == NULL || fargs == NULL) {
         LEAVE(makeLetBindings);
@@ -174,9 +175,7 @@ static LamExp *performApplySimplifications(LamApply *apply) {
         if (countLamArgs(aargs) == countLamVarList(fargs)) {
             LamBindings *bindings = makeLetBindings(CPI(apply), aargs, fargs);
             int save = PROTECT(bindings);
-            LamLet *let = newLamLet(CPI(apply), bindings, lam->exp);
-            PROTECT(let);
-            LamExp *exp = newLamExp_Let(CPI(apply), let);
+            LamExp *exp = makeLamExp_Let(CPI(apply), bindings, lam->exp);
             UNPROTECT(save);
             LEAVE(performApplySimplifications);
             return exp;
@@ -278,7 +277,8 @@ static LamAmb *performAmbSimplifications(LamAmb *amb) {
     return amb;
 }
 
-static LamIntCondCases *performIntCondCaseSimplifications(LamIntCondCases *cases) {
+static LamIntCondCases *
+performIntCondCaseSimplifications(LamIntCondCases *cases) {
     ENTER(performIntCondCaseSimplifications);
     if (cases == NULL) {
         LEAVE(performIntCondCaseSimplifications);
@@ -290,7 +290,8 @@ static LamIntCondCases *performIntCondCaseSimplifications(LamIntCondCases *cases
     return cases;
 }
 
-static LamCharCondCases *performCharCondCaseSimplifications(LamCharCondCases *cases) {
+static LamCharCondCases *
+performCharCondCaseSimplifications(LamCharCondCases *cases) {
     ENTER(performCharCondCaseSimplifications);
     if (cases == NULL) {
         LEAVE(performCharCondCaseSimplifications);
@@ -309,14 +310,17 @@ static LamCondCases *performCondCaseSimplifications(LamCondCases *cases) {
         return NULL;
     }
     switch (cases->type) {
-        case LAMCONDCASES_TYPE_INTEGERS:
-            setLamCondCases_Integers(cases, performIntCondCaseSimplifications(getLamCondCases_Integers(cases)));
-            break;
-        case LAMCONDCASES_TYPE_CHARACTERS:
-            setLamCondCases_Characters(cases, performCharCondCaseSimplifications(getLamCondCases_Characters(cases)));
-            break;
-        default:
-            cant_happen("unrecognised %s", lamCondCasesTypeName(cases->type));
+    case LAMCONDCASES_TYPE_INTEGERS:
+        setLamCondCases_Integers(cases, performIntCondCaseSimplifications(
+                                            getLamCondCases_Integers(cases)));
+        break;
+    case LAMCONDCASES_TYPE_CHARACTERS:
+        setLamCondCases_Characters(cases,
+                                   performCharCondCaseSimplifications(
+                                       getLamCondCases_Characters(cases)));
+        break;
+    default:
+        cant_happen("unrecognised %s", lamCondCasesTypeName(cases->type));
     }
     LEAVE(performCondCaseSimplifications);
     return cases;
@@ -330,9 +334,11 @@ static LamCond *performCondSimplifications(LamCond *cond) {
     return cond;
 }
 
-static LamNameSpaceArray *performNameSpacesSimplifications(LamNameSpaceArray *nameSpaces) {
+static LamNameSpaceArray *
+performNameSpacesSimplifications(LamNameSpaceArray *nameSpaces) {
     for (Index i = 0; i < nameSpaces->size; i++) {
-        nameSpaces->entries[i] = lamPerformSimplifications(nameSpaces->entries[i]);
+        nameSpaces->entries[i] =
+            lamPerformSimplifications(nameSpaces->entries[i]);
     }
     return nameSpaces;
 }
@@ -343,89 +349,106 @@ LamExp *lamPerformSimplifications(LamExp *exp) {
     // eprintf("\n");
     if (exp != NULL) {
         switch (exp->type) {
-            case LAMEXP_TYPE_BIGINTEGER:
-            case LAMEXP_TYPE_STDINT:
-            case LAMEXP_TYPE_CHARACTER:
-            case LAMEXP_TYPE_BACK:
-            case LAMEXP_TYPE_ERROR:
-            case LAMEXP_TYPE_CONSTANT:
-            case LAMEXP_TYPE_CONSTRUCTOR:
-            case LAMEXP_TYPE_ENV:
-                break;
-            case LAMEXP_TYPE_LAM:
-                exp = performLamSimplifications(getLamExp_Lam(exp));
-                break;
-            case LAMEXP_TYPE_APPLY:
-                exp = performApplySimplifications(getLamExp_Apply(exp));
-                break;
-            case LAMEXP_TYPE_VAR:
-                setLamExp_Var(exp, performVarSimplifications(getLamExp_Var(exp)));
-                break;
-            case LAMEXP_TYPE_PRIM:
-                setLamExp_Prim(exp, performPrimSimplifications(getLamExp_Prim(exp)));
-                break;
-            case LAMEXP_TYPE_SEQUENCE:
-                exp = performSequenceSimplifications(CPI(exp), getLamExp_Sequence(exp));
-                break;
-            case LAMEXP_TYPE_MAKEVEC:
-                setLamExp_MakeVec(exp, performMakeVecSimplifications(getLamExp_MakeVec(exp)));
-                break;
-            case LAMEXP_TYPE_DECONSTRUCT:
-                setLamExp_Deconstruct(exp, performDeconstructSimplifications(getLamExp_Deconstruct(exp)));
-                break;
-            case LAMEXP_TYPE_CONSTRUCT:
-                setLamExp_Construct(exp, performConstructSimplifications(getLamExp_Construct(exp)));
-                break;
-            case LAMEXP_TYPE_TAG:
-                setLamExp_Tag(exp, lamPerformSimplifications(getLamExp_Tag(exp)));
-                break;
-            case LAMEXP_TYPE_IFF:
-                setLamExp_Iff(exp, performIffSimplifications(getLamExp_Iff(exp)));
-                break;
-            case LAMEXP_TYPE_COND:
-                setLamExp_Cond(exp, performCondSimplifications(getLamExp_Cond(exp)));
-                break;
-            case LAMEXP_TYPE_CALLCC:
-                setLamExp_CallCC(exp, lamPerformSimplifications(getLamExp_CallCC(exp)));
-                break;
-            case LAMEXP_TYPE_LET:
-                setLamExp_Let(exp, performLetSimplifications(getLamExp_Let(exp)));
-                break;
-            case LAMEXP_TYPE_LETREC:
-                setLamExp_LetRec(exp, performLetRecSimplifications(getLamExp_LetRec(exp)));
-                break;
-            case LAMEXP_TYPE_LETSTAR:
-                setLamExp_LetStar(exp, performLetStarSimplifications(getLamExp_LetStar(exp)));
-                break;
-            case LAMEXP_TYPE_TYPEDEFS:
-                setLamExp_TypeDefs(exp, performTypeDefsSimplifications(getLamExp_TypeDefs(exp)));
-                break;
-            case LAMEXP_TYPE_MATCH:
-                setLamExp_Match(exp, performMatchSimplifications(getLamExp_Match(exp)));
-                break;
-            case LAMEXP_TYPE_AMB:
-                setLamExp_Amb(exp, performAmbSimplifications(getLamExp_Amb(exp)));
-                break;
-            case LAMEXP_TYPE_MAKETUPLE:
-                setLamExp_MakeTuple(exp, performArgsSimplifications(getLamExp_MakeTuple(exp)));
-                break;
-            case LAMEXP_TYPE_TUPLEINDEX:
-                setLamExp_TupleIndex(exp, performTupleIndexSimplifications(getLamExp_TupleIndex(exp)));
-                break;
-            case LAMEXP_TYPE_PRINT:
-                setLamExp_Print(exp, performPrintSimplifications(getLamExp_Print(exp)));
-                break;
-            case LAMEXP_TYPE_TYPEOF:
-                setLamExp_TypeOf(exp, performTypeOfSimplifications(getLamExp_TypeOf(exp)));
-                break;
-            case LAMEXP_TYPE_LOOKUP:
-                setLamExp_LookUp(exp, performLookUpSimplifications(getLamExp_LookUp(exp)));
-                break;
-            case LAMEXP_TYPE_NAMESPACES:
-                setLamExp_NameSpaces(exp, performNameSpacesSimplifications(getLamExp_NameSpaces(exp)));
-                break;
-            default:
-                cant_happen("unrecognized %s", lamExpTypeName(exp->type));
+        case LAMEXP_TYPE_BIGINTEGER:
+        case LAMEXP_TYPE_STDINT:
+        case LAMEXP_TYPE_CHARACTER:
+        case LAMEXP_TYPE_BACK:
+        case LAMEXP_TYPE_ERROR:
+        case LAMEXP_TYPE_CONSTANT:
+        case LAMEXP_TYPE_CONSTRUCTOR:
+        case LAMEXP_TYPE_ENV:
+            break;
+        case LAMEXP_TYPE_LAM:
+            exp = performLamSimplifications(getLamExp_Lam(exp));
+            break;
+        case LAMEXP_TYPE_APPLY:
+            exp = performApplySimplifications(getLamExp_Apply(exp));
+            break;
+        case LAMEXP_TYPE_VAR:
+            setLamExp_Var(exp, performVarSimplifications(getLamExp_Var(exp)));
+            break;
+        case LAMEXP_TYPE_PRIM:
+            setLamExp_Prim(exp,
+                           performPrimSimplifications(getLamExp_Prim(exp)));
+            break;
+        case LAMEXP_TYPE_SEQUENCE:
+            exp = performSequenceSimplifications(CPI(exp),
+                                                 getLamExp_Sequence(exp));
+            break;
+        case LAMEXP_TYPE_MAKEVEC:
+            setLamExp_MakeVec(
+                exp, performMakeVecSimplifications(getLamExp_MakeVec(exp)));
+            break;
+        case LAMEXP_TYPE_DECONSTRUCT:
+            setLamExp_Deconstruct(exp, performDeconstructSimplifications(
+                                           getLamExp_Deconstruct(exp)));
+            break;
+        case LAMEXP_TYPE_CONSTRUCT:
+            setLamExp_Construct(
+                exp, performConstructSimplifications(getLamExp_Construct(exp)));
+            break;
+        case LAMEXP_TYPE_TAG:
+            setLamExp_Tag(exp, lamPerformSimplifications(getLamExp_Tag(exp)));
+            break;
+        case LAMEXP_TYPE_IFF:
+            setLamExp_Iff(exp, performIffSimplifications(getLamExp_Iff(exp)));
+            break;
+        case LAMEXP_TYPE_COND:
+            setLamExp_Cond(exp,
+                           performCondSimplifications(getLamExp_Cond(exp)));
+            break;
+        case LAMEXP_TYPE_CALLCC:
+            setLamExp_CallCC(exp,
+                             lamPerformSimplifications(getLamExp_CallCC(exp)));
+            break;
+        case LAMEXP_TYPE_LET:
+            setLamExp_Let(exp, performLetSimplifications(getLamExp_Let(exp)));
+            break;
+        case LAMEXP_TYPE_LETREC:
+            setLamExp_LetRec(
+                exp, performLetRecSimplifications(getLamExp_LetRec(exp)));
+            break;
+        case LAMEXP_TYPE_LETSTAR:
+            setLamExp_LetStar(
+                exp, performLetStarSimplifications(getLamExp_LetStar(exp)));
+            break;
+        case LAMEXP_TYPE_TYPEDEFS:
+            setLamExp_TypeDefs(
+                exp, performTypeDefsSimplifications(getLamExp_TypeDefs(exp)));
+            break;
+        case LAMEXP_TYPE_MATCH:
+            setLamExp_Match(exp,
+                            performMatchSimplifications(getLamExp_Match(exp)));
+            break;
+        case LAMEXP_TYPE_AMB:
+            setLamExp_Amb(exp, performAmbSimplifications(getLamExp_Amb(exp)));
+            break;
+        case LAMEXP_TYPE_MAKETUPLE:
+            setLamExp_MakeTuple(
+                exp, performArgsSimplifications(getLamExp_MakeTuple(exp)));
+            break;
+        case LAMEXP_TYPE_TUPLEINDEX:
+            setLamExp_TupleIndex(exp, performTupleIndexSimplifications(
+                                          getLamExp_TupleIndex(exp)));
+            break;
+        case LAMEXP_TYPE_PRINT:
+            setLamExp_Print(exp,
+                            performPrintSimplifications(getLamExp_Print(exp)));
+            break;
+        case LAMEXP_TYPE_TYPEOF:
+            setLamExp_TypeOf(
+                exp, performTypeOfSimplifications(getLamExp_TypeOf(exp)));
+            break;
+        case LAMEXP_TYPE_LOOKUP:
+            setLamExp_LookUp(
+                exp, performLookUpSimplifications(getLamExp_LookUp(exp)));
+            break;
+        case LAMEXP_TYPE_NAMESPACES:
+            setLamExp_NameSpaces(exp, performNameSpacesSimplifications(
+                                          getLamExp_NameSpaces(exp)));
+            break;
+        default:
+            cant_happen("unrecognized %s", lamExpTypeName(exp->type));
         }
     }
     LEAVE(lamPerformSimplifications);

@@ -62,7 +62,6 @@ static MinIntList *desugarLamIntList(LamIntList *node);
 static MinLetRec *desugarLamLetRec(LamLetRec *node);
 static MinBindings *desugarLamBindings(LamBindings *node);
 static MinAmb *desugarLamAmb(LamAmb *node);
-static MinExp *desugarLamExp_internal(LamExp *node);
 static MinCondCases *desugarLamCondCases(LamCondCases *node);
 static MinNameSpaceArray *desugarLamNameSpaceArray(LamNameSpaceArray *node);
 
@@ -121,6 +120,7 @@ static MinPrimOp desugarLamPrimOp(LamPrimOp primOp) {
         cant_happen("unrecognised %s", lamPrimOpName(primOp));
     }
 }
+
 static MinPrimApp *desugarLamPrimApp(LamPrimApp *node) {
     ENTER(desugarLamPrimApp);
     if (node == NULL) {
@@ -128,9 +128,9 @@ static MinPrimApp *desugarLamPrimApp(LamPrimApp *node) {
         return NULL;
     }
 
-    MinExp *new_exp1 = desugarLamExp_internal(node->exp1);
+    MinExp *new_exp1 = desugarLamExp(node->exp1);
     int save = PROTECT(new_exp1);
-    MinExp *new_exp2 = desugarLamExp_internal(node->exp2);
+    MinExp *new_exp2 = desugarLamExp(node->exp2);
     PROTECT(new_exp2);
     MinPrimApp *result = newMinPrimApp(CPI(node), desugarLamPrimOp(node->type),
                                        new_exp1, new_exp2);
@@ -148,7 +148,7 @@ static MinLam *desugarLamLam(LamLam *node) {
 
     MinVarList *params = desugarLamVarList(node->args);
     int save = PROTECT(params);
-    MinExp *body = desugarLamExp_internal(node->exp);
+    MinExp *body = desugarLamExp(node->exp);
     PROTECT(body);
     MinLam *result = newMinLam(CPI(node), params, body);
     UNPROTECT(save);
@@ -165,7 +165,7 @@ static MinExprList *desugarLamSequence(LamSequence *node) {
 
     MinExprList *next = desugarLamSequence(node->next);
     int save = PROTECT(next);
-    MinExp *exp = desugarLamExp_internal(node->exp);
+    MinExp *exp = desugarLamExp(node->exp);
     PROTECT(exp);
     MinExprList *result = newMinExprList(CPI(node), exp, next);
     UNPROTECT(save);
@@ -182,7 +182,7 @@ static MinExprList *desugarLamArgs(LamArgs *node) {
 
     MinExprList *next = desugarLamArgs(node->next);
     int save = PROTECT(next);
-    MinExp *exp = desugarLamExp_internal(node->exp);
+    MinExp *exp = desugarLamExp(node->exp);
     PROTECT(exp);
     MinExprList *result = newMinExprList(CPI(node), exp, next);
     UNPROTECT(save);
@@ -197,7 +197,7 @@ static MinApply *desugarLamApply(LamApply *node) {
         return NULL;
     }
 
-    MinExp *function = desugarLamExp_internal(node->function);
+    MinExp *function = desugarLamExp(node->function);
     int save = PROTECT(function);
     MinExprList *args = desugarLamArgs(node->args);
     PROTECT(args);
@@ -214,7 +214,7 @@ static MinLookUp *desugarLamLookUp(LamLookUp *node) {
         return NULL;
     }
 
-    MinExp *exp = desugarLamExp_internal(node->exp);
+    MinExp *exp = desugarLamExp(node->exp);
     int save = PROTECT(exp);
     MinLookUp *result = newMinLookUp(CPI(node), node->nsId, exp);
     UNPROTECT(save);
@@ -312,11 +312,11 @@ static MinIff *desugarLamIff(LamIff *node) {
         return NULL;
     }
 
-    MinExp *condition = desugarLamExp_internal(node->condition);
+    MinExp *condition = desugarLamExp(node->condition);
     int save = PROTECT(condition);
-    MinExp *consequent = desugarLamExp_internal(node->consequent);
+    MinExp *consequent = desugarLamExp(node->consequent);
     PROTECT(consequent);
-    MinExp *alternative = desugarLamExp_internal(node->alternative);
+    MinExp *alternative = desugarLamExp(node->alternative);
     PROTECT(alternative);
     MinIff *result = newMinIff(CPI(node), condition, consequent, alternative);
     UNPROTECT(save);
@@ -331,7 +331,7 @@ static MinCond *desugarLamCond(LamCond *node) {
         return NULL;
     }
 
-    MinExp *value = desugarLamExp_internal(node->value);
+    MinExp *value = desugarLamExp(node->value);
     int save = PROTECT(value);
     MinCondCases *cases = desugarLamCondCases(node->cases);
     PROTECT(cases);
@@ -348,7 +348,7 @@ static MinIntCondCases *desugarLamIntCondCases(LamIntCondCases *node) {
         return NULL;
     }
 
-    MinExp *body = desugarLamExp_internal(node->body);
+    MinExp *body = desugarLamExp(node->body);
     int save = PROTECT(body);
     MinIntCondCases *next = desugarLamIntCondCases(node->next);
     PROTECT(next);
@@ -366,7 +366,7 @@ static MinCharCondCases *desugarLamCharCondCases(LamCharCondCases *node) {
         return NULL;
     }
 
-    MinExp *body = desugarLamExp_internal(node->body);
+    MinExp *body = desugarLamExp(node->body);
     int save = PROTECT(body);
     MinCharCondCases *next = desugarLamCharCondCases(node->next);
     PROTECT(next);
@@ -384,7 +384,7 @@ static MinMatch *desugarLamMatch(LamMatch *node) {
         return NULL;
     }
 
-    MinExp *index = desugarLamExp_internal(node->index);
+    MinExp *index = desugarLamExp(node->index);
     int save = PROTECT(index);
     MinMatchList *cases = desugarLamMatchList(node->cases);
     PROTECT(cases);
@@ -403,7 +403,7 @@ static MinMatchList *desugarLamMatchList(LamMatchList *node) {
 
     MinIntList *matches = desugarLamIntList(node->matches);
     int save = PROTECT(matches);
-    MinExp *body = desugarLamExp_internal(node->body);
+    MinExp *body = desugarLamExp(node->body);
     PROTECT(body);
     MinMatchList *next = desugarLamMatchList(node->next);
     PROTECT(next);
@@ -461,7 +461,7 @@ static MinExp *desugarLamLet(LamExp *exp) {
     LamLet *node = getLamExp_Let(exp);
     MinBindings *bindings = desugarLamBindings(node->bindings);
     int save = PROTECT(bindings);
-    MinExp *body = desugarLamExp_internal(node->body);
+    MinExp *body = desugarLamExp(node->body);
     PROTECT(body);
     MinVarList *fargs = extractKeysFromBindings(bindings);
     PROTECT(fargs);
@@ -484,7 +484,7 @@ static MinLetRec *desugarLamLetRec(LamLetRec *node) {
 
     MinBindings *bindings = desugarLamBindings(node->bindings);
     int save = PROTECT(bindings);
-    MinExp *body = desugarLamExp_internal(node->body);
+    MinExp *body = desugarLamExp(node->body);
     PROTECT(body);
     MinLetRec *result = newMinLetRec(CPI(node), bindings, body);
     UNPROTECT(save);
@@ -515,7 +515,7 @@ static MinExp *desugarLamLetStar(LamExp *exp) {
     // build a nest of lets, then desugar that
     LamExp *lets = nestLets(node->bindings, node->body);
     int save = PROTECT(lets);
-    MinExp *result = desugarLamExp_internal(lets);
+    MinExp *result = desugarLamExp(lets);
     UNPROTECT(save);
     LEAVE(desugarLamLetStar);
     return result;
@@ -528,7 +528,7 @@ static MinBindings *desugarLamBindings(LamBindings *node) {
         return NULL;
     }
 
-    MinExp *val = desugarLamExp_internal(node->val);
+    MinExp *val = desugarLamExp(node->val);
     int save = PROTECT(val);
     MinBindings *next = desugarLamBindings(node->next);
     PROTECT(next);
@@ -551,9 +551,9 @@ static MinAmb *desugarLamAmb(LamAmb *node) {
         return NULL;
     }
 
-    MinExp *left = desugarLamExp_internal(node->left);
+    MinExp *left = desugarLamExp(node->left);
     int save = PROTECT(left);
-    MinExp *right = desugarLamExp_internal(node->right);
+    MinExp *right = desugarLamExp(node->right);
     PROTECT(right);
     MinAmb *result = newMinAmb(CPI(node), left, right);
     UNPROTECT(save);
@@ -564,28 +564,26 @@ static MinAmb *desugarLamAmb(LamAmb *node) {
 static MinExp *desugarLamTypeOf(LamExp *exp) {
     ENTER(desugarLamTypeOf);
     LamTypeOf *node = getLamExp_TypeOf(exp);
-    MinExp *result = desugarLamExp_internal(node->typeString);
+    MinExp *result = desugarLamExp(node->typeString);
     LEAVE(desugarLamTypeOf);
     return result;
 }
 
 static MinExp *desugarLamTypeDefs(LamExp *exp) {
     ENTER(desugarLamTypeDefs);
-    MinExp *result = desugarLamExp_internal(getLamExp_TypeDefs(exp)->body);
+    MinExp *result = desugarLamExp(getLamExp_TypeDefs(exp)->body);
     LEAVE(desugarLamTypeDefs);
     return result;
 }
 
 static MinExp *desugarLamPrint(LamExp *node) {
-    MinExp *printer = desugarLamExp_internal(getLamExp_Print(node)->printer);
+    MinExp *printer = desugarLamExp(getLamExp_Print(node)->printer);
     int save = PROTECT(printer);
-    MinExp *arg = desugarLamExp_internal(getLamExp_Print(node)->exp);
+    MinExp *arg = desugarLamExp(getLamExp_Print(node)->exp);
     PROTECT(arg);
     MinExprList *args = newMinExprList(CPI(node), arg, NULL);
     PROTECT(args);
-    MinApply *app = newMinApply(CPI(node), printer, args);
-    PROTECT(app);
-    MinExp *result = newMinExp_Apply(CPI(node), app);
+    MinExp *result = makeMinExp_Apply(CPI(node), printer, args);
     UNPROTECT(save);
     return result;
 }
@@ -629,16 +627,75 @@ static MinExp *desugarLamTag(LamExp *exp) {
     return result;
 }
 
-static MinExp *desugarLamExp_internal(LamExp *node) {
+static MinCondCases *desugarLamCondCases(LamCondCases *node) {
+    ENTER(desugarLamCondCases);
+    if (node == NULL) {
+        LEAVE(desugarLamCondCases);
+        return NULL;
+    }
+
+    int save = PROTECT(NULL);
+    MinCondCases *result = NULL;
+
+    switch (node->type) {
+    case LAMCONDCASES_TYPE_INTEGERS: {
+        // LamIntCondCases
+        MinIntCondCases *new =
+            desugarLamIntCondCases(getLamCondCases_Integers(node));
+        PROTECT(new);
+        result = newMinCondCases_Integers(CPI(node), new);
+        break;
+    }
+    case LAMCONDCASES_TYPE_CHARACTERS: {
+        // LamCharCondCases
+        MinCharCondCases *new =
+            desugarLamCharCondCases(getLamCondCases_Characters(node));
+        PROTECT(new);
+        result = newMinCondCases_Characters(CPI(node), new);
+        break;
+    }
+    default:
+        cant_happen("unrecognized LamCondCases type %d", node->type);
+    }
+
+    UNPROTECT(save);
+    LEAVE(desugarLamCondCases);
+    return result;
+}
+
+static MinNameSpaceArray *desugarLamNameSpaceArray(LamNameSpaceArray *node) {
+    ENTER(desugarLamNameSpaceArray);
+    if (node == NULL) {
+        LEAVE(desugarLamNameSpaceArray);
+        return NULL;
+    }
+
+    MinNameSpaceArray *result = newMinNameSpaceArray();
+    int save = PROTECT(result);
+
+    // Iterate over all elements
+    for (Index i = 0; i < node->size; i++) {
+        LamExp *element = peeknLamNameSpaceArray(node, i);
+        struct MinExp *new = desugarLamExp(element);
+        int save2 = PROTECT(new);
+        pushMinNameSpaceArray(result, new);
+        UNPROTECT(save2);
+    }
+
+    UNPROTECT(save);
+    LEAVE(desugarLamNameSpaceArray);
+    return result;
+}
+
+// Main desugaring function and public interface
+MinExp *desugarLamExp(LamExp *node) {
     ENTER(desugarLamExp);
     if (node == NULL) {
         LEAVE(desugarLamExp);
         return NULL;
     }
-
     MinExp *result = NULL;
     int save = PROTECT(NULL);
-
     switch (node->type) {
     case LAMEXP_TYPE_AMB: {
         MinAmb *new = desugarLamAmb(getLamExp_Amb(node));
@@ -675,7 +732,7 @@ static MinExp *desugarLamExp_internal(LamExp *node) {
     }
     case LAMEXP_TYPE_CALLCC: {
         // LamExp
-        MinExp *new_callcc = desugarLamExp_internal(getLamExp_CallCC(node));
+        MinExp *new_callcc = desugarLamExp(getLamExp_CallCC(node));
         PROTECT(new_callcc);
         result = newMinExp_CallCC(CPI(node), new_callcc);
         break;
@@ -796,71 +853,7 @@ static MinExp *desugarLamExp_internal(LamExp *node) {
     default:
         cant_happen("unexpected LamExp type %s", lamExpTypeName(node->type));
     }
-
     UNPROTECT(save);
     LEAVE(desugarLamExp);
     return result;
 }
-
-static MinCondCases *desugarLamCondCases(LamCondCases *node) {
-    ENTER(desugarLamCondCases);
-    if (node == NULL) {
-        LEAVE(desugarLamCondCases);
-        return NULL;
-    }
-
-    int save = PROTECT(NULL);
-    MinCondCases *result = NULL;
-
-    switch (node->type) {
-    case LAMCONDCASES_TYPE_INTEGERS: {
-        // LamIntCondCases
-        MinIntCondCases *new =
-            desugarLamIntCondCases(getLamCondCases_Integers(node));
-        PROTECT(new);
-        result = newMinCondCases_Integers(CPI(node), new);
-        break;
-    }
-    case LAMCONDCASES_TYPE_CHARACTERS: {
-        // LamCharCondCases
-        MinCharCondCases *new =
-            desugarLamCharCondCases(getLamCondCases_Characters(node));
-        PROTECT(new);
-        result = newMinCondCases_Characters(CPI(node), new);
-        break;
-    }
-    default:
-        cant_happen("unrecognized LamCondCases type %d", node->type);
-    }
-
-    UNPROTECT(save);
-    LEAVE(desugarLamCondCases);
-    return result;
-}
-
-static MinNameSpaceArray *desugarLamNameSpaceArray(LamNameSpaceArray *node) {
-    ENTER(desugarLamNameSpaceArray);
-    if (node == NULL) {
-        LEAVE(desugarLamNameSpaceArray);
-        return NULL;
-    }
-
-    MinNameSpaceArray *result = newMinNameSpaceArray();
-    int save = PROTECT(result);
-
-    // Iterate over all elements
-    for (Index i = 0; i < node->size; i++) {
-        LamExp *element = peeknLamNameSpaceArray(node, i);
-        struct MinExp *new = desugarLamExp_internal(element);
-        int save2 = PROTECT(new);
-        pushMinNameSpaceArray(result, new);
-        UNPROTECT(save2);
-    }
-
-    UNPROTECT(save);
-    LEAVE(desugarLamNameSpaceArray);
-    return result;
-}
-
-// Public entry point
-MinExp *desugarLamExp(LamExp *node) { return desugarLamExp_internal(node); }

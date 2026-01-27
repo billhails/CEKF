@@ -154,10 +154,8 @@ static AstDefinitions *makeCurrentFileDefinition(const char *fileName,
     PROTECT(stringExpr);
 
     // Create the definition: currentFile = "..."
-    AstDefine *define = newAstDefine(PI, currentFileSymbol(), stringExpr);
-    PROTECT(define);
-
-    AstDefinition *definition = newAstDefinition_Define(PI, define);
+    AstDefinition *definition =
+        makeAstDefinition_Define(PI, currentFileSymbol(), stringExpr);
     PROTECT(definition);
 
     AstDefinitions *result = newAstDefinitions(PI, definition, next);
@@ -499,9 +497,7 @@ static LamExp *lamConvertTypeOf(AstTypeOf *typeOfExp, LamContext *context) {
     ENTER(lamConvertTypeOf);
     LamExp *exp = convertExpression(typeOfExp->exp, context);
     int save = PROTECT(exp);
-    LamTypeOf *lamTypeOf = newLamTypeOf(CPI(exp), exp);
-    PROTECT(lamTypeOf);
-    LamExp *result = newLamExp_TypeOf(CPI(lamTypeOf), lamTypeOf);
+    LamExp *result = makeLamExp_TypeOf(CPI(exp), exp);
     UNPROTECT(save);
     LEAVE(lamConvertTypeOf);
     return result;
@@ -1221,11 +1217,7 @@ static LamBindings *prependMacro(AstDefMacro *macro, LamContext *env,
 }
 
 LamExp *makeUnpackTuple(ParserInfo PI, LamExp *temp, int index, int size) {
-    LamTupleIndex *tupleIndex = newLamTupleIndex(PI, index, size, temp);
-    int save = PROTECT(tupleIndex);
-    LamExp *exp = newLamExp_TupleIndex(PI, tupleIndex);
-    UNPROTECT(save);
-    return exp;
+    return makeLamExp_TupleIndex(PI, index, size, temp);
 }
 
 static LamBindings *prependMultiSymbols(AstSymbolList *symbols, int index,
@@ -1400,12 +1392,7 @@ static LamExp *makeCallCC(LamArgs *args) {
  */
 static LamExp *makeBinOp(LamPrimOp opCode, LamArgs *args) {
     CHECK_TWO_ARGS(makeBinOp, args);
-    LamPrimApp *app =
-        newLamPrimApp(CPI(args), opCode, args->exp, args->next->exp);
-    int save = PROTECT(app);
-    LamExp *exp = newLamExp_Prim(CPI(app), app);
-    UNPROTECT(save);
-    return exp;
+    return makeLamExp_Prim(CPI(args), opCode, args->exp, args->next->exp);
 }
 
 /**
@@ -1415,11 +1402,7 @@ static LamExp *makeBinOp(LamPrimOp opCode, LamArgs *args) {
  */
 static LamExp *makeLamAmb(LamArgs *args) {
     CHECK_TWO_ARGS(makeLamAmb, args);
-    LamAmb *lamAmb = newLamAmb(CPI(args), args->exp, args->next->exp);
-    int save = PROTECT(lamAmb);
-    LamExp *res = newLamExp_Amb(CPI(lamAmb), lamAmb);
-    UNPROTECT(save);
-    return res;
+    return makeLamExp_Amb(CPI(args), args->exp, args->next->exp);
 }
 
 /**
@@ -1881,9 +1864,7 @@ static LamExp *makeStructureApplication(LamExp *constructor,
     LamArgs *args =
         convertTagsToArgs(getLamExp_Constructor(constructor)->tags, tags, env);
     int save = PROTECT(args);
-    LamApply *apply = newLamApply(CPI(constructor), constructor, args);
-    PROTECT(apply);
-    LamExp *result = newLamExp_Apply(CPI(apply), apply);
+    LamExp *result = makeLamExp_Apply(CPI(constructor), constructor, args);
     UNPROTECT(save);
     return result;
 }
@@ -2013,9 +1994,7 @@ static AstFarg *rewriteAstFarg(AstFarg *arg, LamContext *env);
 static AstFarg *rewriteAstNamed(AstNamedArg *namedArg, LamContext *env) {
     AstFarg *arg = rewriteAstFarg(namedArg->arg, env);
     int save = PROTECT(arg);
-    AstNamedArg *this = newAstNamedArg(CPI(namedArg), namedArg->name, arg);
-    PROTECT(this);
-    AstFarg *res = newAstFarg_Named(CPI(this), this);
+    AstFarg *res = makeAstFarg_Named(CPI(namedArg), namedArg->name, arg);
     UNPROTECT(save);
     return res;
 }
@@ -2030,9 +2009,7 @@ static AstFarg *rewriteAstNamed(AstNamedArg *namedArg, LamContext *env) {
 static AstFarg *rewriteAstUnpack(AstUnpack *unpack, LamContext *env) {
     AstFargList *args = rewriteAstFargList(unpack->argList, env);
     int save = PROTECT(args);
-    AstUnpack *this = newAstUnpack(CPI(unpack), unpack->symbol, args);
-    PROTECT(this);
-    AstFarg *res = newAstFarg_Unpack(CPI(this), this);
+    AstFarg *res = makeAstFarg_Unpack(CPI(unpack), unpack->symbol, args);
     UNPROTECT(save);
     return res;
 }
@@ -2109,9 +2086,7 @@ static AstFarg *rewriteAstUnpackStruct(AstUnpackStruct *structure,
     AstFargList *args =
         rewriteAstTaggedArgList(info->tags, structure->argList, env);
     int save = PROTECT(args);
-    AstUnpack *unpack = newAstUnpack(CPI(structure), structure->symbol, args);
-    PROTECT(unpack);
-    AstFarg *res = newAstFarg_Unpack(CPI(unpack), unpack);
+    AstFarg *res = makeAstFarg_Unpack(CPI(structure), structure->symbol, args);
     UNPROTECT(save);
     return res;
 }

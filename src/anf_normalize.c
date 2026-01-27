@@ -152,10 +152,7 @@ static AnfExp *normalizeCond(MinCond *cond, AnfExp *tail) {
     int save2 = PROTECT(value);
     CexpCondCases *cases = normalizeCondCases(cond->cases);
     PROTECT(cases);
-    CexpCond *cexpCond = newCexpCond(CPI(value), value, cases);
-    UNPROTECT(save2);
-    save2 = PROTECT(cexpCond);
-    Cexp *cexp = newCexp_Cond(CPI(cexpCond), cexpCond);
+    Cexp *cexp = makeCexp_Cond(CPI(value), value, cases);
     REPLACE_PROTECT(save2, cexp);
     AnfExp *exp = wrapCexp(cexp);
     REPLACE_PROTECT(save2, exp);
@@ -172,13 +169,10 @@ static AnfExp *normalizeMatch(MinMatch *match, AnfExp *tail) {
     MinExpTable *replacements = newMinExpTable();
     int save = PROTECT(replacements);
     Aexp *index = replaceMinExp(match->index, replacements);
-    int save2 = PROTECT(index);
+    PROTECT(index);
     AnfMatchList *matchList = normalizeMatchList(match->cases);
-    PROTECT(matchList);
-    CexpMatch *cexpMatch = newCexpMatch(CPI(index), index, matchList);
-    UNPROTECT(save2);
-    save2 = PROTECT(cexpMatch);
-    Cexp *cexp = newCexp_Match(CPI(cexpMatch), cexpMatch);
+    int save2 = PROTECT(matchList);
+    Cexp *cexp = makeCexp_Match(CPI(index), index, matchList);
     REPLACE_PROTECT(save2, cexp);
     AnfExp *exp = wrapCexp(cexp);
     REPLACE_PROTECT(save2, exp);
@@ -304,9 +298,7 @@ static AnfExp *normalizeMakeVec(ParserInfo PI, MinExprList *minMakeVec,
     DEBUG("calling replaceMinArgs");
     AexpList *args = replaceMinArgs(minMakeVec, replacements);
     int save2 = PROTECT(args);
-    AexpMakeVec *aexpMakeVec = newAexpMakeVec(PI, countAexpList(args), args);
-    REPLACE_PROTECT(save2, aexpMakeVec);
-    Aexp *aexp = newAexp_MakeVec(PI, aexpMakeVec);
+    Aexp *aexp = makeAexp_MakeVec(PI, countAexpList(args), args);
     REPLACE_PROTECT(save2, aexp);
     AnfExp *exp = wrapAexp(aexp);
     REPLACE_PROTECT(save2, exp);
@@ -397,9 +389,7 @@ static AnfExp *normalizeAmb(MinAmb *app, AnfExp *tail) {
     int save = PROTECT(left);
     AnfExp *right = normalize(app->right, NULL);
     PROTECT(right);
-    CexpAmb *amb = newCexpAmb(CPI(app), left, right);
-    PROTECT(amb);
-    Cexp *cexp = newCexp_Amb(CPI(amb), amb);
+    Cexp *cexp = makeCexp_Amb(CPI(app), left, right);
     PROTECT(cexp);
     AnfExp *exp = wrapCexp(cexp);
     PROTECT(exp);
@@ -471,9 +461,7 @@ static AnfExp *normalizeNameSpaces(ParserInfo I, MinNameSpaceArray *nsArray,
     ENTER(normalizeNameSpaces);
     AexpNameSpaceArray *nsa = aexpNormalizeNameSpaces(I, nsArray);
     int save = PROTECT(nsa);
-    AexpNameSpaces *nso = newAexpNameSpaces(I, nsa, tail);
-    PROTECT(nso);
-    Aexp *aexp = newAexp_NameSpaces(I, nso);
+    Aexp *aexp = makeAexp_NameSpaces(I, nsa, tail);
     PROTECT(aexp);
     AnfExp *exp = wrapAexp(aexp);
     UNPROTECT(save);
@@ -513,9 +501,7 @@ static AnfExp *normalizeEnv(ParserInfo I, AnfExp *tail) {
 static AnfExp *normalizeMinLookUp(MinLookUp *lookUp, AnfExp *tail) {
     AnfExp *rest = normalize(lookUp->exp, tail);
     int save = PROTECT(rest);
-    AnfExpLookUp *exp = newAnfExpLookUp(CPI(lookUp), lookUp->nsId, rest);
-    PROTECT(exp);
-    AnfExp *res = newAnfExp_LookUp(CPI(exp), exp);
+    AnfExp *res = makeAnfExp_LookUp(CPI(lookUp), lookUp->nsId, rest);
     UNPROTECT(save);
     return res;
 }
@@ -848,10 +834,8 @@ static Aexp *replaceMinPrim(MinPrimApp *minPrimApp, MinExpTable *replacements) {
     int save = PROTECT(exp1);
     Aexp *exp2 = replaceMinExp(minPrimApp->exp2, replacements);
     PROTECT(exp2);
-    AexpPrimApp *prim = newAexpPrimApp(CPI(minPrimApp),
-                                       mapPrimOp(minPrimApp->type), exp1, exp2);
-    PROTECT(prim);
-    Aexp *res = newAexp_Prim(CPI(prim), prim);
+    Aexp *res =
+        makeAexp_Prim(CPI(minPrimApp), mapPrimOp(minPrimApp->type), exp1, exp2);
     UNPROTECT(save);
     LEAVE(replaceMinPrim);
     return res;

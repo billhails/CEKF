@@ -150,9 +150,7 @@ TcType *tc_analyze(LamExp *exp, TcEnv *env) {
 TcType *makeListType(TcType *content) {
     TcTypeSigArgs *args = newTcTypeSigArgs(content, NULL);
     int save = PROTECT(args);
-    TcTypeSig *typeSig = newTcTypeSig(newSymbol("list"), args, -1);
-    PROTECT(typeSig);
-    TcType *res = newTcType_TypeSig(typeSig);
+    TcType *res = makeTcType_TypeSig(newSymbol("list"), args, -1);
     UNPROTECT(save);
     return res;
 }
@@ -160,9 +158,7 @@ TcType *makeListType(TcType *content) {
 TcType *makeMaybeType(TcType *content) {
     TcTypeSigArgs *args = newTcTypeSigArgs(content, NULL);
     int save = PROTECT(args);
-    TcTypeSig *typeSig = newTcTypeSig(newSymbol("maybe"), args, -1);
-    PROTECT(typeSig);
-    TcType *res = newTcType_TypeSig(typeSig);
+    TcType *res = makeTcType_TypeSig(newSymbol("maybe"), args, -1);
     UNPROTECT(save);
     return res;
 }
@@ -175,14 +171,13 @@ TcType *makeMaybeStringType() {
     return maybeStringType;
 }
 
+// used by builtins
 TcType *makeTryType(TcType *failure, TcType *success) {
     TcTypeSigArgs *args = newTcTypeSigArgs(success, NULL);
     int save = PROTECT(args);
     args = newTcTypeSigArgs(failure, args);
     PROTECT(args);
-    TcTypeSig *typeSig = newTcTypeSig(newSymbol("try"), args, -1);
-    PROTECT(typeSig);
-    TcType *res = newTcType_TypeSig(typeSig);
+    TcType *res = makeTcType_TypeSig(newSymbol("try"), args, -1);
     UNPROTECT(save);
     return res;
 }
@@ -196,11 +191,7 @@ TcType *makeStringType(void) {
 }
 
 static TcType *makeNamedType(char *name) {
-    TcTypeSig *typeSig = newTcTypeSig(newSymbol(name), NULL, -1);
-    int save = PROTECT(typeSig);
-    TcType *res = newTcType_TypeSig(typeSig);
-    UNPROTECT(save);
-    return res;
+    return makeTcType_TypeSig(newSymbol(name), NULL, -1);
 }
 
 TcType *makeBasicType(void) { return makeNamedType("basic_type"); }
@@ -674,9 +665,7 @@ static LamApply *curryLamApplyHelper(int nArgs, LamExp *function,
     }
     LamArgs *singleArg = newLamArgs(CPI(args), args->exp, NULL);
     int save = PROTECT(singleArg);
-    LamApply *new = newLamApply(CPI(function), function, singleArg);
-    PROTECT(new);
-    LamExp *newFunction = newLamExp_Apply(CPI(new), new);
+    LamExp *newFunction = makeLamExp_Apply(CPI(function), function, singleArg);
     PROTECT(newFunction);
     LamApply *curried = curryLamApplyHelper(nArgs - 1, newFunction, args->next);
     UNPROTECT(save);
@@ -987,11 +976,7 @@ TcType *makeTypeSig(HashSymbol *name, TcTypeSigArgs *args, int nsId) {
     if (strcmp(name->name, "list") == 0 && nsId != -1) {
         cant_happen("list in ns %d", nsId);
     }
-    TcTypeSig *tcTypeSig = newTcTypeSig(name, args, nsId);
-    int save = PROTECT(tcTypeSig);
-    TcType *res = newTcType_TypeSig(tcTypeSig);
-    UNPROTECT(save);
-    return res;
+    return makeTcType_TypeSig(name, args, nsId);
 }
 
 static TcType *makeTcTypeSig(LamTypeSig *lamType, TcTypeTable *map, int nsId) {
@@ -1557,20 +1542,12 @@ static TcType *freshFunction(TcFunction *fn, TcNg *ng, TcTypeTable *map) {
     return res;
 }
 
-static TcType *makePair(TcType *first, TcType *second) {
-    TcPair *resPair = newTcPair(first, second);
-    int save = PROTECT(resPair);
-    TcType *res = newTcType_Pair(resPair);
-    UNPROTECT(save);
-    return res;
-}
-
 static TcType *freshPair(TcPair *pair, TcNg *ng, TcTypeTable *map) {
     TcType *first = freshRec(pair->first, ng, map);
     int save = PROTECT(first);
     TcType *second = freshRec(pair->second, ng, map);
     PROTECT(second);
-    TcType *res = makePair(first, second);
+    TcType *res = makeTcType_Pair(first, second);
     UNPROTECT(save);
     return res;
 }
@@ -1732,30 +1709,13 @@ static TcType *makeSpaceship() {
 }
 
 static TcType *makeFn(TcType *arg, TcType *result) {
-    arg = prune(arg);
-    result = prune(result);
-    TcFunction *fn = newTcFunction(arg, result);
-    int save = PROTECT(fn);
-    TcType *type = newTcType_Function(fn);
-    UNPROTECT(save);
-    return type;
+    return makeTcType_Function(prune(arg), prune(result));
 }
 
-static TcType *makeThunk(TcType *type) {
-    type = prune(type);
-    TcThunk *thunk = newTcThunk(type);
-    int save = PROTECT(thunk);
-    TcType *res = newTcType_Thunk(thunk);
-    UNPROTECT(save);
-    return res;
-}
+static TcType *makeThunk(TcType *type) { return makeTcType_Thunk(prune(type)); }
 
 static TcType *makeVar(HashSymbol *t) {
-    TcVar *var = newTcVar(t, id_counter++);
-    int save = PROTECT(var);
-    TcType *res = newTcType_Var(var);
-    UNPROTECT(save);
-    return res;
+    return makeTcType_Var(t, id_counter++);
 }
 
 TcType *makeFreshVar(char *name __attribute__((unused))) {
@@ -1844,10 +1804,8 @@ static void addBuiltinsToEnv(TcEnv *env, BuiltIns *builtIns) {
 }
 
 static void addNameSpacesToEnv(TcEnv *env) {
-    TcNameSpaceArray *nameSpaces = newTcNameSpaceArray();
-    int save = PROTECT(nameSpaces);
-    TcType *nsType = newTcType_NameSpaces(nameSpaces);
-    PROTECT(nsType);
+    TcType *nsType = makeTcType_NameSpaces();
+    int save = PROTECT(nsType);
     addToEnv(env, nameSpacesSymbol(), nsType);
     UNPROTECT(save);
 }

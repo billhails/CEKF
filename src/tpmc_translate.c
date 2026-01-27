@@ -158,9 +158,7 @@ static LamExp *translateComparisonArcToTest(TpmcArc *arc) {
     int save = PROTECT(a);
     LamExp *b = newLamExp_Var(I, pattern->current->path);
     PROTECT(b);
-    LamPrimApp *eq = newLamPrimApp(I, LAMPRIMOP_TYPE_EQ, a, b);
-    PROTECT(eq);
-    LamExp *res = newLamExp_Prim(I, eq);
+    LamExp *res = makeLamExp_Prim(I, LAMPRIMOP_TYPE_EQ, a, b);
     UNPROTECT(save);
     LEAVE(translateComparisonArcToTest);
     return res;
@@ -185,17 +183,13 @@ static LamExp *prependLetBindings(TpmcPattern *test, SymbolSet *freeVariables,
                 DEBUG("%s is free", path->name);
                 LamExp *base = newLamExp_Var(I, test->path);
                 int save2 = PROTECT(base);
-                LamDeconstruct *deconstruct = newLamDeconstruct(
+                LamExp *deconstructExp = makeLamExp_Deconstruct(
                     I, name, constructor->info->nsId, i + 1, base);
-                PROTECT(deconstruct);
-                LamExp *deconstructExp = newLamExp_Deconstruct(I, deconstruct);
                 PROTECT(deconstructExp);
                 LamBindings *bindings =
                     newLamBindings(I, path, deconstructExp, NULL);
                 PROTECT(bindings);
-                LamLet *let = newLamLet(I, bindings, body);
-                PROTECT(let);
-                body = newLamExp_Let(I, let);
+                body = makeLamExp_Let(I, bindings, body);
                 REPLACE_PROTECT(save, body);
                 UNPROTECT(save2);
             } else {
@@ -211,16 +205,12 @@ static LamExp *prependLetBindings(TpmcPattern *test, SymbolSet *freeVariables,
             if (getSymbolSet(freeVariables, path)) {
                 LamExp *base = newLamExp_Var(I, test->path);
                 int save2 = PROTECT(base);
-                LamTupleIndex *index = newLamTupleIndex(I, i, size, base);
-                PROTECT(index);
-                LamExp *tupleIndex = newLamExp_TupleIndex(I, index);
+                LamExp *tupleIndex = makeLamExp_TupleIndex(I, i, size, base);
                 PROTECT(tupleIndex);
                 LamBindings *bindings =
                     newLamBindings(I, path, tupleIndex, NULL);
                 PROTECT(bindings);
-                LamLet *let = newLamLet(I, bindings, body);
-                PROTECT(let);
-                body = newLamExp_Let(I, let);
+                body = makeLamExp_Let(I, bindings, body);
                 REPLACE_PROTECT(save, body);
                 UNPROTECT(save2);
             }
