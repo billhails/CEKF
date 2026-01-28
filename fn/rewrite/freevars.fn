@@ -1,82 +1,68 @@
 
 namespace
-link "expr.fn" as E;
+link "minexpr.fn" as M;
 link "../listutils.fn" as list;
 
 // free: expr -> list(string)
 fn free {
 
     // amb_expr(expr, expr)
-    (E.amb_expr(e1, e2)) {
+    (M.amb_expr(e1, e2)) {
         list.unique(free(e1) @@ free(e2))
     }
 
     // apply[_closure](expr, list(expr))
-    (E.apply_closure(f, args)) | (E.apply(f, args)) {
+    (M.apply_closure(f, args)) | (M.apply(f, args)) {
         list.unique(list.concat(free(f) @ list.map(free, args)))
     }
 
     // back_expr
-    (E.back_expr) |
+    (M.back_expr) |
     // bigint(number)
-    (E.bigint(_)) |
+    (M.bigint(_)) |
     // character(char)
-    (E.character(_)) |
-    // constant(string)
-    (E.constant(_)) |
-    // constructor_info(string)
-    (E.constructor_info(_)) |
+    (M.character(_)) |
     // env_expr
-    (E.env_expr) |
+    (M.env_expr) |
     // error_expr
-    (E.error_expr) |
+    (M.error_expr) |
     // stdint(number)
-    (E.stdint(_)) { [] }
+    (M.stdint(_)) { [] }
 
     // callcc_expr(expr)
-    (E.callcc_expr(e)) {
+    (M.callcc_expr(e)) {
         free(e)
     }
 
     // env_ref(expr, string)
-    (E.env_ref(e, s)) {
+    (M.env_ref(e, s)) {
         free(e)
     }
 
     // cond_expr(expr, list(#(expr, expr)))
-    (E.cond_expr(test, branches)) {
+    (M.cond_expr(test, branches)) {
         list.unique(free(test) @@ list.concat(list.map(fn (#(cond, res)) {
             list.unique(free(cond) @@ free(res))
         }, branches)))
     }
 
-    // construct(string, list(expr))
-    (E.construct(tag, fields)) {
-        list.unique(list.concat(list.map(free, fields)))
-    }
-
-    // deconstruct(string, number, expr)
-    (E.deconstruct(tag, n, e)) {
-        free(e)
-    }
-
     // env_ref(expr, string)
-    (E.env_ref(e, s)) {
+    (M.env_ref(e, s)) {
         free(e)
     }
 
     // if_expr(expr, expr, expr)
-    (E.if_expr(cond, then_branch, else_branch)) {
+    (M.if_expr(cond, then_branch, else_branch)) {
         list.unique(free(cond) @@ free(then_branch) @@ free(else_branch))
     }
 
     // lambda[c](list(string), expr)
-    (E.lambda(params, body)) | (E.lambdac(params, body)) {
+    (M.lambda(params, body)) | (M.lambdac(params, body)) {
         list.exclude(params, free(body))
     }
 
     // letrec_expr(list(#(string, expr)), expr)
-    (E.letrec_expr(bindings, body)) {
+    (M.letrec_expr(bindings, body)) {
         let
             #(names, exprs) = list.unzip(bindings);
         in
@@ -84,83 +70,53 @@ fn free {
     }
 
     // lookup(string, number, expr)
-    (E.lookup(s, n, e)) {
+    (M.lookup(s, n, e)) {
         free(e)
     }
 
     // make_closure(expr, expr)
-    (E.make_closure(fun, env)) {
+    (M.make_closure(fun, env)) {
         list.unique(free(fun) @@ free(env));
     }
 
     // make_env(list(#(string, expr)))
-    (E.make_env(bindings)) {
+    (M.make_env(bindings)) {
         let #(vs, es) = list.unzip(bindings);
         in list.unique(list.concat(list.map(free, es)))
     }
 
-    // make_tuple(list(expr))
-    (E.make_tuple(elements)) {
-        list.unique(list.concat(list.map(free, elements)))
-    }
-
     // make_vec(number, list(expr))
-    (E.make_vec(n, elements)) {
+    (M.make_vec(n, elements)) {
         list.unique(list.concat(list.map(free, elements)))
     }
 
     // match_cases(expr, list(#(list(number), expr)))
-    (E.match_cases(scrutinee, cases)) {
+    (M.match_cases(scrutinee, cases)) {
         list.unique(free(scrutinee) @@ list.concat(list.map(fn (#(nums, e)) {
             free(e)
         }, cases)))
     }
 
     // namespaces(list(expr))
-    (E.namespaces(exprs)) {
+    (M.namespaces(exprs)) {
         list.unique(list.concat(list.map(free, exprs)))
     }
 
     // primapp(string, expr, expr)
-    (E.primapp(op, e1, e2)) {
+    (M.primapp(op, e1, e2)) {
         list.unique(free(e1) @@ free(e2))
     }
 
-    // print_exp(expr)
-    (E.print_exp(e)) {
-        free(e)
-    }
-
     // sequence(list(expr))
-    (E.sequence(exps)) {
+    (M.sequence(exps)) {
         list.unique(list.concat(list.map(free, exps)))
     }
 
-    // tag(expr)
-    (E.tag(e)) {
-        free(e)
-    }
-
-    // tuple_index(number, number, expr)
-    (E.tuple_index(n1, n2, e)) {
-        free(e)
-    }
-
-    // typedefs(number, expr)
-    (E.typedefs(n, e)) {
-        free(e)
-    }
-
-    // typeof_expr(expr)
-    (E.typeof_expr(e)) {
-        free(e)
-    }
-
     // var(string)
-    (E.var(v)) { [v] }
+    (M.var(v)) { [v] }
 
     (e) {
-        E.print_expr(e);
+        M.print_expr(e);
         puts(": ");
         error("unhandled expr type");
     }

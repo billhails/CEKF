@@ -3,14 +3,14 @@ let
     link "desugar.fn" as DS;
     link "samples.fn" as Samples;
     link "../ioutils.fn" as io;
-    link "expr.fn" as E;
+    link "minexpr.fn" as M;
 
     import io operator "$_";
 
     // Normalization algorithm
 
     fn genstring() { "$" @@ $incr() }
-    fn gensym() { E.var(genstring()) }
+    fn gensym() { M.var(genstring()) }
 
     fn normalize_term (e) { normalize(e, fn (x) { x }) }
 
@@ -31,169 +31,167 @@ let
 
     fn normalize_name(e, k) {
         normalize(e, fn {
-            (x=E.bigint(_)) |
-            (x=E.var(_)) |
-            (x=E.back_expr) |
-            (x=E.constant(_)) |
-            (x=E.constructor_info(_)) |
-            (x=E.stdint(_)) |
-            (x=E.env_expr) |
-            (x=E.error_expr) |
-            (x=E.character(_)) {
+            (x=M.bigint(_)) |
+            (x=M.var(_)) |
+            (x=M.back_expr) |
+            (x=M.constructor_info(_)) |
+            (x=M.stdint(_)) |
+            (x=M.env_expr) |
+            (x=M.error_expr) |
+            (x=M.character(_)) {
                 k(x)
             }
             (x) {
                 let
                     y = genstring();
                 in
-                    DS.desugar(E.let_expr([#(y, x)], k(E.var(y))))
+                    DS.desugar(M.let_expr([#(y, x)], k(M.var(y))))
             }
         })
     }
 
     fn normalize {
 
-        (E.lambda(params, body), k) {
-            k(E.lambda(params, normalize_term(body)))
+        (M.lambda(params, body), k) {
+            k(M.lambda(params, normalize_term(body)))
         }
 
-        (x=E.bigint(_), k) |
-        (x=E.var(_), k) |
-        (x=E.back_expr, k) |
-        (x=E.constant(_), k) |
-        (x=E.stdint(_), k) |
-        (x=E.constructor_info(_), k) |
-        (x=E.env_expr, k) |
-        (x=E.error_expr, k) |
-        (x=E.character(_), k) {
+        (x=M.bigint(_), k) |
+        (x=M.var(_), k) |
+        (x=M.back_expr, k) |
+        (x=M.stdint(_), k) |
+        (x=M.constructor_info(_), k) |
+        (x=M.env_expr, k) |
+        (x=M.error_expr, k) |
+        (x=M.character(_), k) {
             k(x)
         }
 
-        (E.callcc_expr(e), k) {
+        (M.callcc_expr(e), k) {
             normalize_name(e, fn (t) {
-                k(E.callcc_expr(t))
+                k(M.callcc_expr(t))
             })
         }
 
         // the branches of the if must be contained
-        (E.if_expr(e0, e1, e2), k) {
+        (M.if_expr(e0, e1, e2), k) {
             normalize_name(e0, fn (test) {
-                k(E.if_expr(test, normalize_term(e1), normalize_term(e2)))
+                k(M.if_expr(test, normalize_term(e1), normalize_term(e2)))
             })
         }
 
-        (E.apply(Fn, Ms), k) {
+        (M.apply(Fn, Ms), k) {
             normalize_name(Fn, fn (t) {
                 normalize_names(Ms, fn (ts) {
-                    k(E.apply(t, ts))
+                    k(M.apply(t, ts))
                 })
             })
         }
 
-        (E.construct(name, args), k) {
+        (M.construct(name, args), k) {
             normalize_names(args, fn (ts) {
-                k(E.construct(name, ts))
+                k(M.construct(name, ts))
             })
         }
 
-        (E.make_tuple(Ms), k) {
+        (M.make_tuple(Ms), k) {
             normalize_names(Ms, fn (ts) {
-                k(E.make_tuple(ts))
+                k(M.make_tuple(ts))
             })
         }
 
-        (E.sequence(Ms), k) {
-            k(E.sequence(normalize_terms(Ms)))
+        (M.sequence(Ms), k) {
+            k(M.sequence(normalize_terms(Ms)))
         }
 
-        (E.make_vec(size, Ms), k) {
+        (M.make_vec(size, Ms), k) {
             normalize_names(Ms, fn (ts) {
-                k(E.make_vec(size, ts))
+                k(M.make_vec(size, ts))
             })
         }
 
-        (E.letrec_expr(Bs, body), k) {
+        (M.letrec_expr(Bs, body), k) {
             normalizeBindings(Bs, fn (bs) {
-                E.letrec_expr(bs, normalize(body, k))
+                M.letrec_expr(bs, normalize(body, k))
             })
         }
 
         // amb expression evaluation must be contained
-        (E.amb_expr(e1, e2), k) {
-            k(E.amb_expr(normalize_term(e1), normalize_term(e2)))
+        (M.amb_expr(e1, e2), k) {
+            k(M.amb_expr(normalize_term(e1), normalize_term(e2)))
         }
 
         // branches of a cond must be individually contained
-        (E.cond_expr(e0, branches), k) {
+        (M.cond_expr(e0, branches), k) {
             normalize_name(e0, fn (t) {
-                k(E.cond_expr(t, normalize_cases(branches)))
+                k(M.cond_expr(t, normalize_cases(branches)))
             })
         }
 
-        // same for E.match_cases
-        (E.match_cases(e0, branches), k) {
+        // same for M.match_cases
+        (M.match_cases(e0, branches), k) {
             normalize_name(e0, fn (t) {
-                k(E.match_cases(t, normalize_cases(branches)))
+                k(M.match_cases(t, normalize_cases(branches)))
             })
         }
 
-        (E.deconstruct(name, index, e0), k) {
+        (M.deconstruct(name, index, e0), k) {
             normalize_name(e0, fn (t) {
-                k(E.deconstruct(name, index, t))
+                k(M.deconstruct(name, index, t))
             })
         }
 
         // we have to treat e0 as a Cexp because it is
         // inside the scope of a namespace
-        (E.lookup(name, index, e0), k) {
-            k(E.lookup(name, index, (normalize_term(e0))))
+        (M.lookup(name, index, e0), k) {
+            k(M.lookup(name, index, (normalize_term(e0))))
         }
 
         // each namespace must be individually contained
-        (E.namespaces(exprs), k) {
-            k(E.namespaces(normalize_terms(exprs)))
+        (M.namespaces(exprs), k) {
+            k(M.namespaces(normalize_terms(exprs)))
         }
 
         // the typedefs themselves are discarded after normalization
-        (E.typedefs(ignored, expr), k) {
-            k(E.typedefs(ignored, normalize_term(expr)))
+        (M.typedefs(ignored, expr), k) {
+            k(M.typedefs(ignored, normalize_term(expr)))
         }
 
-        (E.primapp(name, e1, e2), k) {
+        (M.primapp(name, e1, e2), k) {
             normalize_name(e1, fn (t1) {
                 normalize_name(e2, fn (t2) {
-                    k(E.primapp(name, t1, t2))
+                    k(M.primapp(name, t1, t2))
                 })
             })
         }
 
-        (E.print_exp(e0), k) {
+        (M.print_exp(e0), k) {
             normalize_name(e0, fn (t) {
-                k(E.print_exp(t))
+                k(M.print_exp(t))
             })
         }
 
-        (E.typeof_expr(e0), k) {
+        (M.typeof_expr(e0), k) {
             normalize_name(e0, fn (t) {
-                k(E.typeof_expr(t))
+                k(M.typeof_expr(t))
             })
         }
 
-        (E.tuple_index(size, index, e0), k) {
+        (M.tuple_index(size, index, e0), k) {
             normalize_name(e0, fn (t) {
-                k(E.tuple_index(size, index, t))
+                k(M.tuple_index(size, index, t))
             })
         }
 
-        (E.tag(e0), k) {
+        (M.tag(e0), k) {
             normalize_name(e0, fn (t) {
-                k(E.tag(t))
+                k(M.tag(t))
             })
         }
 
         (other, k) {
             // catch-all for unhandled expressions
-            E.print_expr(other);
+            M.print_expr(other);
             puts(": ");
             error("normalize: unhandled expression");
         }
@@ -225,11 +223,11 @@ let
     }
 in
     list.for_each (fn (str) {
-        let expr = E.parse(str);
+        let expr = M.parse(str);
         in
-        E.print_expr(expr);
+        M.print_expr(expr);
         puts(" ==>\n    ");
-        E.print_expr(normalize_term(DS.desugar(expr)));
+        M.print_expr(normalize_term(DS.desugar(expr)));
         puts("\n")
     },
     Samples.data);

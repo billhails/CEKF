@@ -607,10 +607,10 @@ static MinExp *desugarLamMakeTuple(LamExp *exp) {
 }
 
 static LamPrimApp *tagToPrimApp(LamExp *tagged) {
-    LamExp *index = newLamExp_Stdint(CPI(tagged), 0);
-    int save = PROTECT(index);
+    LamExp *zero_index = newLamExp_Stdint(CPI(tagged), 0);
+    int save = PROTECT(zero_index);
     LamPrimApp *res =
-        newLamPrimApp(CPI(tagged), LAMPRIMOP_TYPE_VEC, index, tagged);
+        newLamPrimApp(CPI(tagged), LAMPRIMOP_TYPE_VEC, zero_index, tagged);
     UNPROTECT(save);
     return res;
 }

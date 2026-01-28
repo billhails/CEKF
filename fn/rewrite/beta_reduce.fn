@@ -1,639 +1,182 @@
-let
-    link "expr.fn" as E;
+namespace
+    link "minexpr.fn" as M;
     link "env.fn" as Env;
     link "subst.fn" as SUBST;
     link "../listutils.fn" as list;
+    link "../dictutils.fn" as DICT;
     link "../ioutils.fn" as io;
-    import io operator "$_";
+    import io operator "$_"; // to-string
 
-    fn genstring(p) { p @@ "$" @@ $incr() }
-    fn gensym(p) { E.var(genstring(p)) }
+    fn reduce(e) {
+    let
+        fn genstring(p) { p @@ "$" @@ $incr() }
 
-    fn subst (expr, var, arg) { // replace var with arg in expr
-        SUBST.substitute(DICT.make([var], [arg]), expr)
-    }
+        fn gensym(p) { M.var(genstring(p)) }
 
-    fn betareduce(c, e) {
-        switch (e)  {
-            (E.amb_expr(expr1, expr2)) {
-                // amb_expr(expr, expr)
-                E.amb_expr(betareduce(c, expr1), betareduce(c, expr2))
-            }
+        fn subst (expr, var, arg) { // replace var with arg in expr
+            SUBST.substitute(DICT.make([var], [arg]), expr)
+        }
 
-            (E.apply(fun, args)) {
-                // apply(expr, list(expr))
-                E.apply(betareduce(c, fun), list.map(fn (arg) { betareduce(c, arg) }, args))
-            }
+        fn βr(c, e) {
+            switch (e) {
+                (M.amb_expr(expr1, expr2)) {
+                    // amb_expr(expr, expr)
+                    M.amb_expr(βr(c, expr1), βr(c, expr2))
+                }
 
-            (x = E.back_expr) |
-            (x = E.env_expr) |
-            (x = E.error_expr) |
-            (x = E.bigint(_)) |
-            (x = E.character(_)) |
-            (x = E.constructor_info(_)) |
-            (x = E.stdint(_)) |
-            (x = E.constant(_)) {
-                x
-            }
+                (M.apply(fun, args)) {
+                    // apply(expr, list(expr))
+                    M.apply(βr(c, fun), list.map(fn (arg) { βr(c, arg) }, args))
+                }
 
-            (E.callcc_expr(e)) {
-                // callcc_expr(expr)
-                E.callcc_expr(betareduce(c, e))
-            }
+                (M.apply_closure(closure, args)) {
+                    // apply_closure(expr, list(expr))
+                    M.apply_closure(βr(c, closure),
+                                    list.map(fn (arg) { βr(c, arg) }, args))
+                }
 
-            (E.cond_expr(test, branches)) {
-                // cond_expr(expr, list(#(expr, expr)))
-                let #(vals, results) = list.unzip(branches);
-                in
-                    E.cond_expr(betareduce(c, test),
-                                list.zip(list.map(betareduce(c), vals),
-                                         list.map(betareduce(c), results)))
-            }
+                (x = M.back_expr) |
+                (x = M.env_expr) |
+                (x = M.error_expr) |
+                (x = M.bigint(_)) |
+                (x = M.character(_)) |
+                (x = M.stdint(_)) {
+                    x
+                }
 
-            (E.construct(name, args)) {
-                // construct(string, list(expr))
-                E.construct(name, list.map(betareduce(c), args))
-            }
+                (M.callcc_expr(e)) {
+                    // callcc_expr(expr)
+                    M.callcc_expr(βr(c, e))
+                }
 
-            (E.deconstruct(name, index, expr)) {
-                // deconstruct(string, number, expr)
-                E.deconstruct(name, index, betareduce(c, expr))
-            }
+                (M.make_closure(lambda_expr, env)) {
+                    // closure(expr, list(string))
+                    M.make_closure(βr(c, lambda_expr), βr(c, env))
+                }
 
-            (E.if_expr(exprc, exprt, exprf)) {
-                // if_expr(expr, expr, expr)
-                E.if_expr(betareduce(c, exprc),
-                          betareduce(c, exprt),
-                          betareduce(c, exprf))
-            }
+                (M.cond_expr(test, branches)) {
+                    // cond_expr(expr, list(#(expr, expr)))
+                    let #(vals, results) = list.unzip(branches);
+                    in
+                        M.cond_expr(βr(c, test),
+                                    list.zip(list.map(βr(c), vals),
+                                            list.map(βr(c), results)))
+                }
 
-            (E.lambda(params, body)) {
-                // lambda(list(string), expr)
-                let #(en, nsa) = c;
-                    newparams = list.map(genstring, params);
-                    ee = Env.add_lists(Env.extend(en), params, newparams);
-                in
-                    E.lambda(newparams, betareduce(#(ee, nsa), body))
-            }
+                (M.if_expr(exprc, exprt, exprf)) {
+                    // if_expr(expr, expr, expr)
+                    M.if_expr(βr(c, exprc),
+                            βr(c, exprt),
+                            βr(c, exprf))
+                }
 
-            (E.letrec_expr(bindings, expr)) {
-                // letrec_expr(list(#(string, expr)), expr)
-                let #(en, nsa) = c;
-                    #(vars, exprs) = list.unzip(bindings);
-                    newvars = list.map(genstring, vars);
-                    ee = Env.add_lists(Env.extend(en), vars, newvars);
-                    newvals = list.map(betareduce(#(ee, nsa)), exprs); // in new environment
-                    newbindings = list.zip(newvars, newvals);
-                in
-                    E.letrec_expr(newbindings, betareduce(#(ee, nsa), expr)) // new environment
-            }
+                (M.lambda(params, body)) {
+                    // lambda(list(string), expr)
+                    let #(en, nsa) = c;
+                        newparams = list.map(genstring, params);
+                        ee = Env.add_lists(Env.extend(en), params, newparams);
+                    in
+                        M.lambda(newparams, βr(#(ee, nsa), body))
+                }
 
-            (E.let_expr(bindings, expr)) {
-                // let_expr(list(#(string, expr)), expr)
-                let #(en, nsa) = c;
-                    #(vars, exprs) = list.unzip(bindings);
-                    newvals = list.map(betareduce(c), exprs); // in old environment
-                    newvars = list.map(genstring, vars);
-                    ee = Env.add_lists(Env.extend(en), vars, newvars);
-                    newbindings = list.zip(newvars, newvals);
-                in
-                    E.let_expr(newbindings, betareduce(#(ee, nsa), expr)) // new environment
-            }
+                (M.lambdac(params, body)) {
+                    // lambdac(list(string), expr)
+                    let #(en, nsa) = c;
+                        newparams = list.map(genstring, params);
+                        ee = Env.add_lists(Env.extend(en), params, newparams);
+                    in
+                        M.lambdac(newparams, βr(#(ee, nsa), body))
+                }
 
-            (E.letstar_expr(bindings, expr)) {
-                // letstar_expr(list(#(string, expr)), expr)
-                let
-                    fn nest_lets {
-                        ([], body) { body }
-                        (#(var, exp) @ rest, body) {
-                            E.let_expr([#(var, exp)], nest_lets(rest, body))
+                (M.make_env(bindings)) {
+                    // make_env(list(expr))
+                    let #(en, nsa) = c;
+                        #(vars, exprs) = list.unzip(bindings);
+                        newvals = list.map(βr(c), exprs); // in current environment
+                        newbindings = list.zip(vars, newvals);
+                    in
+                        M.make_env(newbindings)
+                }
+
+                (M.env_ref(env, name)) {
+                    // env_ref(expr, string)
+                    M.env_ref(βr(c, env), name)
+                }
+
+                (M.letrec_expr(bindings, expr)) {
+                    // letrec_expr(list(#(string, expr)), expr)
+                    let #(en, nsa) = c;
+                        #(vars, exprs) = list.unzip(bindings);
+                        newvars = list.map(genstring, vars);
+                        ee = Env.add_lists(Env.extend(en), vars, newvars);
+                        newvals = list.map(βr(#(ee, nsa)), exprs); // in new environment
+                        newbindings = list.zip(newvars, newvals);
+                    in
+                        M.letrec_expr(newbindings, βr(#(ee, nsa), expr)) // new environment
+                }
+
+                (M.lookup(name, index, expr)) {
+                    // lookup(string, number, expr)
+                    let #(e, nsa) = c;
+                        fn find {
+                            (0, h @ t) { h }
+                            (n, h @ t) { find(n - 1, t) }
+                            (_, []) { Env.root }
                         }
-                    }
-                in
-                    betareduce(c, nest_lets(bindings, expr));
-            }
+                    in
+                        M.lookup(name, index, βr(#(find(index, nsa), nsa), expr))
+                }
 
-            (E.lookup(name, index, expr)) {
-                // lookup(string, number, expr)
-                let #(e, nsa) = c;
-                    fn find {
-                        (0, h @ t) { h }
-                        (n, h @ t) { find(n - 1, t) }
-                        (_, []) { error("Namespace index out of bounds") }
-                    }
-                in
-                    E.lookup(name, index, betareduce(#(find(index, nsa), nsa), expr))
-            }
+                (M.make_vec(size, args)) {
+                    // make_vec(number, list(expr))
+                    M.make_vec(size, list.map(βr(c), args))
+                }
 
-            (E.make_tuple(args)) {
-                // make_tuple(list(expr))
-                E.make_tuple(list.map(betareduce(c), args))
-            }
+                (M.match_cases(test, cases)) {
+                    // match_cases(expr, list(#(list(number), expr)))
+                    let #(vals, results) = list.unzip(cases);
+                    in
+                        M.match_cases(βr(c, test),
+                                    list.zip(vals, list.map(βr(c), results)))
+                }
 
-            (E.make_vec(size, args)) {
-                // make_vec(number, list(expr))
-                E.make_vec(size, list.map(betareduce(c), args))
-            }
+                (M.namespaces(exprs)) {
+                    // namespaces(list(expr))
+                    M.namespaces(list.map(βr(c), exprs))
+                }
 
-            (E.match_cases(test, cases)) {
-                // match_cases(expr, list(#(list(number), expr)))
-                let #(vals, results) = list.unzip(cases);
-                in
-                    E.match_cases(betareduce(c, test),
-                                  list.zip(vals, list.map(betareduce(c), results)))
-            }
+                (M.primapp(p, e1, e2)) {
+                    // primapp(string, expr, expr)
+                    M.primapp(p, βr(c, e1), βr(c, e2))
+                }
 
-            (E.namespaces(exprs)) {
-                // namespaces(list(expr))
-                E.namespaces(list.map(betareduce(c), exprs))
-            }
+                (M.sequence(exprs)) {
+                    // sequence(list(expr))
+                    M.sequence(list.map(βr(c), exprs))
+                }
 
-            (E.primapp(p, e1, e2)) {
-                // primapp(string, expr, expr)
-                E.primapp(p, betareduce(c, e1), betareduce(c, e2))
-            }
-
-            (E.print_exp(expr)) {
-                // print_exp(expr)
-                E.print_exp(betareduce(c, expr))
-            }
-
-            (E.sequence(exprs)) {
-                // sequence(list(expr))
-                E.sequence(list.map(betareduce(c), exprs))
-            }
-
-            (E.tag(expr)) {
-                // tag(expr)
-                E.tag(betareduce(c, expr))
-            }
-
-            (E.tuple_index(size, index, expr)) {
-                // tuple_index(number, number, expr)
-                E.tuple_index(size, index, betareduce(c, expr))
-            }
-
-            (E.typedefs(defs, expr)) {
-                // typedefs(list(def), expr)
-                E.typedefs(defs, betareduce(c, expr))
-            }
-
-            (E.typeof_expr(expr)) {
-                // typeof_expr(expr)
-                E.typeof_expr(betareduce(c, expr))
-            }
-            (E.var(name)) {
-                // var(string)
-                let #(e, nsa) = c;
-                    v = Env.get(e, name);
-                in
-                    switch (v) {
-                        (nothing) {
-                            error("Unbound variable: " @@ name)
+                (M.var(name)) {
+                    // var(string)
+                    let #(e, nsa) = c;
+                        v = Env.get(e, name);
+                    in
+                        switch (v) {
+                            (nothing) {
+                                M.var("unbound-variable-" @@ name)
+                            }
+                            (x=some(vname)) {
+                                M.var(vname)
+                            }
                         }
-                        (x=some(vname)) {
-                            E.var(vname)
-                        }
-                    }
-            }
+                }
 
-            (x) {
-                E.print_expr(x);
-                puts("\n");
-                error("betareduce: unsupported expression")
+                (x) {
+                    M.print_expr(x);
+                    puts("\n");
+                    error("reduce: unsupported expression")
+                }
             }
         }
+    in
+        βr(#(Env.add(Env.extend(Env.root), "□", genstring("□")), []), e)
     }
-in
-    list.for_each(fn (str) {
-        let expr = E.parse(str);
-        in
-            E.print_expr(expr);
-            puts(" ==>\n    ");
-            E.print_expr(betareduce(#(Env.root, []), expr));
-            puts("\n\n")
-    },
-    [
-        // Basic application
-        "(let ((g 3) (a 4)) (g a))",
-
-        // Simple lambda application
-        "(let ((h 1) (g 2)) ((lambda (x) (h x)) (g 4)))",
-
-        // Lambda definition with primitives
-        "(lambda (a b) (+ a (* b 2)))",
-
-        // Lambda application with primitives - nested
-        "((lambda (a b) (+ a (* b 2))) 3 4)",
-
-        // Lambda application with function call in primitive
-        "(let ((f 5)) ((lambda (a b) (+ a (* (f b) 2))) 3 4))",
-
-        // Amb operator (non-determinism)
-        "(amb 1 2)",
-
-        // Simple call/cc - immediate escape
-        "(call/cc (lambda (k) (k 5)))",
-
-        // call/cc that doesn't escape
-        "(call/cc (lambda (k) 42))",
-
-        // call/cc with computation before escape
-        "(call/cc (lambda (k) (+ 10 (k 5))))",
-
-        // Nested call/cc
-        "(call/cc (lambda (k1) (call/cc (lambda (k2) (k1 (k2 7))))))",
-
-        // call/cc with amb
-        "(call/cc (lambda (k) (amb (k 1) (k 2))))",
-
-        // Factorial with letrec
-        "(letrec ((fact (lambda (n) (if (== n 0) 1 (* n (fact (- n 1))))))) (fact 5))",
-
-        // Multiple argument function
-        "((lambda (x y z) (+ x (+ y z))) 1 2 3)",
-
-        // Nested lambdas (currying)
-        "((lambda (x) (lambda (y) (+ x y))) 5)",
-
-        // Application of curried function
-        "(((lambda (x) (lambda (y) (+ x y))) 5) 3)",
-
-        // If expression with complex branches
-        "(let ((x 1) (f 2) (g 3)) (if (== x 0) (f 1) (g 2)))",
-
-        // If with nested if
-        "(let ((x 1) (y 2)) (if (== x 0) (if (== y 0) 1 2) 3))",
-
-        // Sequence (begin in Racket)
-        "(let ((f 1) (g 2) (h 3)) (begin (f 1) (g 2) (h 3)))",
-
-        // Letrec with mutual recursion
-        "(letrec ((even (lambda (n) (if (= n 0) true (odd (- n 1))))) (odd (lambda (n) (if (= n 0) false (even (- n 1)))))) (even 5))",
-
-        // Complex amb with computation
-        "(+ (amb 1 2) (amb 3 4))",
-
-        // Nested application
-        "(let ((f 1) (g 2) (h 3) (x 4)) (f (g (h x))))",
-
-        // Multiple primitives in sequence
-        "(+ (* 2 3) (- 5 1))",
-
-        // call/cc capturing continuation in letrec
-        "(letrec ((k null)) (call/cc (lambda (cont) (begin (set! k cont) 42))))",
-
-        // Lambda with no arguments
-        "((lambda () 42))",
-
-        // call/cc with primitive operations
-        "(call/cc (lambda (k) (if (= 1 1) (k 10) 20)))",
-
-        // Deeply nested primitives
-        "(+ 1 (+ 2 (+ 3 (+ 4 5))))",
-
-        // Application with multiple complex arguments
-        "(let ((f 1) (g 2) (h 3) (i 4) (a 5) (b 6) (c 7)) (f (g a) (h b) (i c)))",
-
-        // If where branches have applications
-        "(let ((test 1) (f 2) (g 3) (h 4) (i 5) (x 6) (y 7)) (if test (f (g x)) (h (i y))))",
-
-        // Sequence with amb
-        "(begin (amb 1 2) (amb 3 4))",
-
-        // call/cc that passes continuation to another function
-        "(let ((f 1)) (call/cc (lambda (k) (f k))))",
-
-        // cond expression - like switch/case
-        "(let ((result1 1) (result2 2) (result3 3)) (let ((x 1)) (cond x (1 (result1)) (2 (result2)) (3 (result3)))))",
-
-        // cond with complex test and results
-        "(let ((f 1) (x 2) (g 3) (h 4)) (cond (f x) (1 (g 1)) (2 (h 2))))",
-
-        // construct with atomic arguments
-        "(construct pair 1 2)",
-
-        // construct with complex arguments
-        "(let ((f 1) (g 2)) (construct pair (f 1) (g 2)))",
-
-        // nested construct
-        "(let ((f 1) (g 2) (x 3) (y 4)) (construct cons (f x) (construct cons (g y) (constant nil))))",
-
-        // deconstruct with atomic argument
-        "(let ((p 1)) (deconstruct pair 0 p))",
-
-        // deconstruct with complex argument
-        "(let ((f 1) (x 2)) (deconstruct pair 1 (f x)))",
-
-        // nested deconstruct
-        "(let ((f 1) (x 2)) (deconstruct pair 0 (deconstruct pair 1 (f x))))",
-
-        // let with atomic value
-        "(let ((f 1)) (let ((x 42)) (f x)))",
-
-        // let with complex value
-        "(let ((f 1) (g 2)) (let ((x (f 10))) (g x)))",
-
-        // nested let
-        "(let ((f 1) (g 2) (h 3) (x 4)) (let ((x (f 1)) (y (g x))) (h x y)))",
-
-        // nested let*
-        "(let ((f 1) (g 2) (h 3) (x 4)) (let* ((x (f 1)) (y (g x))) (h x y)))",
-
-        // lookup with simple variable
-        // "(let ((ns 1) (x 2)) (lookup ns 0 x))",
-
-        // lookup with function call
-        // "(lookup ns 0 (f x))",
-
-        // nested lookup
-        // "(f (lookup ns 0 (g x)))",
-
-        // make_tuple with atomic args
-        "(make_tuple 1 2 3)",
-
-        // make_tuple with complex args
-        "(let ((f 1) (g 2)) (make_tuple (f 1) (g 2)))",
-
-        // make_tuple with mixed args
-        "(let ((x 1) (y 2) (f 3)) (make_tuple x (f y) 42))",
-
-        // make_vec with atomic args
-        "(make_vec 3 1 2 3)",
-
-        // make_vec with complex args
-        "(let ((f 1) (g 2)) (make_vec 2 (f 1) (g 2)))",
-
-        // make_vec with mixed args
-        "(let ((x 1) (y 2) (f 3)) (make_vec 3 x (f y) 42))",
-
-        // match_cases with atomic test
-        "(let ((x 1) (r1 2) (r2 3)) (match_cases x ((1 2) (r1)) ((3 4 5) (r2))))",
-
-        // match_cases with complex test
-        // "(match_cases (f x) ((1) (g 1)) ((2) (h 2)))",
-
-        // match_cases with complex results
-        // "(match_cases x ((1) (f 1)) ((2) (g 2)))",
-
-        // namespaces with atomic expressions
-        // "(namespaces x y z)",
-
-        // namespaces with complex expressions
-        // "(namespaces (f 1) (g 2))",
-
-        // namespaces with mixed expressions
-        // "(namespaces x (f y) z)",
-
-        // namespaces with letrec bodies returning env
-        "(namespaces (letrec ((x 1) (y 2)) (let* ((f 1) (g f)) (env))) (letrec ((a 3) (b 4)) (env)))",
-
-        // print_exp with atomic argument
-        "(let ((x 1)) (print x))",
-
-        // print_exp with complex argument
-        "(let ((f 1) (x 2)) (print (f x)))",
-
-        // print_exp nested in computation
-        "(let ((f 1) (x 2)) (+ (print (f x)) 10))",
-
-        // tag with atomic argument
-        "(let ((x 1)) (tag x))",
-
-        // tag with complex argument
-        "(let ((f 1) (x 2)) (tag (f x)))",
-
-        // tag in cond test
-        "(let ((f 1) (x 2) (r1 3) (r2 4)) (cond (tag (f x)) (1 (r1)) (2 (r2))))",
-
-        // tuple_index with atomic tuple
-        "(let ((t 1)) (tuple_index 3 0 t))",
-
-        // tuple_index with complex tuple
-        "(let ((f 1) (x 2)) (tuple_index 2 1 (f x)))",
-
-        // nested tuple_index
-        "(let ((f 1) (x 2)) (tuple_index 2 0 (tuple_index 3 1 (f x))))",
-
-        // typedefs with simple expression
-        "(let ((x 1)) (typedefs 0 x))",
-
-        // typedefs with letrec body
-        "(let ((g 1)) (typedefs 0 (letrec ((f (lambda (x) (g x)))) (f 42))))",
-
-        // typedefs with complex body
-        "(let ((f 1) (g 2) (x 3)) (typedefs 0 (f (g x))))",
-
-        // typedefs wrapping letrec with env body
-        "(typedefs 0 (letrec ((x 1) (y 2)) (env)))",
-
-        // typeof_expr with atomic argument
-        "(let ((x 1)) (typeof x))",
-
-        // typeof_expr with complex argument
-        "(let ((f 1) (x 2)) (typeof (f x)))",
-
-        // typeof_expr in conditional
-        "(let ((f 1) (x 2) (g 3) (h 4)) (if (typeof (f x)) (g 1) (h 2)))"
-    ]);
-//
-// output:
-//
-// (let [(g 3) (a 4)] (g a)) ==>
-//     (let [(g$1 3) (a$2 4)] (g$1 a$2))
-// 
-// (let [(h 1) (g 2)] ((λ (x) (h x)) (g 4))) ==>
-//     (let [(h$3 1) (g$4 2)] ((λ (x$5) (h$3 x$5)) (g$4 4)))
-// 
-// (λ (a b) (+ a (* b 2))) ==>
-//     (λ (a$6 b$7) (+ a$6 (* b$7 2)))
-// 
-// ((λ (a b) (+ a (* b 2))) 3 4) ==>
-//     ((λ (a$8 b$9) (+ a$8 (* b$9 2))) 3 4)
-// 
-// (let [(f 5)] ((λ (a b) (+ a (* (f b) 2))) 3 4)) ==>
-//     (let [(f$10 5)] ((λ (a$11 b$12) (+ a$11 (* (f$10 b$12) 2))) 3 4))
-// 
-// (amb 1 2) ==>
-//     (amb 1 2)
-// 
-// (call/cc (λ (k) (k 5))) ==>
-//     (call/cc (λ (k$13) (k$13 5)))
-// 
-// (call/cc (λ (k) 42)) ==>
-//     (call/cc (λ (k$14) 42))
-// 
-// (call/cc (λ (k) (+ 10 (k 5)))) ==>
-//     (call/cc (λ (k$15) (+ 10 (k$15 5))))
-// 
-// (call/cc (λ (k1) (call/cc (λ (k2) (k1 (k2 7)))))) ==>
-//     (call/cc (λ (k1$16) (call/cc (λ (k2$17) (k1$16 (k2$17 7))))))
-// 
-// (call/cc (λ (k) (amb (k 1) (k 2)))) ==>
-//     (call/cc (λ (k$18) (amb (k$18 1) (k$18 2))))
-// 
-// (letrec [(fact (λ (n) (if (== n 0) 1 (* n (fact (- n 1))))))] (fact 5)) ==>
-//     (letrec [(fact$19 (λ (n$20) (if (== n$20 0) 1 (* n$20 (fact$19 (- n$20 1))))))] (fact$19 5))
-// 
-// ((λ (x y z) (+ x (+ y z))) 1 2 3) ==>
-//     ((λ (x$21 y$22 z$23) (+ x$21 (+ y$22 z$23))) 1 2 3)
-// 
-// ((λ (x) (λ (y) (+ x y))) 5) ==>
-//     ((λ (x$24) (λ (y$25) (+ x$24 y$25))) 5)
-// 
-// (((λ (x) (λ (y) (+ x y))) 5) 3) ==>
-//     (((λ (x$26) (λ (y$27) (+ x$26 y$27))) 5) 3)
-// 
-// (let [(x 1) (f 2) (g 3)] (if (== x 0) (f 1) (g 2))) ==>
-//     (let [(x$28 1) (f$29 2) (g$30 3)] (if (== x$28 0) (f$29 1) (g$30 2)))
-// 
-// (let [(x 1) (y 2)] (if (== x 0) (if (== y 0) 1 2) 3)) ==>
-//     (let [(x$31 1) (y$32 2)] (if (== x$31 0) (if (== y$32 0) 1 2) 3))
-// 
-// (let [(f 1) (g 2) (h 3)] (begin (f 1) (g 2) (h 3))) ==>
-//     (let [(f$33 1) (g$34 2) (h$35 3)] (begin (f$33 1) (g$34 2) (h$35 3)))
-// 
-// (letrec [(even (λ (n) (if (= n 0) (constant true) (odd (- n 1))))) (odd (λ (n) (if (= n 0) (constant false) (even (- n 1)))))] (even 5)) ==>
-//     (letrec [(even$36 (λ (n$38) (if (= n$38 0) (constant true) (odd$37 (- n$38 1))))) (odd$37 (λ (n$39) (if (= n$39 0) (constant false) (even$36 (- n$39 1)))))] (even$36 5))
-// 
-// (+ (amb 1 2) (amb 3 4)) ==>
-//     (+ (amb 1 2) (amb 3 4))
-// 
-// (let [(f 1) (g 2) (h 3) (x 4)] (f (g (h x)))) ==>
-//     (let [(f$40 1) (g$41 2) (h$42 3) (x$43 4)] (f$40 (g$41 (h$42 x$43))))
-// 
-// (+ (* 2 3) (- 5 1)) ==>
-//     (+ (* 2 3) (- 5 1))
-// 
-// (letrec [(k (constant null))] (call/cc (λ (cont) (begin (set! k cont) 42)))) ==>
-//     (letrec [(k$44 (constant null))] (call/cc (λ (cont$45) (begin (set! k$44 cont$45) 42))))
-// 
-// ((λ () 42)) ==>
-//     ((λ () 42))
-// 
-// (call/cc (λ (k) (if (= 1 1) (k 10) 20))) ==>
-//     (call/cc (λ (k$46) (if (= 1 1) (k$46 10) 20)))
-// 
-// (+ 1 (+ 2 (+ 3 (+ 4 5)))) ==>
-//     (+ 1 (+ 2 (+ 3 (+ 4 5))))
-// 
-// (let [(f 1) (g 2) (h 3) (i 4) (a 5) (b 6) (c 7)] (f (g a) (h b) (i c))) ==>
-//     (let [(f$47 1) (g$48 2) (h$49 3) (i$50 4) (a$51 5) (b$52 6) (c$53 7)] (f$47 (g$48 a$51) (h$49 b$52) (i$50 c$53)))
-// 
-// (let [(test 1) (f 2) (g 3) (h 4) (i 5) (x 6) (y 7)] (if test (f (g x)) (h (i y)))) ==>
-//     (let [(test$54 1) (f$55 2) (g$56 3) (h$57 4) (i$58 5) (x$59 6) (y$60 7)] (if test$54 (f$55 (g$56 x$59)) (h$57 (i$58 y$60))))
-// 
-// (begin (amb 1 2) (amb 3 4)) ==>
-//     (begin (amb 1 2) (amb 3 4))
-// 
-// (let [(f 1)] (call/cc (λ (k) (f k)))) ==>
-//     (let [(f$61 1)] (call/cc (λ (k$62) (f$61 k$62))))
-// 
-// (let [(result1 1) (result2 2) (result3 3)] (let [(x 1)] (cond x (1 (result1)) (2 (result2)) (3 (result3))))) ==>
-//     (let [(result1$63 1) (result2$64 2) (result3$65 3)] (let [(x$66 1)] (cond x$66 (1 (result1$63)) (2 (result2$64)) (3 (result3$65)))))
-// 
-// (let [(f 1) (x 2) (g 3) (h 4)] (cond (f x) (1 (g 1)) (2 (h 2)))) ==>
-//     (let [(f$67 1) (x$68 2) (g$69 3) (h$70 4)] (cond (f$67 x$68) (1 (g$69 1)) (2 (h$70 2))))
-// 
-// (construct pair 1 2) ==>
-//     (construct pair 1 2)
-// 
-// (let [(f 1) (g 2)] (construct pair (f 1) (g 2))) ==>
-//     (let [(f$71 1) (g$72 2)] (construct pair (f$71 1) (g$72 2)))
-// 
-// (let [(f 1) (g 2) (x 3) (y 4)] (construct cons (f x) (construct cons (g y) (constant nil)))) ==>
-//     (let [(f$73 1) (g$74 2) (x$75 3) (y$76 4)] (construct cons (f$73 x$75) (construct cons (g$74 y$76) (constant nil))))
-// 
-// (let [(p 1)] (deconstruct pair 0 p)) ==>
-//     (let [(p$77 1)] (deconstruct pair 0 p$77))
-// 
-// (let [(f 1) (x 2)] (deconstruct pair 1 (f x))) ==>
-//     (let [(f$78 1) (x$79 2)] (deconstruct pair 1 (f$78 x$79)))
-// 
-// (let [(f 1) (x 2)] (deconstruct pair 0 (deconstruct pair 1 (f x)))) ==>
-//     (let [(f$80 1) (x$81 2)] (deconstruct pair 0 (deconstruct pair 1 (f$80 x$81))))
-// 
-// (let [(f 1)] (let [(x 42)] (f x))) ==>
-//     (let [(f$82 1)] (let [(x$83 42)] (f$82 x$83)))
-// 
-// (let [(f 1) (g 2)] (let [(x (f 10))] (g x))) ==>
-//     (let [(f$84 1) (g$85 2)] (let [(x$86 (f$84 10))] (g$85 x$86)))
-// 
-// (let [(f 1) (g 2) (h 3) (x 4)] (let [(x (f 1)) (y (g x))] (h x y))) ==>
-//     (let [(f$87 1) (g$88 2) (h$89 3) (x$90 4)] (let [(x$91 (f$87 1)) (y$92 (g$88 x$90))] (h$89 x$91 y$92)))
-// 
-// (let [(f 1) (g 2) (h 3) (x 4)] (let* [(x (f 1)) (y (g x))] (h x y))) ==>
-//     (let [(f$93 1) (g$94 2) (h$95 3) (x$96 4)] (let [(x$97 (f$93 1))] (let [(y$98 (g$94 x$97))] (h$95 x$97 y$98))))
-// 
-// (make_tuple 1 2 3) ==>
-//     (make_tuple 1 2 3)
-// 
-// (let [(f 1) (g 2)] (make_tuple (f 1) (g 2))) ==>
-//     (let [(f$99 1) (g$100 2)] (make_tuple (f$99 1) (g$100 2)))
-// 
-// (let [(x 1) (y 2) (f 3)] (make_tuple x (f y) 42)) ==>
-//     (let [(x$101 1) (y$102 2) (f$103 3)] (make_tuple x$101 (f$103 y$102) 42))
-// 
-// (make_vec 3 1 2 3) ==>
-//     (make_vec 3 1 2 3)
-// 
-// (let [(f 1) (g 2)] (make_vec 2 (f 1) (g 2))) ==>
-//     (let [(f$104 1) (g$105 2)] (make_vec 2 (f$104 1) (g$105 2)))
-// 
-// (let [(x 1) (y 2) (f 3)] (make_vec 3 x (f y) 42)) ==>
-//     (let [(x$106 1) (y$107 2) (f$108 3)] (make_vec 3 x$106 (f$108 y$107) 42))
-// 
-// (let [(x 1) (r1 2) (r2 3)] (match_cases x ((1 2) (r1)) ((3 4 5) (r2)))) ==>
-//     (let [(x$109 1) (r1$110 2) (r2$111 3)] (match_cases x$109 ((1 2) (r1$110)) ((3 4 5) (r2$111))))
-// 
-// (namespaces (letrec [(x 1) (y 2)] (let* [(f 1) (g f)] (env))) (letrec [(a 3) (b 4)] (env))) ==>
-//     (namespaces (letrec [(x$112 1) (y$113 2)] (let [(f$114 1)] (let [(g$115 f$114)] (env)))) (letrec [(a$116 3) (b$117 4)] (env)))
-// 
-// (let [(x 1)] (print x)) ==>
-//     (let [(x$118 1)] (print x$118))
-// 
-// (let [(f 1) (x 2)] (print (f x))) ==>
-//     (let [(f$119 1) (x$120 2)] (print (f$119 x$120)))
-// 
-// (let [(f 1) (x 2)] (+ (print (f x)) 10)) ==>
-//     (let [(f$121 1) (x$122 2)] (+ (print (f$121 x$122)) 10))
-// 
-// (let [(x 1)] (tag x)) ==>
-//     (let [(x$123 1)] (tag x$123))
-// 
-// (let [(f 1) (x 2)] (tag (f x))) ==>
-//     (let [(f$124 1) (x$125 2)] (tag (f$124 x$125)))
-// 
-// (let [(f 1) (x 2) (r1 3) (r2 4)] (cond (tag (f x)) (1 (r1)) (2 (r2)))) ==>
-//     (let [(f$126 1) (x$127 2) (r1$128 3) (r2$129 4)] (cond (tag (f$126 x$127)) (1 (r1$128)) (2 (r2$129))))
-// 
-// (let [(t 1)] (tuple_index 1 1 t)) ==>
-//     (let [(t$130 1)] (tuple_index 1 1 t$130))
-// 
-// (let [(f 1) (x 2)] (tuple_index 1 1 (f x))) ==>
-//     (let [(f$131 1) (x$132 2)] (tuple_index 1 1 (f$131 x$132)))
-// 
-// (let [(f 1) (x 2)] (tuple_index 1 1 (tuple_index 1 1 (f x)))) ==>
-//     (let [(f$133 1) (x$134 2)] (tuple_index 1 1 (tuple_index 1 1 (f$133 x$134))))
-// 
-// (let [(x 1)] (typedefs 1 x)) ==>
-//     (let [(x$135 1)] (typedefs 1 x$135))
-// 
-// (let [(g 1)] (typedefs 1 (letrec [(f (λ (x) (g x)))] (f 42)))) ==>
-//     (let [(g$136 1)] (typedefs 1 (letrec [(f$137 (λ (x$138) (g$136 x$138)))] (f$137 42))))
-// 
-// (let [(f 1) (g 2) (x 3)] (typedefs 1 (f (g x)))) ==>
-//     (let [(f$139 1) (g$140 2) (x$141 3)] (typedefs 1 (f$139 (g$140 x$141))))
-// 
-// (typedefs 1 (letrec [(x 1) (y 2)] (env))) ==>
-//     (typedefs 1 (letrec [(x$142 1) (y$143 2)] (env)))
-// 
-// (let [(x 1)] (typeof x)) ==>
-//     (let [(x$144 1)] (typeof x$144))
-// 
-// (let [(f 1) (x 2)] (typeof (f x))) ==>
-//     (let [(f$145 1) (x$146 2)] (typeof (f$145 x$146)))
-// 
-// (let [(f 1) (x 2) (g 3) (h 4)] (if (typeof (f x)) (g 1) (h 2))) ==>
-//     (let [(f$147 1) (x$148 2) (g$149 3) (h$150 4)] (if (typeof (f$147 x$148)) (g$149 1) (h$150 2)))
-//

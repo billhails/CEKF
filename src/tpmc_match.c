@@ -325,10 +325,11 @@ static void populateSubPatternMatrixRowWithConstructor(TpmcMatrix *matrix,
                                                        ParserInfo I) {
     if (arity != pattern->pattern->val.constructor->components->size) {
         ppTpmcPattern(pattern);
-        can_happen(
-            "\narity %d does not match constructor arity %d at %s line %d",
-            arity, pattern->pattern->val.constructor->components->size,
-            I.fileName, I.lineNo);
+        can_happen("\narity %d does not match constructor \"%s\" arity %d at "
+                   "%s line %d",
+                   arity, pattern->pattern->val.constructor->info->name->name,
+                   pattern->pattern->val.constructor->components->size,
+                   I.fileName, I.lineNo);
         exit(1);
     }
     for (Index i = 0; i < arity; i++) {

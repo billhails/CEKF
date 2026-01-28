@@ -1,6 +1,8 @@
 let
     link "samples.fn" as Samples;
+    link "beta_reduce.fn" as β;
     link "expr.fn" as E;
+    link "minexpr.fn" as M;
     link "../listutils.fn" as list;
     link "desugar.fn" as DS;
     link "cps.fn" as CPS;
@@ -10,14 +12,14 @@ in
         let
             expr = E.parse(str);
             dexpr = DS.desugar(expr);
-            cexpr = CPS.T_c(dexpr, E.var("□"));
+            cexpr = CPS.T_c(dexpr, M.var("□"));
             tab = "\n    ";
         in
             E.print_expr(expr);
             puts(" ==>");
             puts(tab);
-            E.print_expr(CC.shared_closure_convert(cexpr));
+            M.print_expr(β.reduce(CC.shared_closure_convert(cexpr)));
             puts(tab);
-            E.print_expr(CC.flat_closure_convert(cexpr));
+            M.print_expr(β.reduce(CC.flat_closure_convert(cexpr)));
             puts("\n\n")
     }, Samples.data());

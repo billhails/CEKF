@@ -6,7 +6,7 @@ CEKF, a.k.a.  F♮ is a **bytecode-based functional programming language VM** Wr
 
 ## Architecture Pipeline
 
-Source flows through these stages (see README.md flowchart):
+Source flows through these stages:
 
 1. **Scanner** (`src/pratt_scanner.c`) (text → [`PrattToken`](../src/pratt.yaml)) — *see [pratt-parser.md](../docs/agent/pratt-parser.md)*
 2. **Pratt Parser** (`src/pratt_parser.c`) → AST  (`PrattToken*` → [`AstNode*`](../src/ast.yaml)) — *see [pratt-parser.md](../docs/agent/pratt-parser.md)*
@@ -36,7 +36,7 @@ The build depends heavily on code generation. Do not manually edit files in `gen
 (via `MODE=` variable):
 
 ```bash
-make                    # default MODE=debug: -g, enables `--stress-gc` flag which forces GC on every malloc
+make                    # default MODE=debug: -g, enables `--stress-gc` flag which will force GC on every malloc
 make MODE=testing       # -g without aggressive GC option
 make MODE=production    # -O2, all safety checks disabled
 ```
@@ -174,14 +174,11 @@ For detailed information on specific compiler stages, see:
 
 - Start at `src/main.c` for overall flow
 - Each stage has `*_helper.h` with utility functions
-- Generated `*_debug.c` files are essential for understanding structure relationships
-- `docs/MATH.md` formalizes the CEKF machine mathematics
+- Generated `*_debug.c` files contain basic pretty-printers for data structures
 - `docs/lambda-conversion.md` has extensive TPMC algorithm walkthrough
 
 ## Workflows and Cross-Cutting Concerns
 
-See [docs/agent/workflows.md](docs/agent/workflows.md) for detailed guides on:
+See [workflows.md](../docs/agent/workflows.md) for detailed guides on:
 - Error Handling (User vs Internal errors)
 - Adding Built-in Functions
-- Adding Runtime Types
-- Adding Bytecodes

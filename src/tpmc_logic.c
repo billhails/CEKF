@@ -169,8 +169,10 @@ static TpmcPattern *makeConstructorPattern(AstUnpack *unpack, LamContext *env) {
     LamTypeConstructorInfo *info =
         lookUpScopedAstConstructorInLamContext(env, unpack->symbol);
     if (info == NULL) {
-        cant_happen("makeConstructorPattern() passed invalid constructor: '%s'",
-                    getLookUpName(unpack->symbol));
+        cant_happen("makeConstructorPattern() passed invalid constructor: '%s' "
+                    "in %s line %d",
+                    getLookUpName(unpack->symbol), CPI(unpack).fileName,
+                    CPI(unpack).lineNo);
     }
     TpmcPatternArray *patterns = convertArgList(unpack->argList, env);
     int save = PROTECT(patterns);

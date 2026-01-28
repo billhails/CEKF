@@ -2,6 +2,11 @@ namespace
     link "../listutils.fn" as list;
 
     typedef expr {
+        lambdac(list(string), expr) |
+        make_closure(expr, expr) |
+        make_env(list(#(string, expr))) |
+        env_ref(expr, string) |
+        apply_closure(expr, list(expr)) |
         amb_expr(expr, expr) |
         apply(expr, list(expr)) |
         back_expr |
@@ -9,30 +14,18 @@ namespace
         callcc_expr(expr) |
         character(char) |
         cond_expr(expr, list(#(expr, expr))) |
-        constant(string, number) |
-        constructor_info(string) |
-        construct(string, number, list(expr)) |
-        deconstruct(string, number, expr) |
         env_expr |
         error_expr |
         if_expr(expr, expr, expr) |
         lambda(list(string), expr) |
-        let_expr(list(#(string, expr)), expr) |
         letrec_expr(list(#(string, expr)), expr) |
-        letstar_expr(list(#(string, expr)), expr) |
         lookup(string, number, expr) |
-        make_tuple(list(expr)) |
         make_vec(number, list(expr)) |
         match_cases(expr, list(#(list(number), expr))) |
         namespaces(list(expr)) |
         primapp(string, expr, expr) |
-        print_exp(expr) |
         sequence(list(expr)) |
         stdint(number) |
-        tag(expr) |
-        tuple_index(number, number, expr) |
-        typedefs(number, expr) |
-        typeof_expr(expr) |
         var(string)
     }
 
@@ -74,38 +67,61 @@ namespace
 
     // Printer for expressions
     fn print_expr {
+        (x=lambdac(args, expr)) {
+            puts("(λ* (");
+            print_list(args, puts, " ");
+            puts(") ");
+            print_expr(expr);
+            puts(")");
+            x;
+        }
+        (x=make_closure(func, env)) {
+            puts("(CLO ");
+            print_expr(func);
+            puts(" ");
+            print_expr(env);
+            puts(")");
+            x;
+        }
+        (x=make_env(bindings)) {
+            puts("{ ");
+            print_list(bindings, fn(#(name, expr)) {
+                puts(name);
+                switch (expr) {
+                    (var(name2)) {
+                        if (name == name2) {
+                            ""
+                        } else {
+                            puts(": ");
+                            print_expr(expr);
+                            ""
+                        }
+                    }
+                    (_) {
+                        puts(": ");
+                        print_expr(expr);
+                        ""
+                    }
+                }
+            }, ", ");
+            puts(" }");
+            x;
+        }
+        (x=env_ref(env, name)) {
+            print_expr(env);
+            puts("->");
+            puts(name);
+            x;
+        }
+        (x=apply_closure(closure, args)) {
+            puts("(A/C ");
+            print_expr(closure);
+            print_sequence(args);
+            puts(")");
+            x;
+        }
         (x=callcc_expr(e)) {
             puts("(call/cc ");
-            print_expr(e);
-            puts(")");
-            x;
-        }
-        (x=typeof_expr(e)) {
-            puts("(typeof ");
-            print_expr(e);
-            puts(")");
-            x;
-        }
-        (x=typedefs(defs, expr)) {
-            puts("(typedefs ");
-            putn(defs);
-            puts(" ");
-            print_expr(expr);
-            puts(")");
-            x;
-        }
-        (x=tuple_index(size, index, expr)) {
-            puts("(tuple-index ");
-            putn(size);
-            puts(" ");
-            putn(index);
-            puts(" ");
-            print_expr(expr);
-            puts(")");
-            x;
-        }
-        (x=tag(e)) {
-            puts("(tag ");
             print_expr(e);
             puts(")");
             x;
@@ -117,12 +133,6 @@ namespace
         (x=sequence(exprs)) {
             puts("(begin");
             print_sequence(exprs);
-            puts(")");
-            x;
-        }
-        (x=print_exp(e)) {
-            puts("(print ");
-            print_expr(e);
             puts(")");
             x;
         }
@@ -164,12 +174,6 @@ namespace
             puts(")");
             x;
         }
-        (x=make_tuple(elements)) {
-            puts("(make-tuple");
-            print_sequence(elements);
-            puts(")");
-            x;
-        }
         (x=lookup(name, index, expr)) {
             puts("(lookup ");
             puts(name);
@@ -186,39 +190,6 @@ namespace
         }
         (x=error_expr) {
             puts("(error)");
-            x;
-        }
-        (x=deconstruct(name, index, expr)) {
-            puts("(deconstruct ");
-            puts(name);
-            puts(" ");
-            putn(index);
-            puts(" ");
-            print_expr(expr);
-            puts(")");
-            x;
-        }
-        (x=constructor_info(name)) {
-            puts("(constructor-info ");
-            puts(name);
-            puts(")");
-            x;
-        }
-        (x=construct(name, tg, args)) {
-            puts("(construct ");
-            puts(name);
-            putc(' ');
-            putn(tg);
-            print_sequence(args);
-            puts(")");
-            x;
-        }
-        (x=constant(name, tg)) {
-            puts("(constant ");
-            puts(name);
-            putc(' ');
-            putn(tg);
-            puts(")");
             x;
         }
         (x=cond_expr(test, branches)) {
@@ -239,14 +210,6 @@ namespace
         }
         (x=letrec_expr(bindings, body)) {
             print_let("letrec", bindings, body);
-            x;
-        }
-        (x=let_expr(bindings, body)) {
-            print_let("let", bindings, body);
-            x;
-        }
-        (x=letstar_expr(bindings, body)) {
-            print_let("let*", bindings, body);
             x;
         }
         (x=lambda(args, expr)) {
@@ -346,9 +309,6 @@ namespace
 
             fn to_expr {
                 (atom("back")) { back_expr }
-                (atom("true")) { constant("true", 1) }
-                (atom("false")) { constant("false", 0) }
-                (atom("null")) { constant("null", 0) }
                 (atom(['\'', c, '\''])) { character(c) }
                 (sexp([atom("env")])) { env_expr }
                 (sexp([atom("error")])) { error_expr }
@@ -364,27 +324,9 @@ namespace
                     (sexp([e1, e2])) { #(to_expr(e1), to_expr(e2)) }
                     (_) { error("Invalid cond branch") }
                 }, branches)) }
-                (sexp([atom("constant"), atom(name), atom(tg)])) { constant(name, to_number(tg)) }
-                (sexp([atom("constructor_info"), atom(name)])) { constructor_info(name) }
-                (sexp(atom("construct") @ atom(name) @ atom(tg) @ args)) {
-                    construct(name, to_number(tg), list.map(to_expr, args))
-                }
-                (sexp([atom("deconstruct"), atom(name), atom(index), e])) {
-                    deconstruct(name, to_number(index), to_expr(e))
-                }
                 (sexp([atom("lambda"), sexp(args), body])) |
-                (sexp([atom("\u03bb;"),      sexp(args), body])) {
-                    lambda(list.map(atom_to_string, args), to_expr(body))
-                }
+                (sexp([atom("\u03bb;"),      sexp(args), body])) { lambda(list.map(atom_to_string, args), to_expr(body)) }
                 (sexp(atom("begin") @ exprs)) { sequence(list.map(to_expr, exprs)) }
-                (sexp([atom("let"), sexp(bindings), body])) {
-                    let bindingsList = list.map (fn {
-                        (sexp([atom(name), expr])) { #(name, to_expr(expr)) }
-                        (_) { error("Invalid let binding") }
-                    }, bindings);
-                    in
-                        let_expr(bindingsList, to_expr(body))
-                }
                 (sexp([atom("letrec"), sexp(bindings), body])) {
                     let bindingsList = list.map (fn {
                         (sexp([atom(name), expr])) { #(name, to_expr(expr)) }
@@ -393,16 +335,7 @@ namespace
                     in
                         letrec_expr(bindingsList, to_expr(body))
                 }
-                (sexp([atom("let*"), sexp(bindings), body])) {
-                    let bindingsList = list.map (fn {
-                        (sexp([atom(name), expr])) { #(name, to_expr(expr)) }
-                        (_) { error("Invalid let* binding") }
-                    }, bindings);
-                    in
-                        letstar_expr(bindingsList, to_expr(body))
-                }
                 (sexp([atom("lookup"), atom(name), atom(index), e])) { lookup(name, to_number(index), to_expr(e)) }
-                (sexp(atom("make_tuple") @ elements)) { make_tuple(list.map(to_expr, elements)) }
                 (sexp(atom("make_vec") @ atom(size) @ elements)) { make_vec(to_number(size), list.map(to_expr, elements)) }
                 (sexp(atom("match_cases") @ exp @ cases)) { match_cases(to_expr(exp), list.map (fn {
                     (sexp([sexp(indices), caseExpr])) {
@@ -428,11 +361,6 @@ namespace
                 (sexp([atom("<="), e1, e2])) { primapp("<=", to_expr(e1), to_expr(e2)) }
                 (sexp([atom(">="), e1, e2])) { primapp(">=", to_expr(e1), to_expr(e2)) }
                 (sexp([atom("set!"), e1, e2])) { primapp("set!", to_expr(e1), to_expr(e2)) }
-                (sexp([atom("print"), e])) { print_exp(to_expr(e)) }
-                (sexp([atom("tag"), e])) { tag(to_expr(e)) }
-                (sexp([atom("tuple_index"), atom(size), atom(index), e])) { tuple_index(1, 1, to_expr(e)) }
-                (sexp([atom("typedefs"), atom(defs), e])) { typedefs(1, to_expr(e)) }
-                (sexp([atom("typeof"), e])) { typeof_expr(to_expr(e)) }
                 (sexp([])) { error("Empty expression") }
                 (sexp(func @ args)) { apply(to_expr(func), list.map(to_expr, args)) }
                 (x) {
