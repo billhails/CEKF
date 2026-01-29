@@ -262,52 +262,5 @@ arrays:
 primitives: !include primitives.yaml
 
 external:
-    LamExp:
-        data:
-            cname: "LamExp *"
-            printFn: ppLamExpD
-            markFn: markLamExp
-            copyFn: copyLamExp
-            valued: true
-
-    LamTypeConstructorInfo:
-        data:
-            cname: "LamTypeConstructorInfo *"
-            printFn: printLamTypeConstructorInfo
-            markFn: markLamTypeConstructorInfo
-            copyFn: copyLamTypeConstructorInfo
-            valued: true
-
-    SymbolSet:
-        data:
-            cname: "SymbolSet *"
-            printFn: printSymbolSet
-            markFn: markHashTable
-            copyFn: copyHashTable
-            newFn: newSymbolSet
-            valued: true
-
-    SymbolMap:
-        data:
-            cname: "SymbolMap *"
-            printFn: printSymbolMap
-            markFn: markHashTable
-            copyFn: copyHashTable
-            newFn: newSymbolMap
-            valued: true
-
-    SymbolArray:
-        data:
-            cname: "SymbolArray *"
-            printFn: printSymbolArray
-            markFn: markSymbolArray
-            copyFn: copySymbolArray
-            valued: true
-
-    IntArray:
-        data:
-            cname: "IntArray *"
-            printFn: printIntArray
-            markFn: markIntArray
-            copyFn: copyIntArray
-            valued: true
+- !include lambda.yaml
+- !include utils.yaml

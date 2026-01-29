@@ -81,10 +81,5 @@ arrays:
 primitives: !include primitives.yaml
 
 external:
-    TcType:
-        data:
-            cname: "struct TcType *"
-            printFn: printTcType
-            markFn: markTcType
-            valued: true
+- !include tc.yaml
 

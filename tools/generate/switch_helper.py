@@ -38,8 +38,9 @@ class SwitchHelper:
         
         # Generate cases from entities
         for entity in catalog.contents.values():
-            method = getattr(entity, case_method)
-            method(catalog)
+            if not entity.isExternal():
+                method = getattr(entity, case_method)
+                method(catalog)
         
         # Default case
         print(f'        default: {c}')

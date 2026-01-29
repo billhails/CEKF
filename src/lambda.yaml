@@ -507,23 +507,5 @@ arrays:
 primitives: !include primitives.yaml
 
 external:
-    TcType:
-        data:
-            cname: "struct TcType *"
-            printFn: printTcType
-            markFn: markTcType
-            valued: true
-    SymbolSet:
-        data:
-            cname: "struct SymbolSet *"
-            printFn: printSymbolSet
-            markFn: markHashTable
-            newFn: newSymbolSet
-            valued: true
-    SymbolMap:
-        data:
-            cname: "struct SymbolMap *"
-            printFn: printSymbolMap
-            markFn: markHashTable
-            newFn: newSymbolMap
-            valued: true
+- !include tc.yaml
+- !include utils.yaml

@@ -331,21 +331,5 @@ arrays:
 primitives: !include primitives.yaml
 
 external:
-    TcType:
-        meta:
-            brief: external type from the type-checker
-            description: A type-checker type referenced by the ANF code.
-        data:
-            cname: "struct TcType *"
-            printFn: printTcType
-            markFn: markTcType
-            valued: true
-    IntMap:
-        meta:
-            brief: Map from symbol to Integer.
-        data:
-            cname: "struct IntMap *"
-            printFn: printIntMap
-            markFn: markHashTable
-            newFn: newIntMap
-            valued: true
+- !include utils.yaml
+- !include tc.yaml

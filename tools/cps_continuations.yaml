@@ -20,49 +20,7 @@ config:
 primitives: !include ../src/primitives.yaml
 
 external:
-  MinExp:
-    meta:
-      brief: Minbda expressions
-    data:
-      cname: "struct MinExp *"
-      printFn: printMinExp
-      markFn: markMinExp
-      valued: true
-  MinExprList:
-    meta:
-      brief: List of MinExp
-    data:
-      cname: "struct MinExprList *"
-      printFn: printMinExprList
-      markFn: markMinExprList
-      valued: true
-  MinBindings:
-    meta:
-      brief: List of MinBindings
-    data:
-      cname: "struct MinBindings *"
-      printFn: printMinBindings
-      markFn: markMinBindings
-      valued: true
-  MinCondCases:
-    meta:
-      brief: List of MinCondCases
-    data:
-      cname: "struct MinCondCases *"
-      printFn: printMinCondCases
-      markFn: markMinCondCases
-      valued: true
-  MinMatchList:
-    data:
-      cname: "struct MinMatchList *"
-      printFn: printMinMatchList
-      markFn: markMinMatchList
-      valued: true
-  MinPrimOp:
-    data:
-      cname: "enum MinPrimOp"
-      printf: "%d"
-      valued: true
+- !include ../src/minlam.yaml
 
 # Naming convention, since each kont is argument to T_k and never
 # to T_c, we use Tk for continuations constructed by T_k, and

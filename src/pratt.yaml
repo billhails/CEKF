@@ -282,26 +282,5 @@ arrays:
 primitives: !include primitives.yaml
 
 external:
-    AstExpression:
-        data:
-            cname: "struct AstExpression *"
-            printFn: printAstExpression
-            markFn: markAstExpression
-            valued: true
-
-    WCharArray:
-        data:
-            cname: "struct WCharArray *"
-            printFn: printWCharArray
-            markFn: markWCharArray
-            newFn: newWCharArray
-            eqFn: eqWCharArray
-            valued: true
-
-    WCharVec:
-        data:
-            cname: "struct WCharVec *"
-            printFn: printWCharVec
-            markFn: markWCharVec
-            eqFn: eqWCharVec
-            valued: true
+- !include ast.yaml
+- !include utils.yaml

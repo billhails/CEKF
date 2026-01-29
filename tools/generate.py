@@ -131,18 +131,18 @@ def process_document(document, catalog, external):
             locals[name] = catalog.get(name)
 
     if "external" in document:
-        for name in document["external"]:
-            catalog.add(Primitive(name, document["external"][name]), external)
-            locals[name] = catalog.get(name)
+        for externalDoc in document["external"]:
+            process_document(externalDoc, catalog, True)
 
     if "arrays" in document:
         for name in document["arrays"]:
             catalog.add(SimpleArray(name, document["arrays"][name]), external)
             locals[name] = catalog.get(name)
 
-    parserInfo = document['config'].get('parserInfo', False)
-    for local in locals:
-        locals[local].setParserInfo(parserInfo)
+    if "config" in document:
+        parserInfo = document['config'].get('parserInfo', False)
+        for local in locals:
+            locals[local].setParserInfo(parserInfo)
 
     if "tags" in document:
         for tag in document["tags"]:

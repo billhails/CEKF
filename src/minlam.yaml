@@ -257,10 +257,4 @@ arrays:
 primitives: !include primitives.yaml
 
 external:
-    SymbolMap:
-        data:
-            cname: "struct SymbolMap *"
-            printFn: printSymbolMap
-            markFn: markHashTable
-            newFn: newSymbolMap
-            valued: true
+- !include utils.yaml

@@ -347,12 +347,15 @@ class Catalog:
     def printObjTypeDefine(self, packageName):
         objTypeArray = []
         for entity in self.contents.values():
-            objTypeArray += entity.objTypeArray()
+            if not entity.isExternal():
+                objTypeArray += entity.objTypeArray()
         print("#define {packageName}_OBJTYPES() \\\n{a}".format(a=', \\\n'.join(objTypeArray), packageName=packageName.upper()))
+
     def printObjCasesDefine(self, packageName):
         print(f"#define {packageName.upper()}_OBJTYPE_CASES() \\")
         for entity in self.contents.values():
-            objType = entity.objTypeArray()
-            if len(objType) == 1:
-                print(f'case {objType[0]}:\\')
+            if not entity.isExternal():
+                objType = entity.objTypeArray()
+                if len(objType) == 1:
+                    print(f'case {objType[0]}:\\')
         print("")

@@ -17,44 +17,7 @@ config:
 primitives: !include ../src/primitives.yaml
 
 external:
-  MinExp:
-    meta:
-      brief: Lambda expressions
-    data:
-      cname: "struct MinExp *"
-      printFn: printMinExp
-      markFn: markMinExp
-      valued: true
-  MinExprList:
-    meta:
-      brief: List of MinExp
-    data:
-      cname: "struct MinExprList *"
-      printFn: printMinExprList
-      markFn: markMinExprList
-      valued: true
-  MinBindings:
-    meta:
-      brief: List of MinBindings
-    data:
-      cname: "struct MinBindings *"
-      printFn: printMinBindings
-      markFn: markMinBindings
-      valued: true
-  MinCondCases:
-    meta:
-      brief: List of MinCondCases
-    data:
-      cname: "struct MinCondCases *"
-      printFn: printMinCondCases
-      markFn: markMinCondCases
-      valued: true
-  MinMatchList:
-    data:
-      cname: "struct MinMatchList *"
-      printFn: printMinMatchList
-      markFn: markMinMatchList
-      valued: true
+- !include ../src/minlam.yaml
 
 continuations:
   normalizeTerm:

@@ -273,7 +273,11 @@ class SimpleStruct(Base):
         extraArgs = self.getExtraEqAargs({})
         a = AccessorHelper.accessor(isInline)
         pad(depth)
-        print(f"if (!eq{myName}(a{a}{prefix}{field}, b{a}{prefix}{field}{extraArgs})) return false; {c}")
+        if self.isExternal() and extraArgs != "":
+            # We don't have access to those extra args if we're not called natively
+            print(f"if (a{a}{prefix}{field} != b{a}{prefix}{field}) return false; {c}")
+        else:
+            print(f"if (!eq{myName}(a{a}{prefix}{field}, b{a}{prefix}{field}{extraArgs})) return false; {c}")
 
     def printPrintHashField(self, depth):
         c = self.comment('printPrintHashField')
