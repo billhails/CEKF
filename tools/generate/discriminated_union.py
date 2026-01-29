@@ -22,8 +22,8 @@ class DiscriminatedUnion(SimpleStruct):
         self.enum = DiscriminatedUnionEnum(self.name, self.fields, body)
 
     def build(self, catalog):
-        catalog.add(self.union)
-        catalog.add(self.enum)
+        catalog.add(self.union, self.isExternal())
+        catalog.add(self.enum, self.isExternal())
 
     def makeField(self, fieldName, fieldData):
         return DiscriminatedUnionField(self.name, fieldName, fieldData)

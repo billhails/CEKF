@@ -33,7 +33,8 @@ class Catalog:
     def __init__(self):
         self.contents = {}
 
-    def add(self, value):
+    def add(self, value, external):
+        value.setExternal(external)
         name = value.getName()
         if name in self.contents:
             raise Exception("attempt to overwrite " + name + " in catalog")
@@ -67,8 +68,9 @@ class Catalog:
             *args: Arguments to pass to the method (usually self for catalog)
         """
         for entity in self.contents.values():
-            method = getattr(entity, method_name)
-            method(*args)
+            if not entity.isExternal():
+                method = getattr(entity, method_name)
+                method(*args)
 
     def printHelperNewDeclarations(self):
         self._dispatch('printHelperNewDeclarations', self)
@@ -120,27 +122,27 @@ class Catalog:
 
     def printTypedefs(self):
         for entity in self.contents.values():
-            if entity.isEnum():
+            if entity.isEnum() and not entity.isExternal():
                 entity.printTypedef(self)
         for entity in self.contents.values():
-            if entity.isArray():
+            if entity.isArray() and not entity.isExternal():
                 entity.printTypedef(self)
         for entity in self.contents.values():
-            if entity.isUnion():
+            if entity.isUnion() and not entity.isExternal():
                 entity.printTypedef(self)
         # Print inline structs first (no dependencies, can be used by other structs)
         for entity in self.contents.values():
-            if entity.isStruct() and entity.isInline(self):
+            if entity.isStruct() and entity.isInline(self) and not entity.isExternal():
                 entity.printTypedef(self)
         # Then print regular structs
         for entity in self.contents.values():
-            if entity.isStruct() and not entity.isInline(self):
+            if entity.isStruct() and not entity.isInline(self) and not entity.isExternal():
                 entity.printTypedef(self)
         for entity in self.contents.values():
-            if entity.isHash():
+            if entity.isHash() and not entity.isExternal():
                 entity.printTypedef(self)
         for entity in self.contents.values():
-            if entity.isVector():
+            if entity.isVector() and not entity.isExternal():
                 entity.printTypedef(self)
 
     def printInitDeclarations(self):

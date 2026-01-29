@@ -74,6 +74,12 @@ class Base:
         if self.parserInfo is None:
             self.parserInfo = info
 
+    def setExternal(self, external):
+        self.external = external
+    
+    def isExternal(self):
+        return getattr(self, 'external', False)
+
     def formatDescription(self):
         """
         Format the description for documentation.

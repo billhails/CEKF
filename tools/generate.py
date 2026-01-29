@@ -70,12 +70,12 @@ def main():
     includes = document['config'].get('includes', [])
     limited_includes = document['config'].get('limited_includes', [])
     catalog = Catalog()
-    process_document(document, catalog)
+    process_document(document, catalog, False)
     catalog.build()
     generate_output(args, catalog, document, packageName, description, includes, limited_includes)
 
 
-def process_document(document, catalog):
+def process_document(document, catalog, external):
     """Process the YAML document and build the catalog"""
 
     locals = {}
@@ -83,61 +83,61 @@ def process_document(document, catalog):
     # Build catalog from YAML document
     if "hashes" in document:
         for name in document["hashes"]:
-            catalog.add(SimpleHash(name, document["hashes"][name]))
+            catalog.add(SimpleHash(name, document["hashes"][name]), external)
             locals[name] = catalog.get(name)
 
     if "structs" in document:
         for name in document["structs"]:
-            catalog.add(SimpleStruct(name, document["structs"][name]))
+            catalog.add(SimpleStruct(name, document["structs"][name]), external)
             locals[name] = catalog.get(name)
 
     if "vectors" in document:
         for name in document["vectors"]:
-            catalog.add(SimpleVector(name, document["vectors"][name]))
+            catalog.add(SimpleVector(name, document["vectors"][name]), external)
             locals[name] = catalog.get(name)
 
     if "inline" in document:
         if "structs" in document["inline"]:
             for name in document["inline"]["structs"]:
-                catalog.add(InlineStruct(name, document["inline"]["structs"][name]))
+                catalog.add(InlineStruct(name, document["inline"]["structs"][name]), external)
                 locals[name] = catalog.get(name)
         if "unions" in document["inline"]:
             for name in document["inline"]["unions"]:
-                catalog.add(InlineDiscriminatedUnion(name, document["inline"]["unions"][name]))
+                catalog.add(InlineDiscriminatedUnion(name, document["inline"]["unions"][name]), external)
                 locals[name] = catalog.get(name)
         if "arrays" in document["inline"]:
             for name in document["inline"]["arrays"]:
-                catalog.add(InlineArray(name, document["inline"]["arrays"][name]))
+                catalog.add(InlineArray(name, document["inline"]["arrays"][name]), external)
                 locals[name] = catalog.get(name)
 
     if "unions" in document:
         for name in document["unions"]:
-            catalog.add(DiscriminatedUnion(name, document["unions"][name]))
+            catalog.add(DiscriminatedUnion(name, document["unions"][name]), external)
             locals[name] = catalog.get(name)
 
     if "stacks" in document:
         for name in document["stacks"]:
-            catalog.add(SimpleStack(name, document["stacks"][name]))
+            catalog.add(SimpleStack(name, document["stacks"][name]), external)
             locals[name] = catalog.get(name)
 
     if "enums" in document:
         for name in document["enums"]:
-            catalog.add(SimpleEnum(name, document["enums"][name]))
+            catalog.add(SimpleEnum(name, document["enums"][name]), external)
             locals[name] = catalog.get(name)
 
     if "primitives" in document:
         for name in document["primitives"]:
-            catalog.add(Primitive(name, document["primitives"][name]))
+            catalog.add(Primitive(name, document["primitives"][name]), external)
             locals[name] = catalog.get(name)
 
     if "external" in document:
         for name in document["external"]:
-            catalog.add(Primitive(name, document["external"][name]))
+            catalog.add(Primitive(name, document["external"][name]), external)
             locals[name] = catalog.get(name)
 
     if "arrays" in document:
         for name in document["arrays"]:
-            catalog.add(SimpleArray(name, document["arrays"][name]))
+            catalog.add(SimpleArray(name, document["arrays"][name]), external)
             locals[name] = catalog.get(name)
 
     parserInfo = document['config'].get('parserInfo', False)
