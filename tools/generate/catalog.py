@@ -30,33 +30,14 @@ from .switch_helper import SwitchHelper
 class Catalog:
     """Central registry managing all entities in a schema."""
     
-    def __init__(self, typeName):
-        self.typeName = typeName
+    def __init__(self):
         self.contents = {}
-        self.parserInfo = False
 
     def add(self, value):
         name = value.getName()
         if name in self.contents:
-            raise Exception("attempt to overwtite " + name + " in catalog")
+            raise Exception("attempt to overwrite " + name + " in catalog")
         self.contents[name] = value
-
-    def tag(self, t):
-        if t in self.contents:
-            self.contents[t].tag()
-
-    def noteExtraEqArgs(self, args):
-        for key in self.contents:
-            self.contents[key].noteExtraEqArgs(args)
-
-    def noteParserInfo(self):
-        self.parserInfo = True
-
-    def noteBespokeEqImplementation(self, name):
-        if name in self.contents:
-            self.contents[name].noteBespokeEqImplementation()
-        else:
-            raise Exception("bespoke eq implementation declared for nonexistant entry " + name)
 
     def get(self, key):
         key = key.strip()
@@ -73,9 +54,9 @@ class Catalog:
     def getParserInfo(self, key):
         key = key.strip()
         if key in self.contents:
-            return self.contents[key].getParserInfo(self.parserInfo)
+            return self.contents[key].getParserInfo()
         else:
-            return self.parserInfo
+            raise Exception("key '" + key + "' not found in catalog")
 
     def _dispatch(self, method_name, *args):
         """
@@ -98,17 +79,17 @@ class Catalog:
     def printSetterDeclarations(self):
         self._dispatch('printSetterDeclarations', self)
 
-    def generateVisitor(self, target):
+    def generateVisitor(self, packageName, target):
         """Generate complete visitor boilerplate"""
         output = []
         
         # Includes
-        output.append(f'#include "{self.typeName}.h"\n')
+        output.append(f'#include "{packageName}.h"\n')
         output.append('#include "memory.h"\n\n')
-        output.append(f'#include "{self.typeName}_{target}.h"\n\n')
+        output.append(f'#include "{packageName}_{target}.h"\n\n')
         
         # Conditional debugging include
-        debug_macro = f"DEBUG_{self.typeName.upper()}_{target.upper()}"
+        debug_macro = f"DEBUG_{packageName.upper()}_{target.upper()}"
         output.append(f'#ifdef {debug_macro}\n')
         output.append('#  include "debugging_on.h"\n')
         output.append('#else\n')
@@ -339,36 +320,35 @@ class Catalog:
     def printMermaid(self):
         self._dispatch('printMermaid', self)
 
-    def printMarkObjFunction(self):
+    def printMarkObjFunction(self, packageName):
         SwitchHelper.print_switch_function(
-            self, 'printMarkObjFunction', 'mark{Type}Obj', 'struct Header *h',
+            self, packageName, 'printMarkObjFunction', 'mark{Type}Obj', 'struct Header *h',
             'printMarkObjCase',
-            f'cant_happen("unrecognised type %d in mark{self.typeName.capitalize()}Obj\\n", h->type);'
+            f'cant_happen("unrecognised type %d in mark{packageName.capitalize()}Obj\\n", h->type);'
         )
 
-    def printFreeObjFunction(self):
+    def printFreeObjFunction(self, packageName):
         SwitchHelper.print_switch_function(
-            self, 'printFreeObjFunction', 'free{Type}Obj', 'struct Header *h',
+            self, packageName, 'printFreeObjFunction', 'free{Type}Obj', 'struct Header *h',
             'printFreeObjCase',
-            f'cant_happen("unrecognised type %d in free{self.typeName.capitalize()}Obj\\n", h->type);'
+            f'cant_happen("unrecognised type %d in free{packageName.capitalize()}Obj\\n", h->type);'
         )
 
-    def printTypeObjFunction(self):
+    def printTypeObjFunction(self, packageName):
         SwitchHelper.print_switch_function(
-            self, 'printTypeObjFunction', 'typename{Type}Obj', 'int type',
+            self, packageName, 'printTypeObjFunction', 'typename{Type}Obj', 'int type',
             'printTypeObjCase',
             'return "???"; // no error, can be used during error reporting',
             'char *'
         )
 
-    def printObjTypeDefine(self):
+    def printObjTypeDefine(self, packageName):
         objTypeArray = []
         for entity in self.contents.values():
             objTypeArray += entity.objTypeArray()
-        print("#define {typeName}_OBJTYPES() \\\n{a}".format(a=', \\\n'.join(objTypeArray), typeName=self.typeName.upper()))
-
-    def printObjCasesDefine(self):
-        print(f"#define {self.typeName.upper()}_OBJTYPE_CASES() \\")
+        print("#define {packageName}_OBJTYPES() \\\n{a}".format(a=', \\\n'.join(objTypeArray), packageName=packageName.upper()))
+    def printObjCasesDefine(self, packageName):
+        print(f"#define {packageName.upper()}_OBJTYPE_CASES() \\")
         for entity in self.contents.values():
             objType = entity.objTypeArray()
             if len(objType) == 1:

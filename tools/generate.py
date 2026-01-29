@@ -65,75 +65,96 @@ def main():
     stream = open(args.yaml, 'r')
     document = yaml.load(stream, Loader)
 
-    typeName = document['config']['name']
+    packageName = document['config']['name']
     description = document['config']['description']
     includes = document['config'].get('includes', [])
     limited_includes = document['config'].get('limited_includes', [])
-    parserInfo = document['config'].get('parserInfo', False)
+    catalog = Catalog()
+    process_document(document, catalog)
+    catalog.build()
+    generate_output(args, catalog, document, packageName, description, includes, limited_includes)
 
-    catalog = Catalog(typeName)
 
-    if parserInfo:
-        catalog.noteParserInfo()
+def process_document(document, catalog):
+    """Process the YAML document and build the catalog"""
+
+    locals = {}
 
     # Build catalog from YAML document
     if "hashes" in document:
         for name in document["hashes"]:
             catalog.add(SimpleHash(name, document["hashes"][name]))
+            locals[name] = catalog.get(name)
 
     if "structs" in document:
         for name in document["structs"]:
             catalog.add(SimpleStruct(name, document["structs"][name]))
+            locals[name] = catalog.get(name)
 
     if "vectors" in document:
         for name in document["vectors"]:
             catalog.add(SimpleVector(name, document["vectors"][name]))
+            locals[name] = catalog.get(name)
 
     if "inline" in document:
         if "structs" in document["inline"]:
             for name in document["inline"]["structs"]:
                 catalog.add(InlineStruct(name, document["inline"]["structs"][name]))
+                locals[name] = catalog.get(name)
         if "unions" in document["inline"]:
             for name in document["inline"]["unions"]:
                 catalog.add(InlineDiscriminatedUnion(name, document["inline"]["unions"][name]))
+                locals[name] = catalog.get(name)
         if "arrays" in document["inline"]:
             for name in document["inline"]["arrays"]:
                 catalog.add(InlineArray(name, document["inline"]["arrays"][name]))
+                locals[name] = catalog.get(name)
 
     if "unions" in document:
         for name in document["unions"]:
             catalog.add(DiscriminatedUnion(name, document["unions"][name]))
+            locals[name] = catalog.get(name)
 
     if "stacks" in document:
         for name in document["stacks"]:
             catalog.add(SimpleStack(name, document["stacks"][name]))
+            locals[name] = catalog.get(name)
 
     if "enums" in document:
         for name in document["enums"]:
             catalog.add(SimpleEnum(name, document["enums"][name]))
+            locals[name] = catalog.get(name)
 
     if "primitives" in document:
         for name in document["primitives"]:
             catalog.add(Primitive(name, document["primitives"][name]))
+            locals[name] = catalog.get(name)
 
     if "external" in document:
         for name in document["external"]:
             catalog.add(Primitive(name, document["external"][name]))
+            locals[name] = catalog.get(name)
 
     if "arrays" in document:
         for name in document["arrays"]:
             catalog.add(SimpleArray(name, document["arrays"][name]))
+            locals[name] = catalog.get(name)
+
+    parserInfo = document['config'].get('parserInfo', False)
+    for local in locals:
+        locals[local].setParserInfo(parserInfo)
 
     if "tags" in document:
         for tag in document["tags"]:
-            catalog.tag(tag)
+            locals[tag].tag()
 
     if "cmp" in document:
         if "extraArgs" in document["cmp"]:
-            catalog.noteExtraEqArgs(document["cmp"]["extraArgs"])
+            for local in locals:
+                locals[local].noteExtraEqArgs(document["cmp"]["extraArgs"])
         if "bespokeImplementation" in document["cmp"]:
             for bespoke in document["cmp"]["bespokeImplementation"]:
-                catalog.noteBespokeEqImplementation(bespoke)
+                locals[bespoke].noteBespokeEqImplementation()
 
     # For continuation YAML, add generated structs/unions to catalog
     if "continuations" in document:
@@ -141,34 +162,29 @@ def main():
         generator = KontinuationGenerator(document)
         generator.populate_catalog(catalog)
 
-    catalog.build()
 
-    # Generate output based on type
-    generate_output(args, catalog, document, typeName, description, includes, limited_includes, parserInfo)
-
-
-def generate_output(args, catalog, document, typeName, description, includes, limited_includes, parserInfo):
+def generate_output(args, catalog, document, packageName, description, includes, limited_includes):
     """Generate the appropriate output based on args.type"""
     
     if args.type == "h":
-        generate_header(args, catalog, document, typeName, includes, limited_includes, parserInfo)
+        generate_header(args, catalog, document, packageName, includes, limited_includes)
     elif args.type == "objtypes_h":
-        generate_objtypes_header(args, catalog, document, typeName)
+        generate_objtypes_header(args, catalog, document, packageName)
     elif args.type == "c":
-        generate_implementation(args, catalog, document, typeName)
+        generate_implementation(args, catalog, document, packageName)
     elif args.type == 'debug_h':
-        generate_debug_header(args, catalog, document, typeName, includes, limited_includes)
+        generate_debug_header(args, catalog, document, packageName, includes, limited_includes)
     elif args.type == 'debug_c':
-        generate_debug_implementation(args, catalog, document, typeName, limited_includes)
+        generate_debug_implementation(args, catalog, document, packageName, limited_includes)
     elif args.type == 'md':
-        generate_documentation(args, catalog, typeName, description)
+        generate_documentation(args, catalog, packageName, description)
     elif args.type == 'visitor':
         if args.target == "":
             print(f"Error: visitor type requires a target argument", file=sys.stderr)
             sys.exit(1)
         printGpl(args.yaml, document)
         print("")
-        print(catalog.generateVisitor(args.target))
+        print(catalog.generateVisitor(packageName, args.target))
     elif args.type == 'kont_impl_inc':
         # For continuation scaffolding, generate .inc (catalog already populated)
         from generate.kontinuations import KontinuationGenerator
@@ -186,18 +202,17 @@ def generate_output(args, catalog, document, typeName, description, includes, li
         generator.generate_kont_impl_c(sys.stdout, catalog, includes)
 
 
-def generate_header(args, catalog, document, typeName, includes, limited_includes, parserInfo):
+def generate_header(args, catalog, document, packageName, includes, limited_includes):
     """Generate main header file"""
-    print(f"#ifndef cekf_{typeName}_h")
-    print(f"#define cekf_{typeName}_h")
+    print(f"#ifndef cekf_{packageName}_h")
+    print(f"#define cekf_{packageName}_h")
     printGpl(args.yaml, document)
     print("")
     print('#include "hash.h"')
     print('#include "memory.h"')
     print('#include "common.h"')
     print('#include "types.h"')
-    if parserInfo:
-        print('#include "parser_info.h"')
+    print('#include "parser_info.h"')
     for include in includes:
         print(f'#include "{include}"')
     for include in limited_includes:
@@ -258,32 +273,32 @@ def generate_header(args, catalog, document, typeName, includes, limited_include
     print("#endif")
 
 
-def generate_objtypes_header(args, catalog, document, typeName):
+def generate_objtypes_header(args, catalog, document, packageName):
     """Generate object types header file"""
-    print(f"#ifndef cekf_{typeName}_objtypes_h")
-    print(f"#define cekf_{typeName}_objtypes_h")
+    print(f"#ifndef cekf_{packageName}_objtypes_h")
+    print(f"#define cekf_{packageName}_objtypes_h")
     printGpl(args.yaml, document)
     printSection("define objtypes")
-    catalog.printObjTypeDefine()
+    catalog.printObjTypeDefine(packageName)
     printSection("define cases")
-    catalog.printObjCasesDefine()
+    catalog.printObjCasesDefine(packageName)
     printSection("declare generic type functions")
-    print(f'void mark{typeName.capitalize()}Obj(struct Header *h);')
-    print(f'void free{typeName.capitalize()}Obj(struct Header *h);')
-    print(f'char *typename{typeName.capitalize()}Obj(int type);')
+    print(f'void mark{packageName.capitalize()}Obj(struct Header *h);')
+    print(f'void free{packageName.capitalize()}Obj(struct Header *h);')
+    print(f'char *typename{packageName.capitalize()}Obj(int type);')
     print("")
     print("#endif")
 
 
-def generate_implementation(args, catalog, document, typeName):
+def generate_implementation(args, catalog, document, packageName):
     """Generate main implementation file"""
     printGpl(args.yaml, document)
     print("")
-    print(f'#include "{typeName}.h"')
+    print(f'#include "{packageName}.h"')
     print("#include <stdio.h>")
     print("#include <strings.h>")
     print('#include "common.h"')
-    print(f'#ifdef DEBUG_{typeName.upper()}')
+    print(f'#ifdef DEBUG_{packageName.upper()}')
     print('#include "debugging_on.h"')
     print('#else')
     print('#include "debugging_off.h"')
@@ -319,13 +334,13 @@ def generate_implementation(args, catalog, document, typeName):
     printSection("mark functions")
     catalog.printMarkFunctions()
     printSection("generic mark function")
-    catalog.printMarkObjFunction()
+    catalog.printMarkObjFunction(packageName)
     printSection("free functions")
     catalog.printFreeFunctions()
     printSection("generic free function")
-    catalog.printFreeObjFunction()
+    catalog.printFreeObjFunction(packageName)
     printSection("type identifier function")
-    catalog.printTypeObjFunction()
+    catalog.printTypeObjFunction(packageName)
     printSection("type name function")
     catalog.printNameFunctionBodies()
     printSection("protect functions")
@@ -334,13 +349,13 @@ def generate_implementation(args, catalog, document, typeName):
     catalog.printEqFunctions()
 
 
-def generate_debug_header(args, catalog, document, typeName, includes, limited_includes):
+def generate_debug_header(args, catalog, document, packageName, includes, limited_includes):
     """Generate debug header file"""
-    print(f"#ifndef cekf_{typeName}_debug_h")
-    print(f"#define cekf_{typeName}_debug_h")
+    print(f"#ifndef cekf_{packageName}_debug_h")
+    print(f"#define cekf_{packageName}_debug_h")
     printGpl(args.yaml, document)
     print("")
-    print(f'#include "{typeName}_helper.h"')
+    print(f'#include "{packageName}_helper.h"')
     for include in includes:
         print(f'#include "{include[0:-2]}_debug.h"')
     for include in limited_includes:
@@ -351,13 +366,13 @@ def generate_debug_header(args, catalog, document, typeName, includes, limited_i
     print("#endif")
 
 
-def generate_debug_implementation(args, catalog, document, typeName, limited_includes):
+def generate_debug_implementation(args, catalog, document, packageName, limited_includes):
     """Generate debug implementation file"""
     printGpl(args.yaml, document)
     print("")
     print('#include <stdio.h>')
     print("")
-    print(f'#include "{typeName}_debug.h"')
+    print(f'#include "{packageName}_debug.h"')
     for include in limited_includes:
         print(f'#include "{include}"')
     printSection("helper functions")
@@ -366,9 +381,9 @@ def generate_debug_implementation(args, catalog, document, typeName, limited_inc
     catalog.printPrintFunctions()
 
 
-def generate_documentation(args, catalog, typeName, description):
+def generate_documentation(args, catalog, packageName, description):
     """Generate Mermaid documentation"""
-    print(f"# {typeName}")
+    print(f"# {packageName}")
     print("")
     print(description)
     print("")

@@ -65,10 +65,14 @@ class Base:
                 print(f" * {line}")
             print(" */")
 
-    def getParserInfo(self, default):
-        if self.parserInfo is not None:
-            return self.parserInfo
-        return default
+    def getParserInfo(self):
+        if self.parserInfo is None:
+            return False
+        return self.parserInfo
+    
+    def setParserInfo(self, info):
+        if self.parserInfo is None:
+            self.parserInfo = info
 
     def formatDescription(self):
         """
