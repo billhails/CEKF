@@ -140,7 +140,7 @@ class Base:
 
     def comment(self, method):
         """Generate method comment using class name automatically."""
-        return CommentGen.method_comment(self.__class__.__name__, method)
+        return CommentGen.method_comment_with_impl(self, method)
 
     def hasParserInfo(self, catalog):
         return False
