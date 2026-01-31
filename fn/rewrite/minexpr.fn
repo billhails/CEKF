@@ -1,4 +1,5 @@
 namespace
+    // minexpr: somewhat reduced expression set output by desugaring and used by later passes
     link "../listutils.fn" as list;
 
     typedef expr {
