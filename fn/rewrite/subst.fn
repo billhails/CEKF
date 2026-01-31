@@ -25,6 +25,7 @@ namespace
                 }
 
                 (x = M.back_expr) |
+                (x = M.primop(_)) |
                 (x = M.env_expr) |
                 (x = M.error_expr) |
                 (x = M.bigint(_)) |
@@ -107,11 +108,6 @@ namespace
                 // namespaces(list(expr))
                 (M.namespaces(exprs)) {
                     M.namespaces(list.map(substitute(c), exprs))
-                }
-
-                // primapp(string, expr, expr)
-                (M.primapp(p, e1, e2)) {
-                    M.primapp(p, substitute(c, e1), substitute(c, e2))
                 }
 
                 // sequence(list(expr))

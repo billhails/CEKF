@@ -23,7 +23,7 @@ namespace
         make_vec(number, list(expr)) |
         match_cases(expr, list(#(list(number), expr))) |
         namespaces(list(expr)) |
-        primapp(string, expr, expr) |
+        primop(string) |
         sequence(list(expr)) |
         stdint(number) |
         var(string)
@@ -133,16 +133,6 @@ namespace
         (x=sequence(exprs)) {
             puts("(begin");
             print_sequence(exprs);
-            puts(")");
-            x;
-        }
-        (x=primapp(name, e1, e2)) {
-            puts("(");
-            puts(name);
-            puts(" ");
-            print_expr(e1);
-            puts(" ");
-            print_expr(e2);
             puts(")");
             x;
         }
@@ -263,6 +253,10 @@ namespace
             putc('\'');
             x;
         }
+        (x=primop(name)) {
+            puts(name);
+            x;
+        }
     }
 
     // A *very* dumb parser for basic s-expressions
@@ -349,18 +343,18 @@ namespace
                     (_) { error("Invalid match_cases case") }
                 }, cases)) }
                 (sexp(atom("namespaces") @ exprs)) { namespaces(list.map(to_expr, exprs)) }
-                (sexp([atom("+"), e1, e2])) { primapp("+", to_expr(e1), to_expr(e2)) }
-                (sexp([atom("-"), e1, e2])) { primapp("-", to_expr(e1), to_expr(e2)) }
-                (sexp([atom("*"), e1, e2])) { primapp("*", to_expr(e1), to_expr(e2)) }
-                (sexp([atom("/"), e1, e2])) { primapp("/", to_expr(e1), to_expr(e2)) }
-                (sexp([atom("**"), e1, e2])) { primapp("**", to_expr(e1), to_expr(e2)) }
-                (sexp([atom("=="), e1, e2])) { primapp("==", to_expr(e1), to_expr(e2)) }
-                (sexp([atom("="), e1, e2])) { primapp("=", to_expr(e1), to_expr(e2)) }
-                (sexp([atom("<"), e1, e2])) { primapp("<", to_expr(e1), to_expr(e2)) }
-                (sexp([atom(">"), e1, e2])) { primapp(">", to_expr(e1), to_expr(e2)) }
-                (sexp([atom("<="), e1, e2])) { primapp("<=", to_expr(e1), to_expr(e2)) }
-                (sexp([atom(">="), e1, e2])) { primapp(">=", to_expr(e1), to_expr(e2)) }
-                (sexp([atom("set!"), e1, e2])) { primapp("set!", to_expr(e1), to_expr(e2)) }
+                (sexp([atom("+"), e1, e2])) { apply(primop("+"), [to_expr(e1), to_expr(e2)]) }
+                (sexp([atom("-"), e1, e2])) { apply(primop("-"), [to_expr(e1), to_expr(e2)]) }
+                (sexp([atom("*"), e1, e2])) { apply(primop("*"), [to_expr(e1), to_expr(e2)]) }
+                (sexp([atom("/"), e1, e2])) { apply(primop("/"), [to_expr(e1), to_expr(e2)]) }
+                (sexp([atom("**"), e1, e2])) { apply(primop("**"), [to_expr(e1), to_expr(e2)]) }
+                (sexp([atom("=="), e1, e2])) { apply(primop("=="), [to_expr(e1), to_expr(e2)]) }
+                (sexp([atom("="), e1, e2])) { apply(primop("="), [to_expr(e1), to_expr(e2)]) }
+                (sexp([atom("<"), e1, e2])) { apply(primop("<"), [to_expr(e1), to_expr(e2)]) }
+                (sexp([atom(">"), e1, e2])) { apply(primop(">"), [to_expr(e1), to_expr(e2)]) }
+                (sexp([atom("<="), e1, e2])) { apply(primop("<="), [to_expr(e1), to_expr(e2)]) }
+                (sexp([atom(">="), e1, e2])) { apply(primop(">="), [to_expr(e1), to_expr(e2)]) }
+                (sexp([atom("set!"), e1, e2])) { apply(primop("set!"), [to_expr(e1), to_expr(e2)]) }
                 (sexp([])) { error("Empty expression") }
                 (sexp(func @ args)) { apply(to_expr(func), list.map(to_expr, args)) }
                 (x) {

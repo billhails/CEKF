@@ -57,6 +57,7 @@ let
         }
 
         (x=M.bigint(_), k) |
+        (x=M.primop(_), k) |
         (x=M.var(_), k) |
         (x=M.back_expr, k) |
         (x=M.stdint(_), k) |
@@ -155,14 +156,6 @@ let
         // the typedefs themselves are discarded after normalization
         (M.typedefs(ignored, expr), k) {
             k(M.typedefs(ignored, normalize_term(expr)))
-        }
-
-        (M.primapp(name, e1, e2), k) {
-            normalize_name(e1, fn (t1) {
-                normalize_name(e2, fn (t2) {
-                    k(M.primapp(name, t1, t2))
-                })
-            })
         }
 
         (M.print_exp(e0), k) {

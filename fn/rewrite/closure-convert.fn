@@ -19,6 +19,7 @@ fn closure_convert {
         in
             M.make_closure(M.lambdac(sparams, vbody), M.make_env(venv))
     }
+    (x=M.apply(M.primop(_), _)) { x }
     (M.apply(func, args)) {
         M.apply_closure(func, args)
     }

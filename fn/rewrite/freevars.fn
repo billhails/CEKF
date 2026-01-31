@@ -16,17 +16,12 @@ fn free {
         list.unique(list.concat(free(f) @ list.map(free, args)))
     }
 
-    // back_expr
     (M.back_expr) |
-    // bigint(number)
     (M.bigint(_)) |
-    // character(char)
+    (M.primop(_)) |
     (M.character(_)) |
-    // env_expr
     (M.env_expr) |
-    // error_expr
     (M.error_expr) |
-    // stdint(number)
     (M.stdint(_)) { [] }
 
     // callcc_expr(expr)
@@ -100,11 +95,6 @@ fn free {
     // namespaces(list(expr))
     (M.namespaces(exprs)) {
         list.unique(list.concat(list.map(free, exprs)))
-    }
-
-    // primapp(string, expr, expr)
-    (M.primapp(op, e1, e2)) {
-        list.unique(free(e1) @@ free(e2))
     }
 
     // sequence(list(expr))

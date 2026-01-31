@@ -38,6 +38,7 @@ fn reduce {
     }
 
     (x = M.back_expr) |
+    (x = M.primop(_)) |
     (x = M.env_expr) |
     (x = M.error_expr) |
     (x = M.bigint(_)) |
@@ -103,11 +104,6 @@ fn reduce {
     (M.namespaces(exprs)) {
         // namespaces(list(expr))
         M.namespaces(list.map(reduce, exprs))
-    }
-
-    (M.primapp(p, e1, e2)) {
-        // primapp(string, expr, expr)
-        M.primapp(p, reduce(e1), reduce(e2))
     }
 
     (M.sequence(exprs)) {

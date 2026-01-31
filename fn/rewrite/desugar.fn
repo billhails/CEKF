@@ -94,9 +94,7 @@ namespace
 
                 (E.deconstruct(name, index, expr)) {
                     // deconstruct(string, number, expr)
-                    M.primapp("vec-ref",
-                              M.stdint(index),
-                              ds(expr))
+                    M.apply(M.primop("vec-ref"), [M.stdint(index), ds(expr)])
                 }
 
                 (E.if_expr(exprc, exprt, exprf)) {
@@ -181,7 +179,7 @@ namespace
 
                 (E.primapp(p, e1, e2)) {
                     // primapp(string, expr, expr)
-                    M.primapp(p, ds(e1), ds(e2))
+                    M.apply(M.primop(p), [ds(e1), ds(e2)])
                 }
 
                 (E.print_exp(expr)) {

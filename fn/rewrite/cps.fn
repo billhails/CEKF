@@ -5,6 +5,7 @@ namespace
 
     fn isAexpr {
         (M.var(_)) |
+        (M.primop(_)) |
         (M.back_expr) |
         (M.character(_)) |
         (M.env_expr) |
@@ -108,14 +109,6 @@ namespace
                     })
                 }
 
-                (M.primapp(p, e1, e2)) {
-                    T_k(e1, fn (s1) {
-                        T_k(e2, fn (s2) {
-                            k(M.primapp(p, s1, s2))
-                        })
-                    })
-                }
-
                 (M.sequence([expr])) { T_k(expr, k) }
                 (M.sequence(expr @ exprs)) {
                     T_k(expr, fn (ignored) {
@@ -143,6 +136,14 @@ namespace
                         vsk = M.var(sk);
                     in
                         M.apply(M.lambda([sk], M.amb_expr(T_c(expr1, vsk), T_c(expr2, vsk))), [c])
+                }
+
+                (M.apply(p=M.primop(_), [e1, e2])) {
+                    T_k(e1, fn (s1) {
+                        T_k(e2, fn (s2) {
+                            M.apply(c, [M.apply(p, [s1, s2])])
+                        })
+                    })
                 }
 
                 (M.apply(f, es)) {
@@ -214,14 +215,6 @@ namespace
                 (M.namespaces(exprs)) {
                     Ts_k(exprs, fn (sexprs) {
                         M.apply(c, [M.namespaces(sexprs)])
-                    })
-                }
-
-                (M.primapp(p, e1, e2)) {
-                    T_k(e1, fn (s1) {
-                        T_k(e2, fn (s2) {
-                            M.apply(c, [M.primapp(p, s1, s2)])
-                        })
                     })
                 }
 

@@ -17,6 +17,7 @@ fn alphaconvert(c, e) {
         }
 
         (x = M.back_expr) |
+        (x = M.primop(_)) |
         (x = M.env_expr) |
         (x = M.error_expr) |
         (x = M.bigint(_)) |
@@ -111,11 +112,6 @@ fn alphaconvert(c, e) {
         (M.namespaces(exprs)) {
             // namespaces(list(expr))
             M.namespaces(list.map(alphaconvert(c), exprs))
-        }
-
-        (M.primapp(p, e1, e2)) {
-            // primapp(string, expr, expr)
-            M.primapp(p, alphaconvert(c, e1), alphaconvert(c, e2))
         }
 
         (M.print_exp(expr)) {
