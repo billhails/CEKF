@@ -1,0 +1,154 @@
+namespace
+
+// operator folding
+
+link "minexpr.fn" as M;
+link "../listutils.fn" as list;
+
+fn fold {
+    (M.amb_expr(expr1, expr2)) {
+        // amb_expr(expr, expr)
+        M.amb_expr(fold(expr1), fold(expr2))
+    }
+
+    (M.apply(fun, args)) {
+        // apply(expr, list(expr))
+        M.apply(fold(fun), list.map(fold, args))
+    }
+
+    (x = M.back_expr) |
+    (x = M.env_expr) |
+    (x = M.error_expr) |
+    (x = M.bigint(_)) |
+    (x = M.character(_)) |
+    (x = M.var(_)) |
+    (x = M.stdint(_)) {
+        x
+    }
+
+    (M.callcc_expr(e)) {
+        // callcc_expr(expr)
+        M.callcc_expr(fold(e))
+    }
+
+    (M.cond_expr(test, branches)) {
+        // cond_expr(expr, list(#(expr, expr)))
+        let #(vals, results) = list.unzip(branches);
+        in
+            M.cond_expr(fold(test),
+                        list.zip(list.map(fold, vals),
+                                list.map(fold, results)))
+    }
+
+    (M.if_expr(exprc, exprt, exprf)) {
+        // if_expr(expr, expr, expr)
+        let exprc = fold(exprc);
+        in
+            switch (exprc) {
+                (M.bigint(n)) {
+                    if (n != 0) {
+                        fold(exprt)
+                    } else {
+                        fold(exprf)
+                    }
+                }
+                (_) {
+                    M.if_expr(exprc, fold(exprt), fold(exprf))
+                }
+            }
+    }
+
+    (M.lambda(params, body)) {
+        // lambda(list(string), expr)
+        M.lambda(params, fold(body))
+    }
+
+    (M.letrec_expr(bindings, expr)) {
+        // letrec_expr(list(#(string, expr)), expr)
+        let #(vars, exprs) = list.unzip(bindings);
+            newexprs = list.map(fold, exprs);
+            newbindings = list.zip(vars, newexprs);
+        in
+            M.letrec_expr(newbindings, fold(expr))
+    }
+
+    (M.lookup(name, index, expr)) {
+        // lookup(string, number, expr)
+        M.lookup(name, index, fold(expr))
+    }
+
+    (M.make_vec(size, args)) {
+        // make_vec(number, list(expr))
+        M.make_vec(size, list.map(fold, args))
+    }
+
+    (M.match_cases(test, cases)) {
+        // match_cases(expr, list(#(list(number), expr)))
+        let #(vals, results) = list.unzip(cases);
+        in
+            M.match_cases(fold(test),
+                        list.zip(vals, list.map(fold, results)))
+    }
+
+    (M.namespaces(exprs)) {
+        // namespaces(list(expr))
+        M.namespaces(list.map(fold, exprs))
+    }
+
+    (M.primapp(p, e1, e2)) {
+        // primapp(string, expr, expr)
+        let e1 = fold(e1);
+            e2 = fold(e2);
+        in
+            switch(e1, e2) {
+                // constant folding for arithmetic operations
+                (M.bigint(n1), M.bigint(n2)) {
+                    switch(p) {
+                        ("+") { M.bigint(n1 + n2) }
+                        ("-") { M.bigint(n1 - n2) }
+                        ("*") { M.bigint(n1 * n2) }
+                        ("/") { M.bigint(n1 / n2) }
+                        ("<") {
+                            if (n1 < n2) {
+                                M.bigint(1)
+                            } else {
+                                M.bigint(0)
+                            }
+                        }
+                        (">") {
+                            if (n1 > n2) {
+                                M.bigint(1)
+                            } else {
+                                M.bigint(0)
+                            }
+                        }
+                        ("**") { M.bigint(n1 ** n2) }
+                        ("==") | ("=") {
+                            if (n1 == n2) {
+                                M.bigint(1)
+                            } else {
+                                M.bigint(0)
+                            }
+                        }
+                        (_) {
+                            M.primapp(p, e1, e2)
+                        }
+                    }
+                }
+                (_, _) {
+                    M.primapp(p, e1, e2)
+                }
+            }
+    }
+
+    (M.sequence(exprs)) {
+        // sequence(list(expr))
+        M.sequence(list.map(fold, exprs))
+    }
+
+    (x) {
+        M.print_expr(x);
+        puts("\n");
+        error("fold: unsupported expression")
+    }
+}

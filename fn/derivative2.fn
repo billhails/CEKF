@@ -36,7 +36,7 @@ let
     }
 
     fn simplify {
-        (x=num(_))            { x }
+        (x=num(_))            |
         (x=var(_))            { x }
         (add(a, num(0)))      |
         (add(num(0), a))      { simplify(a) }
@@ -45,11 +45,23 @@ let
         (add(num(a), add(x, num(b)))) |
         (add(add(x, num(b)), num(a))) |
         (add(add(num(b), x), num(a))) { simplify(add(num(a + b), x)) }
+        (add(num(a), sub(num(b), x))) |
+        (add(sub(num(b), x), num(a))) { simplify(sub(num(a + b), x)) }
+        (add(num(a), sub(x, num(b)))) |
+        (add(sub(x, num(b)), num(a))) { simplify(add(x, num(a - b))) }
         (add(a, num(n)))      |
         (add(num(n), a))      { add(num(n), simplify(a)) }
         (add(a, b))           { add(simplify(a), simplify(b)) }
+        (sub(num(a), num(b))) { num(a - b) }
         (sub(a, num(0)))      { simplify(a) }
-        (sub(a, num(n)))      { sub(simplify(a), num(n)) }
+        (sub(num(a), sub(num(b), x))) { simplify(add(num(a - b), x)) }
+        (sub(num(a), sub(x, num(b)))) { simplify(sub(num(a + b), x)) }
+        (sub(num(a), add(num(b), x))) |
+        (sub(num(a), add(x, num(b)))) |
+        (sub(sub(num(a), x), num(b))) { simplify(sub(num(a - b), x)) }
+        (sub(sub(x, num(a)), num(b))) { simplify(sub(x, num(a + b))) }
+        (sub(add(num(a), x), num(b))) |
+        (sub(add(x, num(a)), num(b))) { simplify(sub(x, num(a + b))) }
         (sub(a, b))           { sub(simplify(a), simplify(b)) }
         (mul(num(0), _))      |
         (mul(_, num(0)))      { num(0) }

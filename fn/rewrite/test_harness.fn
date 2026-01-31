@@ -1,6 +1,7 @@
 let
     link "samples.fn" as Samples;
     link "beta_reduce.fn" as β;
+    link "constant_folding.fn" as OF;
     link "expr.fn" as E;
     link "minexpr.fn" as M;
     link "../listutils.fn" as list;
@@ -13,13 +14,26 @@ in
             expr = E.parse(str);
             dexpr = DS.desugar(expr);
             cexpr = CPS.T_c(dexpr, M.var("□"));
-            tab = "\n    ";
+            bexpr = β.reduce(cexpr);
+            oexpr = OF.fold(bexpr);
+            ccexpr = CC.shared_closure_convert(oexpr);
+            nltab = "\n    ";
         in
             E.print_expr(expr);
-            puts(" ==>");
-            puts(tab);
-            M.print_expr(β.reduce(CC.shared_closure_convert(cexpr)));
-            puts(tab);
-            M.print_expr(β.reduce(CC.flat_closure_convert(cexpr)));
+            puts("\n==> desugar");
+            puts(nltab);
+            M.print_expr(dexpr);
+            puts("\n==> cps transform");
+            puts(nltab);
+            M.print_expr(cexpr);
+            puts("\n==> beta reduce");
+            puts(nltab);
+            M.print_expr(bexpr);
+            puts("\n==> operator folding");
+            puts(nltab);
+            M.print_expr(oexpr);
+            puts("\n==> shared closure convert");
+            puts(nltab);
+            M.print_expr(ccexpr);
             puts("\n\n")
     }, Samples.data());
