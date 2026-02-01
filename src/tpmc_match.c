@@ -94,15 +94,24 @@ static bool comparisonIsReady(TpmcPattern *pattern, TpmcMatrix *matrix) {
     }
     HashSymbol *required = pattern->pattern->val.comparison->requiredPath;
     if (required == NULL) {
+        DEBUG(
+            "comparisonIsReady: pattern %s has no requiredPath, returning true",
+            pattern->path ? pattern->path->name : "(null)");
         return true; // No requirement recorded
     }
+    DEBUG("comparisonIsReady: pattern %s requires %s",
+          pattern->path ? pattern->path->name : "(null)", required->name);
     // Check if required path is a column header (root-level binding)
     for (Index x = 0; x < matrix->width; x++) {
         TpmcPattern *top = getTpmcMatrixIndex(matrix, x, 0);
+        DEBUG("  column %d header: %s", x,
+              top->path ? top->path->name : "(null)");
         if (top->path == required) {
+            DEBUG("  FOUND required path at column %d, returning true", x);
             return true; // Required path is at root level
         }
     }
+    DEBUG("  required path NOT found, returning false");
     return false; // Required path is nested, not yet available
 }
 
@@ -521,6 +530,11 @@ static bool arcsAreExhaustive(int size, TpmcArcArray *arcs, ParserInfo I) {
             UNPROTECT(save);
             return true;
         } break;
+        case TPMCPATTERNVALUE_TYPE_COMPARISON:
+            // Comparison arcs don't contribute to constructor exhaustiveness -
+            // they're guards on already-matched values, not constructor cases.
+            // Skip them in the exhaustiveness check.
+            break;
         default:
             cant_happen("arcsAreExhaustive given non-constructor arc while "
                         "parsing %s, line %d",
@@ -741,13 +755,23 @@ static TpmcArc *makeTpmcArc(TpmcPattern *pattern, TpmcState *state) {
     return arc;
 }
 
-static IntArray *findWcIndices(TpmcPatternArray *N) {
+// Find indices of rows that should be treated as wildcards for the default arc.
+// This includes actual wildcards AND non-ready comparisons (comparisons whose
+// required path is not yet a column header).
+static IntArray *findWcIndices(TpmcPatternArray *N, TpmcMatrix *M) {
     IntArray *wcIndices = newIntArray();
     int save = PROTECT(wcIndices);
     Index row = 0;
     TpmcPattern *candidate;
     while (iterateTpmcPatternArray(N, &row, &candidate, NULL)) {
+        // Include actual wildcards
         if (patternIsWildCard(candidate)) {
+            pushIntArray(wcIndices, row - 1);
+        }
+        // Also include non-ready comparisons (they were skipped in arc
+        // creation)
+        else if (patternIsComparison(candidate) &&
+                 !comparisonIsReady(candidate, M)) {
             pushIntArray(wcIndices, row - 1);
         }
     }
@@ -777,7 +801,10 @@ static TpmcState *mixture(TpmcMatrix *M, TpmcStateArray *finalStates,
         TpmcPattern *c = N->entries[row];
         // For each constructor c in the selected column, its arc is defined as
         // follows:
-        if (!patternIsWildCard(c)) {
+        // Skip wildcards AND non-ready comparisons (comparisons whose required
+        // path is not yet a column header). Non-ready comparisons are handled
+        // via the wildcard/default arc path instead.
+        if (patternIsActionable(c, M)) {
             // Skip if we've already added an arc for this exact constructor
             // pattern This prevents redundant recursive match() calls for
             // duplicate constructors
@@ -881,8 +908,9 @@ static TpmcState *mixture(TpmcMatrix *M, TpmcStateArray *finalStates,
     // If the set of constructors is exhaustive, then no more arcs are computed
     if (!constructorsAreExhaustive(testState, I)) {
         // Otherwise, a default arc (_,state) is the last arc.
-        // If there are any wildCard patterns in the selected column
-        IntArray *wcIndices = findWcIndices(N);
+        // If there are any wildCard patterns (or non-ready comparisons) in the
+        // selected column
+        IntArray *wcIndices = findWcIndices(N, M);
         PROTECT(wcIndices);
         if (countIntArray(wcIndices) > 0) {
             // then their rows are selected from the rest of the matrix and the

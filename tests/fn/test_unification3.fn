@@ -1,0 +1,18 @@
+let
+    typedef term {
+        num(number) |
+        add(term, term) |
+        sub(term, term)
+    }
+
+    fn broken {
+        (add(num(0), a))      |
+        (add(a, num(0)))      { 2 }
+        (add(num(a), sub(num(0), num(a)))) |
+        (add(sub(num(0), num(a)), num(a))) { 0 }
+        (_) { 1 }
+    }
+in
+    assert(broken(add(num(5), sub(num(0), num(5))) ) == 0);
+    assert(broken(add(sub(num(0), num(5)), num(5)) ) == 0);
+    assert(broken(num(10)) == 1);

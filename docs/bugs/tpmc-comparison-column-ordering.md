@@ -545,6 +545,7 @@ static TpmcPattern *collectComparisonSubstitutions(TpmcPattern *pattern,
 
 - Added `isAncestorPath()` helper for path relationship checking
 - Modified `addFreeVariablesRequiredByPattern()` to only add comparison dependency if previous is NOT an ancestor of current
+- Added handling for `TPMCPATTERNVALUE_TYPE_COMPARISON` in `arcsAreExhaustive()` - comparison arcs are now skipped when checking constructor exhaustiveness, since they are guards rather than constructor cases
 
 ### Why Both Fixes Were Necessary
 
@@ -634,3 +635,72 @@ TPMC uses free variables to determine which states can be merged during DFA cons
 In the buggy graph, states T202-T205 form a separate chain that couldn't be merged with similar states elsewhere. In the fixed graph, states are reused more efficiently because their free variable sets correctly reflect only the variables actually needed.
 
 **Conclusion:** The fix removed "noise" from free variable tracking, allowing DFA minimization to work properly. This is a serendipitous optimization - the fix was required for correctness, but it also improved code generation efficiency.
+
+## Bug 4: Non-Ready Comparisons Creating Arcs
+
+### Symptom
+
+After fixing Bugs 1-3, a new failure appeared with more complex patterns involving pseudo-unification:
+
+```fn
+fn broken {
+    (add(num(0), a))      |
+    (add(a, num(0)))      { 2 }
+    (add(num(a), sub(num(0), num(a)))) |
+    (add(sub(num(0), num(a)), num(a))) { 0 }
+    (_) { 1 }
+}
+```
+
+Error: `undefined variable p$106$0$1$0`
+
+### Root Cause
+
+When `mixture()` selects a column for processing (e.g., column `$1$0`), it correctly uses `findFirstActionableColumn()` to skip non-ready comparisons when choosing which column to process. However, once a column is selected, the loop that creates arcs for patterns in that column used `!patternIsWildCard(c)` as its filter.
+
+This meant that if column `$1$0` was selected because row 1 had an actionable pattern like `num(0)`, a non-ready comparison in row 2 of the same column would still get an arc created for it. That arc would then list the comparison's `requiredPath` (e.g., `p$106$0$1$0`) in its free variables - but that path hadn't been deconstructed yet.
+
+### The Fix
+
+The fix required two changes in `src/tpmc_match.c`:
+
+**Part 1: Skip non-ready comparisons in arc creation**
+
+The `mixture()` function's arc creation loop was changed from:
+
+```c
+if (!patternIsWildCard(c)) {
+```
+
+to:
+
+```c
+if (patternIsActionable(c, M)) {
+```
+
+The `patternIsActionable()` function already correctly handles both wildcards AND non-ready comparisons by returning `false` for both. This ensures non-ready comparisons don't get their own arcs with unbound free variables.
+
+**Part 2: Include non-ready comparisons in wildcard path**
+
+The `findWcIndices()` function, which collects row indices for the default/wildcard arc, was updated to also include non-ready comparisons:
+
+```c
+static IntArray *findWcIndices(TpmcPatternArray *N, TpmcMatrix *M) {
+    // ...
+    while (iterateTpmcPatternArray(N, &row, &candidate, NULL)) {
+        if (patternIsWildCard(candidate)) {
+            pushIntArray(wcIndices, row - 1);
+        }
+        // Also include non-ready comparisons
+        else if (patternIsComparison(candidate) &&
+                 !comparisonIsReady(candidate, M)) {
+            pushIntArray(wcIndices, row - 1);
+        }
+    }
+    // ...
+}
+```
+
+Without Part 2, non-ready comparisons were being lost entirely - they weren't getting arcs (correct) but they also weren't being included in the wildcard path (bug), so the rows containing pseudo-unification patterns never got propagated into the recursive `match()` call.
+
+When the algorithm recurses deeper and the required path eventually becomes a column header, the comparison will become "ready" and get its own arc at that point.

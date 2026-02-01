@@ -297,10 +297,29 @@ static void renamePattern(TpmcPattern *pattern, HashSymbol *variable);
 
 static void renameComparisonPattern(TpmcComparisonPattern *pattern,
                                     HashSymbol *path) {
+#ifdef DEBUG_TPMC_MATCH
+    eprintf("renameComparisonPattern ENTER: path=%s, previous=%p, current=%p\n",
+            path ? path->name : "NULL", (void *)pattern->previous,
+            (void *)pattern->current);
+    if (pattern->previous) {
+        eprintf(
+            "  previous->path BEFORE=%s, type=%d\n",
+            pattern->previous->path ? pattern->previous->path->name : "NULL",
+            pattern->previous->pattern ? pattern->previous->pattern->type : -1);
+    }
+#endif
     renamePattern(pattern->current,
                   path); // previous will already have been named
     // Record the path that must be bound before this comparison can execute
     pattern->requiredPath = pattern->previous->path;
+#ifdef DEBUG_TPMC_MATCH
+    eprintf("renameComparisonPattern EXIT: pattern path=%s, previous->path=%s, "
+            "current->path=%s, requiredPath=%s\n",
+            path ? path->name : "NULL",
+            pattern->previous->path ? pattern->previous->path->name : "NULL",
+            pattern->current->path ? pattern->current->path->name : "NULL",
+            pattern->requiredPath ? pattern->requiredPath->name : "NULL");
+#endif
 }
 
 static void renameAssignmentPattern(TpmcAssignmentPattern *pattern,

@@ -92,6 +92,9 @@ fn simplify (e) {
                     // 0 + a == a + 0 == a
                     (add(num(0), a))      |
                     (add(a, num(0)))      { a }
+                    // a + (0 - a) == 0
+                    (add(num(a), sub(num(0), num(a)))) |
+                    (add(sub(num(0), num(a)), num(a))) { num(0) }
                     // a + (b + x) == a + (x + b) == (a + x) + b == (x + a) + b == (a + b) + x
                     (add(num(a), add(num(b), x))) |
                     (add(num(a), add(x, num(b)))) |
@@ -197,7 +200,8 @@ fn simplify (e) {
                     (mul(num(1), a))      |
                     (mul(a, num(1)))      { a }
                     // x * (1 / x) == 1
-                    (mul(x, div(num(1), x))) { num(1) }
+                    (mul(x, div(num(1), x))) |
+                    (mul(div(num(1), x), x)) { num(1) }
 
                     // MISSING: (-1) * a = -a (if you have negation)
                     // there is no negation operator currently
