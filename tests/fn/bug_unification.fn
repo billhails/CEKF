@@ -1,0 +1,13 @@
+let
+    typedef term {
+        num(number) |
+        mul(term, term)
+    }
+
+    fn broken {
+        (mul(mul(num(1), x), x)) { num(1) }
+        (mul(x, mul(num(1), x))) { num(1) }
+        (x) { x }
+    }
+in
+    broken(mul(num(2), mul(num(1), num(2))))

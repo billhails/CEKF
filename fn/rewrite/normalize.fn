@@ -1,7 +1,5 @@
-let
+namespace
     link "../listutils.fn" as list;
-    link "desugar.fn" as DS;
-    link "samples.fn" as Samples;
     link "../ioutils.fn" as io;
     link "minexpr.fn" as M;
 
@@ -34,7 +32,6 @@ let
             (x=M.bigint(_)) |
             (x=M.var(_)) |
             (x=M.back_expr) |
-            (x=M.constructor_info(_)) |
             (x=M.stdint(_)) |
             (x=M.env_expr) |
             (x=M.error_expr) |
@@ -42,16 +39,13 @@ let
                 k(x)
             }
             (x) {
-                let
-                    y = genstring();
-                in
-                    DS.desugar(M.let_expr([#(y, x)], k(M.var(y))))
+                let y = genstring();
+                in  M.apply(M.lambda([y], k(M.var(y))), [x])
             }
         })
     }
 
     fn normalize {
-
         (M.lambda(params, body), k) {
             k(M.lambda(params, normalize_term(body)))
         }
@@ -61,7 +55,6 @@ let
         (x=M.var(_), k) |
         (x=M.back_expr, k) |
         (x=M.stdint(_), k) |
-        (x=M.constructor_info(_), k) |
         (x=M.env_expr, k) |
         (x=M.error_expr, k) |
         (x=M.character(_), k) {
@@ -81,23 +74,17 @@ let
             })
         }
 
+        (M.apply(M.primop(op), Ms), k) {
+            normalize_names(Ms, fn (ts) {
+                k(M.apply(M.primop(op), ts))
+            })
+        }
+
         (M.apply(Fn, Ms), k) {
             normalize_name(Fn, fn (t) {
                 normalize_names(Ms, fn (ts) {
                     k(M.apply(t, ts))
                 })
-            })
-        }
-
-        (M.construct(name, args), k) {
-            normalize_names(args, fn (ts) {
-                k(M.construct(name, ts))
-            })
-        }
-
-        (M.make_tuple(Ms), k) {
-            normalize_names(Ms, fn (ts) {
-                k(M.make_tuple(ts))
             })
         }
 
@@ -136,12 +123,6 @@ let
             })
         }
 
-        (M.deconstruct(name, index, e0), k) {
-            normalize_name(e0, fn (t) {
-                k(M.deconstruct(name, index, t))
-            })
-        }
-
         // we have to treat e0 as a Cexp because it is
         // inside the scope of a namespace
         (M.lookup(name, index, e0), k) {
@@ -151,35 +132,6 @@ let
         // each namespace must be individually contained
         (M.namespaces(exprs), k) {
             k(M.namespaces(normalize_terms(exprs)))
-        }
-
-        // the typedefs themselves are discarded after normalization
-        (M.typedefs(ignored, expr), k) {
-            k(M.typedefs(ignored, normalize_term(expr)))
-        }
-
-        (M.print_exp(e0), k) {
-            normalize_name(e0, fn (t) {
-                k(M.print_exp(t))
-            })
-        }
-
-        (M.typeof_expr(e0), k) {
-            normalize_name(e0, fn (t) {
-                k(M.typeof_expr(t))
-            })
-        }
-
-        (M.tuple_index(size, index, e0), k) {
-            normalize_name(e0, fn (t) {
-                k(M.tuple_index(size, index, t))
-            })
-        }
-
-        (M.tag(e0), k) {
-            normalize_name(e0, fn (t) {
-                k(M.tag(t))
-            })
         }
 
         (other, k) {
@@ -214,13 +166,3 @@ let
             })
         }
     }
-in
-    list.for_each (fn (str) {
-        let expr = M.parse(str);
-        in
-        M.print_expr(expr);
-        puts(" ==>\n    ");
-        M.print_expr(normalize_term(DS.desugar(expr)));
-        puts("\n")
-    },
-    Samples.data);
