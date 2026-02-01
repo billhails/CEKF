@@ -480,13 +480,157 @@ Working cases (for reference):
 - `tests/fn/test_pseudo_unification.fn` - comparison across different columns
 - Pattern `(mul(mul(num(1), x), x))` - first `x` is deeper, works correctly
 
-Broken case:
+Broken case (now fixed):
 
 - `tests/fn/bug_unification.fn` - comparison where second occurrence is deeper
-- Pattern `(mul(x, mul(num(1), x)))` - second `x` is deeper, fails
+- Pattern `(mul(x, mul(num(1), x)))` - second `x` is deeper
 
 ## References
 
 - `docs/lambda-conversion.md` - Contains walkthrough of an earlier comparison bug fix
 - `docs/agent/tpmc.md` - TPMC overview documentation
 - Pettersson 1992 paper (`docs/pettersson92.pdf`) - Original algorithm (does not cover comparisons)
+
+## Implemented Fix
+
+The investigation revealed **two separate bugs** that combined to cause the failure:
+
+### Bug 1: Column Selection Didn't Defer Non-Ready Comparisons
+
+The original heuristic fell back to column 0 when comparisons existed, but this didn't handle cases where the required binding was nested within the same column.
+
+**Fix in `src/tpmc_match.c`:**
+
+1. Added `comparisonIsReady()` - checks if a comparison's `requiredPath` is a current column header
+2. Added `patternIsActionable()` - returns false for wildcards and non-ready comparisons
+3. Added `topRowHasNoActionablePatterns()` - replaces `topRowOnlyVariables()` to handle non-ready comparisons in the Variable Rule
+4. Added `findFirstActionableColumn()` - replaces `findFirstConstructorColumn()`, skipping non-actionable patterns
+5. Removed the column 0 fallback hack from `mixture()`
+
+### Bug 2: Comparison's `current` Path Was Added to Free Variables
+
+When processing comparisons for substitution, the `current` pattern (second occurrence) was being processed, which added its path to the substitutions map. This caused the path to appear in free variables even when the body didn't use it.
+
+**Fix in `src/tpmc_logic.c`:**
+
+Changed `collectComparisonSubstitutions()` to NOT process `current` for substitutions:
+
+```c
+static TpmcPattern *collectComparisonSubstitutions(TpmcPattern *pattern,
+                                                   SymbolMap *substitutions) {
+    // Process previous to collect substitutions - this is where the variable
+    // name should be bound (first occurrence)
+    TpmcPattern *previous = pattern->pattern->val.comparison->previous;
+    pattern->pattern->val.comparison->previous =
+        collectPatternSubstitutions(previous, substitutions);
+    // Note: Do NOT process current for substitutions.
+    // The current is only used for the equality comparison in the DFA,
+    // not for substitution into the body.
+    return pattern;
+}
+```
+
+### Supporting Changes
+
+**`src/tpmc.yaml`:**
+
+- Added `requiredPath: HashSymbol=NULL` to `TpmcComparisonPattern`
+
+**`src/tpmc_logic.c`:**
+
+- Set `requiredPath = previous->path` in `renameComparisonPattern()` (after paths are assigned)
+- Added rejection for >2 occurrences of the same variable in `replaceVarPattern()`
+
+**`src/tpmc_match.c`:**
+
+- Added `isAncestorPath()` helper for path relationship checking
+- Modified `addFreeVariablesRequiredByPattern()` to only add comparison dependency if previous is NOT an ancestor of current
+
+### Why Both Fixes Were Necessary
+
+- Bug 1 alone would still fail because `p$106$1$1` was appearing as a free variable at the root state
+- Bug 2 alone would still fail because the column selection wasn't deferring the comparison until its required binding was available
+- Together, the fixes ensure that (a) comparisons are deferred until ready, and (b) only the necessary paths appear in free variables
+
+### Fixed TPMC Graph
+
+```mermaid
+---
+title: fixed
+---
+flowchart TD
+T196("p$106<br/>[]<br/>(arcs 2)")
+T197("p$106$0<br/>[p$106$1 p$106 p$106$0]<br/>(arcs 2)")
+T198("p$106$1<br/>[p$106$1 p$106$0$0 p$106 p$106$0$1 p$106$0]<br/>(arcs 3)")
+T199("p$106$0$0<br/>[p$106$0$0 p$106$0$1 p$106$0]<br/>(arcs 2)")
+T200("p$106$0$0$0<br/>[p$106$0$1 p$106$0$0$0 p$106$0]<br/>(arcs 2)")
+F192("(begin 1)<br/>[p$106$0$1]")
+T200 --"p$106$0$0$0:1<br/>[p$106$0$1]"--> F192
+F193("(begin 2)<br/>[p$106$0]")
+T200 --"p$106$0$0$0:_<br/>[p$106$0]"--> F193
+T199 --"p$106$0$0:num(p$106$0$0$0:_)<br/>[p$106$0$1 p$106$0]"--> T200
+T199 --"p$106$0$0:_<br/>[p$106$0]"--> F193
+T198 --"p$106$1:p$106$0$1:_==p$106$1:var x<br/>[p$106$0$0 p$106$0$1 p$106$0]"--> T199
+T201("p$106$1$0<br/>[p$106 p$106$1$0 p$106$0]<br/>(arcs 2)")
+T202("p$106$1$0$0<br/>[p$106$1$0$0 p$106 p$106$0]<br/>(arcs 2)")
+T202 --"p$106$1$0$0:1<br/>[p$106$0]"--> F193
+F194("(begin 3)<br/>[p$106]")
+T202 --"p$106$1$0$0:_<br/>[p$106]"--> F194
+T201 --"p$106$1$0:num(p$106$1$0$0:_)<br/>[p$106 p$106$0]"--> T202
+T201 --"p$106$1$0:_<br/>[p$106]"--> F194
+T198 --"p$106$1:mul(p$106$1$0:_, p$106$1$1:_)<br/>[p$106 p$106$0]"--> T201
+T198 --"p$106$1:_<br/>[p$106]"--> F194
+T197 --"p$106$0:mul(p$106$0$0:_, p$106$0$1:_)<br/>[p$106$1 p$106]"--> T198
+T203("p$106$1<br/>[p$106$1 p$106 p$106$0]<br/>(arcs 2)")
+T202 --"p$106$1$0$0:1<br/>[p$106$0]"--> F193
+T202 --"p$106$1$0$0:_<br/>[p$106]"--> F194
+T201 --"p$106$1$0:num(p$106$1$0$0:_)<br/>[p$106 p$106$0]"--> T202
+T201 --"p$106$1$0:_<br/>[p$106]"--> F194
+T203 --"p$106$1:mul(p$106$1$0:_, p$106$1$1:_)<br/>[p$106 p$106$0]"--> T201
+T203 --"p$106$1:_<br/>[p$106]"--> F194
+T197 --"p$106$0:_<br/>[p$106$1 p$106]"--> T203
+T196 --"p$106:mul(p$106$0:_, p$106$1:_)<br/>[]"--> T197
+T196 --"p$106:_<br/>[]"--> F194
+```
+
+### Why the Fixed Graph is Smaller
+
+The fixed graph has **8 test states** compared to the buggy graph's **12 test states** (33% reduction). This improvement is a direct consequence of fixing Bug 2 (the free variable propagation issue).
+
+**Root cause of state explosion:**
+
+In the buggy code, `collectComparisonSubstitutions()` processed both `previous` and `current` of a comparison pattern. This caused `p$106$1$1` (the `current` pattern's path) to be incorrectly added to free variable sets throughout the state machine.
+
+Compare the root arc in both graphs:
+
+**Buggy**:
+
+```mermaid
+flowchart LR
+T196("p$106<br/>[]<br/>(arcs 2)")
+T197("p$106$0<br/>[p$106$1 p$106 p$106$0]<br/>(arcs 2)")
+T196 --"p$106:mul...<br/>[p$106$1$1]"--> T197
+```
+
+**Fixed**:
+
+```mermaid
+flowchart LR
+T196("p$106<br/>[]<br/>(arcs 2)")
+T197("p$106$0<br/>[p$106$1 p$106 p$106$0]<br/>(arcs 2)")
+T196 --"p$106:mul...<br/>[]"--> T197
+```
+
+The spurious `[p$106$1$1]` is a path that doesn't even exist yet at T196 (p$106).
+
+**Why spurious free variables cause state explosion:**
+
+TPMC uses free variables to determine which states can be merged during DFA construction. When incorrect variables pollute free variable sets:
+
+1. States that should be structurally identical now have **different** free variable sets.
+2. This **prevents state merging** during DFA minimization.
+3. The algorithm maintains distinct execution paths for what should be shared logic.
+
+In the buggy graph, states T202-T205 form a separate chain that couldn't be merged with similar states elsewhere. In the fixed graph, states are reused more efficiently because their free variable sets correctly reflect only the variables actually needed.
+
+**Conclusion:** The fix removed "noise" from free variable tracking, allowing DFA minimization to work properly. This is a serendipitous optimization - the fix was required for correctness, but it also improved code generation efficiency.

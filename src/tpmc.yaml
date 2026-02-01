@@ -57,6 +57,7 @@ structs:
         data:
             previous: TpmcPattern
             current: TpmcPattern
+            requiredPath: HashSymbol=NULL
 
     TpmcAssignmentPattern:
         meta:

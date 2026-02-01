@@ -12,6 +12,7 @@ TpmcMatchRule --action--> TpmcState
 TpmcMatchRule --patterns--> TpmcPatternArray
 TpmcComparisonPattern --previous--> TpmcPattern
 TpmcComparisonPattern --current--> TpmcPattern
+TpmcComparisonPattern --requiredPath--> HashSymbol
 TpmcAssignmentPattern --name--> HashSymbol
 TpmcAssignmentPattern --value--> TpmcPattern
 TpmcConstructorPattern --tag--> HashSymbol

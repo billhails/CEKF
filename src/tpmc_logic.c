@@ -299,6 +299,8 @@ static void renameComparisonPattern(TpmcComparisonPattern *pattern,
                                     HashSymbol *path) {
     renamePattern(pattern->current,
                   path); // previous will already have been named
+    // Record the path that must be bound before this comparison can execute
+    pattern->requiredPath = pattern->previous->path;
 }
 
 static void renameAssignmentPattern(TpmcAssignmentPattern *pattern,
@@ -379,21 +381,30 @@ static void renameRules(TpmcMatchRules *input, ParserInfo I) {
 }
 
 static TpmcPattern *replaceComparisonPattern(TpmcPattern *pattern,
-                                             TpmcPatternTable *seen);
+                                             TpmcPatternTable *seen,
+                                             ParserInfo I);
 
 static TpmcPattern *replaceVarPattern(TpmcPattern *pattern,
-                                      TpmcPatternTable *seen) {
+                                      TpmcPatternTable *seen, ParserInfo I) {
     TpmcPattern *other = NULL;
     if (getTpmcPatternTable(seen, pattern->pattern->val.var, &other)) {
         if (other->pattern->type == TPMCPATTERNVALUE_TYPE_ASSIGNMENT) {
             // FIXME should be possible to allow this? assignments are just
             // variable bindings would be necessary to refine the
             // patternsMatchingPattern algorithm in tpmc_match.c:mixture()
-            can_happen("cannot compare assignment (var %s)",
-                       pattern->pattern->val.var->name);
+            can_happen("cannot compare assignment (var %s) at +%d %s",
+                       pattern->pattern->val.var->name, I.lineNo, I.fileName);
+        }
+        if (other->pattern->type == TPMCPATTERNVALUE_TYPE_COMPARISON) {
+            // More than 2 occurrences of same variable not yet supported
+            can_happen(
+                "variable '%s' appears more than twice in pattern at +%d %s",
+                pattern->pattern->val.var->name, I.lineNo, I.fileName);
         }
         TpmcPatternValue *val = makeTpmcPatternValue_Comparison(other, pattern);
         int save = PROTECT(val);
+        // Note: requiredPath is set later in renameComparisonPattern when paths
+        // are assigned
         TpmcPattern *result = newTpmcPattern(val);
         UNPROTECT(save);
         return result;
@@ -404,57 +415,61 @@ static TpmcPattern *replaceVarPattern(TpmcPattern *pattern,
 }
 
 static TpmcPattern *replaceAssignmentPattern(TpmcPattern *pattern,
-                                             TpmcPatternTable *seen) {
+                                             TpmcPatternTable *seen,
+                                             ParserInfo I) {
     TpmcPattern *other = NULL;
     if (getTpmcPatternTable(seen, pattern->pattern->val.assignment->name,
                             &other)) {
-        can_happen("cannot compare assignment (var %s)",
-                   pattern->pattern->val.assignment->name->name);
+        can_happen("cannot compare assignment (var %s) at +%d %s",
+                   pattern->pattern->val.assignment->name->name, I.lineNo,
+                   I.fileName);
     } else {
         setTpmcPatternTable(seen, pattern->pattern->val.assignment->name,
                             pattern);
     }
-    pattern->pattern->val.assignment->value =
-        replaceComparisonPattern(pattern->pattern->val.assignment->value, seen);
+    pattern->pattern->val.assignment->value = replaceComparisonPattern(
+        pattern->pattern->val.assignment->value, seen, I);
     return pattern;
 }
 
 static TpmcPattern *replaceConstructorPattern(TpmcPattern *pattern,
-                                              TpmcPatternTable *seen) {
+                                              TpmcPatternTable *seen,
+                                              ParserInfo I) {
     TpmcPatternArray *components =
         pattern->pattern->val.constructor->components;
     for (Index i = 0; i < components->size; ++i) {
         components->entries[i] =
-            replaceComparisonPattern(components->entries[i], seen);
+            replaceComparisonPattern(components->entries[i], seen, I);
     }
     return pattern;
 }
 
 static TpmcPattern *replaceTuplePattern(TpmcPattern *pattern,
-                                        TpmcPatternTable *seen) {
+                                        TpmcPatternTable *seen, ParserInfo I) {
     TpmcPatternArray *components = pattern->pattern->val.tuple;
     for (Index i = 0; i < components->size; ++i) {
         components->entries[i] =
-            replaceComparisonPattern(components->entries[i], seen);
+            replaceComparisonPattern(components->entries[i], seen, I);
     }
     return pattern;
 }
 
 static TpmcPattern *replaceComparisonPattern(TpmcPattern *pattern,
-                                             TpmcPatternTable *seen) {
+                                             TpmcPatternTable *seen,
+                                             ParserInfo I) {
     switch (pattern->pattern->type) {
     case TPMCPATTERNVALUE_TYPE_BIGINTEGER:
     case TPMCPATTERNVALUE_TYPE_WILDCARD:
     case TPMCPATTERNVALUE_TYPE_CHARACTER:
         return pattern;
     case TPMCPATTERNVALUE_TYPE_VAR:
-        return replaceVarPattern(pattern, seen);
+        return replaceVarPattern(pattern, seen, I);
     case TPMCPATTERNVALUE_TYPE_ASSIGNMENT:
-        return replaceAssignmentPattern(pattern, seen);
+        return replaceAssignmentPattern(pattern, seen, I);
     case TPMCPATTERNVALUE_TYPE_TUPLE:
-        return replaceTuplePattern(pattern, seen);
+        return replaceTuplePattern(pattern, seen, I);
     case TPMCPATTERNVALUE_TYPE_CONSTRUCTOR:
-        return replaceConstructorPattern(pattern, seen);
+        return replaceConstructorPattern(pattern, seen, I);
     case TPMCPATTERNVALUE_TYPE_COMPARISON:
         cant_happen("encounterted nested comparison pattern during "
                     "replaceComparisonPattern");
@@ -464,20 +479,20 @@ static TpmcPattern *replaceComparisonPattern(TpmcPattern *pattern,
     }
 }
 
-static void replaceComparisonRule(TpmcMatchRule *rule) {
+static void replaceComparisonRule(TpmcMatchRule *rule, ParserInfo I) {
     TpmcPatternTable *seen = newTpmcPatternTable();
     int save = PROTECT(seen);
     for (Index i = 0; i < rule->patterns->size; i++) {
         rule->patterns->entries[i] =
-            replaceComparisonPattern(rule->patterns->entries[i], seen);
+            replaceComparisonPattern(rule->patterns->entries[i], seen, I);
     }
     UNPROTECT(save);
     validateLastAlloc();
 }
 
-static void replaceComparisonRules(TpmcMatchRules *input) {
+static void replaceComparisonRules(TpmcMatchRules *input, ParserInfo I) {
     for (Index i = 0; i < input->rules->size; i++) {
-        replaceComparisonRule(input->rules->entries[i]);
+        replaceComparisonRule(input->rules->entries[i], I);
     }
 }
 
@@ -525,11 +540,16 @@ static TpmcPattern *collectTupleSubstitutions(TpmcPattern *pattern,
 
 static TpmcPattern *collectComparisonSubstitutions(TpmcPattern *pattern,
                                                    SymbolMap *substitutions) {
+    // Process previous to collect substitutions - this is where the variable
+    // name should be bound (first occurrence)
     TpmcPattern *previous = pattern->pattern->val.comparison->previous;
     pattern->pattern->val.comparison->previous =
         collectPatternSubstitutions(previous, substitutions);
-    pattern->pattern->val.comparison->current = collectPatternSubstitutions(
-        pattern->pattern->val.comparison->current, substitutions);
+    // Note: Do NOT process current for substitutions.
+    // The current is only used for the equality comparison in the DFA,
+    // not for substitution into the body. The variable name was already
+    // bound by previous. Processing current would incorrectly add its path
+    // to free variables and potentially overwrite the correct substitution.
     return pattern;
 }
 
@@ -699,7 +719,7 @@ LamLam *tpmcConvert(bool allow_unsafe, ParserInfo I, int nArgs, int nbodies,
     PROTECT(rules);
     TpmcMatchRules *input = newTpmcMatchRules(rules, rootVariables);
     REPLACE_PROTECT(save, input);
-    replaceComparisonRules(input);
+    replaceComparisonRules(input, I);
     renameRules(input, I);
     performRulesSubstitutions(input);
     TpmcMatrix *matrix = convertToMatrix(input);

@@ -197,7 +197,7 @@ fn simplify (e) {
                     (mul(num(1), a))      |
                     (mul(a, num(1)))      { a }
                     // x * (1 / x) == 1
-                    // (mul(x, div(num(1), x))) { num(1) } // BROKEN
+                    (mul(x, div(num(1), x))) { num(1) }
 
                     // MISSING: (-1) * a = -a (if you have negation)
                     // there is no negation operator currently

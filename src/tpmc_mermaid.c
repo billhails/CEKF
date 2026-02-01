@@ -192,8 +192,10 @@ void tpmcMermaid(TpmcState *state) {
     if (tpmc_mermaid_flag) {
         SymbolSet *seen = newSymbolSet();
         int save = PROTECT(seen);
-        printf("## %s\n", tpmc_mermaid_function);
         printf("```mermaid\n");
+        printf("---\n");
+        printf("title: %s\n", tpmc_mermaid_function);
+        printf("---\n");
         printf("flowchart LR\n");
         mermaidState(state, seen);
         printf("```\n");

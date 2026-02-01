@@ -87,33 +87,59 @@ static bool patternIsComparison(TpmcPattern *pattern) {
     return pattern->pattern->type == TPMCPATTERNVALUE_TYPE_COMPARISON;
 }
 
-static bool topRowOnlyVariables(TpmcMatrix *matrix) {
+// Check if a comparison's required path is available (is a column header)
+static bool comparisonIsReady(TpmcPattern *pattern, TpmcMatrix *matrix) {
+    if (pattern->pattern->type != TPMCPATTERNVALUE_TYPE_COMPARISON) {
+        return true; // Not a comparison, always ready
+    }
+    HashSymbol *required = pattern->pattern->val.comparison->requiredPath;
+    if (required == NULL) {
+        return true; // No requirement recorded
+    }
+    // Check if required path is a column header (root-level binding)
     for (Index x = 0; x < matrix->width; x++) {
-        if (!patternIsWildCard(getTpmcMatrixIndex(matrix, x, 0))) {
+        TpmcPattern *top = getTpmcMatrixIndex(matrix, x, 0);
+        if (top->path == required) {
+            return true; // Required path is at root level
+        }
+    }
+    return false; // Required path is nested, not yet available
+}
+
+// A pattern is actionable if it's not a wildcard and not a non-ready comparison
+static bool patternIsActionable(TpmcPattern *pattern, TpmcMatrix *matrix) {
+    if (patternIsWildCard(pattern)) {
+        return false;
+    }
+    // Non-ready comparisons are treated as wildcards for column selection
+    if (patternIsComparison(pattern) && !comparisonIsReady(pattern, matrix)) {
+        return false;
+    }
+    return true;
+}
+
+// Check if top row has only wildcards or non-ready comparisons (nothing
+// actionable)
+static bool topRowHasNoActionablePatterns(TpmcMatrix *matrix) {
+    for (Index x = 0; x < matrix->width; x++) {
+        if (patternIsActionable(getTpmcMatrixIndex(matrix, x, 0), matrix)) {
             return false;
         }
     }
     return true;
 }
 
-static bool columnHasComparisons(int x, TpmcMatrix *matrix) {
-    for (Index y = 0; y < matrix->height; y++) {
-        if (patternIsComparison(getTpmcMatrixIndex(matrix, x, y))) {
-            return true;
-        }
-    }
-    return false;
-}
-
-static int findFirstConstructorColumn(TpmcMatrix *matrix) {
+// Find first column with an actionable pattern (constructor, literal, or ready
+// comparison)
+static int findFirstActionableColumn(TpmcMatrix *matrix) {
     for (Index x = 0; x < matrix->width; x++) {
-        if (!patternIsWildCard(getTpmcMatrixIndex(matrix, x, 0))) {
-            DEBUG("findFirstConstructorColumn(%d x %d) => %d", matrix->width,
+        if (patternIsActionable(getTpmcMatrixIndex(matrix, x, 0), matrix)) {
+            DEBUG("findFirstActionableColumn(%d x %d) => %d", matrix->width,
                   matrix->height, x);
             return x;
         }
     }
-    cant_happen("findFirstConstructorColumn failed");
+    cant_happen("findFirstActionableColumn failed");
 }
 
 static TpmcState *makeEmptyTestState(HashSymbol *path) {
@@ -665,12 +691,25 @@ static SymbolSet *getStatesFreeVariables(TpmcState *state) {
     return state->freeVariables;
 }
 
+// Check if pathA is an ancestor of pathB (pathB starts with pathA$)
+static bool isAncestorPath(HashSymbol *pathA, HashSymbol *pathB) {
+    const char *a = pathA->name;
+    const char *b = pathB->name;
+    size_t lenA = strlen(a);
+    // pathB must start with pathA followed by '$'
+    return strncmp(a, b, lenA) == 0 && b[lenA] == '$';
+}
+
 static void addFreeVariablesRequiredByPattern(TpmcPattern *pattern,
                                               SymbolSet *freeVariables) {
     if (pattern->pattern->type == TPMCPATTERNVALUE_TYPE_COMPARISON) {
         TpmcPattern *previous = pattern->pattern->val.comparison->previous;
         HashSymbol *name = previous->path;
-        setSymbolSet(freeVariables, name);
+        // Only add as free variable if previous is NOT an ancestor of current
+        // If previous is an ancestor, it will be bound during descent
+        if (!isAncestorPath(name, pattern->path)) {
+            setSymbolSet(freeVariables, name);
+        }
     }
 }
 
@@ -721,13 +760,10 @@ static TpmcState *mixture(TpmcMatrix *M, TpmcStateArray *finalStates,
                           TpmcStateTable *stateTable, bool *unsafe,
                           ParserInfo I) {
     ENTER(mixture);
-    // there is some column N whose topmost pattern is a constructor
-    int firstConstructorColumn = findFirstConstructorColumn(M);
-    // this heuristic allows for comparisons to work:
-    if (firstConstructorColumn > 0 &&
-        columnHasComparisons(firstConstructorColumn, M)) {
-        firstConstructorColumn = 0;
-    }
+    // Find first column with an actionable pattern (constructor, literal, or
+    // ready comparison) Non-ready comparisons are treated as wildcards until
+    // their required bindings are available
+    int firstConstructorColumn = findFirstActionableColumn(M);
     TpmcPatternArray *N = extractMatrixColumn(firstConstructorColumn, M);
     int save = PROTECT(N);
     // let M-N be all the columns in M except N
@@ -897,7 +933,7 @@ static TpmcState *match(TpmcMatrix *matrix, TpmcStateArray *finalStates,
         cant_happen("zero-height matrix passed to match");
     }
     TpmcState *res = NULL;
-    if (topRowOnlyVariables(matrix)) {
+    if (topRowHasNoActionablePatterns(matrix)) {
         res = finalStates->entries[0];
     } else {
         res = mixture(matrix, finalStates, errorState, knownStates, stateTable,
