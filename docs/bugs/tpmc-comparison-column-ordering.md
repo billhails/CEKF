@@ -704,3 +704,137 @@ static IntArray *findWcIndices(TpmcPatternArray *N, TpmcMatrix *M) {
 Without Part 2, non-ready comparisons were being lost entirely - they weren't getting arcs (correct) but they also weren't being included in the wildcard path (bug), so the rows containing pseudo-unification patterns never got propagated into the recursive `match()` call.
 
 When the algorithm recurses deeper and the required path eventually becomes a column header, the comparison will become "ready" and get its own arc at that point.
+
+## Bug 5: Comparisons Grouping With Constructors During Row Partitioning
+
+### Symptom
+
+After fixing Bugs 1-4, a new failure appeared with pseudo-unification patterns:
+
+```fn
+fn simplify {
+    (div(num(a), num(b))) { num(a / b) }
+    (div(x, x)) { num(1) }
+    (x) { x }
+}
+```
+
+Test case `tests/fn/bug_unifictation4.fn`:
+
+- Input: `simplify(div(num(1), var("x")))`
+- Expected: `div(num(1), var("x"))` (no simplification, children differ)
+- Actual: `num(1)` (incorrectly matched `div(x, x)` pattern)
+
+The pattern `(div(x, x))` was falsely matching when the two children were different types (`num` vs `var`).
+
+### Root Cause
+
+In `patternMatches()`, the logic for determining which patterns "match" a given constructor was too permissive for comparisons. The original code had:
+
+```c
+|| isComparison
+```
+
+in several branches, which caused comparison patterns to match ANY constructor. This meant during row partitioning in `mixture()`:
+
+1. When processing rows for constructor `num`, the comparison row was grouped with it
+2. Both rows ended up sharing the same final state body (`num(a/b)`)
+3. The comparison was never actually evaluated
+
+### The Fix
+
+**Part 1: Fix `patternMatches()` to not group comparisons with constructors**
+
+Changed the logic so comparisons only match:
+
+- The same comparison pattern (for deduplication)
+- Wildcards (which match everything)
+
+The key change was from `|| isComparison` to `!constructorIsComparison &&`:
+
+```c
+// Before (wrong):
+case TPMCPATTERNVALUE_TYPE_CONSTRUCTOR:
+    return (pattern->pattern->val.constructor->tag ==
+            constructor->pattern->val.constructor->tag) ||
+           isComparison;  // WRONG: comparison matches any constructor
+
+// After (correct):
+case TPMCPATTERNVALUE_TYPE_CONSTRUCTOR:
+    return !constructorIsComparison &&
+           (pattern->pattern->val.constructor->tag ==
+            constructor->pattern->val.constructor->tag);
+```
+
+**Part 2: Fix `comparisonIsReady()` to use prefix check**
+
+The comparison's `requiredPath` (e.g., `p$106$0`) may have been deconstructed, creating child paths as column headers (e.g., `p$106$0$0`, `p$106$0$1`). The comparison should become "ready" when any child of its required path exists.
+
+Added `pathIsPrefix()` helper:
+
+```c
+static bool pathIsPrefix(HashSymbol *prefix, HashSymbol *full) {
+    const char *prefixStr = prefix->name;
+    const char *fullStr = full->name;
+    size_t prefixLen = strlen(prefixStr);
+    if (strncmp(prefixStr, fullStr, prefixLen) != 0) {
+        return false;
+    }
+    // Must be exact match or prefix followed by '$'
+    return fullStr[prefixLen] == '\0' || fullStr[prefixLen] == '$';
+}
+```
+
+Modified `comparisonIsReady()` to use this:
+
+```c
+static bool comparisonIsReady(TpmcPattern *pattern, TpmcMatrix *matrix) {
+    // ...
+    for (Index x = 0; x < matrix->width; x++) {
+        TpmcPattern *top = getTpmcMatrixIndex(matrix, x, 0);
+        // Check if required path is a prefix of a column header
+        if (pathIsPrefix(required, top->path)) {
+            return true;
+        }
+    }
+    return false;
+}
+```
+
+### Why Both Parts Were Necessary
+
+- Part 1 ensures comparisons are sent to the wildcard partition, not grouped with specific constructors
+- Part 2 ensures the comparison becomes "ready" after the required path has been deconstructed (even though the exact path is no longer a column header)
+
+### How the Fix Works
+
+For pattern `(div(x, x))` matching `div(num(1), var("x"))`:
+
+1. First `x` is at `p$106$0`, second `x` at `p$106$1`
+2. Comparison created with `requiredPath = p$106$0`
+3. Initially, column is `p$106` - comparison not ready
+4. Algorithm descends into `div`, creating columns `p$106$0` and `p$106$1`
+5. Comparison IS now ready (column `p$106$0` exists)
+6. Row partitioning for `num` constructor:
+   - Row 1 `(div(num(a), num(b)))`: has `num` in column 0 → groups with `num`
+   - Row 2 `(div(x, x))`: comparison in column 0 → goes to wildcard partition (not `num`)
+7. Comparison row is correctly excluded from the `num` case
+8. When wildcard path processes the comparison, it correctly tests `p$106$0 == p$106$1` and fails
+
+### Test Coverage
+
+Added `tests/fn/bug_unifictation4.fn`:
+
+```fn
+let
+    typedef expr { num(number) | var(string) | div(expr, expr) }
+
+    fn simplify {
+        (div(num(a), num(b))) { num(a / b) }
+        (div(x, x)) { num(1) }
+        (x) { x }
+    }
+in
+    simplify(div(num(1), var("x")))
+// Expected output: div(num(1), var("x"))
+```

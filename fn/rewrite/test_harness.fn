@@ -29,24 +29,26 @@ in
                 nltab = "\n    ";
             in
                 E.print_expr(a);
-                puts("\n==> desugar");
-                puts(nltab);
-                M.print_expr(b);
-                puts("\n==> eta reduce");
-                puts(nltab);
-                M.print_expr(d);
-                puts("\n==> cps transform");
-                puts(nltab);
-                M.print_expr(e);
-                puts("\n==> beta reduce");
-                puts(nltab);
-                M.print_expr(f);
-                puts("\n==> operator folding");
-                puts(nltab);
+                // puts("\n==> desugar");
+                // puts(nltab);
+                // M.print_expr(b);
+                // puts("\n==> eta reduce");
+                // puts(nltab);
+                // M.print_expr(d);
+                // puts("\n==> cps transform");
+                // puts(nltab);
+                // M.print_expr(e);
+                // puts("\n==> beta reduce");
+                // puts(nltab);
+                // M.print_expr(f);
+                // puts("\n==> operator folding");
+                // puts(nltab);
+                puts("\n    ");
                 M.print_expr(g);
-                puts("\n==> shared closure convert");
-                puts(nltab);
-                M.print_expr(h);
-                puts("\n\n\n")
+                // puts("\n==> shared closure convert");
+                // puts(nltab);
+                // M.print_expr(h);
+                // puts("\n\n\n")
+                puts("\n")
         }
     }, Samples.data());

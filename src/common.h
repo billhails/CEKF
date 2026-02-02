@@ -36,7 +36,7 @@
 // #    define DEBUG_BYTECODE
 // #    define DEBUG_CEKFS
 // #    define DEBUG_DESUGARING
-#define DEBUG_DUMP_CORE
+// #define DEBUG_DUMP_CORE
 // #    define DEBUG_HASHTABLE
 // #    define DEBUG_LAMBDA_CONVERT
 // #    define DEBUG_LAMBDA_SUBSTITUTE
@@ -59,7 +59,7 @@
 // #    define DEBUG_TIN_UNIFICATION
 // #    define DEBUG_TPMC_COMPARE
 // #    define DEBUG_TPMC_LOGIC
-// #    define DEBUG_TPMC_MATCH
+// #define DEBUG_TPMC_MATCH
 // #    define DEBUG_TPMC_TRANSLATE
 #define SAFETY_CHECKS
 #endif

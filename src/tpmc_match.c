@@ -87,7 +87,27 @@ static bool patternIsComparison(TpmcPattern *pattern) {
     return pattern->pattern->type == TPMCPATTERNVALUE_TYPE_COMPARISON;
 }
 
-// Check if a comparison's required path is available (is a column header)
+// Check if 'prefix' is a path prefix of 'path'.
+// Path names are like "p$106$0$1" - prefix "p$106$0" should match.
+// This returns true if 'path' starts with 'prefix' followed by '$' or end.
+static bool pathIsPrefix(HashSymbol *prefix, HashSymbol *path) {
+    if (prefix == path) {
+        return true; // Exact match
+    }
+    const char *prefixStr = prefix->name;
+    const char *pathStr = path->name;
+    size_t prefixLen = strlen(prefixStr);
+    // Check if path starts with prefix and next char is '$' (sub-component)
+    if (strncmp(pathStr, prefixStr, prefixLen) == 0 &&
+        pathStr[prefixLen] == '$') {
+        return true;
+    }
+    return false;
+}
+
+// Check if a comparison's required path is available (is a column header
+// or has been deconstructed, i.e., a column header is a child of the required
+// path)
 static bool comparisonIsReady(TpmcPattern *pattern, TpmcMatrix *matrix) {
     if (pattern->pattern->type != TPMCPATTERNVALUE_TYPE_COMPARISON) {
         return true; // Not a comparison, always ready
@@ -101,14 +121,18 @@ static bool comparisonIsReady(TpmcPattern *pattern, TpmcMatrix *matrix) {
     }
     DEBUG("comparisonIsReady: pattern %s requires %s",
           pattern->path ? pattern->path->name : "(null)", required->name);
-    // Check if required path is a column header (root-level binding)
+    // Check if required path is a column header OR has been deconstructed
+    // (a column header is a child of the required path, meaning the required
+    // path was already matched and expanded)
     for (Index x = 0; x < matrix->width; x++) {
         TpmcPattern *top = getTpmcMatrixIndex(matrix, x, 0);
         DEBUG("  column %d header: %s", x,
               top->path ? top->path->name : "(null)");
-        if (top->path == required) {
-            DEBUG("  FOUND required path at column %d, returning true", x);
-            return true; // Required path is at root level
+        if (top->path != NULL && pathIsPrefix(required, top->path)) {
+            DEBUG(
+                "  FOUND required path (or child) at column %d, returning true",
+                x);
+            return true;
         }
     }
     DEBUG("  required path NOT found, returning false");
@@ -162,48 +186,63 @@ static TpmcState *makeEmptyTestState(HashSymbol *path) {
 }
 
 static bool patternMatches(TpmcPattern *constructor, TpmcPattern *pattern) {
-    bool isComparison =
+    // When constructor is a comparison pattern, it should only match the same
+    // comparison (for deduplication) or wildcards. It should NOT match other
+    // constructors, because comparisons are guards that belong in the wildcard
+    // partition during row selection, not mixed with specific constructors.
+    bool constructorIsComparison =
         (constructor->pattern->type == TPMCPATTERNVALUE_TYPE_COMPARISON);
     switch (pattern->pattern->type) {
     case TPMCPATTERNVALUE_TYPE_VAR:
         cant_happen("patternMatches encountered var");
     case TPMCPATTERNVALUE_TYPE_COMPARISON:
+        // Both are comparisons - check for equality
         return eqTpmcPattern(constructor, pattern);
     case TPMCPATTERNVALUE_TYPE_ASSIGNMENT:
         cant_happen("patternMatches encountered assignment");
     case TPMCPATTERNVALUE_TYPE_WILDCARD:
+        // Wildcards match anything
         return true;
     case TPMCPATTERNVALUE_TYPE_CHARACTER: {
-        bool res = isComparison || (constructor->pattern->type ==
-                                        TPMCPATTERNVALUE_TYPE_CHARACTER &&
-                                    constructor->pattern->val.character ==
-                                        pattern->pattern->val.character);
+        // Comparison patterns do not match literal characters for row
+        // partitioning - comparisons belong in wildcard partition
+        bool res =
+            !constructorIsComparison &&
+            (constructor->pattern->type == TPMCPATTERNVALUE_TYPE_CHARACTER &&
+             constructor->pattern->val.character ==
+                 pattern->pattern->val.character);
         return res;
     }
     case TPMCPATTERNVALUE_TYPE_BIGINTEGER: {
+        // Comparison patterns do not match literal integers for row
+        // partitioning - comparisons belong in wildcard partition
         bool res =
-            isComparison ||
+            !constructorIsComparison &&
             (constructor->pattern->type == TPMCPATTERNVALUE_TYPE_BIGINTEGER &&
              cmpMaybeBigInt(constructor->pattern->val.bigInteger,
                             pattern->pattern->val.bigInteger) == 0);
         return res;
     }
     case TPMCPATTERNVALUE_TYPE_CONSTRUCTOR: {
-        // remember the "constructor" is really just "not a wildCard"
+        // Comparison patterns do not match constructors for row partitioning -
+        // comparisons are guards that belong in the wildcard partition, not
+        // mixed with specific constructor arcs. Remember the first arg
+        // "constructor" is really just "not a wildCard".
         bool res =
+            !constructorIsComparison &&
             (constructor->pattern->type == TPMCPATTERNVALUE_TYPE_CONSTRUCTOR &&
              // pointer equivalence works for hash symbols
              constructor->pattern->val.constructor->tag ==
-                 pattern->pattern->val.constructor->tag) ||
-            isComparison;
+                 pattern->pattern->val.constructor->tag);
         return res;
     }
     case TPMCPATTERNVALUE_TYPE_TUPLE: {
-        bool res =
-            (constructor->pattern->type == TPMCPATTERNVALUE_TYPE_TUPLE) ||
-            isComparison;
-        if (countTpmcPatternArray(constructor->pattern->val.tuple) !=
-            countTpmcPatternArray(pattern->pattern->val.tuple)) {
+        // Comparison patterns do not match tuples for row partitioning -
+        // comparisons belong in wildcard partition
+        bool res = !constructorIsComparison &&
+                   (constructor->pattern->type == TPMCPATTERNVALUE_TYPE_TUPLE);
+        if (res && countTpmcPatternArray(constructor->pattern->val.tuple) !=
+                       countTpmcPatternArray(pattern->pattern->val.tuple)) {
             can_happen("tuple arity mismatch");
             return false;
         }

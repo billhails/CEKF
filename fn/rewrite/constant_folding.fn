@@ -13,41 +13,50 @@ typedef term {
     mul(term, term) |
     div(term, term) |
     pow(term, term) |
-    other(M.expr)
+    other(M.expr)   |
+    cas(term)
 }
 
-fn term_to_expr {
-    (num(n))            { M.bigint(n) }
-    (add(a, b))         { M.apply(M.primop("+"), [term_to_expr(a), term_to_expr(b)]) }
-    (sub(a, b))         { M.apply(M.primop("-"), [term_to_expr(a), term_to_expr(b)]) }
-    (mul(a, b))         { M.apply(M.primop("*"), [term_to_expr(a), term_to_expr(b)]) }
-    (div(a, b))         { M.apply(M.primop("/"), [term_to_expr(a), term_to_expr(b)]) }
-    (pow(a, b))         { M.apply(M.primop("**"), [term_to_expr(a), term_to_expr(b)]) }
-    (other(x))          { x }
+fn term_to_expr(term) {
+    switch(term) {
+        (num(n))    { M.bigint(n) }
+        (add(a, b)) { M.apply(M.primop("+"), [term_to_expr(a), term_to_expr(b)]) }
+        (sub(a, b)) { M.apply(M.primop("-"), [term_to_expr(a), term_to_expr(b)]) }
+        (mul(a, b)) { M.apply(M.primop("*"), [term_to_expr(a), term_to_expr(b)]) }
+        (div(a, b)) { M.apply(M.primop("/"), [term_to_expr(a), term_to_expr(b)]) }
+        (pow(a, b)) { M.apply(M.primop("**"), [term_to_expr(a), term_to_expr(b)]) }
+        (other(x))  { x }
+        (cas(x))  { error("hit cas") }
+    }
 }
 
-fn expr_to_term {
-    (M.bigint(n)) {
-        num(n)
-    }
-    (M.apply(M.primop("+"), [e1, e2])) {
-        add(expr_to_term(e1), expr_to_term(e2))
-    }
-    (M.apply(M.primop("-"), [e1, e2])) {
-        sub(expr_to_term(e1), expr_to_term(e2))
-    }
-    (M.apply(M.primop("*"), [e1, e2])) {
-        mul(expr_to_term(e1), expr_to_term(e2))
-    }
-    (M.apply(M.primop("/"), [e1, e2])) {
-        div(expr_to_term(e1), expr_to_term(e2))
-    }
-    (M.apply(M.primop("**"), [e1, e2])) {
-        pow(expr_to_term(e1), expr_to_term(e2))
-    }
-    (x) {
-        other(x)
-    }
+fn expr_to_term(expr) {
+    let
+        result = switch(expr) {
+            (M.bigint(n)) {
+                num(n)
+            }
+            (M.apply(M.primop("+"), [e1, e2])) {
+                add(expr_to_term(e1), expr_to_term(e2))
+            }
+            (M.apply(M.primop("-"), [e1, e2])) {
+                sub(expr_to_term(e1), expr_to_term(e2))
+            }
+            (M.apply(M.primop("*"), [e1, e2])) {
+                mul(expr_to_term(e1), expr_to_term(e2))
+            }
+            (M.apply(M.primop("/"), [e1, e2])) {
+                div(expr_to_term(e1), expr_to_term(e2))
+            }
+            (M.apply(M.primop("**"), [e1, e2])) {
+                pow(expr_to_term(e1), expr_to_term(e2))
+            }
+            (x) {
+                other(x)
+            }
+        }
+    in
+        result
 }
 
 // patterns that may be reduced (n is number, x is other)
@@ -65,15 +74,6 @@ fn expr_to_term {
 //
 // (**) < (*, /) < (+, -)
 //
-// REVIEW NOTES:
-// =============
-// General observations:
-// 1. The function assumes children have already been simplified (bottom-up).
-// 2. Division rules assume rational arithmetic (a/b returns rational, not integer division).
-// 3. Some division identities are mathematically incorrect - see specific notes below.
-// 4. Missing: 0 - a reduction, pow identities beyond (n ** n).
-// 5. Missing: interactions between * and ** (e.g., x^a * x^b = x^(a+b)).
-//
 fn simplify (e) {
     let term = expr_to_term(e);
         fn sim(term) {
@@ -84,6 +84,7 @@ fn simplify (e) {
                     (mul(x, y)) { mul(sim(x), sim(y)) }
                     (div(x, y)) { div(sim(x), sim(y)) }
                     (pow(x, y)) { pow(sim(x), sim(y)) }
+                    (cas(x))      { x }
                 };
             in
                 switch(basis) {
@@ -93,8 +94,8 @@ fn simplify (e) {
                     (add(num(0), a))      |
                     (add(a, num(0)))      { a }
                     // a + (0 - a) == 0
-                    (add(num(a), sub(num(0), num(a)))) |
-                    (add(sub(num(0), num(a)), num(a))) { num(0) }
+                    (add(a, sub(num(0), a))) |
+                    (add(sub(num(0), a), a)) { num(0) }
                     // a + (b + x) == a + (x + b) == (a + x) + b == (x + a) + b == (a + b) + x
                     (add(num(a), add(num(b), x))) |
                     (add(num(a), add(x, num(b)))) |
@@ -140,6 +141,8 @@ fn simplify (e) {
                     (sub(a, num(0))) { a }
                     // MISSING: 0 - a could be reduced to neg(a) or mul(num(-1), a)
                     // there is no negation operator currently
+
+                    (sub(x, x)) { num(0) }
                     
                     // a - (b + x) == a - (x + b) == (a - b) - x
                     (sub(num(a), add(num(b), x))) |
@@ -202,6 +205,11 @@ fn simplify (e) {
                     // x * (1 / x) == 1
                     (mul(x, div(num(1), x))) |
                     (mul(div(num(1), x), x)) { num(1) }
+                    // x * x == x ** 2
+                    (mul(a, a)) { pow(a, num(2)) }
+                    // x * x ** n == x ** (n + 1)
+                    (mul(a, pow(a, b))) |
+                    (mul(pow(a, b), a)) { sim(pow(a, add(b, num(1)))) }
 
                     // MISSING: (-1) * a = -a (if you have negation)
                     // there is no negation operator currently
@@ -236,7 +244,7 @@ fn simplify (e) {
                     (div(a, num(1))) { a }
                     // 0 / a == 0
                     (div(num(0), _)) { num(0) }
-                    (div(num(_), num(_))) { num(1) }
+                    (div(x, x)) { num(1) }
                     
                     // (x / a) / b == x / (a * b)
                     (div(div(x, num(a)), num(b))) { sim(div(x, num(a * b))) }
@@ -279,12 +287,9 @@ fn simplify (e) {
                     // 1 ** n = 1
                     (pow(num(1), _)) { num(1) }
                     // (x ** a) ** b = x ** (a * b)
-                    (pow(pow(x, num(a)), num(b))) { sim(pow(x, num(a * b))) }
+                    (pow(pow(x, a), b)) { sim(pow(x, mul(a, b))) }
                     // x ** a * x ** b = x ** (a + b)
-                    (mul(pow(x, num(a)), pow(x, num(b)))) { sim(pow(x, num(a + b))) }
-                    // (x * b) ** a = x ** a * b ** a
-                    (pow(mul(x, num(b)), num(a))) |
-                    (pow(mul(num(b), x), num(a))) { sim(mul(pow(x, num(a)), num(b ** a))) }
+                    (mul(pow(x, a), pow(x, b))) { sim(pow(x, add(a, b))) }
                     
                     (x) { x }
                 };
@@ -299,8 +304,9 @@ fn fold {
         M.amb_expr(fold(expr1), fold(expr2))
     }
 
-    (M.apply(fun, args)) {
+    (x = M.apply(fun, args)) {
         // apply(expr, list(expr))
+        {
         let f = fold(fun);
             a = list.map(fold, args);
         in
@@ -312,6 +318,7 @@ fn fold {
                     M.apply(f, a)
                 }
             }
+        }
     }
 
     (x = M.back_expr) |

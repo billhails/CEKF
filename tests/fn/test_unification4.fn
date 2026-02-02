@@ -1,0 +1,16 @@
+let
+
+typedef term {
+    num(number) |
+    div(term, term) |
+    var(string)
+}
+
+fn simplify {
+    (div(num(a), num(b))) { num(a / b) }
+    (div(x, x)) { num(1) }
+    (x) { x }
+}
+
+in
+    assert(simplify(div(num(1), var("x"))) == div(num(1), var("x")));
