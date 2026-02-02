@@ -3,7 +3,7 @@ let
     b = incr();
     c = incr();
 in
-    print typeof incr;
+    assert(typeof incr == "#() -> number");
     assert(a == 1);
     assert(b == 2);
     assert(c == 3);

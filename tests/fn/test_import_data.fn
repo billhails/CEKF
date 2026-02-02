@@ -1,4 +1,4 @@
 let
     link "import_data.fn" as Data;
 in
-    print Data.data();
+    assert(Data.data() == 1);

@@ -20,7 +20,7 @@ fn main() {
         let
             result1 = lazy_or(true, false);
         in
-            print(result1);
+            assert(result1 == true)
     };
     
     // Pass ADAPTER to HOF - works!
@@ -28,7 +28,7 @@ fn main() {
         let
             result2 = apply_binary(strict_lazy_or, true, false);
         in
-        print(result2);
+        assert(result2 == true);
     }
 }
 in

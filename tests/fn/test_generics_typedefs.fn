@@ -206,8 +206,6 @@ let
         in
             assert(mylist_length(list) == 3);
             assert(mylist_length(doubled) == 3);
-            putv(mylist_length(list));
-            putv(mylist_length(doubled));
     }
     
     // Test: Polymorphic identity and const

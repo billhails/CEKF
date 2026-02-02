@@ -5,7 +5,7 @@ let x = 42;
     f = fn (x) { x + 1 };
     lst = [1, 2, 3];
 in
-    print(typeof x);
-    print(typeof y);
-    print(typeof f);
-    print(typeof lst);
+    assert(typeof x == "number");
+    assert(typeof y == "char");
+    assert(typeof f == "number -> number");
+    assert(typeof lst == "list(number)");

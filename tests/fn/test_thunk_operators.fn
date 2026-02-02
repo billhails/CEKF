@@ -17,16 +17,12 @@ let
     // Force twice
     value = *(*double_thunk);
 in
-    print("Type of x (thunk): " @@ typeof x);
-    print("Type of y (forced): " @@ typeof y);
-    print("Value of y: " @@ $y);
+    assert(typeof x == "#() -> number");
+    assert(typeof y == "number");
     
-    print("Type of double_thunk: " @@ typeof double_thunk);
-    print("Type of double forced double_thunk: " @@ typeof value);
-    print("Value after double force: " @@ $value);
+    assert(typeof double_thunk == "#() -> #() -> number");
+    assert(typeof value == "number");
     
     assert(y == 3);
     assert(value == 42);
     
-    print("Thunk operator tests passed!");
-

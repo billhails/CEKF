@@ -1,0 +1,8 @@
+// Over-application bug
+// looks like the continuation is escaping the interpreter
+
+let
+    fun1 = fn (x, y) { fn (z) { x + y + z } };
+    r1 = fun1(1, 2, 3);
+in
+    assert(false); // never gets here

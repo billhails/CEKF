@@ -9,5 +9,5 @@ let
         lazy_or(x, y)
     }
 in
-    print(typeof lazy_or);
-    print(typeof strict_lazy_or);
+    assert((typeof lazy_or) == "#() -> bool -> #() -> bool -> bool");
+    assert((typeof strict_lazy_or) == "bool -> bool -> bool");

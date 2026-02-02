@@ -15,7 +15,7 @@ fn main() {
         let
             result1 = lazy_or(true, false);
         in
-            print(result1);
+            assert(result1 == true);
     };
     
     // Pass macro to HOF - needs adapter
@@ -23,7 +23,7 @@ fn main() {
         let
             result2 = apply_binary(lazy_or, true, false);
         in
-        print(result2);
+        assert(result2 == true);
     }
 }
 in

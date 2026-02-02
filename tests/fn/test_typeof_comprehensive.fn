@@ -16,11 +16,3 @@ in
     
     // Test list types
     assert(typeof lst == "list(number)");
-    
-    // Print all types for visual verification
-    print("Type of 42: " @@ typeof x);
-    print("Type of 'a': " @@ typeof y);
-    print("Type of fn(x){x+1}: " @@ typeof f);
-    print("Type of [1,2,3]: " @@ typeof lst);
-    print("Type of #(1, \"hello\"): " @@ typeof tup);
-    print("Type of identity function: " @@ typeof id);

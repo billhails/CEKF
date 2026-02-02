@@ -349,13 +349,10 @@ let
             assert(result == 3);  // Pattern x=1, rest has 2 elements
     }
     
-    // Test: Macro with print statements
+    // Test: Macro with statements
     fn test_macro_with_print() {
         let
             macro DEBUG_PRINT(x) {
-                puts("Debug: ");
-                putv(x);
-                puts("\n");
                 x
             }
             
@@ -457,8 +454,7 @@ let
             }
             
             macro SHOW_COLOR(c) {
-                puts("Color: ");
-                print(c);
+                c
             }
             
             result = SHOW_COLOR(red);
@@ -496,7 +492,7 @@ let
             assert(val3 == 99);
     }
     
-    // Test: Macro with print of complex type
+    // Test: Macro with complex type
     fn test_macro_print_complex() {
         let
             typedef pair(#a, #b) {
@@ -506,11 +502,6 @@ let
             macro PRINT_PAIR(p) {
                 switch (p) {
                     (mk_pair{ fst: a, snd: b }) {
-                        puts("(");
-                        putv(a);
-                        puts(", ");
-                        putv(b);
-                        puts(")\n");
                         p
                     }
                 }
@@ -538,7 +529,7 @@ let
             
             wrapped = MAKE_WRAPPER(42);
         in
-            putv(wrapped);
+            assert(typeof wrapped == "wrapper(number)");
     }
 
     fn test_macro_string_recognition() {
