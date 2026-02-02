@@ -1,13 +1,15 @@
 # Namespace Let-to-Lambda Bytecode Control Flow Issue
 
-This document captures the investigation into why desugared `let`/`let*` in namespaces
-causes early program exit after fixing the annotation issue in `import-data.md`.
+This document captures the investigation into why desugared `let`/`let*`
+in namespaces causes early program exit after fixing the annotation
+issue in `import-data.md`.
 
 ## Problem Statement
 
-After fixing the `isCapturing` flag issue in `annotate.c`, the test `test_import_data.fn`
-no longer crashes during annotation, but the program exits before printing the imported
-value. The bytecode execution appears to return from the program prematurely.
+After fixing the `isCapturing` flag issue in `annotate.c`, the test
+`test_import_data.fn` no longer crashes during annotation, but the program
+exits before printing the imported value. The bytecode execution appears
+to return from the program prematurely.
 
 ## Bytecode Generation Comparison
 
@@ -147,13 +149,14 @@ APPLY 1            ; call closure, state.C = closure.C (into lambda)
                    ; NO continuation created for after APPLY!
 ```
 
-The `APPLY` instruction jumps into the lambda body. When the lambda's `RETURN` executes,
-it pops `state.K` which is the **caller's** continuation (possibly the program's top-level
-continuation), not a continuation for code after the `APPLY`.
+The `APPLY` instruction jumps into the lambda body. When the lambda's
+`RETURN` executes, it pops `state.K` which is the **caller's**
+continuation (possibly the program's top-level continuation), not a
+continuation for code after the `APPLY`.
 
-This is correct behavior for normal function calls - you want to return to the caller.
-But for simulating `let`, there's no code "after" the `APPLY` because the body is
-**inside** the lambda.
+This is correct behavior for normal function calls - you want to return
+to the caller.  But for simulating `let`, there's no code "after" the
+`APPLY` because the body is **inside** the lambda.
 
 ## Why This Is a Problem for Namespaces
 
@@ -177,25 +180,25 @@ lambda skips over it.
 
 ## Why This Works in Regular Function Bodies
 
-This issue is specific to namespaces and doesn't affect regular function bodies for
-two reasons:
+This issue is specific to namespaces and doesn't affect regular function bodies for two reasons:
 
 ### Reason 1: Tail Position Behavior
 
-In regular function bodies, if a let-as-lambda is the **entire body** of a function,
-the lambda's RETURN correctly returns to the function's caller. This is the expected
-behavior - there's no code "after" the let that needs to execute.
+In regular function bodies, if a let-as-lambda is the **entire body**
+of a function, the lambda's RETURN correctly returns to the function's
+caller. This is the expected behavior - there's no code "after" the let
+that needs to execute.
 
 ### Reason 2: ANF Ensures Proper Continuations
 
-If code needs to execute **after** a let-as-lambda in a regular function, ANF
-ensures the let-as-lambda is wrapped in an `AnfExpLet` which creates the proper
-continuation. ANF normalization let-binds all non-atomic expressions.
+If code needs to execute **after** a let-as-lambda in a regular function,
+ANF ensures the let-as-lambda is wrapped in an `AnfExpLet` which creates
+the proper continuation. ANF normalization let-binds all non-atomic
+expressions.
 
 ### Reason 3: Namespace Bodies Expect "Fall-Through" Semantics
 
-The critical difference with namespaces is in how `writeCexpLetRec` vs `writeCexpApply`
-work:
+The critical difference with namespaces is in how `writeCexpLetRec` vs `writeCexpApply` work:
 
 **`letrec` (working case)** generates:
 
@@ -206,8 +209,10 @@ LETREC [n]           ; patches closures, DOES NOT change state.C
 NS_END               ; reached because execution continued sequentially
 ```
 
-The `LETREC` instruction ([step.c#L1006-L1020](../../src/step.c#L1006-L1020)) just patches
-closures and lets execution **continue to the next instruction**. It doesn't jump anywhere.
+The `LETREC` instruction
+([step.c#L1006-L1020](../../src/step.c#L1006-L1020)) just patches
+closures and lets execution **continue to the next instruction**. It
+doesn't jump anywhere.
 
 **Lambda application (broken case)** generates:
 
