@@ -1,0 +1,108 @@
+// Test cases for multi-occurrence pseudo-unification (3+ occurrences)
+
+let
+    // Test 1: Three identical values in tuple
+    fn triple {
+        (a, a, a) { 0 }
+        (_, _, _) { 1 }
+    }
+
+    // Test 2: Four identical values
+    fn quad {
+        (a, a, a, a) { 0 }
+        (_, _, _, _) { 1 }
+    }
+
+    // Test 3: Five identical values
+    fn quint {
+        (a, a, a, a, a) { 42 }
+        (_, _, _, _, _) { 99 }
+    }
+
+    // Test 4: Mixed - two independent pairs
+    fn two_pairs {
+        (a, a, b, b) { 0 }
+        (_, _, _, _) { 1 }
+    }
+
+    // Test 5: Nested with triple occurrence
+    typedef nested { nested(number, number, number) }
+
+    fn nested_triple {
+        (nested(a, a, a)) { 0 }
+        (_) { 1 }
+    }
+
+    // Test 6: Tree with all in different positions
+    typedef tree {
+        leaf(number) |
+        node(tree, number, tree)
+    }
+
+    fn all_same_tree {
+        (node(leaf(a), a, leaf(a))) { true }
+        (_) { false }
+    }
+
+    // Test 7: Character matching
+    fn triple_char {
+        (a, a, a) { 'Y' }
+        (_, _, _) { 'N' }
+    }
+
+    // Test 8: List matching
+    fn triple_list {
+        (a, a, a) { [1] }
+        (_, _, _) { [2] }
+    }
+in {
+    // Test 1: Three identical values
+    assert(triple(5, 5, 5) == 0);
+    assert(triple(5, 5, 6) == 1);
+    assert(triple(5, 6, 5) == 1);
+    assert(triple(6, 5, 5) == 1);
+    puts("Triple test passed\n");
+
+    // Test 2: Four identical values
+    assert(quad(3, 3, 3, 3) == 0);
+    assert(quad(3, 3, 3, 4) == 1);
+    assert(quad(3, 4, 3, 3) == 1);
+    puts("Quad test passed\n");
+
+    // Test 3: Five identical values
+    assert(quint(7, 7, 7, 7, 7) == 42);
+    assert(quint(7, 7, 7, 7, 8) == 99);
+    puts("Quint test passed\n");
+
+    // Test 4: Two independent pairs
+    assert(two_pairs(1, 1, 2, 2) == 0);
+    assert(two_pairs(1, 1, 1, 1) == 0);
+    assert(two_pairs(1, 2, 2, 2) == 1);
+    assert(two_pairs(1, 1, 2, 3) == 1);
+    puts("Two pairs test passed\n");
+
+    // Test 5: Nested triple
+    assert(nested_triple(nested(5, 5, 5)) == 0);
+    assert(nested_triple(nested(5, 5, 6)) == 1);
+    assert(nested_triple(nested(5, 6, 5)) == 1);
+    assert(nested_triple(nested(6, 5, 5)) == 1);
+    puts("Nested triple test passed\n");
+
+    // Test 6: Tree with all same
+    assert(all_same_tree(node(leaf(5), 5, leaf(5))));
+    assert(not(all_same_tree(node(leaf(5), 6, leaf(5)))));
+    assert(not(all_same_tree(node(leaf(5), 5, leaf(6)))));
+    puts("Tree test passed\n");
+
+    // Test 8: Character matching
+    assert(triple_char('x', 'x', 'x') == 'Y');
+    assert(triple_char('x', 'y', 'x') == 'N');
+    puts("Character test passed\n");
+
+    // Test 9: List matching
+    assert(triple_list([1,2], [1,2], [1,2]) == [1]);
+    assert(triple_list([1,2], [1,3], [1,2]) == [2]);
+    puts("List test passed\n");
+
+    puts("All multi-occurrence pseudo-unification tests passed!\n")
+}

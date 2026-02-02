@@ -415,10 +415,10 @@ static TpmcPattern *replaceVarPattern(TpmcPattern *pattern,
                        pattern->pattern->val.var->name, I.lineNo, I.fileName);
         }
         if (other->pattern->type == TPMCPATTERNVALUE_TYPE_COMPARISON) {
-            // More than 2 occurrences of same variable not yet supported
-            can_happen(
-                "variable '%s' appears more than twice in pattern at +%d %s",
-                pattern->pattern->val.var->name, I.lineNo, I.fileName);
+            // Multiple occurrences: extract the original binding site (first
+            // occurrence) All comparisons should point to the original VAR
+            // pattern, not to intermediate COMPARISON patterns
+            other = other->pattern->val.comparison->previous;
         }
         TpmcPatternValue *val = makeTpmcPatternValue_Comparison(other, pattern);
         int save = PROTECT(val);

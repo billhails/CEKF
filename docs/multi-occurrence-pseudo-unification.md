@@ -158,7 +158,7 @@ fn partial {
 
 // Nested with triple occurrence
 fn nested_triple {
-    (pair(a, pair(a, a))) { 0 }
+    ([a, a, a]) { 0 } // list is a nest of pairs
     (_) { 1 }
 }
 
