@@ -13,6 +13,14 @@ fn same_pair {
 
 This document proposes extending support to three or more occurrences of the same variable in a pattern.
 
+This document is a consequence of significant improvements and bug fixes (Bugs 1-5) documented in [TPMC Comparison Column Ordering](bugs/tpmc-comparison-column-ordering.md). The fixes ensure that:
+
+1. Comparisons are deferred until their required bindings are available (`comparisonIsReady()`)
+2. Comparison paths are correctly excluded from free variables during substitution (Bug 2 fix)
+3. Comparisons don't incorrectly group with constructor patterns during row partitioning (Bug 5 fix)
+
+These fixes are **prerequisites** for multi-occurrence support.
+
 ## Current Limitation
 
 The current implementation explicitly rejects patterns with more than two occurrences:
@@ -54,80 +62,74 @@ fn simplify {
 
 ### Design Choice: All Compare to First
 
-When a variable appears N times, generate N-1 comparison patterns, each comparing to the **first** occurrence (the binding site). This is simpler than chaining comparisons.
+When a variable appears N times, generate N-1 comparison patterns, each comparing to the **first** occurrence (the binding site).
 
 For pattern `(a, a, a)`:
 
-- 1st `a` at path `$0`: stored as binding site
-- 2nd `a` at path `$1`: comparison `$1 == $0`
-- 3rd `a` at path `$2`: comparison `$2 == $0`
+- 1st `a` at path `$0`: stored as binding site (VAR pattern)
+- 2nd `a` at path `$1`: comparison `$1 == $0` (COMPARISON pattern with `previous = $0`, `requiredPath = $0`)
+- 3rd `a` at path `$2`: comparison `$2 == $0` (COMPARISON pattern with `previous = $0`, `requiredPath = $0`)
 
 Both comparisons have `requiredPath = $0`, so they become ready at the same time.
+
+**Important**: All comparisons must point directly to the original VAR pattern, not to other COMPARISON patterns. This is critical because:
+
+1. **Bug 2 fix requirement**: `collectComparisonSubstitutions()` only processes `previous` (the binding site) for variable name substitution into the body. If `previous` points to another comparison instead of the original VAR, the variable name will be lost.
+
+2. **Consistency**: The `requiredPath` must always reference the actual binding location where the variable is bound, not an intermediate comparison.
 
 ### Changes Required
 
 #### 1. Modify `replaceVarPattern()` in `src/tpmc_logic.c`
 
-Current logic:
+Current logic (lines 406-433):
 
 ```c
-if (getTpmcPatternTable(seen, varName, &other)) {
-    if (other->pattern->type == TPMCPATTERNVALUE_TYPE_COMPARISON) {
-        can_happen("more than twice...");  // ERROR
+static TpmcPattern *replaceVarPattern(TpmcPattern *pattern,
+                                      TpmcPatternTable *seen, ParserInfo I) {
+    TpmcPattern *other = NULL;
+    if (getTpmcPatternTable(seen, pattern->pattern->val.var, &other)) {
+        if (other->pattern->type == TPMCPATTERNVALUE_TYPE_ASSIGNMENT) {
+            can_happen("cannot compare assignment (var %s) at +%d %s",
+                       pattern->pattern->val.var->name, I.lineNo, I.fileName);
+        }
+        if (other->pattern->type == TPMCPATTERNVALUE_TYPE_COMPARISON) {
+            // More than 2 occurrences of same variable not yet supported
+            can_happen(
+                "variable '%s' appears more than twice in pattern at +%d %s",
+                pattern->pattern->val.var->name, I.lineNo, I.fileName);
+        }
+        TpmcPatternValue *val = makeTpmcPatternValue_Comparison(other, pattern);
+        int save = PROTECT(val);
+        // Note: requiredPath is set later in renameComparisonPattern when paths
+        // are assigned
+        TpmcPattern *result = newTpmcPattern(val);
+        UNPROTECT(save);
+        return result;
+    } else {
+        setTpmcPatternTable(seen, pattern->pattern->val.var, pattern);
+        return pattern;
     }
-    // Create comparison, implicitly replaces in table
-    ...
-} else {
-    setTpmcPatternTable(seen, varName, pattern);  // First occurrence
 }
 ```
 
-Proposed logic:
+**Key observation**: The `seen` table is NOT updated after the second occurrence. When the second occurrence is encountered, `other` is the first occurrence (a VAR pattern), and a COMPARISON is created pointing to it. However, the `seen` table still maps the variable name to the original VAR pattern, not to the new COMPARISON.
+
+This means the current implementation **already has the correct structure** for multi-occurrence support - it just needs the error check removed.
+
+Proposed change:
 
 ```c
-if (getTpmcPatternTable(seen, varName, &other)) {
-    // If 'other' is already a comparison, extract the original binding
-    TpmcPattern *original = other;
-    if (other->pattern->type == TPMCPATTERNVALUE_TYPE_COMPARISON) {
-        original = other->pattern->val.comparison->previous;
-    }
-    // Create comparison to the original binding site
-    TpmcPatternValue *val = makeTpmcPatternValue_Comparison(original, pattern);
-    // DON'T update 'seen' - keep pointing to original for future occurrences
-    ...
-} else {
-    setTpmcPatternTable(seen, varName, pattern);  // First occurrence
+if (other->pattern->type == TPMCPATTERNVALUE_TYPE_COMPARISON) {
+    // Extract the original binding site (first occurrence)
+    // The 'other' here is itself a comparison, so we need to follow
+    // 'previous' to get the original VAR pattern
+    other = other->pattern->val.comparison->previous;
 }
+TpmcPatternValue *val = makeTpmcPatternValue_Comparison(other, pattern);
 ```
 
-Wait - there's a subtlety. The `seen` table currently stores the pattern, and when the second occurrence creates a comparison, the comparison is returned but `seen` isn't explicitly updated. Let me re-examine.
-
-Actually, looking more carefully at the code, `setTpmcPatternTable` is only called for the first occurrence. The comparison is returned but doesn't replace the entry. So subsequent lookups would find the original pattern... but then we hit the error because `other` is not a comparison type.
-
-Ah, I see the issue now. The check `if (other->pattern->type == TPMCPATTERNVALUE_TYPE_COMPARISON)` is checking the *stored* pattern, which should be the original VAR pattern, not a comparison. The error triggers if somehow the stored entry is already a comparison, which shouldn't happen with the current code.
-
-Let me re-read more carefully...
-
-#### Revised Understanding
-
-Looking at the code flow:
-
-1. First `a`: not in `seen`, so `setTpmcPatternTable(seen, "a", pattern1)` stores it
-2. Second `a`: found in `seen`, `other = pattern1` (type VAR), creates comparison
-3. Third `a`: found in `seen`, `other = pattern1` (type VAR)...
-
-Wait, the original pattern is still in `seen`, so the third occurrence would also find the VAR pattern, not a comparison. The error check seems wrong or there's code I'm missing.
-
-Let me look at whether the `seen` table gets updated after creating a comparison.
-
-#### Re-examination Needed
-
-Before implementing, we need to verify:
-
-1. Does `seen` get updated after the second occurrence?
-2. If not, why does the error check for COMPARISON exist?
-
-If `seen` is NOT updated, then the fix might just be removing the error - multiple comparisons would all point to the original binding naturally.
+This ensures all comparisons point to the original VAR, not to an intermediate COMPARISON.
 
 ### Testing
 
@@ -176,20 +178,54 @@ fn simplify_cubes {
 
 ### Potential Complications
 
-1. **Readiness ordering**: With multiple comparisons, they may become ready at different times if the binding site is deeply nested. The existing `comparisonIsReady` check should handle this correctly since each comparison independently checks if its `requiredPath` is a column header.
+1. **Readiness ordering**: With multiple comparisons, they may become ready at different times if the binding site is deeply nested. The existing `comparisonIsReady()` check (with `pathIsPrefix()` from Bug 5 fix) handles this correctly since each comparison independently checks if its `requiredPath` is a column header or has been deconstructed.
 
-2. **Free variable tracking**: Each comparison will add the binding site to its free variables. This should work correctly with the existing `collectComparisonSubstitutions` logic.
+2. **Free variable tracking**: With the Bug 2 fix, `collectComparisonSubstitutions()` only processes `previous` (the binding site) and explicitly does NOT process `current`. This is correct for multi-occurrence: only the binding site's path will be in free variables, not the comparison paths. Each comparison adds only the binding site to its dependencies.
 
-3. **Code generation**: Multiple comparisons generate multiple `if (eq ...)` tests. The order shouldn't matter since they're all equality checks.
+3. **Code generation**: Multiple comparisons generate multiple `if (eq ...)` tests. The order should not matter since they are all equality checks. Example for `(a, a, a)` with paths `$0, $1, $2`:
+
+   ```scheme
+   (if (eq $1 $0)
+     (if (eq $2 $0)
+       <body with substitution a → $0>
+       <alternative>)
+     <alternative>)
+   ```
+
+4. **Row partitioning**: The Bug 5 fix ensures comparisons don't incorrectly group with constructor patterns. With multiple comparisons in a pattern, each comparison will be evaluated independently via `patternIsActionable()`, ensuring they all reach the wildcard partition until ready.
+
+**Critical validation needed**: Test that when a third occurrence creates a comparison pointing to the original VAR (not to the second comparison), the `requiredPath` is correctly set to the VAR's path, not to the second comparison's path. This is essential because `renameComparisonPattern()` sets `requiredPath = previous->path` - we need `previous` to be the VAR.
 
 ## Implementation Steps
 
-1. Examine the `seen` table behavior more closely to understand current state
-2. Modify or remove the error check in `replaceVarPattern()`
-3. Ensure comparisons always point to the original VAR pattern, not to other comparisons
-4. Add test cases
-5. Run full test suite
+1. **Verify `seen` table behavior**: Confirmed that the `seen` table is NOT updated after the second occurrence - it always maps to the first (VAR) pattern.
 
-## Estimated Effort
+2. **Modify `replaceVarPattern()`**:
+   - Remove the error check for `TPMCPATTERNVALUE_TYPE_COMPARISON`
+   - Add logic to extract `previous` from a comparison pattern to ensure all comparisons point to the original VAR
 
-Low to moderate - likely 2-4 hours including testing, assuming the existing TPMC machinery handles multiple comparisons correctly (which it should, since each comparison is independent).
+3. **Verify `renameComparisonPattern()` correctness**: Ensure that when `requiredPath = previous->path` is set, `previous` is always a VAR pattern with a valid path, not a COMPARISON pattern.
+
+4. **Add comprehensive test cases** covering:
+   - Three identical values in tuple
+   - Four or more occurrences
+   - Nested patterns with multiple occurrences
+   - Mixed patterns with multiple independent equality constraints
+   - Edge case: all occurrences in different nesting levels
+
+5. **Run full test suite** to ensure no regressions from Bugs 1-5 fixes.
+
+## Risk Assessment
+
+**Low risk** given the bug fixes:
+
+- Bug 1-4 fixes ensure comparison readiness, row partitioning, and free variable tracking work correctly
+- Bug 5 fix ensures comparisons don't group with constructors, which is independent of occurrence count
+- The `seen` table already naturally points all occurrences to the first VAR pattern
+- Main change is removing an artificial restriction rather than adding new logic
+
+**Validation focus**:
+
+- Ensure `previous` pointer chain doesn't create comparisons pointing to comparisons
+- Verify `requiredPath` is set correctly for all N-1 comparisons
+- Test patterns with deep nesting where binding site is nested deeper than some comparison sites
