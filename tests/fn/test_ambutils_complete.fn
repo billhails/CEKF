@@ -106,4 +106,3 @@ in
     test_some_of_operator();
     test_combined_amb();
     
-    puts("All ambutils tests completed successfully!")

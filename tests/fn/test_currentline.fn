@@ -14,5 +14,4 @@ in {
     // Test that currentLine works in expressions
     assert(currentLine == 15);
     
-    puts("currentLine tests passed!\n");
 }

@@ -149,4 +149,3 @@ in
     test_unicode_basic();
     test_unicode_ascii();
     test_unicode_extended();
-    puts("Unicode tests passed\n")

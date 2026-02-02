@@ -63,4 +63,3 @@ in
     test_opendir_file();
     test_opendir_empty();
     
-    puts("All directory operation tests completed successfully!")

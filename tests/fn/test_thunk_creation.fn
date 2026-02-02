@@ -5,16 +5,8 @@
         // Zero-argument function should be a thunk
         fn zero_arg() { 42 }
     
-        // One-argument function should be a regular function
-        fn one_arg(x) { x }
     in
-        puts("Zero-arg function type: ");
-        print(typeof zero_arg);
+        assert((typeof zero_arg) == "#() -> number");
 
-        puts("One-arg function type:  ");
-        print(typeof one_arg);
-
-        // Test that we can call the thunk
-        puts("\nCalling zero_arg(): ");
-        print(zero_arg());
+        assert(zero_arg() == 42);
 }

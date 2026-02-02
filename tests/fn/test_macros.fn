@@ -10,7 +10,6 @@ let
             result = DOUBLE(5);
         in
             assert(result == 10);
-            puts("Basic macro test passed\n")
     }
 
     // Test: Macro with multiple arguments
@@ -24,7 +23,6 @@ let
         in
             assert(sum == 7);
             assert(product == 30);
-            puts("Multi-argument macro test passed\n")
     }
 
     // Test: Macro argument evaluation (should be lazy)
@@ -37,7 +35,6 @@ let
             result = FIRST(42, explode()) then 999;
         in
             assert(result == 42);
-            puts("Macro lazy evaluation test passed\n")
     }
 
     // Test: Nested macro calls
@@ -49,7 +46,6 @@ let
             result = QUAD(3);
         in
             assert(result == 12);
-            puts("Nested macro test passed\n")
     }
 
     // Test: Macro with conditional
@@ -64,7 +60,6 @@ let
         in
             assert(result1 == 10);
             assert(result2 == 8);
-            puts("Macro conditional test passed\n")
     }
 
     // Test: Macro with explicit parameters (not variable capture)
@@ -77,7 +72,6 @@ let
         in
             assert(result1 == 15);
             assert(result2 == 25);
-            puts("Macro parameters test passed\n")
     }
 
     // Test: Macro with pattern matching
@@ -93,7 +87,6 @@ let
             result = HEAD([1, 2, 3]);
         in
             assert(result == 1);
-            puts("Macro pattern matching test passed\n")
     }
 
     // Test: Macro with function calls
@@ -109,7 +102,6 @@ let
             result = APPLY_BOTH(double, triple, 5);
         in
             assert(result == 25);
-            puts("Macro function calls test passed\n")
     }
 
     // Test: Macro with list operations
@@ -122,7 +114,6 @@ let
             result = CONS_TWICE(5, [1, 2, 3]);
         in
             assert(result == [5, 5, 1, 2, 3]);
-            puts("Macro list operations test passed\n")
     }
 
     // Test: Short-circuit AND macro
@@ -139,7 +130,6 @@ let
         in
             assert(result1 == false);
             assert(result2 == true);
-            puts("Short-circuit AND test passed\n")
     }
 
     // Test: Short-circuit OR macro
@@ -156,7 +146,6 @@ let
         in
             assert(result1 == true);
             assert(result2 == true);
-            puts("Short-circuit OR test passed\n")
     }
 
     // Test: Macro with recursion
@@ -171,7 +160,6 @@ let
             result = APPLY_TWICE(inc, 5);
         in
             assert(result == 7);
-            puts("Macro recursion test passed\n")
     }
 
     // Test: Complex macro expression
@@ -188,7 +176,6 @@ let
             result = COMPUTE(2, 3, 4);
         in
             assert(result == 20);
-            puts("Complex macro test passed\n")
     }
 
     // Test: Macro with tuple
@@ -209,7 +196,6 @@ let
         in
             assert(pair == #(1, 2));
             assert(swapped == #(2, 1));
-            puts("Macro tuple test passed\n")
     }
 
     // Test: Macro argument used multiple times
@@ -226,7 +212,6 @@ let
             result = USE_TWICE(counter());
         in
             assert(result == #(1, 1));
-            puts("Macro multi-use test passed\n")
     }
 
     // Test: Macro with let binding shadowing argument
@@ -239,7 +224,6 @@ let
             result = SHADOW_ARG(42);
         in
             assert(result == 101);  // Should use shadowed x=100, not argument
-            puts("Macro argument shadowing test passed\n")
     }
 
     // Test: Macro with nested let shadowing
@@ -259,7 +243,6 @@ let
             result = NESTED_SHADOW(1, 2);
         in
             assert(result == 30);  // Should use shadowed values 10 and 20
-            puts("Macro nested shadowing test passed\n")
     }
 
     // Test: Macro argument partially shadowed
@@ -275,7 +258,6 @@ let
             result = PARTIAL_SHADOW(100, 200);
         in
             assert(result == 205);  // 5 (shadowed x) + 200 (original y)
-            puts("Macro partial shadowing test passed\n")
     }
 
     // Test: Macro with let binding using argument
@@ -292,7 +274,6 @@ let
             result = LET_WITH_ARG(5);
         in
             assert(result == 30);  // (5 + 10) * 2
-            puts("Macro let using argument test passed\n")
     }
 
     // Test: Macro with multiple let bindings and shadowing
@@ -310,7 +291,6 @@ let
             result = MULTI_LET(10);
         in
             assert(result == 23);  // a=12, b=11, sum=23
-            puts("Macro multiple lets test passed\n")
     }
 
     // Test: Macro with deeply nested let and argument access
@@ -338,7 +318,6 @@ let
             result = DEEP_NEST(5);
         in
             assert(result == 13);  // d=8 (5+1+1+1), d+x = 8+5
-            puts("Macro deep let nesting test passed\n")
     }
 
     // Test: Macro with function definition shadowing argument
@@ -354,7 +333,6 @@ let
             result = FN_SHADOW(42);
         in
             assert(result == 999);  // Function x shadows argument x
-            puts("Macro function shadowing test passed\n")
     }
 
     // Test: Macro with pattern match shadowing
@@ -369,7 +347,6 @@ let
             result = PATTERN_SHADOW(100);
         in
             assert(result == 3);  // Pattern x=1, rest has 2 elements
-            puts("Macro pattern shadowing test passed\n")
     }
     
     // Test: Macro with print statements
@@ -385,7 +362,6 @@ let
             result = DEBUG_PRINT(42);
         in
             assert(result == 42);
-            puts("Macro with print test passed\n")
     }
     
     // Test: Macro with type constructor
@@ -413,7 +389,6 @@ let
         in
             assert(result2 == 42);
             assert(result3 == 99);
-            puts("Macro with constructor test passed\n")
     }
     
     // Test: Macro with typedef and switch
@@ -440,7 +415,6 @@ let
         in
             assert(val1 == 123);
             assert(val2 == 0);
-            puts("Macro with typedef test passed\n")
     }
     
     // Test: Macro with switch on multiple types
@@ -473,7 +447,6 @@ let
             assert(count1 == 1);
             assert(count2 == 2);
             assert(count3 == 3);
-            puts("Macro switch types test passed\n")
     }
     
     // Test: Macro that constructs and prints custom type
@@ -491,7 +464,6 @@ let
             result = SHOW_COLOR(red);
         in
             assert(result == red);
-            puts("Macro construct and print test passed\n")
     }
     
     // Test: Macro with nested switch on constructors
@@ -522,7 +494,6 @@ let
             assert(val1 == 42);
             assert(val2 == 0);
             assert(val3 == 99);
-            puts("Macro nested switch test passed\n")
     }
     
     // Test: Macro with print of complex type
@@ -549,7 +520,6 @@ let
             result = PRINT_PAIR(pair1);
         in
             assert(result == pair1);
-            puts("Macro print complex test passed\n")
     }
     
     // Test: Macro with typedef in body
@@ -569,8 +539,6 @@ let
             wrapped = MAKE_WRAPPER(42);
         in
             putv(wrapped);
-            puts("\n");
-            puts("Macro typedef in body test passed\n")
     }
 
     fn test_macro_string_recognition() {
@@ -589,7 +557,6 @@ let
             assert(result1 == "hello");
             assert(result2 == "goodbye");
             assert(result3 == "?");
-            puts("Macro string recognition test passed\n")
     }
 
     fn test_macro_number_recognition() {
@@ -608,7 +575,6 @@ let
             assert(result1 == 1);
             assert(result2 == 2);
             assert(result3 == 0);
-            puts("Macro number recognition test passed\n")
     }
 
     // Main test runner
@@ -644,7 +610,6 @@ let
         test_macro_nested_switch();
         test_macro_print_complex();
         test_macro_typedef_in_body();
-        puts("All macro tests completed successfully!\n")
     }
 
 in

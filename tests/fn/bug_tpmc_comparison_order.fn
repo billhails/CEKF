@@ -18,7 +18,6 @@ fn test_simple_comparison() {
     in {
         assert(result1 == true);
         assert(result2 == false);
-        puts("test_simple_comparison passed\n");
         true
     }
 }
@@ -37,7 +36,6 @@ fn test_reverse_order() {
     in {
         assert(result1 == true);
         assert(result2 == false);
-        puts("test_reverse_order passed\n");
         true
     }
 }
@@ -57,7 +55,6 @@ fn test_adjacent_pairs() {
     in {
         assert(result1 == true);
         assert(result2 == false);
-        puts("test_adjacent_pairs passed\n");
         true
     }
 }
@@ -75,7 +72,6 @@ fn test_nested_comparison() {
     in {
         assert(result1 == true);
         assert(result2 == false);
-        puts("test_nested_comparison passed\n");
         true
     }
 }
@@ -93,7 +89,6 @@ fn test_triple_match() {
     in {
         assert(result1 == true);
         assert(result2 == false);
-        puts("test_triple_match passed\n");
         true
     }
 }
@@ -111,7 +106,6 @@ fn test_deep_nested() {
     in {
         assert(result1 == true);
         assert(result2 == false);
-        puts("test_deep_nested passed\n");
         true
     }
 }
@@ -132,7 +126,6 @@ fn test_list_comparison() {
         assert(result1 == true);
         assert(result2 == false);
         assert(result3 == false);
-        puts("test_list_comparison passed\n");
         true
     }
 }
@@ -150,7 +143,6 @@ fn test_first_and_third() {
     in {
         assert(result1 == true);
         assert(result2 == false);
-        puts("test_first_and_third passed\n");
         true
     }
 }
@@ -171,7 +163,6 @@ fn test_cons_comparison() {
         assert(result1 == true);
         assert(result2 == false);
         assert(result3 == false);
-        puts("test_cons_comparison passed\n");
         true
     }
 }
@@ -193,7 +184,6 @@ fn test_cross_comparison() {
         assert(result1 == true);
         assert(result2 == false);
         assert(result3 == false);
-        puts("test_cross_comparison passed\n");
         true
     }
 }
@@ -210,4 +200,3 @@ in
     test_cons_comparison();
     test_cross_comparison();
     
-    puts("TPMC comparison tests completed!\n");

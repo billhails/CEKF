@@ -237,4 +237,3 @@ in
     test_macro_recursion();
     test_operator_string();
     
-    puts("All advanced operator and macro tests passed!\n")

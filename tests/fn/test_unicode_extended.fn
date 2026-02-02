@@ -138,4 +138,3 @@ in
     assert(not isprint('\u001b;'));
     // Combining characters
     assert(not isalpha('\u0301;')); // combining acute accent (mark, not letter)
-    puts("Unicode tests passed\n")

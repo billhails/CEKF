@@ -15,13 +15,8 @@ in
     y = polymorphic_test(strict_or);
     in
     
-    puts("Both lazy and strict functions type check!\n");
-    puts("lazy_or type:   ");
-    print(typeof lazy_or);
-    puts("strict_or type: ");
-    print(typeof strict_or);
-    puts("x (lazy) type:  ");
-    print(typeof x);
-    puts("y (strict) type:");
-    print(typeof y);
+    assert((typeof lazy_or) == "#() -> bool -> #() -> bool -> bool");
+    assert((typeof strict_or) == "bool -> bool -> bool");
+    assert((typeof x) == "#() -> bool -> #() -> bool -> bool");
+    assert((typeof y) == "bool -> bool -> bool");
 }

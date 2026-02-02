@@ -363,4 +363,3 @@ in
     test_tuple_parameter();
     test_pattern_function();
     
-    puts("All tuple tests passed!\n")

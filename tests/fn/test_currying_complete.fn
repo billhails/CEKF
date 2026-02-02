@@ -263,4 +263,3 @@ in
     test_chain_partial();
     test_multiple_branches();
     
-    puts("All currying tests passed!\n")

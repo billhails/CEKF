@@ -18,7 +18,6 @@ let
             assert(a == 7);
             assert(b == 30);
             assert(c == 49);
-            puts("Basic custom operators test passed\n")
     }
     
     // Test: Operator precedence
@@ -32,7 +31,6 @@ let
             assert(result1 == 14);
             assert(result2 == (2 times 3) plus 4);
             assert(result2 == 10);
-            puts("Operator precedence test passed\n")
     }
     
     // Test: Postfix operators
@@ -43,7 +41,6 @@ let
         in
             assert(a == 25);
             assert(b == 25);
-            puts("Postfix operators test passed\n")
     }
     
     // Test: Left associativity
@@ -55,7 +52,6 @@ let
         in
             // Left assoc: (10 - 3) - 2 = 5
             assert(result == 5);
-            puts("Left associativity test passed\n")
     }
     
     // Test: Right associativity
@@ -67,7 +63,6 @@ let
         in
             // Right assoc: 2 ** (3 ** 2) = 2 ** 9 = 512
             assert(result == 512);
-            puts("Right associativity test passed\n")
     }
     
     // Test: Operator shadowing in nested scopes
@@ -84,7 +79,6 @@ let
                 inner = 3 foo 4;
             in
                 assert(inner == 12);
-                puts("Operator shadowing test passed\n")
             }
     }
     
@@ -101,7 +95,6 @@ let
             assert(result1 == 5);
             assert(result2 == 8);
             assert(result3 == 8);
-            puts("Operators with expressions test passed\n")
     }
     
     // Test: Operators with lists
@@ -114,7 +107,6 @@ let
         in
             assert(list1 == [1, 2, 3, 4]);
             assert(list2 == [1, 2, 3]);
-            puts("Operators with lists test passed\n")
     }
     
     // Test: Built-in operator precedence
@@ -127,7 +119,6 @@ let
             assert(result1 == 14);
             assert(result2 == 4);
             assert(result3 == 9);
-            puts("Built-in precedence test passed\n")
     }
     
     // Test: Comparison operators
@@ -142,7 +133,6 @@ let
             assert(a <= 5);
             assert(a == 5);
             assert(a != b);
-            puts("Comparison operators test passed\n")
     }
     
     // Test: Logical operators (from preamble)
@@ -155,7 +145,6 @@ let
             assert(not (t and f));
             assert(t or f);
             assert(not (f or f));
-            puts("Logical operators test passed\n")
     }
     
     // Test: Cons operator
@@ -168,7 +157,6 @@ let
             assert(list1 == [1, 2, 3]);
             assert(list2 == [1, 2, 3]);
             assert(list3 == [1, 2, 3]);
-            puts("Cons operator test passed\n")
     }
     
     // Test: Append operator
@@ -179,7 +167,6 @@ let
         in
             assert(list1 == [1, 2, 3, 4]);
             assert(list2 == [1, 2, 3]);
-            puts("Append operator test passed\n")
     }
 
     // Main test runner
@@ -197,7 +184,6 @@ let
         test_logical_operators();
         test_cons_operator();
         test_append_operator();
-        puts("All operator tests completed successfully\n")
     }
 
 in

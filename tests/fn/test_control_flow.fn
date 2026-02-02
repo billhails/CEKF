@@ -171,4 +171,3 @@ in
     test_boolean_expressions();
     test_comparison_conditions();
     test_switch_chars();
-    puts("All control flow tests completed successfully!")

@@ -515,4 +515,3 @@ in
 
      test_power_float_imaginary_float();
 
-    puts("All mixed-type arithmetic tests passed!\n")

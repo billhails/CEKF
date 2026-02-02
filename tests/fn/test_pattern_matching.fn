@@ -186,4 +186,3 @@ in
     test_string_patterns();
     test_wildcards();
     test_pattern_assignment();
-    puts("All pattern matching tests completed successfully!")

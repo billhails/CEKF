@@ -398,4 +398,3 @@ in
     test_tuple_unpacking();
     test_character_edge_cases();
     
-    puts("All error handling tests completed successfully!\n")

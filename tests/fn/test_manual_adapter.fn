@@ -2,7 +2,6 @@
 
 let
 macro lazy_or(a, b) {
-    puts("evaluating lazy_or\n");
     a or b
 }
 
@@ -12,13 +11,11 @@ fn strict_lazy_or(x, y) {
 }
 
 fn apply_binary(f, x, y) {
-    puts("apply_binary calling f\n");
     f(x, y)
 }
 
 fn main() {
     // Direct macro call - works
-    puts("Direct call: ");
     {
         let
             result1 = lazy_or(true, false);
@@ -31,7 +28,6 @@ fn main() {
         let
             result2 = apply_binary(strict_lazy_or, true, false);
         in
-        puts("Through HOF with adapter: ");
         print(result2);
     }
 }

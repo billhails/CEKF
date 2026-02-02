@@ -64,4 +64,3 @@ in
     test_multiple_indices();
     test_negative_index();
     
-    puts("All argv() tests completed successfully!")

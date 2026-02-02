@@ -56,7 +56,5 @@ let
     }
 
 in
-    puts("Testing readdir() - may segfault...");
     test_readdir_basic();
     test_readdir_multiple();
-    puts("If you see this, readdir() has been fixed!")

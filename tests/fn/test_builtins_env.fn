@@ -86,4 +86,3 @@ in
     test_getenv_empty();
     test_multiple_getenv();
     
-    puts("All getenv() tests completed successfully!")

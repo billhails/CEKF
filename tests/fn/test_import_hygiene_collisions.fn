@@ -16,4 +16,3 @@ in
     assert(2 plus 3 == 5);
     assert(~5 == -5);
 
-    puts("Hygiene with collisions OK\n")

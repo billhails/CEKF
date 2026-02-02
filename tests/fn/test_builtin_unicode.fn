@@ -48,4 +48,3 @@ assert(unicode_category('\uE000;') == GC_Co); // Private Use Area
 assert(unicode_category('\uD800;') == GC_Cs); // High Surrogate
 // GC_Cn (Unassigned) test - using a code point that is currently unassigned
 assert(unicode_category('\u0378;') == GC_Ll); // Lowecase letter
-puts("Unicode category tests passed\n")

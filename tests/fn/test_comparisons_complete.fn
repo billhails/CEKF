@@ -186,4 +186,3 @@ in
     test_comparison_conditionals();
     test_tuple_comparisons();
     test_pattern_equality();
-    puts("All comparison tests completed successfully!")

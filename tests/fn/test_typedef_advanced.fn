@@ -368,4 +368,3 @@ in
     test_generic_fold();
     test_binary_tree_operations();
     
-    puts("All advanced typedef tests passed!\n")

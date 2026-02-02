@@ -304,4 +304,3 @@ in
     test_continuation_unused();
     test_continuation_string();
     
-    puts("All advanced continuation tests passed!\n")

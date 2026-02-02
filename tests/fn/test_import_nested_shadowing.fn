@@ -22,4 +22,3 @@ in
     // After inner scope, shadowing is gone; outer imported plus remains; operator ~_ is not visible here
     assert(2 plus 3 == 5);
 
-    puts("Nested import/shadowing OK\n")

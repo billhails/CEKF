@@ -232,7 +232,6 @@ fn main () {
     test_shadow_restoration();
     test_nested_function_scope();
 
-    puts("All operator hygiene tests passed!\n")
 }
 
 in main()

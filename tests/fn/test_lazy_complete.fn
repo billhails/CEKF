@@ -7,24 +7,20 @@
 // === Macros (lazy functions) ===
 let
 macro lazy_and(a, b) {
-    puts("lazy_and evaluated\n");
     a and b
 }
 
 macro lazy_or(a, b) {
-    puts("lazy_or evaluated\n");
     a or b
 }
 
 // === Strict functions ===
 
 fn strict_and(x, y) {
-    puts("strict_and evaluated\n");
     x and y
 }
 
 fn strict_or(x, y) {
-    puts("strict_or evaluated\n");
     x or y
 }
 
@@ -41,13 +37,10 @@ fn adapt_lazy_or(x, y) {
 // === Higher-order function ===
 
 fn apply_binary(f, x, y) {
-    puts("apply_binary calling function\n");
     f(x, y)
 }
 in
 // === Type Display ===
-puts("=== Type Display Tests ===\n");
-puts("lazy_and type:   ");
 print(typeof lazy_and);
 puts("lazy_or type:    ");
 print(typeof lazy_or);

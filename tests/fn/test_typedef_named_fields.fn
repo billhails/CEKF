@@ -339,4 +339,3 @@ in
     test_named_fields_with_bool();
     test_named_fields_recursive();
     
-    puts("All named fields tests passed!\n")
