@@ -1,0 +1,18 @@
+let
+
+typedef term {
+    num(number) |
+    mul(term, term) |
+    pow(term, term) |
+    var(string) |
+    cast(term)
+}
+
+fn simplify {
+    (mul(num(a), num(b))) { num(a * b) }
+    (mul(a, a)) { pow(a, num(2)) }
+    (x) { x }
+}
+in
+    print simplify(mul(var("x"), var("y")));
+    assert(simplify(mul(var("x"), var("y"))) == mul(var("x"), var("y")))

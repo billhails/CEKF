@@ -40,7 +40,8 @@
 
 static TpmcState *match(TpmcMatrix *matrix, TpmcStateArray *finalStates,
                         TpmcState *errorState, TpmcStateArray *knownStates,
-                        TpmcStateTable *stateTable, bool *unsafe, ParserInfo I);
+                        TpmcStateTable *stateTable, bool *unsafe,
+                        SymbolSet *testedPaths, ParserInfo I);
 
 static HashSymbol *stampToSymbol(int stamp) {
     char buf[32];
@@ -56,9 +57,11 @@ TpmcState *tpmcMatch(TpmcMatrix *matrix, TpmcStateArray *finalStates,
 #endif
     TpmcStateTable *stateTable = newTpmcStateTable();
     int save = PROTECT(stateTable);
+    SymbolSet *testedPaths = newSymbolSet();
+    PROTECT(testedPaths);
     bool unsafe = false;
     TpmcState *result = match(matrix, finalStates, errorState, knownStates,
-                              stateTable, &unsafe, I);
+                              stateTable, &unsafe, testedPaths, I);
     UNPROTECT(save);
     if (unsafe) {
         if (!allow_unsafe) {
@@ -105,10 +108,11 @@ static bool pathIsPrefix(HashSymbol *prefix, HashSymbol *path) {
     return false;
 }
 
-// Check if a comparison's required path is available (is a column header
-// or has been deconstructed, i.e., a column header is a child of the required
-// path)
-static bool comparisonIsReady(TpmcPattern *pattern, TpmcMatrix *matrix) {
+// Check if a comparison's required path is available (is a column header,
+// has been deconstructed, i.e., a column header is a child of the required
+// path, or has already been tested in a parent mixture() call)
+static bool comparisonIsReady(TpmcPattern *pattern, TpmcMatrix *matrix,
+                              SymbolSet *testedPaths) {
     if (pattern->pattern->type != TPMCPATTERNVALUE_TYPE_COMPARISON) {
         return true; // Not a comparison, always ready
     }
@@ -121,6 +125,11 @@ static bool comparisonIsReady(TpmcPattern *pattern, TpmcMatrix *matrix) {
     }
     DEBUG("comparisonIsReady: pattern %s requires %s",
           pattern->path ? pattern->path->name : "(null)", required->name);
+    // First check if required path was already tested in a parent mixture()
+    if (testedPaths != NULL && getSymbolSet(testedPaths, required)) {
+        DEBUG("  FOUND required path in testedPaths, returning true");
+        return true;
+    }
     // Check if required path is a column header OR has been deconstructed
     // (a column header is a child of the required path, meaning the required
     // path was already matched and expanded)
@@ -140,12 +149,14 @@ static bool comparisonIsReady(TpmcPattern *pattern, TpmcMatrix *matrix) {
 }
 
 // A pattern is actionable if it's not a wildcard and not a non-ready comparison
-static bool patternIsActionable(TpmcPattern *pattern, TpmcMatrix *matrix) {
+static bool patternIsActionable(TpmcPattern *pattern, TpmcMatrix *matrix,
+                                SymbolSet *testedPaths) {
     if (patternIsWildCard(pattern)) {
         return false;
     }
     // Non-ready comparisons are treated as wildcards for column selection
-    if (patternIsComparison(pattern) && !comparisonIsReady(pattern, matrix)) {
+    if (patternIsComparison(pattern) &&
+        !comparisonIsReady(pattern, matrix, testedPaths)) {
         return false;
     }
     return true;
@@ -153,9 +164,11 @@ static bool patternIsActionable(TpmcPattern *pattern, TpmcMatrix *matrix) {
 
 // Check if top row has only wildcards or non-ready comparisons (nothing
 // actionable)
-static bool topRowHasNoActionablePatterns(TpmcMatrix *matrix) {
+static bool topRowHasNoActionablePatterns(TpmcMatrix *matrix,
+                                          SymbolSet *testedPaths) {
     for (Index x = 0; x < matrix->width; x++) {
-        if (patternIsActionable(getTpmcMatrixIndex(matrix, x, 0), matrix)) {
+        if (patternIsActionable(getTpmcMatrixIndex(matrix, x, 0), matrix,
+                                testedPaths)) {
             return false;
         }
     }
@@ -164,9 +177,11 @@ static bool topRowHasNoActionablePatterns(TpmcMatrix *matrix) {
 
 // Find first column with an actionable pattern (constructor, literal, or ready
 // comparison)
-static int findFirstActionableColumn(TpmcMatrix *matrix) {
+static int findFirstActionableColumn(TpmcMatrix *matrix,
+                                     SymbolSet *testedPaths) {
     for (Index x = 0; x < matrix->width; x++) {
-        if (patternIsActionable(getTpmcMatrixIndex(matrix, x, 0), matrix)) {
+        if (patternIsActionable(getTpmcMatrixIndex(matrix, x, 0), matrix,
+                                testedPaths)) {
             DEBUG("findFirstActionableColumn(%d x %d) => %d", matrix->width,
                   matrix->height, x);
             return x;
@@ -796,8 +811,9 @@ static TpmcArc *makeTpmcArc(TpmcPattern *pattern, TpmcState *state) {
 
 // Find indices of rows that should be treated as wildcards for the default arc.
 // This includes actual wildcards AND non-ready comparisons (comparisons whose
-// required path is not yet a column header).
-static IntArray *findWcIndices(TpmcPatternArray *N, TpmcMatrix *M) {
+// required path is not yet a column header or in testedPaths).
+static IntArray *findWcIndices(TpmcPatternArray *N, TpmcMatrix *M,
+                               SymbolSet *testedPaths) {
     IntArray *wcIndices = newIntArray();
     int save = PROTECT(wcIndices);
     Index row = 0;
@@ -810,7 +826,7 @@ static IntArray *findWcIndices(TpmcPatternArray *N, TpmcMatrix *M) {
         // Also include non-ready comparisons (they were skipped in arc
         // creation)
         else if (patternIsComparison(candidate) &&
-                 !comparisonIsReady(candidate, M)) {
+                 !comparisonIsReady(candidate, M, testedPaths)) {
             pushIntArray(wcIndices, row - 1);
         }
     }
@@ -821,12 +837,12 @@ static IntArray *findWcIndices(TpmcPatternArray *N, TpmcMatrix *M) {
 static TpmcState *mixture(TpmcMatrix *M, TpmcStateArray *finalStates,
                           TpmcState *errorState, TpmcStateArray *knownStates,
                           TpmcStateTable *stateTable, bool *unsafe,
-                          ParserInfo I) {
+                          SymbolSet *testedPaths, ParserInfo I) {
     ENTER(mixture);
     // Find first column with an actionable pattern (constructor, literal, or
     // ready comparison) Non-ready comparisons are treated as wildcards until
     // their required bindings are available
-    int firstConstructorColumn = findFirstActionableColumn(M);
+    int firstConstructorColumn = findFirstActionableColumn(M, testedPaths);
     TpmcPatternArray *N = extractMatrixColumn(firstConstructorColumn, M);
     int save = PROTECT(N);
     // let M-N be all the columns in M except N
@@ -836,6 +852,10 @@ static TpmcState *mixture(TpmcMatrix *M, TpmcStateArray *finalStates,
     // arcs (one for each constructor and possibly a default arc).
     TpmcState *testState = makeEmptyTestState(N->entries[0]->path);
     PROTECT(testState);
+    // Add the tested column path to testedPaths for recursive calls
+    // This ensures comparisons requiring this path will be considered ready
+    HashSymbol *testedPath = N->entries[0]->path;
+    setSymbolSet(testedPaths, testedPath);
     for (Index row = 0; row < N->size; row++) {
         TpmcPattern *c = N->entries[row];
         // For each constructor c in the selected column, its arc is defined as
@@ -843,7 +863,7 @@ static TpmcState *mixture(TpmcMatrix *M, TpmcStateArray *finalStates,
         // Skip wildcards AND non-ready comparisons (comparisons whose required
         // path is not yet a column header). Non-ready comparisons are handled
         // via the wildcard/default arc path instead.
-        if (patternIsActionable(c, M)) {
+        if (patternIsActionable(c, M, testedPaths)) {
             // Skip if we've already added an arc for this exact constructor
             // pattern This prevents redundant recursive match() calls for
             // duplicate constructors
@@ -932,8 +952,9 @@ static TpmcState *mixture(TpmcMatrix *M, TpmcStateArray *finalStates,
             PROTECT(cPrime);
             // and state is the result of recursively applying match to the new
             // matrix and the new sequence of final states
-            TpmcState *newState = match(newMatrix, newFinalStates, errorState,
-                                        knownStates, stateTable, unsafe, I);
+            TpmcState *newState =
+                match(newMatrix, newFinalStates, errorState, knownStates,
+                      stateTable, unsafe, testedPaths, I);
             PROTECT(newState);
             TpmcArc *arc = makeTpmcArc(cPrime, newState);
             PROTECT(arc);
@@ -949,7 +970,7 @@ static TpmcState *mixture(TpmcMatrix *M, TpmcStateArray *finalStates,
         // Otherwise, a default arc (_,state) is the last arc.
         // If there are any wildCard patterns (or non-ready comparisons) in the
         // selected column
-        IntArray *wcIndices = findWcIndices(N, M);
+        IntArray *wcIndices = findWcIndices(N, M, testedPaths);
         PROTECT(wcIndices);
         if (countIntArray(wcIndices) > 0) {
             // then their rows are selected from the rest of the matrix and the
@@ -961,8 +982,9 @@ static TpmcState *mixture(TpmcMatrix *M, TpmcStateArray *finalStates,
             PROTECT(wcFinalStates);
             // and the state is the result of applying match to the new matrix
             // and states
-            TpmcState *wcState = match(wcMatrix, wcFinalStates, errorState,
-                                       knownStates, stateTable, unsafe, I);
+            TpmcState *wcState =
+                match(wcMatrix, wcFinalStates, errorState, knownStates,
+                      stateTable, unsafe, testedPaths, I);
             PROTECT(wcState);
             TpmcPattern *wcPattern =
                 makeNamedWildCardPattern(N->entries[0]->path);
@@ -992,7 +1014,7 @@ static TpmcState *mixture(TpmcMatrix *M, TpmcStateArray *finalStates,
 static TpmcState *match(TpmcMatrix *matrix, TpmcStateArray *finalStates,
                         TpmcState *errorState, TpmcStateArray *knownStates,
                         TpmcStateTable *stateTable, bool *unsafe,
-                        ParserInfo I) {
+                        SymbolSet *testedPaths, ParserInfo I) {
     ENTER(match);
     // IFDEBUG(ppTpmcMatrix(matrix));
     // IFDEBUG(ppTpmcStateArray(finalStates));
@@ -1000,11 +1022,11 @@ static TpmcState *match(TpmcMatrix *matrix, TpmcStateArray *finalStates,
         cant_happen("zero-height matrix passed to match");
     }
     TpmcState *res = NULL;
-    if (topRowHasNoActionablePatterns(matrix)) {
+    if (topRowHasNoActionablePatterns(matrix, testedPaths)) {
         res = finalStates->entries[0];
     } else {
         res = mixture(matrix, finalStates, errorState, knownStates, stateTable,
-                      unsafe, I);
+                      unsafe, testedPaths, I);
     }
     IFDEBUG(ppTpmcState(res));
     LEAVE(match);
