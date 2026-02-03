@@ -82,6 +82,10 @@ TpmcState *tpmcMakeState(TpmcStateValue *val) {
     return newTpmcState(counter++, val);
 }
 
+// ============================================================================
+// Pattern Classification & Checking Utilities
+// ============================================================================
+
 static bool patternIsWildCard(TpmcPattern *pattern) {
     return pattern->pattern->type == TPMCPATTERNVALUE_TYPE_WILDCARD;
 }
@@ -296,6 +300,10 @@ static TpmcPatternArray *extractColumnSubset(IntArray *indices,
     return res;
 }
 
+// ============================================================================
+// Matrix Operations
+// ============================================================================
+
 static TpmcPatternArray *extractMatrixColumn(int x, TpmcMatrix *matrix) {
     TpmcPatternArray *res = newTpmcPatternArray("extractMatrixColumn");
     int save = PROTECT(res);
@@ -376,6 +384,10 @@ static TpmcStateArray *extractStateArraySubset(IntArray *indices,
     UNPROTECT(save);
     return res;
 }
+
+// ============================================================================
+// Pattern Transformation & Analysis
+// ============================================================================
 
 static int arityOf(TpmcPattern *pattern) {
     switch (pattern->pattern->type) {
@@ -561,6 +573,10 @@ static IntArray *makeIntArray(int size, int initialValue) {
     return res;
 }
 
+// ============================================================================
+// Exhaustiveness Checking
+// ============================================================================
+
 static bool arcsAreExhaustive(int size, TpmcArcArray *arcs, ParserInfo I) {
     IntArray *flags = makeIntArray(size, 0);
     int save = PROTECT(flags);
@@ -705,6 +721,10 @@ static void collectPathsBoundByPattern(TpmcPattern *pattern,
                     tpmcPatternValueTypeName(pattern->pattern->type));
     }
 }
+
+// ============================================================================
+// State Construction & Free Variables
+// ============================================================================
 
 static SymbolSet *variablesBoundByPattern(TpmcPattern *pattern) {
     ENTER(variablesBoundByPattern);
@@ -882,6 +902,10 @@ static bool arcExistsForPattern(TpmcPattern *pattern, TpmcState *testState) {
     return false;
 }
 
+// ============================================================================
+// Mixture Algorithm - Arc Construction
+// ============================================================================
+
 // Build arcs for each unique constructor/literal in the selected column.
 // For each pattern, creates a sub-matrix by extracting matching rows,
 // recursively calls match(), and adds the resulting arc to the test state.
@@ -1052,6 +1076,10 @@ static TpmcState *mixture(TpmcMatrix *matrix, TpmcStateArray *finalStates,
     LEAVE(mixture);
     return res;
 }
+
+// ============================================================================
+// Main Match Algorithm
+// ============================================================================
 
 static TpmcState *match(TpmcMatrix *matrix, TpmcStateArray *finalStates,
                         TpmcState *errorState, TpmcStateArray *knownStates,
