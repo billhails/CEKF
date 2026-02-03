@@ -882,30 +882,14 @@ static bool arcExistsForPattern(TpmcPattern *pattern, TpmcState *testState) {
     return false;
 }
 
-static TpmcState *mixture(TpmcMatrix *matrix, TpmcStateArray *finalStates,
-                          TpmcState *errorState, TpmcStateArray *knownStates,
-                          TpmcStateTable *stateTable, bool *unsafe,
-                          SymbolSet *testedPaths, ParserInfo I) {
-    ENTER(mixture);
-    // Find first column with an actionable pattern (constructor, literal, or
-    // ready comparison) Non-ready comparisons are treated as wildcards until
-    // their required bindings are available
-    int firstConstructorColumn = findFirstActionableColumn(matrix, testedPaths);
-    TpmcPatternArray *selectedColumn =
-        extractMatrixColumn(firstConstructorColumn, matrix);
-    int save = PROTECT(selectedColumn);
-    // remainingColumns is all the columns in matrix except selectedColumn
-    TpmcMatrix *remainingColumns =
-        discardMatrixColumn(firstConstructorColumn, matrix);
-    PROTECT(remainingColumns);
-    // The goal is to build a test state with the variable v and some outgoing
-    // arcs (one for each constructor and possibly a default arc).
-    TpmcState *testState = makeEmptyTestState(selectedColumn->entries[0]->path);
-    PROTECT(testState);
-    // Add the tested column path to testedPaths for recursive calls
-    // This ensures comparisons requiring this path will be considered ready
-    HashSymbol *testedPath = selectedColumn->entries[0]->path;
-    setSymbolSet(testedPaths, testedPath);
+// Build arcs for each unique constructor/literal in the selected column.
+// For each pattern, creates a sub-matrix by extracting matching rows,
+// recursively calls match(), and adds the resulting arc to the test state.
+static void buildConstructorArcs(
+    TpmcPatternArray *selectedColumn, TpmcMatrix *remainingColumns,
+    TpmcMatrix *matrix, TpmcStateArray *finalStates, TpmcState *errorState,
+    TpmcStateArray *knownStates, TpmcStateTable *stateTable,
+    TpmcState *testState, bool *unsafe, SymbolSet *testedPaths, ParserInfo I) {
     for (Index row = 0; row < selectedColumn->size; row++) {
         TpmcPattern *currentPattern = selectedColumn->entries[row];
         // For each constructor in the selected column, its arc is defined as
@@ -972,6 +956,17 @@ static TpmcState *mixture(TpmcMatrix *matrix, TpmcStateArray *finalStates,
             UNPROTECT(save2);
         }
     }
+}
+
+// Build the default (wildcard) arc or error arc if constructors aren't
+// exhaustive. Handles rows that match wildcards or non-ready comparisons.
+static void buildDefaultArc(TpmcPatternArray *selectedColumn,
+                            TpmcMatrix *remainingColumns, TpmcMatrix *matrix,
+                            TpmcStateArray *finalStates, TpmcState *errorState,
+                            TpmcStateArray *knownStates,
+                            TpmcStateTable *stateTable, TpmcState *testState,
+                            bool *unsafe, SymbolSet *testedPaths,
+                            ParserInfo I) {
     // Finally, the possibility for matching failure is considered.
     // If the set of constructors is exhaustive, then no more arcs are computed
     if (!constructorsAreExhaustive(testState, I)) {
@@ -1015,6 +1010,43 @@ static TpmcState *mixture(TpmcMatrix *matrix, TpmcStateArray *finalStates,
             pushTpmcArcArray(testState->state->val.test->arcs, errorArc);
         }
     }
+}
+
+static TpmcState *mixture(TpmcMatrix *matrix, TpmcStateArray *finalStates,
+                          TpmcState *errorState, TpmcStateArray *knownStates,
+                          TpmcStateTable *stateTable, bool *unsafe,
+                          SymbolSet *testedPaths, ParserInfo I) {
+    ENTER(mixture);
+    // Find first column with an actionable pattern (constructor, literal, or
+    // ready comparison). Non-ready comparisons are treated as wildcards until
+    // their required bindings are available.
+    int firstConstructorColumn = findFirstActionableColumn(matrix, testedPaths);
+    TpmcPatternArray *selectedColumn =
+        extractMatrixColumn(firstConstructorColumn, matrix);
+    int save = PROTECT(selectedColumn);
+    // remainingColumns is all the columns in matrix except selectedColumn
+    TpmcMatrix *remainingColumns =
+        discardMatrixColumn(firstConstructorColumn, matrix);
+    PROTECT(remainingColumns);
+    // Build a test state with the variable v and some outgoing arcs
+    // (one for each constructor and possibly a default arc).
+    TpmcState *testState = makeEmptyTestState(selectedColumn->entries[0]->path);
+    PROTECT(testState);
+    // Add the tested column path to testedPaths for recursive calls.
+    // This ensures comparisons requiring this path will be considered ready.
+    HashSymbol *testedPath = selectedColumn->entries[0]->path;
+    setSymbolSet(testedPaths, testedPath);
+
+    // Build arcs for each unique constructor/literal
+    buildConstructorArcs(selectedColumn, remainingColumns, matrix, finalStates,
+                         errorState, knownStates, stateTable, testState, unsafe,
+                         testedPaths, I);
+
+    // Build default/error arc if needed
+    buildDefaultArc(selectedColumn, remainingColumns, matrix, finalStates,
+                    errorState, knownStates, stateTable, testState, unsafe,
+                    testedPaths, I);
+
     TpmcState *res = deduplicateState(testState, knownStates, stateTable);
     UNPROTECT(save);
     LEAVE(mixture);
