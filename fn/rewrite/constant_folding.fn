@@ -5,57 +5,59 @@ namespace
 link "minexpr.fn" as M;
 link "../listutils.fn" as list;
 
-// a more convenient form for doing algebra
-typedef term {
-    num(number) |
-    add(term, term) |
-    sub(term, term) |
-    mul(term, term) |
-    div(term, term) |
-    pow(term, term) |
-    other(M.expr)
-}
-
-fn term_to_expr(term) {
-    switch(term) {
-        (num(n))    { M.bigint(n) }
-        (add(a, b)) { M.apply(M.primop("+"), [term_to_expr(a), term_to_expr(b)]) }
-        (sub(a, b)) { M.apply(M.primop("-"), [term_to_expr(a), term_to_expr(b)]) }
-        (mul(a, b)) { M.apply(M.primop("*"), [term_to_expr(a), term_to_expr(b)]) }
-        (div(a, b)) { M.apply(M.primop("/"), [term_to_expr(a), term_to_expr(b)]) }
-        (pow(a, b)) { M.apply(M.primop("**"), [term_to_expr(a), term_to_expr(b)]) }
-        (other(x))  { x }
-    }
-}
-
-fn expr_to_term(expr) {
+fn simplify (e) {
     let
-        result = switch(expr) {
-            (M.bigint(n)) {
-                num(n)
-            }
-            (M.apply(M.primop("+"), [e1, e2])) {
-                add(expr_to_term(e1), expr_to_term(e2))
-            }
-            (M.apply(M.primop("-"), [e1, e2])) {
-                sub(expr_to_term(e1), expr_to_term(e2))
-            }
-            (M.apply(M.primop("*"), [e1, e2])) {
-                mul(expr_to_term(e1), expr_to_term(e2))
-            }
-            (M.apply(M.primop("/"), [e1, e2])) {
-                div(expr_to_term(e1), expr_to_term(e2))
-            }
-            (M.apply(M.primop("**"), [e1, e2])) {
-                pow(expr_to_term(e1), expr_to_term(e2))
-            }
-            (x) {
-                other(x)
+// a more convenient form for doing algebra
+        typedef term {
+            num(number) |
+            add(term, term) |
+            sub(term, term) |
+            mul(term, term) |
+            div(term, term) |
+            pow(term, term) |
+            other(M.expr)
+        }
+
+        fn term_to_expr(term) {
+            switch(term) {
+                (num(n))    { M.bigint(n) }
+                (add(a, b)) { M.apply(M.primop("+"), [term_to_expr(a), term_to_expr(b)]) }
+                (sub(a, b)) { M.apply(M.primop("-"), [term_to_expr(a), term_to_expr(b)]) }
+                (mul(a, b)) { M.apply(M.primop("*"), [term_to_expr(a), term_to_expr(b)]) }
+                (div(a, b)) { M.apply(M.primop("/"), [term_to_expr(a), term_to_expr(b)]) }
+                (pow(a, b)) { M.apply(M.primop("**"), [term_to_expr(a), term_to_expr(b)]) }
+                (other(x))  { x }
             }
         }
-    in
-        result
-}
+
+        fn expr_to_term(expr) {
+            let
+                result = switch(expr) {
+                    (M.bigint(n)) {
+                        num(n)
+                    }
+                    (M.apply(M.primop("+"), [e1, e2])) {
+                        add(expr_to_term(e1), expr_to_term(e2))
+                    }
+                    (M.apply(M.primop("-"), [e1, e2])) {
+                        sub(expr_to_term(e1), expr_to_term(e2))
+                    }
+                    (M.apply(M.primop("*"), [e1, e2])) {
+                        mul(expr_to_term(e1), expr_to_term(e2))
+                    }
+                    (M.apply(M.primop("/"), [e1, e2])) {
+                        div(expr_to_term(e1), expr_to_term(e2))
+                    }
+                    (M.apply(M.primop("**"), [e1, e2])) {
+                        pow(expr_to_term(e1), expr_to_term(e2))
+                    }
+                    (x) {
+                        other(x)
+                    }
+                }
+            in
+                result
+        }
 
 // patterns that may be reduced (n is number, x is other)
 // (n op n)
@@ -72,8 +74,6 @@ fn expr_to_term(expr) {
 //
 // (**) < (*, /) < (+, -)
 //
-fn simplify (e) {
-    let term = expr_to_term(e);
         fn sim(term) {
             let basis = switch(term) {
                     (num(_)) | (other(_)) { term }
@@ -292,7 +292,7 @@ fn simplify (e) {
                 };
         }
     in
-        term_to_expr(sim(term))
+        term_to_expr(sim(expr_to_term(e)))
 }
 
 fn fold {

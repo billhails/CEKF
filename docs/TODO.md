@@ -39,3 +39,4 @@ More of a wish-list than a hard and fast plan.
 * (internal) have a NEWZ variant of NEW that bzero's its result.
 * Builtins
   * `now()` builtin returns current time in milliseconds.
+* Bespoke equality functions for user defined types.
