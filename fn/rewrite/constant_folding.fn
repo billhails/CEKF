@@ -269,9 +269,11 @@ fn simplify (e) {
                     // (a / x) * (b / y) = (a * b) / (x * y)
                     (mul(div(num(a), x), div(num(b), y))) { sim(div(num(a * b), mul(x, y))) }
                     // (x / a) / (b / y) = (x * y) / (a * b)
-                    (div(div(x, num(a)), div(y, num(b)))) { sim(div(mul(x, y), num(a * b))) }    
+// INCORRECT: (x/2) / (y/3) = (x/2) * (3/y) = 3x/2y, not xy/6
+                    (div(div(x, num(a)), div(y, num(b)))) { sim(mul(div(x, y), num(b / a))) }    
                     // (a / x) / (y / b) = (a * b) / (x * y)
-                    (div(div(num(a), x), div(num(b), y))) { sim(div(num(a * b), mul(x, y))) }
+// INCORRECT: (2/x) / (3/y) = (2/x) * (y/3) = 2y/3x, not 6/xy
+                    (div(div(num(a), x), div(num(b), y))) { sim(mul(num(a / b), div(y, x))) }
 
                     // a ** b
                     (pow(num(a), num(b)))       { num(a ** b) }
