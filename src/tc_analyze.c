@@ -863,25 +863,145 @@ static void processLetRecBinding(LamBindings *bindings, TcEnv *env, TcNg *ng) {
     UNPROTECT(save);
 }
 
+// Forward declarations for normalized type string conversion
+static void normalizedTypeToString(TcType *type, SCharArray *buffer,
+                                   TcTypeTable *varMap, int *counter);
+
+static void normalizedTypeToString(TcType *type, SCharArray *buffer,
+                                   TcTypeTable *varMap, int *counter) {
+    if (type == NULL) {
+        appendStringToSCharArray(buffer, "<null>");
+        return;
+    }
+    type = prune(type);
+    switch (type->type) {
+    case TCTYPE_TYPE_FUNCTION: {
+        TcFunction *fn = getTcType_Function(type);
+        if (fn->arg->type == TCTYPE_TYPE_FUNCTION) {
+            appendStringToSCharArray(buffer, "(");
+            normalizedTypeToString(fn->arg, buffer, varMap, counter);
+            appendStringToSCharArray(buffer, ")");
+        } else {
+            normalizedTypeToString(fn->arg, buffer, varMap, counter);
+        }
+        appendStringToSCharArray(buffer, " -> ");
+        normalizedTypeToString(fn->result, buffer, varMap, counter);
+        break;
+    }
+    case TCTYPE_TYPE_PAIR: {
+        TcPair *pair = getTcType_Pair(type);
+        appendStringToSCharArray(buffer, "#(");
+        normalizedTypeToString(pair->first, buffer, varMap, counter);
+        appendStringToSCharArray(buffer, ", ");
+        normalizedTypeToString(pair->second, buffer, varMap, counter);
+        appendStringToSCharArray(buffer, ")");
+        break;
+    }
+    case TCTYPE_TYPE_THUNK: {
+        TcThunk *thunk = getTcType_Thunk(type);
+        appendStringToSCharArray(buffer, "#() -> ");
+        normalizedTypeToString(thunk->type, buffer, varMap, counter);
+        break;
+    }
+    case TCTYPE_TYPE_VAR: {
+        TcVar *var = getTcType_Var(type);
+        // Check if we've seen this variable before
+        TcType *mapped = NULL;
+        if (getTcTypeTable(varMap, var->name, &mapped)) {
+            // Use the previously assigned number
+            char numBuf[32];
+            sprintf(numBuf, "#%d", getTcType_Var(mapped)->id);
+            appendStringToSCharArray(buffer, numBuf);
+        } else {
+            // Assign a new number
+            int num = (*counter)++;
+            // Store the mapping (reuse the type but we only care about id)
+            TcType *placeholder = makeTcType_Var(var->name, num);
+            int save = PROTECT(placeholder);
+            setTcTypeTable(varMap, var->name, placeholder);
+            UNPROTECT(save);
+            char numBuf[32];
+            sprintf(numBuf, "#%d", num);
+            appendStringToSCharArray(buffer, numBuf);
+        }
+        break;
+    }
+    case TCTYPE_TYPE_BIGINTEGER:
+        appendStringToSCharArray(buffer, "number");
+        break;
+    case TCTYPE_TYPE_SMALLINTEGER:
+        appendStringToSCharArray(buffer, "smallint");
+        break;
+    case TCTYPE_TYPE_CHARACTER:
+        appendStringToSCharArray(buffer, "char");
+        break;
+    case TCTYPE_TYPE_UNKNOWN:
+        appendStringToSCharArray(buffer, "unknown:");
+        appendStringToSCharArray(buffer, getTcType_Unknown(type)->name);
+        break;
+    case TCTYPE_TYPE_TYPESIG: {
+        TcTypeSig *sig = getTcType_TypeSig(type);
+        appendStringToSCharArray(buffer, sig->name->name);
+        if (sig->args != NULL) {
+            appendStringToSCharArray(buffer, "(");
+            TcTypeSigArgs *args = sig->args;
+            while (args != NULL) {
+                normalizedTypeToString(args->type, buffer, varMap, counter);
+                if (args->next) {
+                    appendStringToSCharArray(buffer, ", ");
+                }
+                args = args->next;
+            }
+            appendStringToSCharArray(buffer, ")");
+        }
+        break;
+    }
+    case TCTYPE_TYPE_TUPLE: {
+        TcTypeArray *tuple = getTcType_Tuple(type);
+        appendStringToSCharArray(buffer, "#(");
+        for (Index i = 0; i < tuple->size; i++) {
+            normalizedTypeToString(tuple->entries[i], buffer, varMap, counter);
+            if (i + 1 < tuple->size) {
+                appendStringToSCharArray(buffer, ", ");
+            }
+        }
+        appendStringToSCharArray(buffer, ")");
+        break;
+    }
+    case TCTYPE_TYPE_ENV:
+        appendStringToSCharArray(buffer, "<env>");
+        break;
+    case TCTYPE_TYPE_OPAQUE:
+        appendStringToSCharArray(buffer, "opaque:");
+        appendStringToSCharArray(buffer, getTcType_Opaque(type)->name);
+        break;
+    default:
+        appendStringToSCharArray(buffer, "<unknown>");
+    }
+}
+
 // Helper to capture a snapshot of all binding types as a single SCharArray
 // Used to detect convergence in iterative type checking
+// Uses normalized type variable names (#0, #1, ...) for consistent comparison
 static SCharArray *snapshotBindingTypes(LamBindings *bindings, TcEnv *env) {
     SCharArray *snapshot = newSCharArray();
     int save = PROTECT(snapshot);
+    // Use a single varMap across all bindings so variables that appear
+    // in multiple binding types get consistent names
+    TcTypeTable *varMap = newTcTypeTable();
+    PROTECT(varMap);
+    int counter = 0;
 
     for (LamBindings *b = bindings; b != NULL; b = b->next) {
         if (isLambdaBinding(b)) {
             TcType *type = NULL;
             if (getFromTcEnv(env, b->var, &type)) {
                 TcType *pruned = prune(type);
-                SCharArray *typeStr = tcTypeToSCharArray(pruned);
-                int save2 = PROTECT(typeStr);
                 appendStringToSCharArray(snapshot, b->var->name);
                 pushSCharArray(snapshot, ':');
                 pushSCharArray(snapshot, ':');
-                appendSCharArray(snapshot, typeStr);
+                normalizedTypeToString(pruned, snapshot, varMap, &counter);
                 pushSCharArray(snapshot, ';');
-                UNPROTECT(save2);
             }
         }
     }

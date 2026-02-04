@@ -1,2 +1,2 @@
 // minimal code to allow dumping of the preamble with --dump-lambda etc.
-1
+1 == 1;
