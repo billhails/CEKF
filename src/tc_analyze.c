@@ -87,6 +87,12 @@ static TcType *analyzeCharacter();
 static TcType *analyzeBack();
 static TcType *analyzeError();
 static TcType *analyzeEnv(TcEnv *env);
+static TcEnv *getNsEnv(int index, TcEnv *env);
+static LamExp *lookupComparator(TcType *type, TcEnv *env, ParserInfo I);
+static bool isEqFunction(HashSymbol *symbol);
+static HashSymbol *extractTypename(HashSymbol *eqSymbol, const char *prefix);
+static TcType *makeEqFunctionType(HashSymbol *typename, TcEnv *env,
+                                  ParserInfo I);
 static bool unify(TcType *a, TcType *b, char *trace __attribute__((unused)));
 static TcType *prune(TcType *t);
 static bool occursInType(TcType *a, TcType *b);
@@ -426,6 +432,47 @@ static TcType *analyzeSpaceship(LamExp *exp1, LamExp *exp2, TcEnv *env,
     return res;
 }
 
+static LamExp *lookupComparator(TcType *type, TcEnv *env, ParserInfo I) {
+    type = prune(type);
+
+    // Only custom types (TYPESIG) can have bespoke comparators
+    if (type->type != TCTYPE_TYPE_TYPESIG) {
+        return NULL;
+    }
+
+    TcTypeSig *typeSig = getTcType_TypeSig(type);
+
+    // Construct the eq$<typename> symbol
+    HashSymbol *eqName = makePrintName("eq$", typeSig->name->name);
+
+    // Look in the appropriate namespace
+    TcEnv *nsEnv = getNsEnv(typeSig->ns, env);
+
+    TcType *comparatorType = NULL;
+    if (!getFromTcEnv(nsEnv, eqName, &comparatorType)) {
+        // No bespoke comparator found
+        return NULL;
+    }
+
+    // Build the expression referencing the comparator
+    LamExp *exp = newLamExp_Var(I, eqName);
+    int save = PROTECT(exp);
+
+    // If in different namespace, wrap in LookUp
+    TcType *currentNs = NULL;
+    getFromTcEnv(env, nameSpaceSymbol(), &currentNs);
+    if (currentNs != NULL && getTcType_NsId(currentNs) != typeSig->ns &&
+        typeSig->ns != NS_GLOBAL) {
+        LamLookUp *lookUp = newLamLookUp(I, typeSig->ns, NULL, exp);
+        PROTECT(lookUp);
+        exp = newLamExp_LookUp(I, lookUp);
+        PROTECT(exp);
+    }
+
+    UNPROTECT(save);
+    return exp;
+}
+
 static TcType *analyzePrim(LamPrimApp *app, TcEnv *env, TcNg *ng) {
     // ENTER(analyzePrim);
     TcType *res = NULL;
@@ -443,9 +490,30 @@ static TcType *analyzePrim(LamPrimApp *app, TcEnv *env, TcNg *ng) {
     case LAMPRIMOP_TYPE_GT:
     case LAMPRIMOP_TYPE_LT:
     case LAMPRIMOP_TYPE_GE:
-    case LAMPRIMOP_TYPE_LE:
+    case LAMPRIMOP_TYPE_LE: {
+        // Analyze the comparison first
         res = analyzeComparison(app->exp1, app->exp2, env, ng);
+
+        // For EQ operations, check for bespoke comparator
+        if (app->type == LAMPRIMOP_TYPE_EQ) {
+            TcType *type1 = analyzeExp(app->exp1, env, ng);
+            int save = PROTECT(type1);
+            LamExp *comparator = lookupComparator(type1, env, CPI(app));
+            if (comparator != NULL) {
+                // Found a bespoke comparator - create replacement
+                PROTECT(comparator);
+                LamArgs *args = newLamArgs(CPI(app), app->exp2, NULL);
+                PROTECT(args);
+                args = newLamArgs(CPI(app), app->exp1, args);
+                PROTECT(args);
+                LamApply *apply = newLamApply(CPI(app), comparator, args);
+                PROTECT(apply);
+                app->replacement = newLamExp_Apply(CPI(app), apply);
+            }
+            UNPROTECT(save);
+        }
         break;
+    }
     case LAMPRIMOP_TYPE_CMP:
         res = analyzeSpaceship(app->exp1, app->exp2, env, ng);
         break;
@@ -836,12 +904,79 @@ static void prepareLetRecEnv(LamBindings *bindings, TcEnv *env) {
     UNPROTECT(save);
 }
 
+static TcEnv *getNsEnv(int index, TcEnv *env) {
+    if (index == NS_GLOBAL) {
+        return env;
+    }
+    TcType *currentNs = NULL;
+    getFromTcEnv(env, nameSpaceSymbol(), &currentNs);
+#ifdef SAFETY_CHECKS
+    if (currentNs == NULL) {
+        cant_happen("cannot find current nameSpace");
+    }
+#endif
+    if (currentNs->val.nsId == index) {
+        return env;
+    }
+    TcType *res = lookUpNsRef(index, env);
+    return res->val.env;
+}
+
+static bool isEqFunction(HashSymbol *symbol) {
+    return strncmp(symbol->name, "eq$", 3) == 0;
+}
+
+static HashSymbol *extractTypename(HashSymbol *eqSymbol, const char *prefix) {
+    size_t prefixLen = strlen(prefix);
+    size_t nameLen = strlen(eqSymbol->name);
+    char *typename = NEW_ARRAY(char, nameLen - prefixLen + 1);
+    strcpy(typename, eqSymbol->name + prefixLen);
+    HashSymbol *result = newSymbol(typename);
+    FREE_ARRAY(char, typename, nameLen - prefixLen + 1);
+    return result;
+}
+
+static TcType *makeEqFunctionType(HashSymbol *typename, TcEnv *env,
+                                  ParserInfo I) {
+    // Get the TcTypeSig for typename
+    TcTypeSig *typeSig = NULL;
+    if (!getTypeSigFromTcEnv(env, typename, &typeSig)) {
+        can_happen("undefined type %s in eq function at %s:%d", typename->name,
+                   I.fileName, I.lineNo);
+        return makeFreshVar("eq_error");
+    }
+
+    // Build type: typename -> typename -> bool
+    TcType *typeArg = newTcType_TypeSig(typeSig);
+    int save = PROTECT(typeArg);
+    TcType *boolType = makeBoolean();
+    PROTECT(boolType);
+    TcType *secondArg = makeFn(typeArg, boolType);
+    PROTECT(secondArg);
+    TcType *result = makeFn(typeArg, secondArg);
+    UNPROTECT(save);
+    return result;
+}
+
 static void processLetRecBinding(LamBindings *bindings, TcEnv *env, TcNg *ng) {
     TcType *existingType = NULL;
     if (!getFromTcEnv(env, bindings->var, &existingType)) {
         cant_happen("failed to retrieve fresh var from env in analyzeLetRec");
     }
     int save = PROTECT(existingType);
+
+    // Check if this is an equality comparator function
+    if (isEqFunction(bindings->var)) {
+        HashSymbol *typename = extractTypename(bindings->var, "eq$");
+        TcType *expectedType = makeEqFunctionType(typename, env, CPI(bindings));
+        PROTECT(expectedType);
+        if (!unify(existingType, expectedType, "eq function type")) {
+            eprintf("eq function %s must have type %s -> %s -> bool\n",
+                    bindings->var->name, typename->name, typename->name);
+            REPORT_PARSER_INFO(bindings->val);
+        }
+    }
+
     // Recursive functions need to be statically typed inside their own context:
     TcNg *ng2 = newTcNg(ng);
     PROTECT(ng2);

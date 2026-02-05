@@ -74,3 +74,504 @@ TPMC requires no changes—it continues to generate `eq` operations for pattern 
 ### Limitation
 
 The surface level `==` is a user defined operator that expands to a call to a macro: `x == y` becomes `(op$macro$1 (λ () x) (λ () y))` where `opMacro$1` is bound to `(λ (x1 x2) (eq (x1) (x2)))`. There is no way currently to get from `x == y` to `(eq x y)` - though it would be great if we could, likewise for the other primitives. Also if we plan to do constant folding in a later compiler pass we'll need to fix this. That's for another day.
+```mermaid
+---
+title: eq$term
+---
+flowchart LR
+T208("p$107<br/>[]<br/>(arcs 7)")
+T209("p$108<br/>[p$108 p$107$0]<br/>(arcs 2)")
+T210("p$108$0<br/>[p$107$0 p$108$0]<br/>(arcs 2)")
+F197("(begin constructor:true)<br/>[p$107$0]")
+T210 --"p$108$0:p$107$0:_==p$108$0:var a<br/>[p$107$0]"--> F197
+F206("(begin constructor:false)<br/>[]")
+T210 --"p$108$0:_<br/>[]"--> F206
+T209 --"p$108:var(p$108$0:_)<br/>[p$107$0]"--> T210
+T209 --"p$108:_<br/>[]"--> F206
+T208 --"p$107:var(p$107$0:_)<br/>[p$108]"--> T209
+T211("p$108<br/>[p$108 p$107$0]<br/>(arcs 2)")
+T212("p$108$0<br/>[p$107$0 p$108$0]<br/>(arcs 2)")
+F198("(begin constructor:true)<br/>[p$107$0]")
+T212 --"p$108$0:p$107$0:_==p$108$0:var a<br/>[p$107$0]"--> F198
+T212 --"p$108$0:_<br/>[]"--> F206
+T211 --"p$108:num(p$108$0:_)<br/>[p$107$0]"--> T212
+T211 --"p$108:_<br/>[]"--> F206
+T208 --"p$107:num(p$107$0:_)<br/>[p$108]"--> T211
+T213("p$108<br/>[p$108 p$107$0 p$107$1]<br/>(arcs 2)")
+T214("p$108$0<br/>[p$107$0 p$108$0 p$107$1 p$108$1]<br/>(arcs 2)")
+T215("p$108$1<br/>[p$107$0 p$107$1 p$108$1]<br/>(arcs 2)")
+F199("(begin constructor:true)<br/>[p$107$0 p$107$1]")
+T215 --"p$108$1:p$107$1:_==p$108$1:var b<br/>[p$107$0 p$107$1]"--> F199
+T215 --"p$108$1:_<br/>[]"--> F206
+T214 --"p$108$0:p$107$0:_==p$108$0:var a<br/>[p$107$0 p$107$1 p$108$1]"--> T215
+T214 --"p$108$0:_<br/>[]"--> F206
+T213 --"p$108:pow(p$108$0:_, p$108$1:_)<br/>[p$107$0 p$107$1]"--> T214
+T213 --"p$108:_<br/>[]"--> F206
+T208 --"p$107:pow(p$107$0:_, p$107$1:_)<br/>[p$108]"--> T213
+T216("p$108<br/>[p$108 p$107$0 p$107$1]<br/>(arcs 2)")
+T217("p$108$0<br/>[p$107$0 p$108$0 p$107$1 p$108$1]<br/>(arcs 2)")
+T218("p$108$1<br/>[p$107$0 p$107$1 p$108$1]<br/>(arcs 2)")
+F200("(begin constructor:true)<br/>[p$107$0 p$107$1]")
+T218 --"p$108$1:p$107$1:_==p$108$1:var b<br/>[p$107$0 p$107$1]"--> F200
+T218 --"p$108$1:_<br/>[]"--> F206
+T217 --"p$108$0:p$107$0:_==p$108$0:var a<br/>[p$107$0 p$107$1 p$108$1]"--> T218
+T217 --"p$108$0:_<br/>[]"--> F206
+T216 --"p$108:div(p$108$0:_, p$108$1:_)<br/>[p$107$0 p$107$1]"--> T217
+T216 --"p$108:_<br/>[]"--> F206
+T208 --"p$107:div(p$107$0:_, p$107$1:_)<br/>[p$108]"--> T216
+T219("p$108<br/>[p$108 p$107$0 p$107$1]<br/>(arcs 2)")
+T220("p$108$0<br/>[p$107$0 p$108$0 p$107$1 p$108$1]<br/>(arcs 3)")
+T221("p$108$1<br/>[p$107$0 p$107$1 p$108$1]<br/>(arcs 2)")
+F201("(begin constructor:true)<br/>[p$107$0 p$107$1]")
+T221 --"p$108$1:p$107$0:_==p$108$1:var b<br/>[p$107$0 p$107$1]"--> F201
+T221 --"p$108$1:_<br/>[]"--> F206
+T220 --"p$108$0:p$107$1:_==p$108$0:var a<br/>[p$107$0 p$107$1 p$108$1]"--> T221
+T222("p$108$1<br/>[p$107$0 p$107$1 p$108$1]<br/>(arcs 2)")
+F202("(begin constructor:true)<br/>[p$107$0 p$107$1]")
+T222 --"p$108$1:p$107$1:_==p$108$1:var b<br/>[p$107$0 p$107$1]"--> F202
+T222 --"p$108$1:_<br/>[]"--> F206
+T220 --"p$108$0:p$107$0:_==p$108$0:var a<br/>[p$107$0 p$107$1 p$108$1]"--> T222
+T220 --"p$108$0:_<br/>[]"--> F206
+T219 --"p$108:mul(p$108$0:_, p$108$1:_)<br/>[p$107$0 p$107$1]"--> T220
+T219 --"p$108:_<br/>[]"--> F206
+T208 --"p$107:mul(p$107$0:_, p$107$1:_)<br/>[p$108]"--> T219
+T223("p$108<br/>[p$108 p$107$0 p$107$1]<br/>(arcs 2)")
+T224("p$108$0<br/>[p$107$0 p$108$0 p$107$1 p$108$1]<br/>(arcs 2)")
+T225("p$108$1<br/>[p$107$0 p$107$1 p$108$1]<br/>(arcs 2)")
+F203("(begin constructor:true)<br/>[p$107$0 p$107$1]")
+T225 --"p$108$1:p$107$1:_==p$108$1:var b<br/>[p$107$0 p$107$1]"--> F203
+T225 --"p$108$1:_<br/>[]"--> F206
+T224 --"p$108$0:p$107$0:_==p$108$0:var a<br/>[p$107$0 p$107$1 p$108$1]"--> T225
+T224 --"p$108$0:_<br/>[]"--> F206
+T223 --"p$108:sub(p$108$0:_, p$108$1:_)<br/>[p$107$0 p$107$1]"--> T224
+T223 --"p$108:_<br/>[]"--> F206
+T208 --"p$107:sub(p$107$0:_, p$107$1:_)<br/>[p$108]"--> T223
+T226("p$108<br/>[p$108 p$107$0 p$107$1]<br/>(arcs 2)")
+T227("p$108$0<br/>[p$107$0 p$108$0 p$107$1 p$108$1]<br/>(arcs 3)")
+T228("p$108$1<br/>[p$107$0 p$107$1 p$108$1]<br/>(arcs 2)")
+F204("(begin constructor:true)<br/>[p$107$0 p$107$1]")
+T228 --"p$108$1:p$107$0:_==p$108$1:var b<br/>[p$107$0 p$107$1]"--> F204
+T228 --"p$108$1:_<br/>[]"--> F206
+T227 --"p$108$0:p$107$1:_==p$108$0:var a<br/>[p$107$0 p$107$1 p$108$1]"--> T228
+T229("p$108$1<br/>[p$107$0 p$107$1 p$108$1]<br/>(arcs 2)")
+F205("(begin constructor:true)<br/>[p$107$0 p$107$1]")
+T229 --"p$108$1:p$107$1:_==p$108$1:var b<br/>[p$107$0 p$107$1]"--> F205
+T229 --"p$108$1:_<br/>[]"--> F206
+T227 --"p$108$0:p$107$0:_==p$108$0:var a<br/>[p$107$0 p$107$1 p$108$1]"--> T229
+T227 --"p$108$0:_<br/>[]"--> F206
+T226 --"p$108:add(p$108$0:_, p$108$1:_)<br/>[p$107$0 p$107$1]"--> T227
+T226 --"p$108:_<br/>[]"--> F206
+T208 --"p$107:add(p$107$0:_, p$107$1:_)<br/>[p$108]"--> T226
+```
+DEBUG EQ: checking for comparator, type is: #cld
+application is:(eq (x1) (x2))
+DEBUG lookupComparator: type->type = TCTYPE_TYPE_VAR
+DEBUG lookupComparator: not a TYPESIG, returning NULL
+DEBUG EQ: No bespoke comparator found for this type
+DEBUG EQ: checking for comparator, type is: #oai
+application is:(eq (x1) (x2))
+DEBUG lookupComparator: type->type = TCTYPE_TYPE_VAR
+DEBUG lookupComparator: not a TYPESIG, returning NULL
+DEBUG EQ: No bespoke comparator found for this type
+DEBUG EQ: checking for comparator, type is: #cqm
+application is:(eq (x1) (x2))
+DEBUG lookupComparator: type->type = TCTYPE_TYPE_VAR
+DEBUG lookupComparator: not a TYPESIG, returning NULL
+DEBUG EQ: No bespoke comparator found for this type
+DEBUG EQ: checking for comparator, type is: term
+application is:(eq p$107$1 p$108$0)
+DEBUG lookupComparator: type->type = TCTYPE_TYPE_TYPESIG
+DEBUG lookupComparator: type name = term, ns = -1
+DEBUG lookupComparator: looking for eq$term
+DEBUG lookupComparator: Found eq$term with type: #mjo [term -> term -> bool]
+DEBUG EQ: Found bespoke comparator at tests/fn/test_bespoke_comparator.fn line 21!
+DEBUG EQ: checking for comparator, type is: term
+application is:(eq p$107$0 p$108$1)
+DEBUG lookupComparator: type->type = TCTYPE_TYPE_TYPESIG
+DEBUG lookupComparator: type name = term, ns = -1
+DEBUG lookupComparator: looking for eq$term
+DEBUG lookupComparator: Found eq$term with type: #mjo [term -> term -> bool]
+DEBUG EQ: Found bespoke comparator at tests/fn/test_bespoke_comparator.fn line 21!
+DEBUG EQ: checking for comparator, type is: term
+application is:(eq p$107$0 p$108$0)
+DEBUG lookupComparator: type->type = TCTYPE_TYPE_TYPESIG
+DEBUG lookupComparator: type name = term, ns = -1
+DEBUG lookupComparator: looking for eq$term
+DEBUG lookupComparator: Found eq$term with type: #mjo [term -> term -> bool]
+DEBUG EQ: Found bespoke comparator at tests/fn/test_bespoke_comparator.fn line 21!
+DEBUG EQ: checking for comparator, type is: term
+application is:(eq p$107$1 p$108$1)
+DEBUG lookupComparator: type->type = TCTYPE_TYPE_TYPESIG
+DEBUG lookupComparator: type name = term, ns = -1
+DEBUG lookupComparator: looking for eq$term
+DEBUG lookupComparator: Found eq$term with type: #mjo [term -> term -> bool]
+DEBUG EQ: Found bespoke comparator at tests/fn/test_bespoke_comparator.fn line 21!
+DEBUG EQ: checking for comparator, type is: term
+application is:(eq p$107$0 p$108$0)
+DEBUG lookupComparator: type->type = TCTYPE_TYPE_TYPESIG
+DEBUG lookupComparator: type name = term, ns = -1
+DEBUG lookupComparator: looking for eq$term
+DEBUG lookupComparator: Found eq$term with type: #mjo [term -> term -> bool]
+DEBUG EQ: Found bespoke comparator at tests/fn/test_bespoke_comparator.fn line 21!
+DEBUG EQ: checking for comparator, type is: term
+application is:(eq p$107$1 p$108$1)
+DEBUG lookupComparator: type->type = TCTYPE_TYPE_TYPESIG
+DEBUG lookupComparator: type name = term, ns = -1
+DEBUG lookupComparator: looking for eq$term
+DEBUG lookupComparator: Found eq$term with type: #mjo [term -> term -> bool]
+DEBUG EQ: Found bespoke comparator at tests/fn/test_bespoke_comparator.fn line 21!
+DEBUG EQ: checking for comparator, type is: term
+application is:(eq p$107$1 p$108$0)
+DEBUG lookupComparator: type->type = TCTYPE_TYPE_TYPESIG
+DEBUG lookupComparator: type name = term, ns = -1
+DEBUG lookupComparator: looking for eq$term
+DEBUG lookupComparator: Found eq$term with type: #mjo [term -> term -> bool]
+DEBUG EQ: Found bespoke comparator at tests/fn/test_bespoke_comparator.fn line 21!
+DEBUG EQ: checking for comparator, type is: term
+application is:(eq p$107$0 p$108$1)
+DEBUG lookupComparator: type->type = TCTYPE_TYPE_TYPESIG
+DEBUG lookupComparator: type name = term, ns = -1
+DEBUG lookupComparator: looking for eq$term
+DEBUG lookupComparator: Found eq$term with type: #mjo [term -> term -> bool]
+DEBUG EQ: Found bespoke comparator at tests/fn/test_bespoke_comparator.fn line 21!
+DEBUG EQ: checking for comparator, type is: term
+application is:(eq p$107$0 p$108$0)
+DEBUG lookupComparator: type->type = TCTYPE_TYPE_TYPESIG
+DEBUG lookupComparator: type name = term, ns = -1
+DEBUG lookupComparator: looking for eq$term
+DEBUG lookupComparator: Found eq$term with type: #mjo [term -> term -> bool]
+DEBUG EQ: Found bespoke comparator at tests/fn/test_bespoke_comparator.fn line 21!
+DEBUG EQ: checking for comparator, type is: term
+application is:(eq p$107$1 p$108$1)
+DEBUG lookupComparator: type->type = TCTYPE_TYPE_TYPESIG
+DEBUG lookupComparator: type name = term, ns = -1
+DEBUG lookupComparator: looking for eq$term
+DEBUG lookupComparator: Found eq$term with type: #mjo [term -> term -> bool]
+DEBUG EQ: Found bespoke comparator at tests/fn/test_bespoke_comparator.fn line 21!
+DEBUG EQ: checking for comparator, type is: term
+application is:(eq p$107$0 p$108$0)
+DEBUG lookupComparator: type->type = TCTYPE_TYPE_TYPESIG
+DEBUG lookupComparator: type name = term, ns = -1
+DEBUG lookupComparator: looking for eq$term
+DEBUG lookupComparator: Found eq$term with type: #mjo [term -> term -> bool]
+DEBUG EQ: Found bespoke comparator at tests/fn/test_bespoke_comparator.fn line 21!
+DEBUG EQ: checking for comparator, type is: term
+application is:(eq p$107$1 p$108$1)
+DEBUG lookupComparator: type->type = TCTYPE_TYPE_TYPESIG
+DEBUG lookupComparator: type name = term, ns = -1
+DEBUG lookupComparator: looking for eq$term
+DEBUG lookupComparator: Found eq$term with type: #mjo [term -> term -> bool]
+DEBUG EQ: Found bespoke comparator at tests/fn/test_bespoke_comparator.fn line 21!
+DEBUG EQ: checking for comparator, type is: term
+application is:(eq p$107$0 p$108$0)
+DEBUG lookupComparator: type->type = TCTYPE_TYPE_TYPESIG
+DEBUG lookupComparator: type name = term, ns = -1
+DEBUG lookupComparator: looking for eq$term
+DEBUG lookupComparator: Found eq$term with type: #mjo [term -> term -> bool]
+DEBUG EQ: Found bespoke comparator at tests/fn/test_bespoke_comparator.fn line 21!
+DEBUG EQ: checking for comparator, type is: term
+application is:(eq p$107$1 p$108$1)
+DEBUG lookupComparator: type->type = TCTYPE_TYPE_TYPESIG
+DEBUG lookupComparator: type name = term, ns = -1
+DEBUG lookupComparator: looking for eq$term
+DEBUG lookupComparator: Found eq$term with type: #mjo [term -> term -> bool]
+DEBUG EQ: Found bespoke comparator at tests/fn/test_bespoke_comparator.fn line 21!
+DEBUG EQ: checking for comparator, type is: number
+application is:(eq p$107$0 p$108$0)
+DEBUG lookupComparator: type->type = TCTYPE_TYPE_BIGINTEGER
+DEBUG lookupComparator: not a TYPESIG, returning NULL
+DEBUG EQ: No bespoke comparator found for this type
+DEBUG EQ: checking for comparator, type is: list(char)
+application is:(eq p$107$0 p$108$0)
+DEBUG lookupComparator: type->type = TCTYPE_TYPE_TYPESIG
+DEBUG lookupComparator: type name = list, ns = -1
+DEBUG lookupComparator: looking for eq$list
+DEBUG lookupComparator: eq$list not found in env
+DEBUG EQ: No bespoke comparator found for this type
+DEBUG EQ: checking for comparator, type is: term
+application is:(eq p$106$0 p$106$1)
+DEBUG lookupComparator: type->type = TCTYPE_TYPE_TYPESIG
+DEBUG lookupComparator: type name = term, ns = -1
+DEBUG lookupComparator: looking for eq$term
+DEBUG lookupComparator: Found eq$term with type: #mjo [term -> term -> bool]
+DEBUG EQ: Found bespoke comparator at tests/fn/test_bespoke_comparator.fn line 26!
+DEBUG EQ: checking for comparator, type is: term
+application is:(eq p$107$1 p$108$0)
+DEBUG lookupComparator: type->type = TCTYPE_TYPE_TYPESIG
+DEBUG lookupComparator: type name = term, ns = -1
+DEBUG lookupComparator: looking for eq$term
+DEBUG lookupComparator: Found eq$term with type: #mjo [term -> term -> bool]
+DEBUG EQ: Found bespoke comparator at tests/fn/test_bespoke_comparator.fn line 21!
+DEBUG EQ: checking for comparator, type is: term
+application is:(eq p$107$0 p$108$1)
+DEBUG lookupComparator: type->type = TCTYPE_TYPE_TYPESIG
+DEBUG lookupComparator: type name = term, ns = -1
+DEBUG lookupComparator: looking for eq$term
+DEBUG lookupComparator: Found eq$term with type: #mjo [term -> term -> bool]
+DEBUG EQ: Found bespoke comparator at tests/fn/test_bespoke_comparator.fn line 21!
+DEBUG EQ: checking for comparator, type is: term
+application is:(eq p$107$0 p$108$0)
+DEBUG lookupComparator: type->type = TCTYPE_TYPE_TYPESIG
+DEBUG lookupComparator: type name = term, ns = -1
+DEBUG lookupComparator: looking for eq$term
+DEBUG lookupComparator: Found eq$term with type: #mjo [term -> term -> bool]
+DEBUG EQ: Found bespoke comparator at tests/fn/test_bespoke_comparator.fn line 21!
+DEBUG EQ: checking for comparator, type is: term
+application is:(eq p$107$1 p$108$1)
+DEBUG lookupComparator: type->type = TCTYPE_TYPE_TYPESIG
+DEBUG lookupComparator: type name = term, ns = -1
+DEBUG lookupComparator: looking for eq$term
+DEBUG lookupComparator: Found eq$term with type: #mjo [term -> term -> bool]
+DEBUG EQ: Found bespoke comparator at tests/fn/test_bespoke_comparator.fn line 21!
+DEBUG EQ: checking for comparator, type is: term
+application is:(eq p$107$0 p$108$0)
+DEBUG lookupComparator: type->type = TCTYPE_TYPE_TYPESIG
+DEBUG lookupComparator: type name = term, ns = -1
+DEBUG lookupComparator: looking for eq$term
+DEBUG lookupComparator: Found eq$term with type: #mjo [term -> term -> bool]
+DEBUG EQ: Found bespoke comparator at tests/fn/test_bespoke_comparator.fn line 21!
+DEBUG EQ: checking for comparator, type is: term
+application is:(eq p$107$1 p$108$1)
+DEBUG lookupComparator: type->type = TCTYPE_TYPE_TYPESIG
+DEBUG lookupComparator: type name = term, ns = -1
+DEBUG lookupComparator: looking for eq$term
+DEBUG lookupComparator: Found eq$term with type: #mjo [term -> term -> bool]
+DEBUG EQ: Found bespoke comparator at tests/fn/test_bespoke_comparator.fn line 21!
+DEBUG EQ: checking for comparator, type is: term
+application is:(eq p$107$1 p$108$0)
+DEBUG lookupComparator: type->type = TCTYPE_TYPE_TYPESIG
+DEBUG lookupComparator: type name = term, ns = -1
+DEBUG lookupComparator: looking for eq$term
+DEBUG lookupComparator: Found eq$term with type: #mjo [term -> term -> bool]
+DEBUG EQ: Found bespoke comparator at tests/fn/test_bespoke_comparator.fn line 21!
+DEBUG EQ: checking for comparator, type is: term
+application is:(eq p$107$0 p$108$1)
+DEBUG lookupComparator: type->type = TCTYPE_TYPE_TYPESIG
+DEBUG lookupComparator: type name = term, ns = -1
+DEBUG lookupComparator: looking for eq$term
+DEBUG lookupComparator: Found eq$term with type: #mjo [term -> term -> bool]
+DEBUG EQ: Found bespoke comparator at tests/fn/test_bespoke_comparator.fn line 21!
+DEBUG EQ: checking for comparator, type is: term
+application is:(eq p$107$0 p$108$0)
+DEBUG lookupComparator: type->type = TCTYPE_TYPE_TYPESIG
+DEBUG lookupComparator: type name = term, ns = -1
+DEBUG lookupComparator: looking for eq$term
+DEBUG lookupComparator: Found eq$term with type: #mjo [term -> term -> bool]
+DEBUG EQ: Found bespoke comparator at tests/fn/test_bespoke_comparator.fn line 21!
+DEBUG EQ: checking for comparator, type is: term
+application is:(eq p$107$1 p$108$1)
+DEBUG lookupComparator: type->type = TCTYPE_TYPE_TYPESIG
+DEBUG lookupComparator: type name = term, ns = -1
+DEBUG lookupComparator: looking for eq$term
+DEBUG lookupComparator: Found eq$term with type: #mjo [term -> term -> bool]
+DEBUG EQ: Found bespoke comparator at tests/fn/test_bespoke_comparator.fn line 21!
+DEBUG EQ: checking for comparator, type is: term
+application is:(eq p$107$0 p$108$0)
+DEBUG lookupComparator: type->type = TCTYPE_TYPE_TYPESIG
+DEBUG lookupComparator: type name = term, ns = -1
+DEBUG lookupComparator: looking for eq$term
+DEBUG lookupComparator: Found eq$term with type: #mjo [term -> term -> bool]
+DEBUG EQ: Found bespoke comparator at tests/fn/test_bespoke_comparator.fn line 21!
+DEBUG EQ: checking for comparator, type is: term
+application is:(eq p$107$1 p$108$1)
+DEBUG lookupComparator: type->type = TCTYPE_TYPE_TYPESIG
+DEBUG lookupComparator: type name = term, ns = -1
+DEBUG lookupComparator: looking for eq$term
+DEBUG lookupComparator: Found eq$term with type: #mjo [term -> term -> bool]
+DEBUG EQ: Found bespoke comparator at tests/fn/test_bespoke_comparator.fn line 21!
+DEBUG EQ: checking for comparator, type is: term
+application is:(eq p$107$0 p$108$0)
+DEBUG lookupComparator: type->type = TCTYPE_TYPE_TYPESIG
+DEBUG lookupComparator: type name = term, ns = -1
+DEBUG lookupComparator: looking for eq$term
+DEBUG lookupComparator: Found eq$term with type: #mjo [term -> term -> bool]
+DEBUG EQ: Found bespoke comparator at tests/fn/test_bespoke_comparator.fn line 21!
+DEBUG EQ: checking for comparator, type is: term
+application is:(eq p$107$1 p$108$1)
+DEBUG lookupComparator: type->type = TCTYPE_TYPE_TYPESIG
+DEBUG lookupComparator: type name = term, ns = -1
+DEBUG lookupComparator: looking for eq$term
+DEBUG lookupComparator: Found eq$term with type: #mjo [term -> term -> bool]
+DEBUG EQ: Found bespoke comparator at tests/fn/test_bespoke_comparator.fn line 21!
+DEBUG EQ: checking for comparator, type is: number
+application is:(eq p$107$0 p$108$0)
+DEBUG lookupComparator: type->type = TCTYPE_TYPE_BIGINTEGER
+DEBUG lookupComparator: not a TYPESIG, returning NULL
+DEBUG EQ: No bespoke comparator found for this type
+DEBUG EQ: checking for comparator, type is: list(char)
+application is:(eq p$107$0 p$108$0)
+DEBUG lookupComparator: type->type = TCTYPE_TYPE_TYPESIG
+DEBUG lookupComparator: type name = list, ns = -1
+DEBUG lookupComparator: looking for eq$list
+DEBUG lookupComparator: eq$list not found in env
+DEBUG EQ: No bespoke comparator found for this type
+DEBUG EQ: checking for comparator, type is: term
+application is:(eq p$106$0 p$106$1)
+DEBUG lookupComparator: type->type = TCTYPE_TYPE_TYPESIG
+DEBUG lookupComparator: type name = term, ns = -1
+DEBUG lookupComparator: looking for eq$term
+DEBUG lookupComparator: Found eq$term with type: #mjo [term -> term -> bool]
+DEBUG EQ: Found bespoke comparator at tests/fn/test_bespoke_comparator.fn line 26!
+DEBUG EQ: checking for comparator, type is: term
+application is:(eq p$107$1 p$108$0)
+DEBUG lookupComparator: type->type = TCTYPE_TYPE_TYPESIG
+DEBUG lookupComparator: type name = term, ns = -1
+DEBUG lookupComparator: looking for eq$term
+DEBUG lookupComparator: Found eq$term with type: #mjo [term -> term -> bool]
+DEBUG EQ: Found bespoke comparator at tests/fn/test_bespoke_comparator.fn line 21!
+DEBUG EQ: checking for comparator, type is: term
+application is:(eq p$107$0 p$108$1)
+DEBUG lookupComparator: type->type = TCTYPE_TYPE_TYPESIG
+DEBUG lookupComparator: type name = term, ns = -1
+DEBUG lookupComparator: looking for eq$term
+DEBUG lookupComparator: Found eq$term with type: #mjo [term -> term -> bool]
+DEBUG EQ: Found bespoke comparator at tests/fn/test_bespoke_comparator.fn line 21!
+DEBUG EQ: checking for comparator, type is: term
+application is:(eq p$107$0 p$108$0)
+DEBUG lookupComparator: type->type = TCTYPE_TYPE_TYPESIG
+DEBUG lookupComparator: type name = term, ns = -1
+DEBUG lookupComparator: looking for eq$term
+DEBUG lookupComparator: Found eq$term with type: #mjo [term -> term -> bool]
+DEBUG EQ: Found bespoke comparator at tests/fn/test_bespoke_comparator.fn line 21!
+DEBUG EQ: checking for comparator, type is: term
+application is:(eq p$107$1 p$108$1)
+DEBUG lookupComparator: type->type = TCTYPE_TYPE_TYPESIG
+DEBUG lookupComparator: type name = term, ns = -1
+DEBUG lookupComparator: looking for eq$term
+DEBUG lookupComparator: Found eq$term with type: #mjo [term -> term -> bool]
+DEBUG EQ: Found bespoke comparator at tests/fn/test_bespoke_comparator.fn line 21!
+DEBUG EQ: checking for comparator, type is: term
+application is:(eq p$107$0 p$108$0)
+DEBUG lookupComparator: type->type = TCTYPE_TYPE_TYPESIG
+DEBUG lookupComparator: type name = term, ns = -1
+DEBUG lookupComparator: looking for eq$term
+DEBUG lookupComparator: Found eq$term with type: #mjo [term -> term -> bool]
+DEBUG EQ: Found bespoke comparator at tests/fn/test_bespoke_comparator.fn line 21!
+DEBUG EQ: checking for comparator, type is: term
+application is:(eq p$107$1 p$108$1)
+DEBUG lookupComparator: type->type = TCTYPE_TYPE_TYPESIG
+DEBUG lookupComparator: type name = term, ns = -1
+DEBUG lookupComparator: looking for eq$term
+DEBUG lookupComparator: Found eq$term with type: #mjo [term -> term -> bool]
+DEBUG EQ: Found bespoke comparator at tests/fn/test_bespoke_comparator.fn line 21!
+DEBUG EQ: checking for comparator, type is: term
+application is:(eq p$107$1 p$108$0)
+DEBUG lookupComparator: type->type = TCTYPE_TYPE_TYPESIG
+DEBUG lookupComparator: type name = term, ns = -1
+DEBUG lookupComparator: looking for eq$term
+DEBUG lookupComparator: Found eq$term with type: #mjo [term -> term -> bool]
+DEBUG EQ: Found bespoke comparator at tests/fn/test_bespoke_comparator.fn line 21!
+DEBUG EQ: checking for comparator, type is: term
+application is:(eq p$107$0 p$108$1)
+DEBUG lookupComparator: type->type = TCTYPE_TYPE_TYPESIG
+DEBUG lookupComparator: type name = term, ns = -1
+DEBUG lookupComparator: looking for eq$term
+DEBUG lookupComparator: Found eq$term with type: #mjo [term -> term -> bool]
+DEBUG EQ: Found bespoke comparator at tests/fn/test_bespoke_comparator.fn line 21!
+DEBUG EQ: checking for comparator, type is: term
+application is:(eq p$107$0 p$108$0)
+DEBUG lookupComparator: type->type = TCTYPE_TYPE_TYPESIG
+DEBUG lookupComparator: type name = term, ns = -1
+DEBUG lookupComparator: looking for eq$term
+DEBUG lookupComparator: Found eq$term with type: #mjo [term -> term -> bool]
+DEBUG EQ: Found bespoke comparator at tests/fn/test_bespoke_comparator.fn line 21!
+DEBUG EQ: checking for comparator, type is: term
+application is:(eq p$107$1 p$108$1)
+DEBUG lookupComparator: type->type = TCTYPE_TYPE_TYPESIG
+DEBUG lookupComparator: type name = term, ns = -1
+DEBUG lookupComparator: looking for eq$term
+DEBUG lookupComparator: Found eq$term with type: #mjo [term -> term -> bool]
+DEBUG EQ: Found bespoke comparator at tests/fn/test_bespoke_comparator.fn line 21!
+DEBUG EQ: checking for comparator, type is: term
+application is:(eq p$107$0 p$108$0)
+DEBUG lookupComparator: type->type = TCTYPE_TYPE_TYPESIG
+DEBUG lookupComparator: type name = term, ns = -1
+DEBUG lookupComparator: looking for eq$term
+DEBUG lookupComparator: Found eq$term with type: #mjo [term -> term -> bool]
+DEBUG EQ: Found bespoke comparator at tests/fn/test_bespoke_comparator.fn line 21!
+DEBUG EQ: checking for comparator, type is: term
+application is:(eq p$107$1 p$108$1)
+DEBUG lookupComparator: type->type = TCTYPE_TYPE_TYPESIG
+DEBUG lookupComparator: type name = term, ns = -1
+DEBUG lookupComparator: looking for eq$term
+DEBUG lookupComparator: Found eq$term with type: #mjo [term -> term -> bool]
+DEBUG EQ: Found bespoke comparator at tests/fn/test_bespoke_comparator.fn line 21!
+DEBUG EQ: checking for comparator, type is: term
+application is:(eq p$107$0 p$108$0)
+DEBUG lookupComparator: type->type = TCTYPE_TYPE_TYPESIG
+DEBUG lookupComparator: type name = term, ns = -1
+DEBUG lookupComparator: looking for eq$term
+DEBUG lookupComparator: Found eq$term with type: #mjo [term -> term -> bool]
+DEBUG EQ: Found bespoke comparator at tests/fn/test_bespoke_comparator.fn line 21!
+DEBUG EQ: checking for comparator, type is: term
+application is:(eq p$107$1 p$108$1)
+DEBUG lookupComparator: type->type = TCTYPE_TYPE_TYPESIG
+DEBUG lookupComparator: type name = term, ns = -1
+DEBUG lookupComparator: looking for eq$term
+DEBUG lookupComparator: Found eq$term with type: #mjo [term -> term -> bool]
+DEBUG EQ: Found bespoke comparator at tests/fn/test_bespoke_comparator.fn line 21!
+DEBUG EQ: checking for comparator, type is: number
+application is:(eq p$107$0 p$108$0)
+DEBUG lookupComparator: type->type = TCTYPE_TYPE_BIGINTEGER
+DEBUG lookupComparator: not a TYPESIG, returning NULL
+DEBUG EQ: No bespoke comparator found for this type
+DEBUG EQ: checking for comparator, type is: list(char)
+application is:(eq p$107$0 p$108$0)
+DEBUG lookupComparator: type->type = TCTYPE_TYPE_TYPESIG
+DEBUG lookupComparator: type name = list, ns = -1
+DEBUG lookupComparator: looking for eq$list
+DEBUG lookupComparator: eq$list not found in env
+DEBUG EQ: No bespoke comparator found for this type
+DEBUG EQ: checking for comparator, type is: term
+application is:(eq p$106$0 p$106$1)
+DEBUG lookupComparator: type->type = TCTYPE_TYPE_TYPESIG
+DEBUG lookupComparator: type name = term, ns = -1
+DEBUG lookupComparator: looking for eq$term
+DEBUG lookupComparator: Found eq$term with type: #mjo [term -> term -> bool]
+DEBUG EQ: Found bespoke comparator at tests/fn/test_bespoke_comparator.fn line 26!
+found replacement for LAMPRIMOP_TYPE_EQ at tests/fn/test_bespoke_comparator.fn line 21
+term is: (eq p$107$0 p$108$0)
+desugared replacement to: (eq$term p$107$0 p$108$0)
+found replacement for LAMPRIMOP_TYPE_EQ at tests/fn/test_bespoke_comparator.fn line 21
+term is: (eq p$107$1 p$108$1)
+desugared replacement to: (eq$term p$107$1 p$108$1)
+found replacement for LAMPRIMOP_TYPE_EQ at tests/fn/test_bespoke_comparator.fn line 21
+term is: (eq p$107$0 p$108$0)
+desugared replacement to: (eq$term p$107$0 p$108$0)
+found replacement for LAMPRIMOP_TYPE_EQ at tests/fn/test_bespoke_comparator.fn line 21
+term is: (eq p$107$1 p$108$1)
+desugared replacement to: (eq$term p$107$1 p$108$1)
+found replacement for LAMPRIMOP_TYPE_EQ at tests/fn/test_bespoke_comparator.fn line 21
+term is: (eq p$107$1 p$108$0)
+desugared replacement to: (eq$term p$107$1 p$108$0)
+found replacement for LAMPRIMOP_TYPE_EQ at tests/fn/test_bespoke_comparator.fn line 21
+term is: (eq p$107$0 p$108$1)
+desugared replacement to: (eq$term p$107$0 p$108$1)
+found replacement for LAMPRIMOP_TYPE_EQ at tests/fn/test_bespoke_comparator.fn line 21
+term is: (eq p$107$0 p$108$0)
+desugared replacement to: (eq$term p$107$0 p$108$0)
+found replacement for LAMPRIMOP_TYPE_EQ at tests/fn/test_bespoke_comparator.fn line 21
+term is: (eq p$107$1 p$108$1)
+desugared replacement to: (eq$term p$107$1 p$108$1)
+found replacement for LAMPRIMOP_TYPE_EQ at tests/fn/test_bespoke_comparator.fn line 21
+term is: (eq p$107$0 p$108$0)
+desugared replacement to: (eq$term p$107$0 p$108$0)
+found replacement for LAMPRIMOP_TYPE_EQ at tests/fn/test_bespoke_comparator.fn line 21
+term is: (eq p$107$1 p$108$1)
+desugared replacement to: (eq$term p$107$1 p$108$1)
+found replacement for LAMPRIMOP_TYPE_EQ at tests/fn/test_bespoke_comparator.fn line 21
+term is: (eq p$107$1 p$108$0)
+desugared replacement to: (eq$term p$107$1 p$108$0)
+found replacement for LAMPRIMOP_TYPE_EQ at tests/fn/test_bespoke_comparator.fn line 21
+term is: (eq p$107$0 p$108$1)
+desugared replacement to: (eq$term p$107$0 p$108$1)
+found replacement for LAMPRIMOP_TYPE_EQ at tests/fn/test_bespoke_comparator.fn line 21
+term is: (eq p$107$0 p$108$0)
+desugared replacement to: (eq$term p$107$0 p$108$0)
+found replacement for LAMPRIMOP_TYPE_EQ at tests/fn/test_bespoke_comparator.fn line 21
+term is: (eq p$107$1 p$108$1)
+desugared replacement to: (eq$term p$107$1 p$108$1)
+found replacement for LAMPRIMOP_TYPE_EQ at tests/fn/test_bespoke_comparator.fn line 26
+term is: (eq p$106$0 p$106$1)
+desugared replacement to: (eq$term p$106$0 p$106$1)
+assertion failed in tests/fn/test_bespoke_comparator.fn line 32

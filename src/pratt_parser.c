@@ -47,6 +47,8 @@
 #include "debugging_off.h"
 #endif
 
+typedef enum { DEFUN_FUNCTION, DEFUN_PRINTER, DEFUN_COMPARATOR } DefunType;
+
 // minimal multiplier for converting declared precedence levels to
 // internal values, to guarantee that adding or subtracting 1 from
 // an internal precedence will not overlap with an adjacent internal
@@ -86,7 +88,7 @@ static AstDefinition *alias(PrattParser *);
 static AstDefinition *assignment(PrattParser *);
 static AstDefinition *definition(PrattParser *);
 static AstDefinition *defMacro(PrattParser *);
-static AstDefinition *defun(PrattParser *, bool, bool);
+static AstDefinition *defun(PrattParser *, bool, DefunType);
 static AstDefinition *importOp(PrattParser *);
 static AstDefinition *exportOp(PrattParser *);
 static AstDefinition *link(PrattParser *);
@@ -303,6 +305,7 @@ static PrattParser *makePrattParser(void) {
     addRecord(table, TOK_COMMA(), NULL, 0, NULL, 0, NULL, 0);
     addRecord(table, TOK_ELSE(), NULL, 0, NULL, 0, NULL, 0);
     addRecord(table, TOK_EOF(), NULL, 0, NULL, 0, NULL, 0);
+    addRecord(table, TOK_EQ(), NULL, 0, NULL, 0, NULL, 0);
     addRecord(table, TOK_ERROR(), NULL, 0, NULL, 0, NULL, 0);
     addRecord(table, TOK_EXPORT(), NULL, 0, NULL, 0, NULL, 0);
     addRecord(table, TOK_FN(), fn, 0, NULL, 0, NULL, 0);
@@ -2007,13 +2010,16 @@ static AstDefinition *definition(PrattParser *parser) {
         save = PROTECT(res);
     } else if (match(parser, TOK_UNSAFE())) {
         consume(parser, TOK_FN());
-        res = defun(parser, true, false);
+        res = defun(parser, true, DEFUN_FUNCTION);
         save = PROTECT(res);
     } else if (match(parser, TOK_FN())) {
-        res = defun(parser, false, false);
+        res = defun(parser, false, DEFUN_FUNCTION);
         save = PROTECT(res);
     } else if (match(parser, TOK_PRINT())) {
-        res = defun(parser, false, true);
+        res = defun(parser, false, DEFUN_PRINTER);
+        save = PROTECT(res);
+    } else if (match(parser, TOK_EQ())) {
+        res = defun(parser, false, DEFUN_COMPARATOR);
         save = PROTECT(res);
     } else if (match(parser, TOK_MACRO())) {
         res = defMacro(parser);
@@ -3074,7 +3080,7 @@ static AstDefinition *defMacro(PrattParser *parser) {
  *
  * The `fn` token has already been consumed when this function is triggered.
  */
-static AstDefinition *defun(PrattParser *parser, bool unsafe, bool isPrinter) {
+static AstDefinition *defun(PrattParser *parser, bool unsafe, DefunType type) {
     ENTER(defun);
     PrattToken *tok = peek(parser);
     int save = PROTECT(tok);
@@ -3082,8 +3088,10 @@ static AstDefinition *defun(PrattParser *parser, bool unsafe, bool isPrinter) {
     AstCompositeFunction *f = compositeFunction(parser);
     f->unsafe = unsafe;
     PROTECT(f);
-    if (isPrinter) {
+    if (type == DEFUN_PRINTER) {
         s = makePrintName("print$", s->name);
+    } else if (type == DEFUN_COMPARATOR) {
+        s = makePrintName("eq$", s->name);
     }
     AstExpression *expr = newAstExpression_Fun(CPI(f), f);
     PROTECT(expr);

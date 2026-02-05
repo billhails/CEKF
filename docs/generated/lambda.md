@@ -15,6 +15,7 @@ LamVarList --next--> LamVarList
 LamPrimApp --type--> LamPrimOp
 LamPrimApp --exp1--> LamExp
 LamPrimApp --exp2--> LamExp
+LamPrimApp --replacement--> LamExp
 LamSequence --exp--> LamExp
 LamSequence --next--> LamSequence
 LamArgs --exp--> LamExp

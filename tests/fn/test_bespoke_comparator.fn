@@ -1,0 +1,42 @@
+let
+    typedef term {
+        add(term, term) |
+        sub(term, term) |
+        mul(term, term) |
+        div(term, term) |
+        pow(term, term) |
+        num(number) |
+        var(string)
+    }
+
+    EQ term {
+        (add(a, b), add(a, b)) |
+        (add(b, a), add(a, b)) |
+        (sub(a, b), sub(a, b)) |
+        (mul(a, b), mul(a, b)) |
+        (mul(b, a), mul(a, b)) |
+        (div(a, b), div(a, b)) |
+        (pow(a, b), pow(a, b)) |
+        (num(a), num(a)) |
+        (var(a), var(a)) { true }
+        (_, _) { false }
+    }
+
+    // Test bespoke equality through pattern matching
+    fn fold {
+        (sub(a, a)) { num(0) }
+        (add(a, a)) { mul(num(2), a) }
+        (x) { x }
+    }
+in
+    // Test non-matching patterns return original
+    assert(fold(sub(num(5), num(3))) == sub(num(5), num(3)));
+    // Test that sub-patterns use bespoke semantic equality
+    assert(fold(sub(mul(var("x"), var("y")), mul(var("x"), var("y"))))
+            == num(0));
+    assert(fold(sub(mul(var("x"), var("y")), mul(var("y"), var("x"))))
+            == num(0));
+    assert(fold(add(mul(var("x"), var("y")), mul(var("x"), var("y"))))
+            == mul(num(2), mul(var("x"), var("y"))));
+    assert(fold(add(mul(var("x"), var("y")), mul(var("y"), var("x"))))
+            == mul(num(2), mul(var("x"), var("y"))));

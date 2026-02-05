@@ -72,6 +72,7 @@ HashSymbol *TOK_COLON(void);
 HashSymbol *TOK_COMMA(void);
 HashSymbol *TOK_ELSE(void);
 HashSymbol *TOK_EOF(void);
+HashSymbol *TOK_EQ(void);
 HashSymbol *TOK_ERROR(void);
 HashSymbol *TOK_EXPORT(void);
 HashSymbol *TOK_FN(void);

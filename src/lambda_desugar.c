@@ -24,6 +24,7 @@
 #include "minlam_pp.h"
 
 #include "lambda_desugar.h"
+#include "lambda_pp.h"
 
 #ifdef DEBUG_LAMBDA_DESUGAR
 #include "debugging_on.h"
@@ -813,9 +814,16 @@ MinExp *desugarLamExp(LamExp *node) {
         break;
     }
     case LAMEXP_TYPE_PRIM: {
-        MinPrimApp *new = desugarLamPrimApp(getLamExp_Prim(node));
-        PROTECT(new);
-        result = newMinExp_Prim(CPI(node), new);
+        // Check if the type checker created a replacement (bespoke comparator)
+        LamPrimApp *prim = getLamExp_Prim(node);
+        if (prim->replacement != NULL) {
+            // Use the replacement instead of the primitive
+            result = desugarLamExp(prim->replacement);
+        } else {
+            MinPrimApp *new = desugarLamPrimApp(prim);
+            PROTECT(new);
+            result = newMinExp_Prim(CPI(node), new);
+        }
         break;
     }
     case LAMEXP_TYPE_PRINT:

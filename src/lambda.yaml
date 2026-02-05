@@ -54,6 +54,7 @@ structs:
             type: LamPrimOp
             exp1: LamExp
             exp2: LamExp
+            replacement: LamExp=NULL
 
     LamSequence:
         meta:
