@@ -404,15 +404,21 @@ static TpmcPattern *replaceComparisonPattern(TpmcPattern *pattern,
                                              ParserInfo I);
 
 static TpmcPattern *replaceVarPattern(TpmcPattern *pattern,
-                                      TpmcPatternTable *seen, ParserInfo I) {
+                                      TpmcPatternTable *seen) {
     TpmcPattern *other = NULL;
     if (getTpmcPatternTable(seen, pattern->pattern->val.var, &other)) {
         if (other->pattern->type == TPMCPATTERNVALUE_TYPE_ASSIGNMENT) {
-            // FIXME should be possible to allow this? assignments are just
-            // variable bindings would be necessary to refine the
-            // patternsMatchingPattern algorithm in tpmc_match.c:mixture()
-            can_happen("cannot compare assignment (var %s) at +%d %s",
-                       pattern->pattern->val.var->name, I.lineNo, I.fileName);
+            // Case B: assignment first (x=1, x)
+            // The assignment binds the variable at its position and matches
+            // its inner pattern. This VAR just needs to compare against that
+            // position. Use the assignment pattern as 'previous' - renaming
+            // will assign it the correct path.
+            TpmcPatternValue *val =
+                makeTpmcPatternValue_Comparison(other, pattern);
+            int save = PROTECT(val);
+            TpmcPattern *result = newTpmcPattern(val);
+            UNPROTECT(save);
+            return result;
         }
         if (other->pattern->type == TPMCPATTERNVALUE_TYPE_COMPARISON) {
             // Multiple occurrences: extract the original binding site (first
@@ -482,7 +488,7 @@ static TpmcPattern *replaceComparisonPattern(TpmcPattern *pattern,
     case TPMCPATTERNVALUE_TYPE_CHARACTER:
         return pattern;
     case TPMCPATTERNVALUE_TYPE_VAR:
-        return replaceVarPattern(pattern, seen, I);
+        return replaceVarPattern(pattern, seen);
     case TPMCPATTERNVALUE_TYPE_ASSIGNMENT:
         return replaceAssignmentPattern(pattern, seen, I);
     case TPMCPATTERNVALUE_TYPE_TUPLE:
