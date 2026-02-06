@@ -1,4 +1,10 @@
 let
+    // Case A: variable first, then assignment (x, x=1)
+    fn test_case_a {
+        (x, x=1) { true }
+        (_, _) { false }
+    }
+    
     // Case B: assignment first, then variable (x=1, x)
     fn test_case_b {
         (x=1, x) { true }
@@ -22,7 +28,44 @@ let
         (x=h@t, x) { true }
         (_, _) { false }
     }
+    
+    // Test Case A with character literals
+    fn test_case_a_char {
+        (x, x='b') { true }
+        (_, _) { false }
+    }
+    
+    // Test Case A with constructor patterns
+    fn test_case_a_cons {
+        (x, x=h@t) { true }
+        (_, _) { false }
+    }
+    
+    // Test mixed patterns: both Case A and Case B in same function
+    fn test_mixed {
+        (x=1, x, y, y=2) { true }  // Case B, then Case A
+        (_, _, _, _) { false }
+    }
 in
+    // Case A tests: variable first, then assignment
+    assert(test_case_a(1, 1) == true);
+    assert(test_case_a(1, 2) == false);
+    assert(test_case_a(2, 1) == false);
+    
+    assert(test_case_a_char('b', 'b') == true);
+    assert(test_case_a_char('a', 'b') == false);
+    assert(test_case_a_char('b', 'a') == false);
+    
+    assert(test_case_a_cons([1, 2], [1, 2]) == true);
+    assert(test_case_a_cons([1], [1]) == true);
+    assert(test_case_a_cons([], []) == false);  // not a cons
+    assert(test_case_a_cons([1], [2]) == false);
+    
+    // Mixed Case A and Case B
+    assert(test_mixed(1, 1, 2, 2) == true);
+    assert(test_mixed(1, 1, 2, 3) == false);
+    assert(test_mixed(1, 2, 2, 2) == false);
+    
     // Case B tests: assignment first, then variable
     assert(test_case_b(1, 1) == true);
     assert(test_case_b(1, 2) == false);

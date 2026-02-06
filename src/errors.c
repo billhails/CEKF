@@ -18,21 +18,21 @@
  * common error handling.
  */
 
-
-#include <stdio.h>
 #include <stdarg.h>
 #include <stdbool.h>
-#include <unistd.h>
+#include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #include "common.h"
+#include "parser_info.h"
 
 static bool errors = false;
 
 /**
  * Handle a "can't happen" error by printing message and exiting.
  * Used by the `cant_happen` macro from common.h.
- * 
+ *
  * @param file the source file name (supplied by the macro)
  * @param line the source line number (supplied by the macro)
  * @param message the error message format string
@@ -54,22 +54,27 @@ void _cant_happen(char *file, int line, const char *message, ...) {
 
 /**
  * Handle a "can happen" error by printing message and setting error flag.
- * 
+ *
+ * @param I the parser info containing file name and line number (use NULLPI if
+ * not available)
  * @param message the error message format string
  * @param ... the error message arguments
  */
-void can_happen(const char *message, ...) {
+void can_happen(ParserInfo I, const char *message, ...) {
     va_list args;
     va_start(args, message);
     vfprintf(errout, message, args);
     va_end(args);
+    if (I.lineNo != 0) {
+        eprintf(" at +%d %s", I.lineNo, I.fileName);
+    }
     eprintf("\n");
     errors = true;
 }
 
 /**
  * Print a message to the error output.
- * 
+ *
  * @param message the message format string
  * @param ... the message arguments
  */
@@ -82,16 +87,12 @@ void eprintf(const char *message, ...) {
 
 /**
  * Check if any errors have occurred.
- * 
+ *
  * @return true if errors have occurred, false otherwise
  */
-bool hadErrors() {
-    return errors;
-}
+bool hadErrors() { return errors; }
 
 /**
  * Clear the error flag.
  */
-void clearErrors() {
-    errors = false;
-}
+void clearErrors() { errors = false; }

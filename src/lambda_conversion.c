@@ -85,7 +85,7 @@ static void conversionError(ParserInfo I, char *message, ...) {
     va_start(args, message);
     vfprintf(errout, message, args);
     va_end(args);
-    can_happen(" at +%d %s", I.lineNo, I.fileName);
+    can_happen(I, "");
 }
 
 /**
@@ -2172,12 +2172,13 @@ static AstFargList *rewriteAstFargList(AstFargList *args, LamContext *env) {
  * @param env The lambda context to use for conversion.
  * @return The converted composite function.
  */
-static LamLam *convertCompositeBodies(int nArgs, AstCompositeFunction *fun,
+static LamLam *convertCompositeBodies(ParserInfo PI, int nArgs,
+                                      AstCompositeFunction *fun,
                                       LamContext *env) {
     ENTER(convertCompositeBodies);
     int nBodies = countAstCompositeFunction(fun);
     if (nBodies == 0) {
-        can_happen("empty composite function");
+        can_happen(PI, "empty composite function");
         LEAVE(convertCompositeBodies);
         return NULL;
     }
@@ -2217,7 +2218,7 @@ static LamExp *convertCompositeFun(ParserInfo PI, AstCompositeFunction *fun,
         return lamExpError(PI);
     }
     int nArgs = countAstFargList(fun->function->argList);
-    LamLam *lambda = convertCompositeBodies(nArgs, fun, env);
+    LamLam *lambda = convertCompositeBodies(PI, nArgs, fun, env);
     DEBUG("convertCompositeBodies returned %p", lambda);
     int save = PROTECT(lambda);
     LamExp *result = newLamExp_Lam(CPI(lambda), lambda);

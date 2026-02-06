@@ -65,13 +65,11 @@ TpmcState *tpmcMatch(TpmcMatrix *matrix, TpmcStateArray *finalStates,
     UNPROTECT(save);
     if (unsafe) {
         if (!allow_unsafe) {
-            can_happen("unsafe function must be declared unsafe at %s line %d",
-                       I.fileName, I.lineNo);
+            can_happen(I, "unsafe function must be declared unsafe");
         }
     } else {
         if (allow_unsafe) {
-            can_happen("safe function declared unsafe at %s line %d",
-                       I.fileName, I.lineNo);
+            can_happen(I, "safe function declared unsafe");
         }
     }
     return result;
@@ -262,7 +260,7 @@ static bool patternMatches(TpmcPattern *constructor, TpmcPattern *pattern) {
                    (constructor->pattern->type == TPMCPATTERNVALUE_TYPE_TUPLE);
         if (res && countTpmcPatternArray(constructor->pattern->val.tuple) !=
                        countTpmcPatternArray(pattern->pattern->val.tuple)) {
-            can_happen("tuple arity mismatch");
+            can_happen(NULLPI, "tuple arity mismatch");
             return false;
         }
         return res;
@@ -426,11 +424,9 @@ static void populateSubPatternMatrixRowWithConstructor(TpmcMatrix *matrix,
                                                        ParserInfo I) {
     if (arity != pattern->pattern->val.constructor->components->size) {
         ppTpmcPattern(pattern);
-        can_happen("\narity %d does not match constructor \"%s\" arity %d at "
-                   "%s line %d",
+        can_happen(I, "\narity %d does not match constructor \"%s\" arity %d",
                    arity, pattern->pattern->val.constructor->info->name->name,
-                   pattern->pattern->val.constructor->components->size,
-                   I.fileName, I.lineNo);
+                   pattern->pattern->val.constructor->components->size);
         exit(1);
     }
     for (Index i = 0; i < arity; i++) {
@@ -446,9 +442,8 @@ static void populateSubPatternMatrixRowWithTuple(TpmcMatrix *matrix, int y,
                                                  ParserInfo I) {
     if (arity != countTpmcPatternArray(pattern->pattern->val.tuple)) {
         ppTpmcPattern(pattern);
-        can_happen("arity %d does not match tuple arity %d at %s line %d",
-                   arity, countTpmcPatternArray(pattern->pattern->val.tuple),
-                   I.fileName, I.lineNo);
+        can_happen(I, "arity %d does not match tuple arity %d", arity,
+                   countTpmcPatternArray(pattern->pattern->val.tuple));
         exit(1);
     }
     for (Index i = 0; i < arity; i++) {

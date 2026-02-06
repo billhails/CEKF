@@ -26,6 +26,9 @@
 
 #define NS_GLOBAL -1
 
+// Null ParserInfo for use when location info is not available
+#define NULLPI ((ParserInfo){.lineNo = 0, .fileName = NULL})
+
 #ifndef PRODUCTION_BUILD
 // #    define DEBUG_ALLOC
 // #    define DEBUG_ANF
@@ -70,9 +73,14 @@
 
 #define errout stdout
 
+// Forward declaration to avoid circular dependency with parser_info.h
+struct ParserInfo;
+typedef struct ParserInfo ParserInfo;
+
 void _cant_happen(char *file, int line, const char *message, ...)
     __attribute__((noreturn, format(printf, 3, 4)));
-void can_happen(const char *message, ...) __attribute__((format(printf, 1, 2)));
+void can_happen(ParserInfo I, const char *message, ...)
+    __attribute__((format(printf, 2, 3)));
 void eprintf(const char *message, ...) __attribute__((format(printf, 1, 2)));
 bool hadErrors(void);
 void clearErrors(void);

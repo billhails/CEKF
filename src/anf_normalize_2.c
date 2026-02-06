@@ -47,8 +47,6 @@
 #include "debugging_off.h"
 #endif
 
-static ParserInfo NULLPI = (ParserInfo){.lineNo = 0, .fileName = ""};
-
 static MinExp *normalize(MinExp *exp, AnfKont *k);
 
 static inline MinExp *INVOKE(AnfKont *k, MinExp *arg) {

@@ -143,9 +143,11 @@ void parserError(PrattParser *parser, const char *message, ...) {
     va_end(args);
     PrattBufList *bufList = parser->lexer->bufList;
     if (bufList) {
-        can_happen(" at +%d %s", bufList->lineNo, bufList->fileName->name);
+        ParserInfo pi = {.lineNo = bufList->lineNo,
+                         .fileName = bufList->fileName->name};
+        can_happen(pi, "");
     } else {
-        can_happen(" at EOF");
+        can_happen(NULLPI, " at EOF");
     }
 }
 
@@ -163,7 +165,7 @@ void parserErrorAt(ParserInfo PI, PrattParser *parser, const char *message,
     va_start(args, message);
     vfprintf(errout, message, args);
     va_end(args);
-    can_happen(" at +%d %s", PI.lineNo, PI.fileName);
+    can_happen(PI, "");
 }
 
 static SCharVec *readFileBytes(char *path) {
@@ -192,7 +194,7 @@ static WCharVec *readFile(char *path) {
     int save = PROTECT(bytes);
     size_t wideSize = mbstowcs(NULL, bytes->entries, 0);
     if (wideSize == (size_t)-1) {
-        can_happen("invalid encoding in file %s", path);
+        can_happen(NULLPI, "invalid encoding in file %s", path);
         WCharVec *data = newWCharVec(1);
         data->entries[0] = L'\0';
         UNPROTECT(save);
@@ -1281,7 +1283,7 @@ static PrattBufList *prattBufListFromMbString(char *string, char *origin,
                                               PrattBufList *next) {
     PrattBuffer *buffer = prattBufferFromString(string);
     if (buffer == NULL) {
-        can_happen("invalid encoding in %s", origin);
+        can_happen(NULLPI, "invalid encoding in %s", origin);
         buffer = prattBufferFromString("");
     }
     int save = PROTECT(buffer);

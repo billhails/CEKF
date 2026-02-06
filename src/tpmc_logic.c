@@ -293,10 +293,11 @@ static TpmcState *makeErrorState() {
     return state;
 }
 
-static void renamePattern(TpmcPattern *pattern, HashSymbol *variable);
+static void renamePattern(TpmcPattern *pattern, HashSymbol *variable,
+                          ParserInfo I);
 
 static void renameComparisonPattern(TpmcComparisonPattern *pattern,
-                                    HashSymbol *path) {
+                                    HashSymbol *path, ParserInfo I) {
 #ifdef DEBUG_TPMC_MATCH
     eprintf("renameComparisonPattern ENTER: path=%s, previous=%p, current=%p\n",
             path ? path->name : "NULL", (void *)pattern->previous,
@@ -308,8 +309,8 @@ static void renameComparisonPattern(TpmcComparisonPattern *pattern,
             pattern->previous->pattern ? pattern->previous->pattern->type : -1);
     }
 #endif
-    renamePattern(pattern->current,
-                  path); // previous will already have been named
+    renamePattern(pattern->current, path,
+                  I); // previous will already have been named
     // Record the path that must be bound before this comparison can execute
     pattern->requiredPath = pattern->previous->path;
 #ifdef DEBUG_TPMC_MATCH
@@ -323,37 +324,39 @@ static void renameComparisonPattern(TpmcComparisonPattern *pattern,
 }
 
 static void renameAssignmentPattern(TpmcAssignmentPattern *pattern,
-                                    HashSymbol *path) {
-    renamePattern(pattern->value, path);
+                                    HashSymbol *path, ParserInfo I) {
+    renamePattern(pattern->value, path, I);
 }
 
 static void renameConstructorPattern(TpmcConstructorPattern *pattern,
-                                     HashSymbol *path) {
+                                     HashSymbol *path, ParserInfo I) {
     TpmcPatternArray *components = pattern->components;
     char buf[512];
     for (Index i = 0; i < components->size; i++) {
         if (snprintf(buf, 512, "%s$%d", path->name, i) >= 511) {
-            can_happen("maximum path depth exceeded");
+            can_happen(I, "maximum path depth exceeded");
         }
         DEBUG("renameConstructorPattern: %s", buf);
         HashSymbol *newPath = newSymbol(buf);
-        renamePattern(components->entries[i], newPath);
+        renamePattern(components->entries[i], newPath, I);
     }
 }
 
-static void renameTuplePattern(TpmcPatternArray *components, HashSymbol *path) {
+static void renameTuplePattern(TpmcPatternArray *components, HashSymbol *path,
+                               ParserInfo I) {
     char buf[512];
     for (Index i = 0; i < components->size; i++) {
         if (snprintf(buf, 512, "%s$%d", path->name, i) >= 511) {
-            can_happen("maximum path depth exceeded");
+            can_happen(I, "maximum path depth exceeded");
         }
         DEBUG("renameTuplePattern: %s", buf);
         HashSymbol *newPath = newSymbol(buf);
-        renamePattern(components->entries[i], newPath);
+        renamePattern(components->entries[i], newPath, I);
     }
 }
 
-static void renamePattern(TpmcPattern *pattern, HashSymbol *variable) {
+static void renamePattern(TpmcPattern *pattern, HashSymbol *variable,
+                          ParserInfo I) {
     pattern->path = variable;
     switch (pattern->pattern->type) {
     case TPMCPATTERNVALUE_TYPE_VAR:
@@ -362,16 +365,17 @@ static void renamePattern(TpmcPattern *pattern, HashSymbol *variable) {
     case TPMCPATTERNVALUE_TYPE_CHARACTER:
         break;
     case TPMCPATTERNVALUE_TYPE_COMPARISON:
-        renameComparisonPattern(pattern->pattern->val.comparison, variable);
+        renameComparisonPattern(pattern->pattern->val.comparison, variable, I);
         break;
     case TPMCPATTERNVALUE_TYPE_ASSIGNMENT:
-        renameAssignmentPattern(pattern->pattern->val.assignment, variable);
+        renameAssignmentPattern(pattern->pattern->val.assignment, variable, I);
         break;
     case TPMCPATTERNVALUE_TYPE_CONSTRUCTOR:
-        renameConstructorPattern(pattern->pattern->val.constructor, variable);
+        renameConstructorPattern(pattern->pattern->val.constructor, variable,
+                                 I);
         break;
     case TPMCPATTERNVALUE_TYPE_TUPLE:
-        renameTuplePattern(pattern->pattern->val.tuple, variable);
+        renameTuplePattern(pattern->pattern->val.tuple, variable, I);
         break;
     default:
         cant_happen("unrecognised pattern type %s",
@@ -382,14 +386,13 @@ static void renamePattern(TpmcPattern *pattern, HashSymbol *variable) {
 static void renameRule(TpmcMatchRule *rule, SymbolArray *rootVariables,
                        ParserInfo I) {
     if (rule->patterns->size != rootVariables->size) {
-        can_happen("inconsistent number of arguments (%d vs %d) in +%d %s",
-                   rule->patterns->size, rootVariables->size, I.lineNo,
-                   I.fileName);
+        can_happen(I, "inconsistent number of arguments (%d vs %d)",
+                   rule->patterns->size, rootVariables->size);
         // will crash otherwise.
         exit(1);
     }
     for (Index i = 0; i < rule->patterns->size; i++) {
-        renamePattern(rule->patterns->entries[i], rootVariables->entries[i]);
+        renamePattern(rule->patterns->entries[i], rootVariables->entries[i], I);
     }
 }
 
@@ -445,9 +448,13 @@ static TpmcPattern *replaceAssignmentPattern(TpmcPattern *pattern,
     TpmcPattern *other = NULL;
     if (getTpmcPatternTable(seen, pattern->pattern->val.assignment->name,
                             &other)) {
-        can_happen("cannot compare assignment (var %s) at +%d %s",
-                   pattern->pattern->val.assignment->name->name, I.lineNo,
-                   I.fileName);
+        // After Case A pattern swapping in replaceComparisonRule, assignment
+        // should only see itself or another assignment in 'seen', never a VAR
+        if (other->pattern->type == TPMCPATTERNVALUE_TYPE_VAR) {
+            cant_happen("found VAR in seen when processing ASSIGNMENT - "
+                        "pattern swapping failed");
+        }
+        // Assignment-after-assignment is OK (duplicate assignment names)
     } else {
         setTpmcPatternTable(seen, pattern->pattern->val.assignment->name,
                             pattern);
@@ -505,8 +512,45 @@ static TpmcPattern *replaceComparisonPattern(TpmcPattern *pattern,
 }
 
 static void replaceComparisonRule(TpmcMatchRule *rule, ParserInfo I) {
+    // Pre-pass: detect Case A (VAR then ASSIGNMENT with same name) and swap
+    // them This transforms (x, x=1) into (x=1, x) so Case B logic handles it
+    TpmcPatternTable *varPositions = newTpmcPatternTable();
+    int save = PROTECT(varPositions);
+
+    // First pass: record VAR positions
+    for (Index i = 0; i < rule->patterns->size; i++) {
+        TpmcPattern *pattern = rule->patterns->entries[i];
+        if (pattern->pattern->type == TPMCPATTERNVALUE_TYPE_VAR) {
+            setTpmcPatternTable(varPositions, pattern->pattern->val.var,
+                                pattern);
+        }
+    }
+
+    // Second pass: detect and swap Case A patterns
+    for (Index i = 0; i < rule->patterns->size; i++) {
+        TpmcPattern *pattern = rule->patterns->entries[i];
+        if (pattern->pattern->type == TPMCPATTERNVALUE_TYPE_ASSIGNMENT) {
+            TpmcPattern *varPattern = NULL;
+            if (getTpmcPatternTable(varPositions,
+                                    pattern->pattern->val.assignment->name,
+                                    &varPattern)) {
+                // Found Case A: swap the VAR and ASSIGNMENT positions
+                // Find the VAR's index
+                for (Index j = 0; j < i; j++) {
+                    if (rule->patterns->entries[j] == varPattern) {
+                        // Swap patterns
+                        rule->patterns->entries[j] = pattern;
+                        rule->patterns->entries[i] = varPattern;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    // Now process comparisons normally (Case B logic handles swapped patterns)
     TpmcPatternTable *seen = newTpmcPatternTable();
-    int save = PROTECT(seen);
+    PROTECT(seen);
     for (Index i = 0; i < rule->patterns->size; i++) {
         rule->patterns->entries[i] =
             replaceComparisonPattern(rule->patterns->entries[i], seen, I);

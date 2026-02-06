@@ -8,9 +8,14 @@ The compiler uses two distinct mechanisms for reporting errors depending on thei
 
 1. **User Errors** (`can_happen`):
     * Triggered by valid but incorrect user input (syntax errors, type errors).
-    * **Usage**: `can_happen(I, fmt, ...)` (or wrappers like `parserError(I, fmt, ...)`).
-    * **Behavior**: These functions do not abort. They print an error message and set a global `errors` flag, then return to the caller.
+    * **Signature**: `void can_happen(ParserInfo I, const char *message, ...)`
+    * **Usage**:
+      * With location: `can_happen(I, "error message", args...)` or `can_happen(CPI(struct), "error message", args...)`
+      * Without location: `can_happen(NULLPI, "error message", args...)` where NULLPI is a macro for when ParserInfo is not available
+    * **Behavior**: These functions do not abort. They print an error message with source location (if ParserInfo.lineNo != 0), set a global `errors` flag, then return to the caller.
+    * **Location formatting**: Automatically adds " at +{lineNo} {fileName}" if lineNo is non-zero
     * **IMPORTANT**: Since execution continues, the calling code MUST return a valid (dummy) value to prevent crashing the current stage. The pipeline will check the `errors` flag after the stage completes and `exit(1)` if set.
+    * **NULLPI macro**: Defined in common.h as `((ParserInfo){.lineNo = 0, .fileName = NULL})` for contexts where location info is unavailable (e.g., type unification)
 
 2. **Internal Compiler Errors** (`cant_happen`):
     * Triggered by logic bugs in the compiler itself (e.g., reaching a "dead" switch case).

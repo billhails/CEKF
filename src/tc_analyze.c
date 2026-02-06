@@ -350,8 +350,7 @@ static TcType *analyzeVar(ParserInfo I, HashSymbol *var, TcEnv *env, TcNg *ng) {
     TcType *res = lookUp(env, var, ng);
     if (res == NULL) {
         // ppTcEnv(env);
-        can_happen("undefined variable %s in %s, line %d", var->name,
-                   I.fileName, I.lineNo);
+        can_happen(I, "undefined variable %s", var->name);
         return makeUnknown(var);
     }
     // LEAVE(analyzeVar);
@@ -598,8 +597,8 @@ static TcType *analyzeDeconstruct(LamDeconstruct *deconstruct, TcEnv *env,
     int save = PROTECT(constructor);
     // ppTcType(constructor); eprintf("\n");
     if (constructor == NULL) {
-        can_happen("undefined type deconstructor %s", deconstruct->name->name);
-        REPORT_PARSER_INFO(deconstruct);
+        can_happen(CPI(deconstruct), "undefined type deconstructor %s",
+                   deconstruct->name->name);
         TcType *res = makeFreshVar(deconstruct->name->name);
         // LEAVE(analyzeDeconstruct);
         return res;
@@ -714,7 +713,8 @@ static TcType *analyzeConstant(LamConstant *constant, TcEnv *env, TcNg *ng) {
     // ENTER(analyzeConstant);
     TcType *constType = lookUp(env, constant->name, ng);
     if (constType == NULL) {
-        can_happen("undefined constant %s", constant->name->name);
+        can_happen(CPI(constant), "undefined constant %s",
+                   constant->name->name);
         TcType *res = makeFreshVar("err");
         // LEAVE(analyzeConstant);
         return res;
@@ -941,8 +941,7 @@ static TcType *makeEqFunctionType(HashSymbol *typename, TcEnv *env,
     // Get the TcTypeSig for typename
     TcTypeSig *typeSig = NULL;
     if (!getTypeSigFromTcEnv(env, typename, &typeSig)) {
-        can_happen("undefined type %s in eq function at %s:%d", typename->name,
-                   I.fileName, I.lineNo);
+        can_happen(I, "undefined type %s in eq function", typename->name);
         return makeFreshVar("eq_error");
     }
 
@@ -2131,7 +2130,7 @@ static void addThenToEnv(TcEnv *env) {
 
 static bool failUnify(TcType *a, TcType *b, char *reason) {
     // can_happen sets a flag that will prevent later stages
-    can_happen("\nunification failed [%s]", reason);
+    can_happen(NULLPI, "\nunification failed [%s]", reason);
     ppTcType(a);
     eprintf(" vs ");
     ppTcType(b);
@@ -2141,7 +2140,7 @@ static bool failUnify(TcType *a, TcType *b, char *reason) {
 
 static bool failUnifyFunctions(TcFunction *a, TcFunction *b, char *reason) {
     // can_happen sets a flag that will prevent later stages
-    can_happen("\nunification failed [%s]", reason);
+    can_happen(NULLPI, "\nunification failed [%s]", reason);
     ppTcFunction(a);
     eprintf(" vs ");
     ppTcFunction(b);
@@ -2167,7 +2166,7 @@ static bool unifyThunks(TcThunk *a, TcThunk *b) {
 
 static bool unifyTuples(TcTypeArray *a, TcTypeArray *b) {
     if (a->size != b->size) {
-        can_happen("tuple sizes differ: %d vs %d", a->size, b->size);
+        can_happen(NULLPI, "tuple sizes differ: %d vs %d", a->size, b->size);
         return false;
     }
     bool unified = true;
@@ -2181,14 +2180,14 @@ static bool unifyTuples(TcTypeArray *a, TcTypeArray *b) {
 
 static bool unifyOpaque(HashSymbol *a, HashSymbol *b) {
     if (a != b) {
-        can_happen("opaque type mismatch %s vs. %s", a->name, b->name);
+        can_happen(NULLPI, "opaque type mismatch %s vs. %s", a->name, b->name);
         return false;
     }
     return true;
 }
 
 static bool failUnifyTypeSigs(TcTypeSig *a, TcTypeSig *b, char *reason) {
-    can_happen("\nunification failed [%s]", reason);
+    can_happen(NULLPI, "\nunification failed [%s]", reason);
     ppTcTypeSig(a);
     eprintf(" vs ");
     ppTcTypeSig(b);
