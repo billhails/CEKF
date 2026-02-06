@@ -355,7 +355,6 @@ namespace
                 (sexp([atom(">"), e1, e2])) { apply(primop(">"), [to_expr(e1), to_expr(e2)]) }
                 (sexp([atom("<="), e1, e2])) { apply(primop("<="), [to_expr(e1), to_expr(e2)]) }
                 (sexp([atom(">="), e1, e2])) { apply(primop(">="), [to_expr(e1), to_expr(e2)]) }
-                (sexp([atom("set!"), e1, e2])) { apply(primop("set!"), [to_expr(e1), to_expr(e2)]) }
                 (sexp([])) { error("Empty expression") }
                 (sexp(func @ args)) { apply(to_expr(func), list.map(to_expr, args)) }
                 (x) {

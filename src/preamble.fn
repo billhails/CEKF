@@ -136,6 +136,18 @@ fn factorial (n) {
 
 operator "_!" 13 factorial;
 
+fn gcd {
+    (0, b) { b }
+    (a, 0) { a }
+    (a, b) {
+        if (a > b) {
+            gcd(a - b, b)
+        } else {
+            gcd(a, b - a)
+        }
+    }
+}
+
 fn __error__(line, file, message) {
     puts("error: ");
     puts(message);

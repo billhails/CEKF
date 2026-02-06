@@ -1,0 +1,7 @@
+let
+    fn test {
+        (x, x=1) { true }
+        (_, _) { false }
+    }
+in
+    assert(test(1, 1) == true);

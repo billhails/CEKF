@@ -420,6 +420,7 @@ namespace
                 (sexp([atom("-"), e1, e2])) { primapp("-", to_expr(e1), to_expr(e2)) }
                 (sexp([atom("*"), e1, e2])) { primapp("*", to_expr(e1), to_expr(e2)) }
                 (sexp([atom("/"), e1, e2])) { primapp("/", to_expr(e1), to_expr(e2)) }
+                (sexp([atom("%"), e1, e2])) { primapp("%", to_expr(e1), to_expr(e2)) }
                 (sexp([atom("**"), e1, e2])) { primapp("**", to_expr(e1), to_expr(e2)) }
                 (sexp([atom("=="), e1, e2])) { primapp("==", to_expr(e1), to_expr(e2)) }
                 (sexp([atom("="), e1, e2])) { primapp("=", to_expr(e1), to_expr(e2)) }
@@ -427,7 +428,6 @@ namespace
                 (sexp([atom(">"), e1, e2])) { primapp(">", to_expr(e1), to_expr(e2)) }
                 (sexp([atom("<="), e1, e2])) { primapp("<=", to_expr(e1), to_expr(e2)) }
                 (sexp([atom(">="), e1, e2])) { primapp(">=", to_expr(e1), to_expr(e2)) }
-                (sexp([atom("set!"), e1, e2])) { primapp("set!", to_expr(e1), to_expr(e2)) }
                 (sexp([atom("print"), e])) { print_exp(to_expr(e)) }
                 (sexp([atom("tag"), e])) { tag(to_expr(e)) }
                 (sexp([atom("tuple_index"), atom(size), atom(index), e])) { tuple_index(1, 1, to_expr(e)) }
