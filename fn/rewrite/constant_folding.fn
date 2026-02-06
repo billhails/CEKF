@@ -7,7 +7,7 @@ link "../listutils.fn" as list;
 
 fn simplify (e) {
     let
-// a more convenient form for doing algebra
+        // a more convenient form for doing algebra
         typedef term {
             num(number) |
             add(term, term) |
@@ -16,6 +16,20 @@ fn simplify (e) {
             div(term, term) |
             pow(term, term) |
             other(M.expr)
+        }
+
+        // allow for commutativity of add and mul
+        EQ term {
+            (add(a, b), add(a, b)) |
+            (add(b, a), add(a, b)) |
+            (sub(a, b), sub(a, b)) |
+            (mul(a, b), mul(a, b)) |
+            (mul(b, a), mul(a, b)) |
+            (div(a, b), div(a, b)) |
+            (pow(a, b), pow(a, b)) |
+            (num(a), num(a)) |
+            (other(a), other(a)) { true }
+            (_, _) { false }
         }
 
         fn term_to_expr(term) {
@@ -268,11 +282,9 @@ fn simplify (e) {
                     (mul(div(x, num(a)), div(y, num(b)))) { sim(div(mul(x, y), num(a * b))) }
                     // (a / x) * (b / y) = (a * b) / (x * y)
                     (mul(div(num(a), x), div(num(b), y))) { sim(div(num(a * b), mul(x, y))) }
-                    // (x / a) / (b / y) = (x * y) / (a * b)
-// INCORRECT: (x/2) / (y/3) = (x/2) * (3/y) = 3x/2y, not xy/6
+                    // (x/2) / (y/3) = (x/2) * (3/y) = 3x/2y
                     (div(div(x, num(a)), div(y, num(b)))) { sim(mul(div(x, y), num(b / a))) }    
-                    // (a / x) / (y / b) = (a * b) / (x * y)
-// INCORRECT: (2/x) / (3/y) = (2/x) * (y/3) = 2y/3x, not 6/xy
+                    // (2/x) / (3/y) = (2/x) * (y/3) = 2y/3x
                     (div(div(num(a), x), div(num(b), y))) { sim(mul(num(a / b), div(y, x))) }
 
                     // a ** b
