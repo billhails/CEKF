@@ -125,8 +125,6 @@ static AstExpression *list(PrattRecord *, PrattParser *, AstExpression *,
                            PrattToken *);
 static AstExpression *lookUp(PrattRecord *, PrattParser *, AstExpression *,
                              PrattToken *);
-static AstExpression *macro(PrattRecord *, PrattParser *, AstExpression *,
-                            PrattToken *);
 static AstExpression *makeAtom(PrattRecord *, PrattParser *, AstExpression *,
                                PrattToken *);
 static AstExpression *makeChar(PrattRecord *, PrattParser *, AstExpression *,
@@ -319,8 +317,8 @@ static PrattParser *makePrattParser(void) {
     addRecord(table, TOK_LCURLY(), nestExpr, 0, makeStruct, 0, NULL, 0);
     addRecord(table, TOK_LET(), NULL, 0, NULL, 0, NULL, 0);
     addRecord(table, TOK_LINK(), NULL, 0, NULL, 0, NULL, 0);
+    addRecord(table, TOK_LAZY(), NULL, 0, NULL, 0, NULL, 0);
     addRecord(table, TOK_LSQUARE(), list, 0, NULL, 0, NULL, 0);
-    addRecord(table, TOK_MACRO(), macro, 0, NULL, 0, NULL, 0);
     addRecord(table, TOK_NAMESPACE(), NULL, 0, NULL, 0, NULL, 0);
     addRecord(table, TOK_NUMBER(), makeNumber, 0, NULL, 0, NULL, 0);
     addRecord(table, TOK_OPEN(), grouping, 0, call, 14, NULL, 0);
@@ -511,7 +509,7 @@ static void synchronize(PrattParser *parser) {
             return;
         if (check(parser, TOK_FN()))
             return;
-        if (check(parser, TOK_MACRO()))
+        if (check(parser, TOK_LAZY()))
             return;
         if (check(parser, TOK_IF()))
             return;
@@ -1985,7 +1983,7 @@ static AstDefinition *operator(PrattParser *parser) {
  * @brief Parse a definition.
  *
  * This fuction parses a definition, which can be an assignment,
- * a typedef, a function, a printer, a macro, a link, an alias,
+ * a typedef, a function, a printer, a lazy fn, a link, an alias,
  * a prefix, an infix, or a postfix operator.
  *
  * @param parser The PrattParser to use for parsing.
@@ -2021,7 +2019,8 @@ static AstDefinition *definition(PrattParser *parser) {
     } else if (match(parser, TOK_EQ())) {
         res = defun(parser, false, DEFUN_COMPARATOR);
         save = PROTECT(res);
-    } else if (match(parser, TOK_MACRO())) {
+    } else if (match(parser, TOK_LAZY())) {
+        consume(parser, TOK_FN());
         res = defMacro(parser);
         save = PROTECT(res);
     } else if (match(parser, TOK_LINK())) {
@@ -3035,20 +3034,20 @@ static AstFarg *astExpressionToFarg(PrattParser *parser, AstExpression *expr) {
 }
 
 /**
- * @brief validate that the macro arguments are conforming (symbols only, and no
- * alternative args)
+ * @brief validate that the lazy fn arguments are conforming (symbols only, and
+ * no alternative args)
  */
 static void validateMacroArgs(PrattParser *parser, AstAltFunction *definition) {
     AstAltArgs *altArgs = definition->altArgs;
     if (altArgs->next) {
         parserErrorAt(CPI(altArgs->next), parser,
-                      "cannot supply alternative arguments to a macro");
+                      "cannot supply alternative arguments to a lazy fn");
     } else {
         AstFargList *args = altArgs->argList;
         while (args) {
             if (args->arg->type != AST_FARG_TYPE_SYMBOL) {
                 parserErrorAt(CPI(args->arg), parser,
-                              "macro arguments can only be simple symbols");
+                              "lazy fn arguments can only be simple symbols");
                 break;
             }
             args = args->next;
@@ -3057,9 +3056,10 @@ static void validateMacroArgs(PrattParser *parser, AstAltFunction *definition) {
 }
 
 /**
- * @brief parse a macro definition.
+ * @brief parse a lazy fn definition.
  *
- * the `macro` token has already been consumed when this function triggers.
+ * the `lazy` and `fn` tokens have already been consumed when this function
+ * triggers.
  */
 static AstDefinition *defMacro(PrattParser *parser) {
     ENTER(defMacro);
@@ -3837,21 +3837,6 @@ static AstExpression *unsafe(PrattRecord *record __attribute__((unused)),
     LEAVE(unsafe);
     UNPROTECT(save);
     return expr;
-}
-
-/**
- * @brief parselet triggered by a prefix `macro` token.
- *
- * We can't actually allow anonymous macro expressions but need to ensure
- * `macro` is registered as a prefix operator so that it can't be
- * overridden.
- */
-static AstExpression *macro(PrattRecord *record __attribute__((unused)),
-                            PrattParser *parser,
-                            AstExpression *lhs __attribute__((unused)),
-                            PrattToken *tok) {
-    parserErrorAt(TOKPI(tok), parser, "can't declare macros as expressions");
-    return errorExpression(TOKPI(tok));
 }
 
 /**

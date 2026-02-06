@@ -6,11 +6,11 @@
 
 // === Macros (lazy functions) ===
 let
-macro lazy_and(a, b) {
+lazy fn lazy_and(a, b) {
     a and b
 }
 
-macro lazy_or(a, b) {
+lazy fn lazy_or(a, b) {
     a or b
 }
 

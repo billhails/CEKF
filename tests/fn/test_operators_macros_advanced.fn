@@ -1,5 +1,5 @@
-// Advanced operator and macro tests
-// Testing: custom operators, precedence, associativity, macro hygiene
+// Advanced operator and lazy fn tests
+// Testing: custom operators, precedence, associativity, lazy fn hygiene
 
 let
     // Test basic custom infix operator
@@ -75,7 +75,7 @@ let
     }
     
     // Test basic macro
-    macro DOUBLE(x) { x + x }
+    lazy fn DOUBLE(x) { x + x }
     
     fn test_basic_macro() {
         let
@@ -86,8 +86,8 @@ let
         }
     }
     
-    // Test macro with multiple arguments
-    macro MAX(a, b) { if (a > b) { a } else { b } }
+    // Test lazy fn with multiple arguments
+    lazy fn MAX(a, b) { if (a > b) { a } else { b } }
     
     fn test_macro_multiple_args() {
         let
@@ -98,8 +98,8 @@ let
         }
     }
     
-    // Test macro with conditional
-    macro IF_THEN(cond, val) { if (cond) { val } else { 0 } }
+    // Test lazy fn with conditional
+    lazy fn IF_THEN(cond, val) { if (cond) { val } else { 0 } }
     
     fn test_macro_conditional() {
         let
@@ -110,8 +110,8 @@ let
         }
     }
     
-    // Test macro with operator
-    macro AND(a, b) { if (a) { b } else { false } }
+    // Test lazy fn with operator
+    lazy fn AND(a, b) { if (a) { b } else { false } }
     operator "_and_" left 30 AND;
     
     fn test_macro_operator() {
@@ -194,8 +194,8 @@ let
             }
     }
     
-    // Test macro with recursion
-    macro FACT(n) { if (n <= 1) { 1 } else { n * FACT(n - 1) } }
+    // Test lazy fn with recursion
+    lazy fn FACT(n) { if (n <= 1) { 1 } else { n * FACT(n - 1) } }
     
     fn test_macro_recursion() {
         let

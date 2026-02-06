@@ -3,7 +3,7 @@
 {
 let
     // Define a simple macro
-    macro lazy_or(a, b) {
+    lazy fn lazy_or(a, b) {
         a or b
     }
     

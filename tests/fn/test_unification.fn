@@ -1,6 +1,6 @@
 // Test: Do lazy and strict functions unify?
 let
-macro lazy_or(a, b) { a or b }
+lazy fn lazy_or(a, b) { a or b }
 
 fn strict_or(x, y) { x or y }
 

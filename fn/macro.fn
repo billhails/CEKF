@@ -5,10 +5,10 @@ let
     }
     operator "not_" 4 NOT;
 
-    macro AND(a, b) { if (a) { b } else { false } }
+    lazy fn AND(a, b) { if (a) { b } else { false } }
     operator "_AND_" left 3 AND;
 
-    macro OR(a, b) { if (a) { true } else { b } }
+    lazy fn OR(a, b) { if (a) { true } else { b } }
     operator "_OR_" left 3 OR;
 
     fn XOR {
@@ -19,13 +19,13 @@ let
     }
     operator "_XOR_" left 3 XOR;
 
-    macro NAND(a, b) { NOT (a AND b) }
+    lazy fn NAND(a, b) { NOT (a AND b) }
     operator "_NAND_" left 3 NAND;
 
-    macro NOR(a, b) { NOT (a OR b) }
+    lazy fn NOR(a, b) { NOT (a OR b) }
     operator "_NOR_" left 3 NOR;
 
-    macro XNOR(a, b) { NOT (a XOR b) }
+    lazy fn XNOR(a, b) { NOT (a XOR b) }
     operator "_XNOR_" left 3 XNOR;
 
     fn a() { print("a called"); false }

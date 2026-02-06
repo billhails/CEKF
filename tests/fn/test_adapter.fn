@@ -1,7 +1,7 @@
 // Test automatic adapter generation for passing macros to higher-order functions
 
 let
-macro lazy_or(a, b) {
+lazy fn lazy_or(a, b) {
     a or b
 }
 
@@ -10,7 +10,7 @@ fn apply_binary(f, x, y) {
 }
 
 fn main() {
-    // Direct macro call - should work (already does)
+    // Direct lazy fn call - should work (already does)
     {
         let
             result1 = lazy_or(true, false);
@@ -18,7 +18,7 @@ fn main() {
             assert(result1 == true);
     };
     
-    // Pass macro to HOF - needs adapter
+    // Pass lazy fn to HOF - needs adapter
     {
         let
             result2 = apply_binary(lazy_or, true, false);

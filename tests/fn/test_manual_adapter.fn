@@ -1,7 +1,7 @@
 // Test manual adapter for passing macros to higher-order functions
 
 let
-macro lazy_or(a, b) {
+lazy fn lazy_or(a, b) {
     a or b
 }
 
@@ -15,7 +15,7 @@ fn apply_binary(f, x, y) {
 }
 
 fn main() {
-    // Direct macro call - works
+    // Direct lazy fn call - works
     {
         let
             result1 = lazy_or(true, false);

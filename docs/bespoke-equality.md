@@ -1,5 +1,11 @@
 # Bespoke Equality Functions for User Types
 
+## Status
+
+Done.
+
+## Motivation
+
 Example type that prompted the idea:
 
 ```fn
@@ -74,6 +80,10 @@ TPMC requires no changes—it continues to generate `eq` operations for pattern 
 ### Limitation
 
 The surface level `==` is a user defined operator that expands to a call to a macro: `x == y` becomes `(op$macro$1 (λ () x) (λ () y))` where `opMacro$1` is bound to `(λ (x1 x2) (eq (x1) (x2)))`. There is no way currently to get from `x == y` to `(eq x y)` - though it would be great if we could, likewise for the other primitives. Also if we plan to do constant folding in a later compiler pass we'll need to fix this. That's for another day.
+
+## Results
+
+This is a TPMC graph of that eq$term function after implementation.
 
 ```mermaid
 ---
@@ -163,4 +173,123 @@ T227 --"p$108$0:_<br/>[]"--> F206
 T226 --"p$108:add(p$108$0:_, p$108$1:_)<br/>[p$107$0 p$107$1]"--> T227
 T226 --"p$108:_<br/>[]"--> F206
 T208 --"p$107:add(p$107$0:_, p$107$1:_)<br/>[p$108]"--> T226
+```
+
+And the resulting IR (after desugaring). You can see the inner recursive calls to `eq$term`.
+
+```scheme
+(λ (p$107 p$108)
+   (letrec (($tpmc206 (λ () 0)))
+     (match (vec 0 p$107)
+            ((6)
+             ((λ (p$107$0)
+                 (match (vec 0 p$108)
+                        ((6)
+                         ((λ (p$108$0)
+                             (if (== p$107$0 p$108$0) 1 ($tpmc206)))
+                          (vec 1 p$108)))
+                        ((5 4 3 2 1 0) ($tpmc206))))
+              (vec 1 p$107)))
+            ((5)
+             ((λ (p$107$0)
+                 (match (vec 0 p$108)
+                        ((5)
+                         ((λ (p$108$0)
+                             (if (== p$107$0 p$108$0) 1 ($tpmc206)))
+                          (vec 1 p$108)))
+                        ((6 4 3 2 1 0) ($tpmc206))))
+              (vec 1 p$107)))
+            ((4)
+             ((λ (p$107$1)
+                 ((λ (p$107$0)
+                     (match (vec 0 p$108)
+                            ((4)
+                             ((λ (p$108$1)
+                                 ((λ (p$108$0)
+                                     (if (eq$term p$107$0 p$108$0)
+                                       (if (eq$term p$107$1 p$108$1)
+                                         1
+                                         ($tpmc206))
+                                       ($tpmc206)))
+                                  (vec 1 p$108)))
+                              (vec 2 p$108)))
+                            ((6 5 3 2 1 0) ($tpmc206))))
+                  (vec 1 p$107)))
+              (vec 2 p$107)))
+            ((3)
+             ((λ (p$107$1)
+                 ((λ (p$107$0)
+                     (match (vec 0 p$108)
+                            ((3)
+                             ((λ (p$108$1)
+                                 ((λ (p$108$0)
+                                     (if (eq$term p$107$0 p$108$0)
+                                       (if (eq$term p$107$1 p$108$1)
+                                         1
+                                         ($tpmc206))
+                                       ($tpmc206)))
+                                  (vec 1 p$108)))
+                              (vec 2 p$108)))
+                            ((6 5 4 2 1 0) ($tpmc206))))
+                  (vec 1 p$107)))
+              (vec 2 p$107)))
+            ((2)
+             ((λ (p$107$1)
+                 ((λ (p$107$0)
+                     (match (vec 0 p$108)
+                            ((2)
+                             ((λ (p$108$1)
+                                 ((λ (p$108$0)
+                                     (if (eq$term p$107$1 p$108$0)
+                                       (if (eq$term p$107$0 p$108$1)
+                                         1
+                                         ($tpmc206))
+                                       (if (eq$term p$107$0 p$108$0)
+                                         (if (eq$term p$107$1 p$108$1)
+                                           1
+                                           ($tpmc206))
+                                         ($tpmc206))))
+                                  (vec 1 p$108)))
+                              (vec 2 p$108)))
+                            ((6 5 4 3 1 0) ($tpmc206))))
+                  (vec 1 p$107)))
+              (vec 2 p$107)))
+            ((1)
+             ((λ (p$107$1)
+                 ((λ (p$107$0)
+                     (match (vec 0 p$108)
+                            ((1)
+                             ((λ (p$108$1)
+                                 ((λ (p$108$0)
+                                     (if (eq$term p$107$0 p$108$0)
+                                       (if (eq$term p$107$1 p$108$1)
+                                         1
+                                         ($tpmc206))
+                                       ($tpmc206)))
+                                  (vec 1 p$108)))
+                              (vec 2 p$108)))
+                            ((6 5 4 3 2 0) ($tpmc206))))
+                  (vec 1 p$107)))
+              (vec 2 p$107)))
+            ((0)
+             ((λ (p$107$1)
+                 ((λ (p$107$0)
+                     (match (vec 0 p$108)
+                            ((0)
+                             ((λ (p$108$1)
+                                 ((λ (p$108$0)
+                                     (if (eq$term p$107$1 p$108$0)
+                                       (if (eq$term p$107$0 p$108$1)
+                                         1
+                                         ($tpmc206))
+                                       (if (eq$term p$107$0 p$108$0)
+                                         (if (eq$term p$107$1 p$108$1)
+                                           1
+                                           ($tpmc206))
+                                         ($tpmc206))))
+                                  (vec 1 p$108)))
+                              (vec 2 p$108)))
+                            ((6 5 4 3 2 1) ($tpmc206))))
+                  (vec 1 p$107)))
+              (vec 2 p$107))))))
 ```

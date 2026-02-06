@@ -12,7 +12,7 @@ Source flows through these stages:
 2. **Pratt Parser** (`src/pratt_parser.c`) → AST  (`PrattToken*` → [`AstNode*`](../src/ast.yaml)) — *see [pratt-parser.md](../docs/agent/pratt-parser.md)*
 3. **Lambda Conversion** (`src/lambda_conversion.c`) → Plain Lambda Form  (`AstNode*` → [`LamExp*`](../src/lambda.yaml))
    - Includes **TPMC** (Term Pattern Matching Compiler, `src/tpmc_*.c`) — *see [tpmc.md](../docs/agent/tpmc.md)*
-   - **Macro Expansion** (`src/macro_substitution.c`)
+   - **Lazy Function Expansion** (`src/macro_substitution.c`)
    - **Print Generator** (`src/print_generator.c`)
 4. **Type Checking** (`src/tc_analyze.c`) - Hindley-Milner Algorithm W using Prolog-style logical variables  (`LamExp*` → [`TcType*`](../src/tc.yaml))
 5. **Constructor Inlining** (`src/inline.c`) (`LamExp*` → `LamExp*`)

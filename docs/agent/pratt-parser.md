@@ -78,14 +78,14 @@ operator "_then_" right 2 amb;            // infix binary right-assoc
 operator "_?" 120 optional;               // postfix unary
 ```
 
-**Macros as operators**:
+**Lazy functions as operators**:
 
 ```fn
-macro AND(a, b) { if (a) { b } else { false } }
+lazy fn AND(a, b) { if (a) { b } else { false } }
 operator "_and_" left 3 AND;
 ```
 
-Macro arguments are wrapped in thunks (`fn() { arg }`) and lazily evaluated, providing proper scoping.
+Lazy function arguments are wrapped in thunks (`fn() { arg }`) and lazily evaluated, providing proper scoping.
 
 ## Parser Table (`PrattRecord`)
 
@@ -158,11 +158,11 @@ After parsing, operator applications are transformed:
 - Prefix: `!a` → `NOT(a)`
 - Postfix: `a!` → `factorial(a)`
 
-Macro operators are handled specially:
+Lazy function operators are handled specially:
 
 1. Arguments wrapped in thunks during lambda conversion: `AND(a, b)` → `AND(fn(){a}, fn(){b})`
-2. Macro substitution unwraps if thunk just invokes arg: `fn(){a()}` → `a`
-3. Free variables in macro body resolved in definition scope (lexical scoping)
+2. Lazy function expansion unwraps if thunk just invokes arg: `fn(){a()}` → `a`
+3. Free variables in lazy fn body resolved in definition scope (lexical scoping)
 
 See `src/macro_substitution.c` for implementation details.
 
@@ -171,7 +171,7 @@ See `src/macro_substitution.c` for implementation details.
 1. **Operator can't be both infix and postfix** - Could be relaxed with better disambiguation
 2. **Fixity conflicts** - Same symbol with multiple fixities simply disallowed
 3. **Precedence granularity** - `PRECEDENCE_SCALE = 3` limits operators between declared levels
-4. **Macro hygiene** - Solved by wrapping args in thunks; works but adds runtime overhead
+4. **Lazy fn hygiene** - Solved by wrapping args in thunks; works but adds runtime overhead
 5. **Copy-on-write for rules tables** - Not currently implemented; each scope creates full copy
 
 ## Debugging Parser Issues
@@ -189,7 +189,7 @@ See `src/macro_substitution.c` for implementation details.
 - Precedence conflicts (operators binding wrong way)
 - Associativity bugs (wrong grouping in chains)
 - Scope leakage (operators visible outside their scope)
-- Macro expansion issues (arguments evaluated too early/late)
+- Lazy fn expansion issues (arguments evaluated too early/late)
 
 ## Key Files
 
@@ -198,4 +198,4 @@ See `src/macro_substitution.c` for implementation details.
 - `src/pratt.yaml` - Parser data structures
 - `src/preamble.fn` - Required operator definitions (compiler depends on these)
 - `docs/PARSING.md` - Original design notes and requirements
-- `docs/OPERATORS.md` - Evolution of operator and macro system
+- `docs/OPERATORS.md` - Evolution of operator and lazy fn system

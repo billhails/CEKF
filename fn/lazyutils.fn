@@ -2,7 +2,7 @@
 let
     typedef lazy(#t, #v) { thunk(#t) | value(#v) }
 
-    macro THUNK(x) { thunk(fn () {x}) }
+    lazy fn THUNK(x) { thunk(fn () {x}) }
     operator "&_" 14 THUNK;
 
     fn FORCE {

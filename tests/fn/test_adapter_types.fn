@@ -1,7 +1,7 @@
 // Test to see the types of lazy and adapter functions
 
 let
-    macro lazy_or(a, b) {
+    lazy fn lazy_or(a, b) {
         a or b
     }
 
