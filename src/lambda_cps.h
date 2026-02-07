@@ -24,14 +24,14 @@
 MinExp *cpsTk(MinExp *, CpsKont *);
 MinExprList *appendMinArg(MinExprList *, MinExp *);
 MinExp *makeVar(ParserInfo, char *);
-MinVarList *appendMinVar(ParserInfo, MinVarList *, HashSymbol *);
+SymbolList *appendMinVar(ParserInfo, SymbolList *, HashSymbol *);
 MinExp *cpsTs_k(MinExp *, CpsKont *);
 bool isAexpr(MinExp *);
 MinExp *cpsTc(MinExp *, MinExp *);
 MinExp *cpsM(MinExp *);
 MinBindings *mapMOverBindings(MinBindings *);
 MinMatchList *mapTcOverMatchCases(MinMatchList *, MinExp *);
-void cpsUnzipMinBindings(MinBindings *, MinVarList **, MinExprList **);
+void cpsUnzipMinBindings(MinBindings *, SymbolList **, MinExprList **);
 MinExp *cpsNestLets(MinBindings *, MinExp *);
 MinExp *nsaToArgs(MinNameSpaceArray *nsa);
 MinNameSpaceArray *argsToNsa(MinExp *seq);

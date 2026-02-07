@@ -7,11 +7,9 @@ flowchart LR
 LamInfoTable --entries--> LamInfo
 LamAliasTable --entries--> LamTypeConstructorType
 LamExpTable --entries--> LamExp
-LamLam --args--> LamVarList
+LamLam --args--> SymbolList
 LamLam --exp--> LamExp
 LamLam --isLazy--> bool
-LamVarList --var--> HashSymbol
-LamVarList --next--> LamVarList
 LamPrimApp --type--> LamPrimOp
 LamPrimApp --exp1--> LamExp
 LamPrimApp --exp2--> LamExp

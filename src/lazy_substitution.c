@@ -29,7 +29,7 @@
 #include "debugging_off.h"
 #endif
 
-static SymbolSet *excludeSymbols(LamVarList *, SymbolSet *);
+static SymbolSet *excludeSymbols(SymbolList *, SymbolSet *);
 
 /**
  * @brief True if the variable is an argument to the function being converted.
@@ -74,9 +74,9 @@ static LamExp *performLamSubstitutions(LamLam *lam, SymbolSet *symbols) {
  * @param symbols The current set of arguments.
  * @return True if any variable is a argument, false otherwise.
  */
-static bool containsLazyArguments(LamVarList *vars, SymbolSet *symbols) {
+static bool containsLazyArguments(SymbolList *vars, SymbolSet *symbols) {
     while (vars != NULL) {
-        if (isLazyArgument(vars->var, symbols)) {
+        if (isLazyArgument(vars->symbol, symbols)) {
             return true;
         }
         vars = vars->next;
@@ -130,9 +130,9 @@ static SymbolSet *copySymbolSet(SymbolSet *symbols) {
  * @param vars The list of variables to search in.
  * @return True if the variable is found, false otherwise.
  */
-static bool varInVarList(HashSymbol *var, LamVarList *vars) {
+static bool varInVarList(HashSymbol *var, SymbolList *vars) {
     while (vars != NULL) {
-        if (var == vars->var) {
+        if (var == vars->symbol) {
             return true;
         }
         vars = vars->next;
@@ -147,7 +147,7 @@ static bool varInVarList(HashSymbol *var, LamVarList *vars) {
  * @param symbols The current set of arguments.
  * @return A new set of arguments without the excluded variables.
  */
-static SymbolSet *excludeSymbols(LamVarList *vars, SymbolSet *symbols) {
+static SymbolSet *excludeSymbols(SymbolList *vars, SymbolSet *symbols) {
     SymbolSet *new = newSymbolSet();
     int save = PROTECT(new);
     Index i = 0;
@@ -168,13 +168,13 @@ static SymbolSet *excludeSymbols(LamVarList *vars, SymbolSet *symbols) {
  * @param bindings The letrec bindings to collect names from.
  * @return A list of variable names for the letrec bindings.
  */
-static LamVarList *collectLetRecNames(LamBindings *bindings) {
+static SymbolList *collectLetRecNames(LamBindings *bindings) {
     if (bindings == NULL) {
         return NULL;
     }
-    LamVarList *next = collectLetRecNames(bindings->next);
+    SymbolList *next = collectLetRecNames(bindings->next);
     int save = PROTECT(next);
-    LamVarList *this = newLamVarList(CPI(bindings), bindings->var, next);
+    SymbolList *this = newSymbolList(CPI(bindings), bindings->var, next);
     UNPROTECT(save);
     return this;
 }
@@ -487,7 +487,7 @@ static LamLetStar *performLetStarSubstitutions(LamLetStar *let,
 static LamLetRec *performLetRecSubstitutions(LamLetRec *letrec,
                                              SymbolSet *symbols) {
     ENTER(performLetRecSubstitutions);
-    LamVarList *names = collectLetRecNames(letrec->bindings);
+    SymbolList *names = collectLetRecNames(letrec->bindings);
     int save = PROTECT(names);
     if (containsLazyArguments(names, symbols)) {
         symbols = excludeSymbols(names, symbols);

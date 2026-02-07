@@ -47,7 +47,7 @@ static HashSymbol *makeLambdaName(TpmcState *state) {
     return newSymbol(buf);
 }
 
-static LamVarList *makeCanonicalArgs(SymbolSet *freeVariables) {
+static SymbolList *makeCanonicalArgs(SymbolSet *freeVariables) {
     ENTER(makeCanonicalArgs);
     if (countSymbolSet(freeVariables) == 0) {
         LEAVE(makeCanonicalArgs);
@@ -72,9 +72,9 @@ static LamVarList *makeCanonicalArgs(SymbolSet *freeVariables) {
     }
     // claim an extra slot
     int save2 = PROTECT(sorted);
-    LamVarList *res = NULL;
+    SymbolList *res = NULL;
     for (Index i = 0; i < sorted->size; i++) {
-        res = newLamVarList(I, sorted->entries[i], res);
+        res = newSymbolList(I, sorted->entries[i], res);
         REPLACE_PROTECT(save2, res);
     }
     UNPROTECT(save);
@@ -82,7 +82,7 @@ static LamVarList *makeCanonicalArgs(SymbolSet *freeVariables) {
     return res;
 }
 
-static LamArgs *convertVarListToList(LamVarList *vars) {
+static LamArgs *convertVarListToList(SymbolList *vars) {
     ENTER(convertVarListToList);
     if (vars == NULL) {
         LEAVE(convertVarListToList);
@@ -90,7 +90,7 @@ static LamArgs *convertVarListToList(LamVarList *vars) {
     }
     LamArgs *next = convertVarListToList(vars->next);
     int save = PROTECT(next);
-    LamExp *exp = newLamExp_Var(I, vars->var);
+    LamExp *exp = newLamExp_Var(I, vars->symbol);
     PROTECT(exp);
     LamArgs *this = newLamArgs(I, exp, next);
     UNPROTECT(save);
@@ -102,7 +102,7 @@ static LamExp *translateToApply(HashSymbol *name, TpmcState *dfa) {
     ENTER(translateToApply);
     LamExp *function = newLamExp_Var(I, name);
     int save = PROTECT(function);
-    LamVarList *cargs = makeCanonicalArgs(dfa->freeVariables);
+    SymbolList *cargs = makeCanonicalArgs(dfa->freeVariables);
     PROTECT(cargs);
     LamArgs *args = convertVarListToList(cargs);
     PROTECT(args);
@@ -116,7 +116,7 @@ static LamExp *translateToLambda(TpmcState *dfa, LamExpTable *lambdaCache) {
     ENTER(translateToLambda);
     LamExp *exp = translateStateToInlineCode(dfa, lambdaCache);
     int save = PROTECT(exp);
-    LamVarList *args = makeCanonicalArgs(dfa->freeVariables);
+    SymbolList *args = makeCanonicalArgs(dfa->freeVariables);
     PROTECT(args);
     LamExp *res = makeLamExp_Lam(I, args, exp);
     UNPROTECT(save);

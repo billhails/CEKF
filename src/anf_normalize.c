@@ -62,7 +62,7 @@ static Aexp *aexpNormalizeCharacter(ParserInfo I, Character character);
 static Aexp *aexpNormalizeLam(MinLam *minMin);
 static AexpNameSpaceArray *aexpNormalizeNameSpaces(ParserInfo I,
                                                    MinNameSpaceArray *nsArray);
-static AexpVarList *convertVarList(MinVarList *args);
+static AexpVarList *convertVarList(SymbolList *args);
 static AexpList *replaceMinArgs(MinExprList *, MinExpTable *);
 static Aexp *replaceMinPrim(MinPrimApp *minPrimApp, MinExpTable *replacements);
 static Aexp *replaceMinMakeVec(MinExprList *makeVec, MinExpTable *replacements);
@@ -547,7 +547,7 @@ static AexpIntList *convertIntList(MinIntList *list) {
     return this;
 }
 
-static AexpVarList *convertVarList(MinVarList *args) {
+static AexpVarList *convertVarList(SymbolList *args) {
     ENTER(convertVarList);
     if (args == NULL) {
         LEAVE(convertVarList);
@@ -555,7 +555,7 @@ static AexpVarList *convertVarList(MinVarList *args) {
     }
     AexpVarList *next = convertVarList(args->next);
     int save = PROTECT(next);
-    AexpVarList *this = newAexpVarList(CPI(args), args->var, next);
+    AexpVarList *this = newAexpVarList(CPI(args), args->symbol, next);
     UNPROTECT(save);
     LEAVE(convertVarList);
     return this;

@@ -46,7 +46,7 @@ static MinExp *desugarLamTupleIndex(LamExp *);
 static MinExp *desugarLamTypeDefs(LamExp *);
 
 static MinLam *desugarLamLam(LamLam *node);
-static MinVarList *desugarLamVarList(LamVarList *node);
+static SymbolList *desugarLamVarList(SymbolList *node);
 static MinPrimApp *desugarLamPrimApp(LamPrimApp *node);
 static MinExprList *desugarLamSequence(LamSequence *node);
 static MinExprList *desugarLamArgs(LamArgs *node);
@@ -70,7 +70,7 @@ char *desugar_conversion_function = NULL;
 int desugar_flag = 0;
 
 // Visitor implementations
-static MinVarList *desugarLamVarList(LamVarList *node) {
+static SymbolList *desugarLamVarList(SymbolList *node) {
     ENTER(desugarLamVarList);
     if (node == NULL) {
         LEAVE(desugarLamVarList);
@@ -78,9 +78,9 @@ static MinVarList *desugarLamVarList(LamVarList *node) {
     }
 
     // Pass through var (type: HashSymbol, not memory-managed)
-    MinVarList *new_next = desugarLamVarList(node->next);
+    SymbolList *new_next = desugarLamVarList(node->next);
     int save = PROTECT(new_next);
-    MinVarList *this = newMinVarList(CPI(node), node->var, new_next);
+    SymbolList *this = newSymbolList(CPI(node), node->symbol, new_next);
 
     UNPROTECT(save);
     LEAVE(desugarLamVarList);
@@ -147,7 +147,7 @@ static MinLam *desugarLamLam(LamLam *node) {
         return NULL;
     }
 
-    MinVarList *params = desugarLamVarList(node->args);
+    SymbolList *params = desugarLamVarList(node->args);
     int save = PROTECT(params);
     MinExp *body = desugarLamExp(node->exp);
     PROTECT(body);
@@ -429,15 +429,15 @@ static MinIntList *desugarLamIntList(LamIntList *node) {
     return result;
 }
 
-static MinVarList *extractKeysFromBindings(MinBindings *bindings) {
+static SymbolList *extractKeysFromBindings(MinBindings *bindings) {
     ENTER(extractKeysFromBindings);
     if (bindings == NULL) {
         LEAVE(extractKeysFromBindings);
         return NULL;
     }
-    MinVarList *next = extractKeysFromBindings(bindings->next);
+    SymbolList *next = extractKeysFromBindings(bindings->next);
     int save = PROTECT(next);
-    MinVarList *result = newMinVarList(CPI(bindings), bindings->var, next);
+    SymbolList *result = newSymbolList(CPI(bindings), bindings->var, next);
     UNPROTECT(save);
     LEAVE(extractKeysFromBindings);
     return result;
@@ -464,7 +464,7 @@ static MinExp *desugarLamLet(LamExp *exp) {
     int save = PROTECT(bindings);
     MinExp *body = desugarLamExp(node->body);
     PROTECT(body);
-    MinVarList *fargs = extractKeysFromBindings(bindings);
+    SymbolList *fargs = extractKeysFromBindings(bindings);
     PROTECT(fargs);
     MinExp *lambda = makeMinExp_Lam(CPI(node), fargs, body);
     PROTECT(lambda);

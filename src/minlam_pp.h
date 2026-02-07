@@ -25,7 +25,7 @@
 
 void ppMinExpD(MinExp *exp, int depth);
 void ppMinLam(MinLam *lam);
-void ppMinVarList(MinVarList *varList);
+void ppMinVarList(SymbolList *varList);
 void ppMinExp(MinExp *exp);
 void ppMinPrimApp(MinPrimApp *primApp);
 void ppMinPrimOp(MinPrimOp type);

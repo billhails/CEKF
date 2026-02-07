@@ -88,7 +88,7 @@ LamExp *compilePrinterForType(ParserInfo I, TcType *type, TcEnv *env) {
     PROTECT(seq);
 
     // (lambda (x) (begin (printer x) (putc '\n') x)
-    LamVarList *fargs = newLamVarList(I, name, NULL);
+    SymbolList *fargs = newSymbolList(I, name, NULL);
     PROTECT(fargs);
     LamExp *body = newLamExp_Sequence(I, seq);
     PROTECT(body);

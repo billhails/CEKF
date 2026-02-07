@@ -155,9 +155,9 @@ static LamExp *thingName(ParserInfo I) {
  * @param I Parser information.
  * @return A new LamVarList representing the last argument.
  */
-static LamVarList *makeLastArg(ParserInfo I) {
+static SymbolList *makeLastArg(ParserInfo I) {
     HashSymbol *name = printArgSymbol();
-    return newLamVarList(I, name, NULL);
+    return newSymbolList(I, name, NULL);
 }
 
 /**
@@ -170,14 +170,14 @@ static LamVarList *makeLastArg(ParserInfo I) {
  * @param args The type signature arguments.
  * @return A new LamVarList representing the arguments.
  */
-static LamVarList *makePrintTypeFunctionArgs(ParserInfo I,
+static SymbolList *makePrintTypeFunctionArgs(ParserInfo I,
                                              LamTypeSigArgs *args) {
     if (args == NULL)
         return makeLastArg(I);
-    LamVarList *next = makePrintTypeFunctionArgs(I, args->next);
+    SymbolList *next = makePrintTypeFunctionArgs(I, args->next);
     int save = PROTECT(next);
     HashSymbol *name = makePrintName("print", args->name->name);
-    LamVarList *res = newLamVarList(I, name, next);
+    SymbolList *res = newSymbolList(I, name, next);
     UNPROTECT(save);
     return res;
 }
@@ -812,7 +812,7 @@ static LamBindings *makePrintTypeLetrec(ParserInfo I, LamTypeDef *typeDef,
     if (userDefined(name, next)) {
         return next;
     }
-    LamVarList *args = makePrintTypeFunctionArgs(I, typeDef->type->args);
+    SymbolList *args = makePrintTypeFunctionArgs(I, typeDef->type->args);
     int save = PROTECT(args);
     LamExp *body = makeFunctionBody(I, typeDef->constructors, env);
     PROTECT(body);

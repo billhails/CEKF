@@ -69,7 +69,7 @@ MinExp *cpsM(MinExp *node) {
     case MINEXP_TYPE_LAM: {
         MinExp *c = makeVar(CPI(node), "k");
         int save = PROTECT(c);
-        MinVarList *args = appendMinVar(CPI(node), getMinExp_Lam(node)->args,
+        SymbolList *args = appendMinVar(CPI(node), getMinExp_Lam(node)->args,
                                         getMinExp_Var(c));
         PROTECT(args);
         MinExp *body = cpsTc(getMinExp_Lam(node)->exp, c);
@@ -275,7 +275,7 @@ static MinExp *cpsTcMinIff(MinIff *node, MinExp *c) {
     PROTECT(k);
     MinExp *body = cpsTk(node->condition, k);
     PROTECT(body);
-    MinVarList *args = newMinVarList(CPI(node), getMinExp_Var(sk), NULL);
+    SymbolList *args = newSymbolList(CPI(node), getMinExp_Var(sk), NULL);
     PROTECT(args);
     MinExp *lambda = makeMinExp_Lam(CPI(node), args, body);
     PROTECT(lambda);
@@ -343,7 +343,7 @@ static MinExp *cpsTcMinCond(MinCond *node, MinExp *c) {
     int save = PROTECT(sk);
     CpsKont *k = makeKont_TcCond(sk, node->cases);
     PROTECT(k);
-    MinVarList *args = newMinVarList(CPI(node), getMinExp_Var(sk), NULL);
+    SymbolList *args = newSymbolList(CPI(node), getMinExp_Var(sk), NULL);
     PROTECT(args);
     MinExp *body = cpsTk(node->value, k);
     PROTECT(body);
@@ -402,7 +402,7 @@ static MinExp *cpsTcMinMatch(MinMatch *node, MinExp *c) {
     int save = PROTECT(sk);
     CpsKont *k = makeKont_TcMatch(sk, node->cases);
     PROTECT(k);
-    MinVarList *args = newMinVarList(CPI(node), getMinExp_Var(sk), NULL);
+    SymbolList *args = newSymbolList(CPI(node), getMinExp_Var(sk), NULL);
     PROTECT(args);
     MinExp *body = cpsTk(node->index, k);
     PROTECT(body);
@@ -471,7 +471,7 @@ static MinExp *cpsTcMinAmb(MinAmb *node, MinExp *c) {
     PROTECT(e2);
     MinExp *lamAmb = makeMinExp_Amb(CPI(node), e1, e2);
     PROTECT(lamAmb);
-    MinVarList *fargs = newMinVarList(CPI(node), getMinExp_Var(k), NULL);
+    SymbolList *fargs = newSymbolList(CPI(node), getMinExp_Var(k), NULL);
     PROTECT(fargs);
     MinExp *lambda = makeMinExp_Lam(CPI(node), fargs, lamAmb);
     PROTECT(lambda);
@@ -501,9 +501,9 @@ static MinExp *makeCallCC(ParserInfo PI) {
     PROTECT(args);
     MinExp *apply = makeMinExp_Apply(PI, cc, args); // (cc x)
     PROTECT(apply);
-    MinVarList *vars = newMinVarList(PI, getMinExp_Var(i), NULL); // (i)
+    SymbolList *vars = newSymbolList(PI, getMinExp_Var(i), NULL); // (i)
     PROTECT(vars);
-    vars = newMinVarList(PI, getMinExp_Var(x), vars); // (x i)
+    vars = newSymbolList(PI, getMinExp_Var(x), vars); // (x i)
     PROTECT(vars);
     MinExp *lambda = makeMinExp_Lam(PI, vars, apply); // (lambda (x i) (cc x))
     PROTECT(lambda);
@@ -513,9 +513,9 @@ static MinExp *makeCallCC(ParserInfo PI) {
     PROTECT(args);
     apply = makeMinExp_Apply(PI, f, args); // (f (lambda (x i) (cc x)) cc)
     PROTECT(apply);
-    vars = newMinVarList(PI, getMinExp_Var(cc), NULL); // (cc)
+    vars = newSymbolList(PI, getMinExp_Var(cc), NULL); // (cc)
     PROTECT(vars);
-    vars = newMinVarList(PI, getMinExp_Var(f), vars); // (f cc)
+    vars = newSymbolList(PI, getMinExp_Var(f), vars); // (f cc)
     PROTECT(vars);
     lambda = makeMinExp_Lam(
         PI, vars, apply); // (lambda (f cc) (f (lambda (x i) (cc x)) cc))

@@ -56,17 +56,17 @@ void ppMinAmb(MinAmb *amb) {
     eprintf(")");
 }
 
-static void _ppMinVarList(MinVarList *varList) {
+static void _ppMinVarList(SymbolList *varList) {
     if (varList == NULL)
         return;
-    ppHashSymbol(varList->var);
+    ppHashSymbol(varList->symbol);
     if (varList->next != NULL) {
         eprintf(" ");
         _ppMinVarList(varList->next);
     }
 }
 
-void ppMinVarList(MinVarList *varList) {
+void ppMinVarList(SymbolList *varList) {
     eprintf("(");
     _ppMinVarList(varList);
     eprintf(")");

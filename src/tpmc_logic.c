@@ -743,25 +743,25 @@ static TpmcMatrix *convertToMatrix(TpmcMatchRules *input) {
 /**
  * Helper for `arrayToVarList`.
  */
-static LamVarList *_arrayToVarList(ParserInfo I, SymbolArray *array,
+static SymbolList *_arrayToVarList(ParserInfo I, SymbolArray *array,
                                    Index count) {
     if (count == array->size) {
         return NULL;
     }
-    LamVarList *next = _arrayToVarList(I, array, count + 1);
+    SymbolList *next = _arrayToVarList(I, array, count + 1);
     int save = PROTECT(next);
-    LamVarList *this = newLamVarList(I, array->entries[count], next);
+    SymbolList *this = newSymbolList(I, array->entries[count], next);
     UNPROTECT(save);
     return this;
 }
 
 /**
- * @brief Converts a SymbolArray into a LamVarList, preserving the order.
+ * @brief Converts a SymbolArray into a SymbolList, preserving the order.
  * @param I Parser information.
  * @param array The SymbolArray to convert.
- * @return A new LamVarList representing the variables in the array.
+ * @return A new SymbolList representing the variables in the array.
  */
-static LamVarList *arrayToVarList(ParserInfo I, SymbolArray *array) {
+static SymbolList *arrayToVarList(ParserInfo I, SymbolArray *array) {
     return _arrayToVarList(I, array, 0);
 }
 
@@ -809,7 +809,7 @@ LamLam *tpmcConvert(bool allow_unsafe, ParserInfo I, int nArgs, int nbodies,
     tpmcMermaid(dfa);
     LamExp *body = tpmcTranslate(I, dfa);
     PROTECT(body);
-    LamVarList *args = arrayToVarList(I, rootVariables);
+    SymbolList *args = arrayToVarList(I, rootVariables);
     PROTECT(args);
     LamLam *res = newLamLam(I, args, body);
     PROTECT(res);

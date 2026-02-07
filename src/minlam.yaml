@@ -33,15 +33,8 @@ structs:
         meta:
             brief: A lambda expression
         data:
-            args: MinVarList
+            args: SymbolList
             exp: MinExp
-
-    MinVarList:
-        meta:
-            brief: Formal arguments of a lambda
-        data:
-            var: HashSymbol
-            next: MinVarList
 
     MinExprList:
         meta:
@@ -164,7 +157,7 @@ structs:
     MinAlphaEnv:
         meta:
             brief: An environment for alpha conversion
-        parserInfo: false
+            parserInfo: false
         data:
             alphaTable: SymbolMap
             next: MinAlphaEnv

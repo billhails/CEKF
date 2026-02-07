@@ -149,7 +149,7 @@ static LamConstruct *performConstructSimplifications(LamConstruct *construct) {
 }
 
 static LamBindings *makeLetBindings(ParserInfo I, LamArgs *aargs,
-                                    LamVarList *fargs) {
+                                    SymbolList *fargs) {
     ENTER(makeLetBindings);
     if (aargs == NULL || fargs == NULL) {
         LEAVE(makeLetBindings);
@@ -157,7 +157,7 @@ static LamBindings *makeLetBindings(ParserInfo I, LamArgs *aargs,
     }
     LamBindings *next = makeLetBindings(I, aargs->next, fargs->next);
     int save = PROTECT(next);
-    LamBindings *this = newLamBindings(I, fargs->var, aargs->exp, next);
+    LamBindings *this = newLamBindings(I, fargs->symbol, aargs->exp, next);
     UNPROTECT(save);
     LEAVE(makeLetBindings);
     return this;
@@ -171,8 +171,8 @@ static LamExp *performApplySimplifications(LamApply *apply) {
         // Convert inline lambdas to let expressions
         LamLam *lam = getLamExp_Lam(apply->function);
         LamArgs *aargs = apply->args;
-        LamVarList *fargs = lam->args;
-        if (countLamArgs(aargs) == countLamVarList(fargs)) {
+        SymbolList *fargs = lam->args;
+        if (countLamArgs(aargs) == countSymbolList(fargs)) {
             LamBindings *bindings = makeLetBindings(CPI(apply), aargs, fargs);
             int save = PROTECT(bindings);
             LamExp *exp = makeLamExp_Let(CPI(apply), bindings, lam->exp);

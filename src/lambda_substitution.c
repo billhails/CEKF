@@ -52,7 +52,7 @@ static void substError(ParserInfo PI, const char *message, ...) {
     can_happen(PI, "");
 }
 
-static LamVarList *performVarListSubstitutions(LamVarList *varList,
+static SymbolList *performVarListSubstitutions(SymbolList *varList,
                                                SymbolMap *substitutions) {
     ENTER(performVarListSubstitutions);
     if (varList == NULL) {
@@ -60,7 +60,7 @@ static LamVarList *performVarListSubstitutions(LamVarList *varList,
         return NULL;
     }
     varList->next = performVarListSubstitutions(varList->next, substitutions);
-    varList->var = performVarSubstitutions(varList->var, substitutions);
+    varList->symbol = performVarSubstitutions(varList->symbol, substitutions);
     LEAVE(performVarListSubstitutions);
     return varList;
 }

@@ -84,12 +84,12 @@ MinExprList *appendMinArg(MinExprList *args, MinExp *exp) {
     return this;
 }
 
-MinVarList *appendMinVar(ParserInfo PI, MinVarList *args, HashSymbol *var) {
+SymbolList *appendMinVar(ParserInfo PI, SymbolList *args, HashSymbol *var) {
     if (args == NULL)
-        return newMinVarList(PI, var, NULL);
-    MinVarList *next = appendMinVar(PI, args->next, var);
+        return newSymbolList(PI, var, NULL);
+    SymbolList *next = appendMinVar(PI, args->next, var);
     int save = PROTECT(next);
-    MinVarList *this = newMinVarList(CPI(args), args->var, next);
+    SymbolList *this = newSymbolList(CPI(args), args->symbol, next);
     UNPROTECT(save);
     return this;
 }
@@ -153,7 +153,7 @@ static MinExp *kToC(ParserInfo PI, CpsKont *k) {
     int save = PROTECT(rv);
     MinExp *body = INVOKE(k, rv);
     PROTECT(body);
-    MinVarList *args = newMinVarList(PI, getMinExp_Var(rv), NULL);
+    SymbolList *args = newSymbolList(PI, getMinExp_Var(rv), NULL);
     PROTECT(args);
     MinExp *cont = makeMinExp_Lam(PI, args, body);
     UNPROTECT(save);
@@ -475,7 +475,7 @@ MinExp *TkMatchKont(MinExp *atest, TkMatchKontEnv *env) {
     return result;
 }
 
-void cpsUnzipMinBindings(MinBindings *bindings, MinVarList **vars,
+void cpsUnzipMinBindings(MinBindings *bindings, SymbolList **vars,
                          MinExprList **exps) {
     if (bindings == NULL) {
         *vars = NULL;
@@ -483,7 +483,7 @@ void cpsUnzipMinBindings(MinBindings *bindings, MinVarList **vars,
         return;
     }
     cpsUnzipMinBindings(bindings->next, vars, exps);
-    *vars = newMinVarList(CPI(bindings), bindings->var, *vars);
+    *vars = newSymbolList(CPI(bindings), bindings->var, *vars);
     PROTECT(*vars);
     *exps = newMinExprList(CPI(bindings), bindings->val, *exps);
     PROTECT(*exps);
@@ -495,7 +495,7 @@ MinExp *cpsNestLets(MinBindings *bindings, MinExp *body) {
     }
     MinExp *rest = cpsNestLets(bindings->next, body);
     int save = PROTECT(rest);
-    MinVarList *farg = newMinVarList(CPI(bindings), bindings->var, NULL);
+    SymbolList *farg = newSymbolList(CPI(bindings), bindings->var, NULL);
     PROTECT(farg);
     MinExp *lambda = makeMinExp_Lam(CPI(bindings), farg, rest);
     PROTECT(lambda);

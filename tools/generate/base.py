@@ -38,13 +38,12 @@ class Base:
         self.hasDocs = False
         self.brief = None
         self.description = None
+        self.parserInfo = None
         self.eqIgnore = []  # List of field names to ignore in equality comparison
-        if "parserInfo" in body:
-            self.parserInfo = body["parserInfo"]
-        else:
-            self.parserInfo = None
         if "meta" in body:
             meta = body["meta"]
+            if "parserInfo" in meta:
+                self.parserInfo = meta["parserInfo"]
             if "brief" in meta:
                 self.hasDocs = True
                 self.brief = meta["brief"]

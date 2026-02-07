@@ -1072,10 +1072,10 @@ static void collectAliases(AstDefinitions *definitions, LamContext *env) {
  * @param args The list of existing macro arguments.
  * @return void
  */
-static void checkDuplicateLazyArg(HashSymbol *arg, LamVarList *args) {
+static void checkDuplicateLazyArg(HashSymbol *arg, SymbolList *args) {
     if (args == NULL)
         return;
-    if (arg == args->var) {
+    if (arg == args->symbol) {
         conversionError(CPI(args),
                         "duplicate argument \"%s\" in macro definition",
                         arg->name);
@@ -1093,14 +1093,14 @@ static void checkDuplicateLazyArg(HashSymbol *arg, LamVarList *args) {
  * @param argList The AST argument list to collect from.
  * @return A linked list of lambda variable arguments.
  */
-static LamVarList *collectLazyArgs(AstFargList *argList) {
+static SymbolList *collectLazyArgs(AstFargList *argList) {
     if (argList == NULL)
         return NULL;
-    LamVarList *next = collectLazyArgs(argList->next);
+    SymbolList *next = collectLazyArgs(argList->next);
     int save = PROTECT(next);
     HashSymbol *arg = getAstFarg_Symbol(argList->arg);
     checkDuplicateLazyArg(arg, next);
-    LamVarList *this = newLamVarList(CPI(argList), arg, next);
+    SymbolList *this = newSymbolList(CPI(argList), arg, next);
     UNPROTECT(save);
     return this;
 }
@@ -1115,10 +1115,10 @@ static LamVarList *collectLazyArgs(AstFargList *argList) {
  * @param args The list of lambda variable arguments.
  * @return void
  */
-static void populateArgsTable(SymbolSet *symbols, LamVarList *args) {
+static void populateArgsTable(SymbolSet *symbols, SymbolList *args) {
     if (args == NULL)
         return;
-    setSymbolSet(symbols, args->var);
+    setSymbolSet(symbols, args->symbol);
     populateArgsTable(symbols, args->next);
 }
 
@@ -1136,7 +1136,7 @@ static void populateArgsTable(SymbolSet *symbols, LamVarList *args) {
 static LamExp *convertAstLazy(AstDefLazy *astLazy, LamContext *env) {
     ENTER(convertAstLazy);
     // get the list of argument symbols
-    LamVarList *args = collectLazyArgs(astLazy->definition->altArgs->argList);
+    SymbolList *args = collectLazyArgs(astLazy->definition->altArgs->argList);
     int save = PROTECT(args);
     // do a standard conversion of the macro body
     LamExp *body = convertNest(astLazy->definition->nest, env);
@@ -1585,12 +1585,12 @@ static LamExp *makeApplication(LamExp *fun, LamArgs *args) {
  * @param list The list of bound variables.
  * @return The resulting list of lambda arguments.
  */
-static LamArgs *varListToList(LamVarList *list) {
+static LamArgs *varListToList(SymbolList *list) {
     if (list == NULL)
         return NULL;
     LamArgs *next = varListToList(list->next);
     int save = PROTECT(next);
-    LamExp *var = newLamExp_Var(CPI(list), list->var);
+    LamExp *var = newLamExp_Var(CPI(list), list->symbol);
     PROTECT(var);
     LamArgs *this = newLamArgs(CPI(var), var, next);
     UNPROTECT(save);
@@ -1603,14 +1603,14 @@ static LamArgs *varListToList(LamVarList *list) {
  * @param nArgs The number of arguments.
  * @return The resulting list of symbolic variables.
  */
-static LamVarList *genSymVarList(ParserInfo I, int nArgs) {
+static SymbolList *genSymVarList(ParserInfo I, int nArgs) {
     if (nArgs == 0) {
         return NULL;
     }
-    LamVarList *rest = genSymVarList(I, nArgs - 1);
+    SymbolList *rest = genSymVarList(I, nArgs - 1);
     int save = PROTECT(rest);
     HashSymbol *s = genSym("$x");
-    LamVarList *this = newLamVarList(I, s, rest);
+    SymbolList *this = newSymbolList(I, s, rest);
     UNPROTECT(save);
     return this;
 }
@@ -1811,7 +1811,7 @@ static LamExp *makeConstructorApplication(LamExp *constructor, LamArgs *args) {
     LamExp *result;
     int arity = findUnderlyingArity(constructor);
     if (nArgs < arity) {
-        LamVarList *fargs = genSymVarList(CPI(constructor), arity);
+        SymbolList *fargs = genSymVarList(CPI(constructor), arity);
         int save = PROTECT(fargs);
         LamArgs *aargs = varListToList(fargs);
         PROTECT(aargs);

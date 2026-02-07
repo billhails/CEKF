@@ -296,7 +296,7 @@ static TcType *analyzeExp(LamExp *exp, TcEnv *env, TcNg *ng) {
     }
 }
 
-static TcType *makeFunctionType(LamVarList *args, TcEnv *env,
+static TcType *makeFunctionType(SymbolList *args, TcEnv *env,
                                 TcType *returnType) {
     // ENTER(makeFunctionType);
     if (args == NULL) {
@@ -306,7 +306,7 @@ static TcType *makeFunctionType(LamVarList *args, TcEnv *env,
     TcType *next = makeFunctionType(args->next, env, returnType);
     int save = PROTECT(next);
     TcType *this = NULL;
-    if (!getFromTcEnv(env, args->var, &this)) {
+    if (!getFromTcEnv(env, args->symbol, &this)) {
         cant_happen("cannot find var in env in makeFunctionType");
     }
     TcType *ret = makeFn(this, next);
@@ -321,10 +321,10 @@ static TcType *analyzeLam(LamLam *lam, TcEnv *env, TcNg *ng) {
     int save = PROTECT(env);
     ng = newTcNg(ng);
     PROTECT(ng);
-    for (LamVarList *args = lam->args; args != NULL; args = args->next) {
-        TcType *freshType = makeFreshVar(args->var->name);
+    for (SymbolList *args = lam->args; args != NULL; args = args->next) {
+        TcType *freshType = makeFreshVar(args->symbol->name);
         int save2 = PROTECT(freshType);
-        addToEnv(env, args->var, freshType);
+        addToEnv(env, args->symbol, freshType);
         addToNg(ng, freshType);
         UNPROTECT(save2);
     }

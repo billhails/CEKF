@@ -10,6 +10,8 @@ SymbolMap --entries--> HashSymbol
 FileId --stDev--> device
 FileId --stIno--> inode
 FileId --fileName--> SCharVec
+SymbolList --symbol--> HashSymbol
+SymbolList --next--> SymbolList
 SCharVec["(SCharVec)"] --entries--> schar
 WCharVec["(WCharVec)"] --entries--> character
 StringArray["StringArray[]"] --entries--> string

@@ -35,6 +35,14 @@ structs:
             stIno: inode
             fileName: SCharVec
 
+    SymbolList:
+        meta:
+            brief: A list of Symbols
+            parserInfo: true
+        data:
+            symbol: HashSymbol
+            next: SymbolList
+
 hashes:
     SymbolSet:
         meta:

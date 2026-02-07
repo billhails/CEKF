@@ -54,7 +54,7 @@ static inline MinExp *INVOKE(AnfKont *k, MinExp *arg) {
 }
 
 static MinExp *makeSingleLambda(HashSymbol *y, MinExp *e, MinExp *body) {
-    MinVarList *fargs = newMinVarList(CPI(e), y, NULL);
+    SymbolList *fargs = newSymbolList(CPI(e), y, NULL);
     int save = PROTECT(fargs);
     MinExp *lam = makeMinExp_Lam(CPI(body), fargs, body);
     PROTECT(lam);

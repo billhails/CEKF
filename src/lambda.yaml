@@ -36,16 +36,9 @@ structs:
                 If isLazy is true,
                 all arguments are expected to be thunked (lazy).
         data:
-            args: LamVarList
+            args: SymbolList
             exp: LamExp
             isLazy: bool=false
-
-    LamVarList:
-        meta:
-            brief: Formal arguments to a lambda expression
-        data:
-            var: HashSymbol
-            next: LamVarList
 
     LamPrimApp:
         meta:

@@ -5,10 +5,8 @@ Minimal AST after desugaring
 ```mermaid
 flowchart LR
 MinExpTable --entries--> MinExp
-MinLam --args--> MinVarList
+MinLam --args--> SymbolList
 MinLam --exp--> MinExp
-MinVarList --var--> HashSymbol
-MinVarList --next--> MinVarList
 MinExprList --exp--> MinExp
 MinExprList --next--> MinExprList
 MinPrimApp --type--> MinPrimOp

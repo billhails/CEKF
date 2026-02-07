@@ -30,7 +30,7 @@
 
 // Forward declarations
 static MinLam *visitMinLam(MinLam *node, MinAlphaEnv *context);
-static MinVarList *visitMinVarList(MinVarList *node, MinAlphaEnv *context);
+static SymbolList *visitMinVarList(SymbolList *node, MinAlphaEnv *context);
 static MinPrimApp *visitMinPrimApp(MinPrimApp *node, MinAlphaEnv *context);
 static MinExprList *visitMinSequence(MinExprList *node, MinAlphaEnv *context);
 static MinExprList *visitMinArgs(MinExprList *node, MinAlphaEnv *context);
@@ -115,7 +115,7 @@ static MinLam *visitMinLam(MinLam *node, MinAlphaEnv *context) {
     int save = PROTECT(context);
 
     bool changed = false;
-    MinVarList *args = visitMinVarList(node->args, context);
+    SymbolList *args = visitMinVarList(node->args, context);
     PROTECT(args);
     changed = changed || (args != node->args);
     MinExp *new_exp = visitMinExp(node->exp, context);
@@ -133,17 +133,17 @@ static MinLam *visitMinLam(MinLam *node, MinAlphaEnv *context) {
     return node;
 }
 
-static MinVarList *visitMinVarList(MinVarList *node, MinAlphaEnv *context) {
+static SymbolList *visitMinVarList(SymbolList *node, MinAlphaEnv *context) {
     if (node == NULL)
         return NULL;
 
-    MinVarList *next = visitMinVarList(node->next, context);
+    SymbolList *next = visitMinVarList(node->next, context);
     int save = PROTECT(next);
 
-    addUniqueNameToContext(node->var, context);
+    addUniqueNameToContext(node->symbol, context);
 
-    MinVarList *result = newMinVarList(
-        CPI(node), getNameFromContext(CPI(node), node->var, context), next);
+    SymbolList *result = newSymbolList(
+        CPI(node), getNameFromContext(CPI(node), node->symbol, context), next);
     UNPROTECT(save);
     return result;
 }

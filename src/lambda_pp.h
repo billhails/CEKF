@@ -25,7 +25,7 @@
 
 void ppLamExpD(LamExp *exp, int depth);
 void ppLamLam(LamLam *lam);
-void ppLamVarList(LamVarList *varList);
+void ppLamVarList(SymbolList *varList);
 void ppLamExp(LamExp *exp);
 void ppHashSymbol(HashSymbol *symbol);
 void ppLamPrimApp(LamPrimApp *primApp);
