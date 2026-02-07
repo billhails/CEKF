@@ -27,10 +27,16 @@ void appendStringToSCharArray(SCharArray *array,
 SCharVec *sCharArrayToVec(SCharArray *array); // adds null terminator
 SCharArray *sCharVecToArray(SCharVec *vec);   // drops null terminator
 
+SymbolSet *symbolListToSet(SymbolList *list);
+SymbolList *symbolSetToList(ParserInfo PI, SymbolSet *set);
 SymbolSet *excludeSymbol(HashSymbol *var, SymbolSet *symbols);
 SymbolSet *copySymbolSet(SymbolSet *symbols);
 bool symbolInList(HashSymbol *var, SymbolList *vars);
 SymbolSet *excludeSymbols(SymbolList *vars, SymbolSet *symbols);
 bool anySymbolInSet(SymbolList *vars, SymbolSet *symbols);
+bool allSymbolsInSet(SymbolList *vars, SymbolSet *symbols);
+SymbolSet *unionSymbolSet(SymbolSet *a, SymbolSet *b);
+SymbolSet *intersectSymbolSet(SymbolSet *a, SymbolSet *b);
+SymbolSet *differenceSymbolSet(SymbolSet *a, SymbolSet *b);
 
 #endif

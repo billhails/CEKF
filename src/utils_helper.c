@@ -88,6 +88,40 @@ SCharArray *sCharVecToArray(SCharVec *vec) {
 }
 
 /**
+ * @brief Converts a list of symbols to a set of symbols.
+ * @param list The list of symbols to convert.
+ * @return A new set of symbols containing the symbols from the list.
+ */
+SymbolSet *symbolListToSet(SymbolList *list) {
+    SymbolSet *set = newSymbolSet();
+    int save = PROTECT(set);
+    while (list != NULL) {
+        setSymbolSet(set, list->symbol);
+        list = list->next;
+    }
+    UNPROTECT(save);
+    return set;
+}
+
+/**
+ * @brief Converts a set of symbols to a list of symbols.
+ * @param PI The parser info for each element of the new list.
+ * @param set The set of symbols.
+ * @return The list of symbols.
+ */
+SymbolList *symbolSetToList(ParserInfo PI, SymbolSet *set) {
+    SymbolList *list = NULL;
+    int save = PROTECT(list);
+    Index i = 0;
+    HashSymbol *current;
+    while ((current = iterateSymbolSet(set, &i)) != NULL) {
+        list = newSymbolList(PI, current, list);
+    }
+    UNPROTECT(save);
+    return list;
+}
+
+/**
  * @brief Exclude a symbol from a set of symbols.
  *
  * @param var The symbol to exclude.
@@ -179,4 +213,81 @@ bool anySymbolInSet(SymbolList *vars, SymbolSet *symbols) {
         vars = vars->next;
     }
     return false;
+}
+
+/**
+ * @brief Check if all symbols in the list are in the set.
+ *
+ * @param vars The list of symbols to check.
+ * @param symbols The set of symbols.
+ * @return True if all symbols are in the set, false otherwise.
+ */
+bool allSymbolsInSet(SymbolList *vars, SymbolSet *symbols) {
+    while (vars != NULL) {
+        if (!getSymbolSet(symbols, vars->symbol)) {
+            return false;
+        }
+        vars = vars->next;
+    }
+    return true;
+}
+
+/**
+ * @brief Create a new set of symbols that is the union of two sets of symbols.
+ * @param a The first set of symbols.
+ * @param b The second set of symbols.
+ * @return The union of the two sets.
+ */
+SymbolSet *unionSymbolSet(SymbolSet *a, SymbolSet *b) {
+    SymbolSet *new = copySymbolSet(a);
+    int save = PROTECT(new);
+    Index i = 0;
+    HashSymbol *current;
+    while ((current = iterateSymbolSet(b, &i)) != NULL) {
+        setSymbolSet(new, current);
+    }
+    UNPROTECT(save);
+    return new;
+}
+
+/**
+ * @brief Create a new set of symbols that is the intersection of two sets of
+ * symbols.
+ * @param a The first set of symbols.
+ * @param b The second set of symbols.
+ * @return The intersection of the two sets.
+ */
+SymbolSet *intersectSymbolSet(SymbolSet *a, SymbolSet *b) {
+    SymbolSet *new = newSymbolSet();
+    int save = PROTECT(new);
+    Index i = 0;
+    HashSymbol *current;
+    while ((current = iterateSymbolSet(a, &i)) != NULL) {
+        if (getSymbolSet(b, current)) {
+            setSymbolSet(new, current);
+        }
+    }
+    UNPROTECT(save);
+    return new;
+}
+
+/**
+ * @brief Create a new set of symbols that is the difference of two sets of
+ * symbols.
+ * @param a The first set of symbols.
+ * @param b The second set of symbols.
+ * @return The difference of the two sets (a - b).
+ */
+SymbolSet *differenceSymbolSet(SymbolSet *a, SymbolSet *b) {
+    SymbolSet *new = newSymbolSet();
+    int save = PROTECT(new);
+    Index i = 0;
+    HashSymbol *current;
+    while ((current = iterateSymbolSet(a, &i)) != NULL) {
+        if (!getSymbolSet(b, current)) {
+            setSymbolSet(new, current);
+        }
+    }
+    UNPROTECT(save);
+    return new;
 }
