@@ -79,7 +79,7 @@ TPMC requires no changes—it continues to generate `eq` operations for pattern 
 
 ### Limitation
 
-The surface level `==` is a user defined operator that expands to a call to a macro: `x == y` becomes `(op$macro$1 (λ () x) (λ () y))` where `opMacro$1` is bound to `(λ (x1 x2) (eq (x1) (x2)))`. There is no way currently to get from `x == y` to `(eq x y)` - though it would be great if we could, likewise for the other primitives. Also if we plan to do constant folding in a later compiler pass we'll need to fix this. That's for another day.
+The surface level `==` is a user defined operator that expands to a call to a lazy function: `x == y` becomes `(opLazy$1 (λ () x) (λ () y))` where `opLazy$1` is bound to `(λ (x1 x2) (eq (x1) (x2)))`. There is no way currently to get from `x == y` to `(eq x y)` - though it would be great if we could, likewise for the other primitives. Also if we plan to do constant folding in a later compiler pass we'll need to fix this. That's for another day.
 
 ## Results
 
