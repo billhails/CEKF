@@ -84,7 +84,7 @@ oi --> scanner
 parser --> ast(AST) -->
 lc([Lambda Conversion]):::process --> tpmc([Pattern Matching Compiler]):::process
 lc <---> pg([Print Function Generator]):::process
-lc <---> me([Macro Expansion]):::process
+lc <---> me([Lazy Function Expansion]):::process
 tpmc --> vs([Variable Substitution]):::process
 vs --> lc
 lc <--> des([Desugaring]):::process
@@ -134,7 +134,7 @@ The various components named in the diagram above are linked to their implementa
 * Tpmc [tpmc_logic.c](src/tpmc_logic.c)
 * Print Function Generator [print_generator.c](src/print_generator.c)
 * Variable Substitution [lambda_substitution.c](src/lambda_substitution.c)
-* Macro Expansion [macro_substitution.c](src/macro_substitution.c)
+* Lazy Function Expansion [lazy_substitution.c](src/lazy_substitution.c)
 * Plain Lambda Form [lambda.yaml](src/lambda.yaml)
 * Simplification [lambda_simplify.c](src/lambda_simplify.c)
 * Type Checking [tc_analyze.c](src/tc_analyze.c)
