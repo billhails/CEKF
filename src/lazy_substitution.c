@@ -20,6 +20,7 @@
 #include "common.h"
 #include "lambda_pp.h"
 #include "symbol.h"
+#include "utils_helper.h"
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -28,8 +29,6 @@
 #else
 #include "debugging_off.h"
 #endif
-
-static SymbolSet *excludeSymbols(SymbolList *, SymbolSet *);
 
 /**
  * @brief True if the variable is an argument to the function being converted.
@@ -65,100 +64,6 @@ static LamExp *performLamSubstitutions(LamLam *lam, SymbolSet *symbols) {
     UNPROTECT(save);
     LEAVE(performLamSubstitutions);
     return newLamExp_Lam(CPI(lam), lam);
-}
-
-/**
- * @brief Check if any variables in the list are arguments.
- *
- * @param vars The list of variables to check.
- * @param symbols The current set of arguments.
- * @return True if any variable is a argument, false otherwise.
- */
-static bool containsLazyArguments(SymbolList *vars, SymbolSet *symbols) {
-    while (vars != NULL) {
-        if (isLazyArgument(vars->symbol, symbols)) {
-            return true;
-        }
-        vars = vars->next;
-    }
-    return false;
-}
-
-/**
- * @brief Exclude a symbol from the set of arguments.
- *
- * @param var The variable to exclude.
- * @param symbols The current set of arguments.
- * @return A new set of arguments without the excluded symbol.
- */
-static SymbolSet *excludeSymbol(HashSymbol *var, SymbolSet *symbols) {
-    SymbolSet *new = newSymbolSet();
-    int save = PROTECT(new);
-    Index i = 0;
-    HashSymbol *current;
-    while ((current = iterateSymbolSet(symbols, &i)) != NULL) {
-        if (current != var) {
-            setSymbolSet(new, current);
-        }
-    }
-    UNPROTECT(save);
-    return new;
-}
-
-/**
- * @brief Copy a set of arguments.
- *
- * @param symbols The current set of arguments.
- * @return A new set of arguments.
- */
-static SymbolSet *copySymbolSet(SymbolSet *symbols) {
-    SymbolSet *new = newSymbolSet();
-    int save = PROTECT(new);
-    Index i = 0;
-    HashSymbol *current;
-    while ((current = iterateSymbolSet(symbols, &i)) != NULL) {
-        setSymbolSet(new, current);
-    }
-    UNPROTECT(save);
-    return new;
-}
-
-/**
- * @brief Check if a variable is in a list of variables.
- *
- * @param var The variable to check.
- * @param vars The list of variables to search in.
- * @return True if the variable is found, false otherwise.
- */
-static bool varInVarList(HashSymbol *var, SymbolList *vars) {
-    while (vars != NULL) {
-        if (var == vars->symbol) {
-            return true;
-        }
-        vars = vars->next;
-    }
-    return false;
-}
-
-/**
- * @brief Exclude a list of variables from the set of arguments.
- *
- * @param vars The list of variables to exclude.
- * @param symbols The current set of arguments.
- * @return A new set of arguments without the excluded variables.
- */
-static SymbolSet *excludeSymbols(SymbolList *vars, SymbolSet *symbols) {
-    SymbolSet *new = newSymbolSet();
-    int save = PROTECT(new);
-    Index i = 0;
-    HashSymbol *current;
-    while ((current = iterateSymbolSet(symbols, &i)) != NULL) {
-        if (!varInVarList(current, vars)) {
-            setSymbolSet(new, current);
-        }
-    }
-    UNPROTECT(save);
-    return new;
 }
 
 /**
@@ -489,7 +394,7 @@ static LamLetRec *performLetRecSubstitutions(LamLetRec *letrec,
     ENTER(performLetRecSubstitutions);
     SymbolList *names = collectLetRecNames(letrec->bindings);
     int save = PROTECT(names);
-    if (containsLazyArguments(names, symbols)) {
+    if (anySymbolInSet(names, symbols)) {
         symbols = excludeSymbols(names, symbols);
         PROTECT(symbols);
     }

@@ -27,4 +27,10 @@ void appendStringToSCharArray(SCharArray *array,
 SCharVec *sCharArrayToVec(SCharArray *array); // adds null terminator
 SCharArray *sCharVecToArray(SCharVec *vec);   // drops null terminator
 
+SymbolSet *excludeSymbol(HashSymbol *var, SymbolSet *symbols);
+SymbolSet *copySymbolSet(SymbolSet *symbols);
+bool symbolInList(HashSymbol *var, SymbolList *vars);
+SymbolSet *excludeSymbols(SymbolList *vars, SymbolSet *symbols);
+bool anySymbolInSet(SymbolList *vars, SymbolSet *symbols);
+
 #endif
