@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "macro_substitution.h"
+#include "lazy_substitution.h"
 #include "common.h"
 #include "lambda_pp.h"
 #include "symbol.h"
@@ -32,22 +32,22 @@
 static SymbolSet *excludeSymbols(LamVarList *, SymbolSet *);
 
 /**
- * @brief True if the variable is an argument to the macro being converted.
+ * @brief True if the variable is an argument to the function being converted.
  *
  * @param var The variable to check.
- * @param symbols The set of macro arguments.
- * @return True if the variable is an argument to the macro, false otherwise.
+ * @param symbols The set of arguments.
+ * @return True if the variable is an argument to the function, false otherwise.
  */
-static bool isMacroArgument(HashSymbol *var, SymbolSet *symbols) {
+static bool isLazyArgument(HashSymbol *var, SymbolSet *symbols) {
     return getSymbolSet(symbols, var);
 }
 
 /**
- * @brief Perform macro substitutions on a lambda defined in the body of a
- * macro.
+ * @brief Perform substitutions on a lambda defined in the body of a
+ * function.
  *
  * @param lam The lambda expression to modify.
- * @param symbols The current set of macro arguments.
+ * @param symbols The current set of arguments.
  * @return The modified lambda expression.
  */
 static LamExp *performLamSubstitutions(LamLam *lam, SymbolSet *symbols) {
@@ -55,28 +55,28 @@ static LamExp *performLamSubstitutions(LamLam *lam, SymbolSet *symbols) {
 #if 1
     // fn () { a() } == a
     if (lam->args == NULL && lam->exp->type == LAMEXP_TYPE_VAR &&
-        isMacroArgument(getLamExp_Var(lam->exp), symbols)) {
+        isLazyArgument(getLamExp_Var(lam->exp), symbols)) {
         return lam->exp;
     }
 #endif
     SymbolSet *newSymbols = excludeSymbols(lam->args, symbols);
     int save = PROTECT(newSymbols);
-    lam->exp = lamPerformMacroSubstitutions(lam->exp, newSymbols);
+    lam->exp = lamPerformLazySubstitutions(lam->exp, newSymbols);
     UNPROTECT(save);
     LEAVE(performLamSubstitutions);
     return newLamExp_Lam(CPI(lam), lam);
 }
 
 /**
- * @brief Check if any variables in the list are macro arguments.
+ * @brief Check if any variables in the list are arguments.
  *
  * @param vars The list of variables to check.
- * @param symbols The current set of macro arguments.
- * @return True if any variable is a macro argument, false otherwise.
+ * @param symbols The current set of arguments.
+ * @return True if any variable is a argument, false otherwise.
  */
-static bool containsMacroArguments(LamVarList *vars, SymbolSet *symbols) {
+static bool containsLazyArguments(LamVarList *vars, SymbolSet *symbols) {
     while (vars != NULL) {
-        if (isMacroArgument(vars->var, symbols)) {
+        if (isLazyArgument(vars->var, symbols)) {
             return true;
         }
         vars = vars->next;
@@ -85,11 +85,11 @@ static bool containsMacroArguments(LamVarList *vars, SymbolSet *symbols) {
 }
 
 /**
- * @brief Exclude a symbol from the set of macro arguments.
+ * @brief Exclude a symbol from the set of arguments.
  *
  * @param var The variable to exclude.
- * @param symbols The current set of macro arguments.
- * @return A new set of macro arguments without the excluded symbol.
+ * @param symbols The current set of arguments.
+ * @return A new set of arguments without the excluded symbol.
  */
 static SymbolSet *excludeSymbol(HashSymbol *var, SymbolSet *symbols) {
     SymbolSet *new = newSymbolSet();
@@ -106,10 +106,10 @@ static SymbolSet *excludeSymbol(HashSymbol *var, SymbolSet *symbols) {
 }
 
 /**
- * @brief Copy a set of macro arguments.
+ * @brief Copy a set of arguments.
  *
- * @param symbols The current set of macro arguments.
- * @return A new set of macro arguments.
+ * @param symbols The current set of arguments.
+ * @return A new set of arguments.
  */
 static SymbolSet *copySymbolSet(SymbolSet *symbols) {
     SymbolSet *new = newSymbolSet();
@@ -141,11 +141,11 @@ static bool varInVarList(HashSymbol *var, LamVarList *vars) {
 }
 
 /**
- * @brief Exclude a list of variables from the set of macro arguments.
+ * @brief Exclude a list of variables from the set of arguments.
  *
  * @param vars The list of variables to exclude.
- * @param symbols The current set of macro arguments.
- * @return A new set of macro arguments without the excluded variables.
+ * @param symbols The current set of arguments.
+ * @return A new set of arguments without the excluded variables.
  */
 static SymbolSet *excludeSymbols(LamVarList *vars, SymbolSet *symbols) {
     SymbolSet *new = newSymbolSet();
@@ -180,24 +180,24 @@ static LamVarList *collectLetRecNames(LamBindings *bindings) {
 }
 
 /**
- * @brief Replaces a macro argument with an invocation of the argument.
+ * @brief Replaces an argument with an invocation of the argument.
  *
  * i.e `a` becomes `a()`
  *
- * This is the second half of the lazy evaluation of macros.
- * The first part, `thunkMacroArg` in `lambda_conversion.c`, wrap all the
- * unevaluated arguments to macros in thunks. So in the example above, `a` is
- * already a thunk at this point.
+ * This is the second half of the lazy evaluation of functions.
+ * The first part, `thunkLazyArg` in `lambda_conversion.c`, wraps all the
+ * unevaluated arguments to lazy functions in thunks. So in the example
+ * above, `a` is already a thunk at this point.
  *
  * @param PI The parser information.
  * @param exp The variable expression to consider for substitution.
- * @param symbols The current set of macro arguments.
+ * @param symbols The current set of arguments.
  * @return The modified or original expression.
  */
 static LamExp *performVarSubstitution(ParserInfo PI, LamExp *exp,
                                       SymbolSet *symbols) {
     ENTER(performVarSubstitution);
-    if (isMacroArgument(getLamExp_Var(exp), symbols)) {
+    if (isLazyArgument(getLamExp_Var(exp), symbols)) {
         exp = makeLamExp_Apply(PI, exp, NULL);
     }
     LEAVE(performVarSubstitution);
@@ -208,14 +208,14 @@ static LamExp *performVarSubstitution(ParserInfo PI, LamExp *exp,
  * @brief Recurse into a primitive application performing substitutions on its
  * arguments.
  * @param prim The primitive application to modify.
- * @param symbols The current set of macro arguments.
+ * @param symbols The current set of arguments.
  * @return The modified primitive application.
  */
 static LamPrimApp *performPrimSubstitutions(LamPrimApp *prim,
                                             SymbolSet *symbols) {
     ENTER(performPrimSubstitutions);
-    prim->exp1 = lamPerformMacroSubstitutions(prim->exp1, symbols);
-    prim->exp2 = lamPerformMacroSubstitutions(prim->exp2, symbols);
+    prim->exp1 = lamPerformLazySubstitutions(prim->exp1, symbols);
+    prim->exp2 = lamPerformLazySubstitutions(prim->exp2, symbols);
     LEAVE(performPrimSubstitutions);
     return prim;
 }
@@ -224,7 +224,7 @@ static LamPrimApp *performPrimSubstitutions(LamPrimApp *prim,
  * @brief iterates over a sequence, performing substitutions on each element.
  *
  * @param sequence The sequence to modify.
- * @param symbols The current set of macro arguments.
+ * @param symbols The current set of arguments.
  * @return The modified sequence.
  */
 static LamSequence *performSequenceSubstitutions(LamSequence *sequence,
@@ -235,7 +235,7 @@ static LamSequence *performSequenceSubstitutions(LamSequence *sequence,
         return NULL;
     }
     sequence->next = performSequenceSubstitutions(sequence->next, symbols);
-    sequence->exp = lamPerformMacroSubstitutions(sequence->exp, symbols);
+    sequence->exp = lamPerformLazySubstitutions(sequence->exp, symbols);
     LEAVE(performSequenceSubstitutions);
     return sequence;
 }
@@ -244,7 +244,7 @@ static LamSequence *performSequenceSubstitutions(LamSequence *sequence,
  * @brief iterates over a list of arguments in a function application.
  * Performs substitutions on each argument.
  * @param list The list of arguments to modify.
- * @param symbols The current set of macro arguments.
+ * @param symbols The current set of arguments.
  * @return The modified list of arguments.
  */
 static LamArgs *performArgsSubstitutions(LamArgs *list, SymbolSet *symbols) {
@@ -254,7 +254,7 @@ static LamArgs *performArgsSubstitutions(LamArgs *list, SymbolSet *symbols) {
         return NULL;
     }
     list->next = performArgsSubstitutions(list->next, symbols);
-    list->exp = lamPerformMacroSubstitutions(list->exp, symbols);
+    list->exp = lamPerformLazySubstitutions(list->exp, symbols);
     LEAVE(performArgsSubstitutions);
     return list;
 }
@@ -262,45 +262,45 @@ static LamArgs *performArgsSubstitutions(LamArgs *list, SymbolSet *symbols) {
 /**
  * @brief Performs substitutions on the expression in a tuple index.
  * @param tupleIndex The tuple index to modify.
- * @param symbols The current set of macro arguments.
+ * @param symbols The current set of arguments.
  * @return The modified tuple index expression.
  */
 static LamTupleIndex *performTupleIndexSubstitutions(LamTupleIndex *tupleIndex,
                                                      SymbolSet *symbols) {
-    tupleIndex->exp = lamPerformMacroSubstitutions(tupleIndex->exp, symbols);
+    tupleIndex->exp = lamPerformLazySubstitutions(tupleIndex->exp, symbols);
     return tupleIndex;
 }
 
 /**
  * @brief Performs substitutions on the argument to a print expression.
  * @param print The print expression to modify.
- * @param symbols The current set of macro arguments.
+ * @param symbols The current set of arguments.
  * @return The modified print expression.
  */
 static LamPrint *performPrintSubstitutions(LamPrint *print,
                                            SymbolSet *symbols) {
-    print->exp = lamPerformMacroSubstitutions(print->exp, symbols);
-    print->printer = lamPerformMacroSubstitutions(print->printer, symbols);
+    print->exp = lamPerformLazySubstitutions(print->exp, symbols);
+    print->printer = lamPerformLazySubstitutions(print->printer, symbols);
     return print;
 }
 
 /**
- * @brief Performs macro substitutions on a lookUp expression.
+ * @brief Performs substitutions on a lookUp expression.
  * @param lookUp The lookUp expression to modify.
- * @param symbols The current set of macro arguments.
+ * @param symbols The current set of arguments.
  * @return The modified lookUp expression.
  */
 static LamLookUp *performLookUpSubstitutions(LamLookUp *lookUp,
                                              SymbolSet *symbols) {
-    lookUp->exp = lamPerformMacroSubstitutions(lookUp->exp, symbols);
+    lookUp->exp = lamPerformLazySubstitutions(lookUp->exp, symbols);
     return lookUp;
 }
 
 #ifdef NOTDEF
 /**
- * @brief Performs macro substitutions on a make vector expression.
+ * @brief Performs substitutions on a make vector expression.
  * @param makeVec The make vector expression to modify.
- * @param symbols The current set of macro arguments.
+ * @param symbols The current set of arguments.
  * @return The modified make vector expression.
  */
 static LamMakeVec *performMakeVecSubstitutions(LamMakeVec *makeVec,
@@ -313,24 +313,24 @@ static LamMakeVec *performMakeVecSubstitutions(LamMakeVec *makeVec,
 #endif
 
 /**
- * @brief Performs macro substitutions on a deconstruct expression.
+ * @brief Performs substitutions on a deconstruct expression.
  * @param deconstruct The deconstruct expression to modify.
- * @param symbols The current set of macro arguments.
+ * @param symbols The current set of arguments.
  * @return The modified deconstruct expression.
  */
 static LamDeconstruct *
 performDeconstructSubstitutions(LamDeconstruct *deconstruct,
                                 SymbolSet *symbols) {
     ENTER(performDeconstructSubstitutions);
-    deconstruct->exp = lamPerformMacroSubstitutions(deconstruct->exp, symbols);
+    deconstruct->exp = lamPerformLazySubstitutions(deconstruct->exp, symbols);
     LEAVE(performDeconstructSubstitutions);
     return deconstruct;
 }
 
 /**
- * @brief Performs macro substitutions on a construct expression.
+ * @brief Performs substitutions on a construct expression.
  * @param construct The construct expression to modify.
- * @param symbols The current set of macro arguments.
+ * @param symbols The current set of arguments.
  * @return The modified construct expression.
  */
 static LamConstruct *performConstructSubstitutions(LamConstruct *construct,
@@ -342,39 +342,39 @@ static LamConstruct *performConstructSubstitutions(LamConstruct *construct,
 }
 
 /**
- * @brief Performs macro substitutions on a function application expression.
+ * @brief Performs substitutions on a function application expression.
  * @param apply The function application expression to modify.
- * @param symbols The current set of macro arguments.
+ * @param symbols The current set of arguments.
  * @return The modified function application expression.
  */
 static LamApply *performApplySubstitutions(LamApply *apply,
                                            SymbolSet *symbols) {
     ENTER(performApplySubstitutions);
-    apply->function = lamPerformMacroSubstitutions(apply->function, symbols);
+    apply->function = lamPerformLazySubstitutions(apply->function, symbols);
     apply->args = performArgsSubstitutions(apply->args, symbols);
     LEAVE(performApplySubstitutions);
     return apply;
 }
 
 /**
- * @brief Performs macro substitutions on an if expression.
+ * @brief Performs substitutions on an if expression.
  * @param iff The if expression to modify.
- * @param symbols The current set of macro arguments.
+ * @param symbols The current set of arguments.
  * @return The modified if expression.
  */
 static LamIff *performIffSubstitutions(LamIff *iff, SymbolSet *symbols) {
     ENTER(performIffSubstitutions);
-    iff->condition = lamPerformMacroSubstitutions(iff->condition, symbols);
-    iff->consequent = lamPerformMacroSubstitutions(iff->consequent, symbols);
-    iff->alternative = lamPerformMacroSubstitutions(iff->alternative, symbols);
+    iff->condition = lamPerformLazySubstitutions(iff->condition, symbols);
+    iff->consequent = lamPerformLazySubstitutions(iff->consequent, symbols);
+    iff->alternative = lamPerformLazySubstitutions(iff->alternative, symbols);
     LEAVE(performIffSubstitutions);
     return iff;
 }
 
 /**
- * @brief Performs macro substitutions on a list of letrec bindings.
+ * @brief Performs substitutions on a list of letrec bindings.
  * @param let The letrec bindings to modify.
- * @param symbols The current set of macro arguments.
+ * @param symbols The current set of arguments.
  * @return The modified letrec bindings.
  */
 static LamBindings *performBindingsSubstitutions(LamBindings *bindings,
@@ -385,15 +385,15 @@ static LamBindings *performBindingsSubstitutions(LamBindings *bindings,
         return NULL;
     }
     bindings->next = performBindingsSubstitutions(bindings->next, symbols);
-    bindings->val = lamPerformMacroSubstitutions(bindings->val, symbols);
+    bindings->val = lamPerformLazySubstitutions(bindings->val, symbols);
     LEAVE(performBindingsSubstitutions);
     return bindings;
 }
 
 /**
- * @brief Performs macro substitutions on a list of let bindings.
+ * @brief Performs substitutions on a list of let bindings.
  * @param bindings The let bindings to modify.
- * @param symbols The current set of macro arguments.
+ * @param symbols The current set of arguments.
  * @return The modified let bindings.
  */
 static LamBindings *performLetBindingsSubstitutions(LamBindings *bindings,
@@ -403,10 +403,10 @@ static LamBindings *performLetBindingsSubstitutions(LamBindings *bindings,
         LEAVE(performLetBindingsSubstitutions);
         return NULL;
     }
-    bindings->val = lamPerformMacroSubstitutions(bindings->val, *symbols);
+    bindings->val = lamPerformLazySubstitutions(bindings->val, *symbols);
     bindings->next = performLetBindingsSubstitutions(bindings->next, symbols);
     // exclude *after* performing the other substitutions
-    if (isMacroArgument(bindings->var, *symbols)) {
+    if (isLazyArgument(bindings->var, *symbols)) {
         *symbols = excludeSymbol(bindings->var, *symbols);
         PROTECT(*symbols); // caller will UNPROTECT
     }
@@ -415,9 +415,9 @@ static LamBindings *performLetBindingsSubstitutions(LamBindings *bindings,
 }
 
 /**
- * @brief Performs macro substitutions on a list of let* bindings.
+ * @brief Performs substitutions on a list of let* bindings.
  * @param bindings The let bindings to modify.
- * @param symbols The current set of macro arguments.
+ * @param symbols The current set of arguments.
  * @return The modified let bindings.
  */
 static LamBindings *performLetStarBindingsSubstitutions(LamBindings *bindings,
@@ -427,11 +427,11 @@ static LamBindings *performLetStarBindingsSubstitutions(LamBindings *bindings,
         LEAVE(performLetStarBindingsSubstitutions);
         return NULL;
     }
-    if (isMacroArgument(bindings->var, *symbols)) {
+    if (isLazyArgument(bindings->var, *symbols)) {
         *symbols = excludeSymbol(bindings->var, *symbols);
         PROTECT(*symbols); // caller will UNPROTECT
     }
-    bindings->val = lamPerformMacroSubstitutions(bindings->val, *symbols);
+    bindings->val = lamPerformLazySubstitutions(bindings->val, *symbols);
     bindings->next =
         performLetStarBindingsSubstitutions(bindings->next, symbols);
     LEAVE(performLetStarBindingsSubstitutions);
@@ -439,9 +439,9 @@ static LamBindings *performLetStarBindingsSubstitutions(LamBindings *bindings,
 }
 
 /**
- * @brief Performs macro substitutions on a let expression.
+ * @brief Performs substitutions on a let expression.
  * @param let The let expression to modify.
- * @param symbols The current set of macro arguments.
+ * @param symbols The current set of arguments.
  * @return The modified let expression.
  */
 static LamLet *performLetSubstitutions(LamLet *let, SymbolSet *symbols) {
@@ -449,16 +449,16 @@ static LamLet *performLetSubstitutions(LamLet *let, SymbolSet *symbols) {
     SymbolSet *remaining = copySymbolSet(symbols);
     int save = PROTECT(remaining);
     let->bindings = performLetBindingsSubstitutions(let->bindings, &remaining);
-    let->body = lamPerformMacroSubstitutions(let->body, remaining);
+    let->body = lamPerformLazySubstitutions(let->body, remaining);
     UNPROTECT(save);
     LEAVE(performLetSubstitutions);
     return let;
 }
 
 /**
- * @brief Performs macro substitutions on a let* expression.
+ * @brief Performs substitutions on a let* expression.
  * @param let The let expression to modify.
- * @param symbols The current set of macro arguments.
+ * @param symbols The current set of arguments.
  * @return The modified let expression.
  */
 static LamLetStar *performLetStarSubstitutions(LamLetStar *let,
@@ -468,20 +468,20 @@ static LamLetStar *performLetStarSubstitutions(LamLetStar *let,
     int save = PROTECT(remaining);
     let->bindings =
         performLetStarBindingsSubstitutions(let->bindings, &remaining);
-    let->body = lamPerformMacroSubstitutions(let->body, remaining);
+    let->body = lamPerformLazySubstitutions(let->body, remaining);
     UNPROTECT(save);
     LEAVE(performLetStarSubstitutions);
     return let;
 }
 
 /**
- * @brief Performs macro substitutions on a letrec expression.
+ * @brief Performs substitutions on a letrec expression.
  *
- * Arranges to exclude *all* letrec bindings from the list of macro arguments
+ * Arranges to exclude *all* letrec bindings from the list of arguments
  * before recursing into the letrec bodies.
  *
  * @param letrec The letrec expression to modify.
- * @param symbols The current set of macro arguments.
+ * @param symbols The current set of arguments.
  * @return The modified letrec expression.
  */
 static LamLetRec *performLetRecSubstitutions(LamLetRec *letrec,
@@ -489,35 +489,35 @@ static LamLetRec *performLetRecSubstitutions(LamLetRec *letrec,
     ENTER(performLetRecSubstitutions);
     LamVarList *names = collectLetRecNames(letrec->bindings);
     int save = PROTECT(names);
-    if (containsMacroArguments(names, symbols)) {
+    if (containsLazyArguments(names, symbols)) {
         symbols = excludeSymbols(names, symbols);
         PROTECT(symbols);
     }
     letrec->bindings = performBindingsSubstitutions(letrec->bindings, symbols);
-    letrec->body = lamPerformMacroSubstitutions(letrec->body, symbols);
+    letrec->body = lamPerformLazySubstitutions(letrec->body, symbols);
     LEAVE(performLetRecSubstitutions);
     UNPROTECT(save);
     return letrec;
 }
 
 /**
- * @brief Performs macro substitutions on the body of a typedef.
+ * @brief Performs substitutions on the body of a typedef.
  * @param typeDefs The typedef to modify.
- * @param symbols The current set of macro arguments.
+ * @param symbols The current set of arguments.
  * @return The modified typedef.
  */
 static LamTypeDefs *performTypeDefsSubstitutions(LamTypeDefs *typeDefs,
                                                  SymbolSet *symbols) {
     ENTER(performTypeDefsSubstitutions);
-    typeDefs->body = lamPerformMacroSubstitutions(typeDefs->body, symbols);
+    typeDefs->body = lamPerformLazySubstitutions(typeDefs->body, symbols);
     LEAVE(performTypeDefsSubstitutions);
     return typeDefs;
 }
 
 /**
- * @brief Performs macro substitutions on the bodies of a case expression.
+ * @brief Performs substitutions on the bodies of a case expression.
  * @param cases The case expression to modify.
- * @param symbols The current set of macro arguments.
+ * @param symbols The current set of arguments.
  * @return The modified case expression.
  */
 static LamMatchList *performCaseSubstitutions(LamMatchList *cases,
@@ -528,44 +528,44 @@ static LamMatchList *performCaseSubstitutions(LamMatchList *cases,
         return NULL;
     }
     cases->next = performCaseSubstitutions(cases->next, symbols);
-    cases->body = lamPerformMacroSubstitutions(cases->body, symbols);
+    cases->body = lamPerformLazySubstitutions(cases->body, symbols);
     LEAVE(performCaseSubstitutions);
     return cases;
 }
 
 /**
- * @brief Performs macro substitutions on the cases of a match expression.
+ * @brief Performs substitutions on the cases of a match expression.
  * @param match The match expression to modify.
- * @param symbols The current set of macro arguments.
+ * @param symbols The current set of arguments.
  * @return The modified match expression.
  */
 static LamMatch *performMatchSubstitutions(LamMatch *match,
                                            SymbolSet *symbols) {
     ENTER(performMatchSubstitutions);
-    match->index = lamPerformMacroSubstitutions(match->index, symbols);
+    match->index = lamPerformLazySubstitutions(match->index, symbols);
     match->cases = performCaseSubstitutions(match->cases, symbols);
     LEAVE(performMatchSubstitutions);
     return match;
 }
 
 /**
- * @brief Performs macro substitutions on an amb (ambivalent) expression.
+ * @brief Performs substitutions on an amb (ambivalent) expression.
  * @param amb The amb expression to modify.
- * @param symbols The current set of macro arguments.
+ * @param symbols The current set of arguments.
  * @return The modified amb expression.
  */
 static LamAmb *performAmbSubstitutions(LamAmb *amb, SymbolSet *symbols) {
     ENTER(performAmbSubstitutions);
-    amb->left = lamPerformMacroSubstitutions(amb->left, symbols);
-    amb->right = lamPerformMacroSubstitutions(amb->right, symbols);
+    amb->left = lamPerformLazySubstitutions(amb->left, symbols);
+    amb->right = lamPerformLazySubstitutions(amb->right, symbols);
     LEAVE(performAmbSubstitutions);
     return amb;
 }
 
 /**
- * @brief Performs macro substitutions on integer conditional cases.
+ * @brief Performs substitutions on integer conditional cases.
  * @param cases The integer conditional cases to modify.
- * @param symbols The current set of macro arguments.
+ * @param symbols The current set of arguments.
  * @return The modified integer conditional cases.
  */
 static LamIntCondCases *performIntCondCaseSubstitutions(LamIntCondCases *cases,
@@ -575,16 +575,16 @@ static LamIntCondCases *performIntCondCaseSubstitutions(LamIntCondCases *cases,
         LEAVE(performIntCondCaseSubstitutions);
         return NULL;
     }
-    cases->body = lamPerformMacroSubstitutions(cases->body, symbols);
+    cases->body = lamPerformLazySubstitutions(cases->body, symbols);
     cases->next = performIntCondCaseSubstitutions(cases->next, symbols);
     LEAVE(performIntCondCaseSubstitutions);
     return cases;
 }
 
 /**
- * @brief Performs macro substitutions on character conditional cases.
+ * @brief Performs substitutions on character conditional cases.
  * @param cases The character conditional cases to modify.
- * @param symbols The current set of macro arguments.
+ * @param symbols The current set of arguments.
  * @return The modified character conditional cases.
  */
 static LamCharCondCases *
@@ -594,19 +594,19 @@ performCharCondCaseSubstitutions(LamCharCondCases *cases, SymbolSet *symbols) {
         LEAVE(performCharCondCaseSubstitutions);
         return NULL;
     }
-    cases->body = lamPerformMacroSubstitutions(cases->body, symbols);
+    cases->body = lamPerformLazySubstitutions(cases->body, symbols);
     cases->next = performCharCondCaseSubstitutions(cases->next, symbols);
     LEAVE(performCharCondCaseSubstitutions);
     return cases;
 }
 
 /**
- * @brief Performs macro substitutions on conditional cases.
+ * @brief Performs substitutions on conditional cases.
  *
  * Switches between char and int conditional cases appropriately.
  *
  * @param cases The conditional cases to modify.
- * @param symbols The current set of macro arguments.
+ * @param symbols The current set of arguments.
  * @return The modified conditional cases.
  */
 static LamCondCases *performCondCaseSubstitutions(LamCondCases *cases,
@@ -636,31 +636,31 @@ static LamCondCases *performCondCaseSubstitutions(LamCondCases *cases,
 }
 
 /**
- * @brief Performs macro substitutions on a cond expression.
+ * @brief Performs substitutions on a cond expression.
  * @param cond The conditional expression to modify.
- * @param symbols The current set of macro arguments.
+ * @param symbols The current set of arguments.
  * @return The modified conditional expression.
  */
 static LamCond *performCondSubstitutions(LamCond *cond, SymbolSet *symbols) {
     ENTER(performCondSubstitutions);
-    cond->value = lamPerformMacroSubstitutions(cond->value, symbols);
+    cond->value = lamPerformLazySubstitutions(cond->value, symbols);
     cond->cases = performCondCaseSubstitutions(cond->cases, symbols);
     LEAVE(performCondSubstitutions);
     return cond;
 }
 
 /**
- * @brief Performs macro substitutions on a lambda expression.
+ * @brief Performs substitutions on a lambda expression.
  *
- * When called externally, the `exp` is the body of the macro
- * and the `symbols` table contains the arguments to the macro.
+ * When called externally, the `exp` is the body of the function
+ * and the `symbols` table contains the arguments to the function.
  *
  * @param exp The lambda expression to modify.
- * @param symbols The set of macro arguments.
+ * @param symbols The set of arguments.
  * @return The modified lambda expression.
  */
-LamExp *lamPerformMacroSubstitutions(LamExp *exp, SymbolSet *symbols) {
-    ENTER(lamPerformMacroSubstitutions);
+LamExp *lamPerformLazySubstitutions(LamExp *exp, SymbolSet *symbols) {
+    ENTER(lamPerformLazySubstitutions);
     // ppLamExp(exp);
     // eprintf("\n");
     if (exp != NULL) {
@@ -704,7 +704,7 @@ LamExp *lamPerformMacroSubstitutions(LamExp *exp, SymbolSet *symbols) {
             break;
         case LAMEXP_TYPE_TAG:
             setLamExp_Tag(
-                exp, lamPerformMacroSubstitutions(getLamExp_Tag(exp), symbols));
+                exp, lamPerformLazySubstitutions(getLamExp_Tag(exp), symbols));
             break;
         case LAMEXP_TYPE_APPLY:
             setLamExp_Apply(
@@ -719,7 +719,7 @@ LamExp *lamPerformMacroSubstitutions(LamExp *exp, SymbolSet *symbols) {
                 exp, performCondSubstitutions(getLamExp_Cond(exp), symbols));
             break;
         case LAMEXP_TYPE_CALLCC:
-            setLamExp_CallCC(exp, lamPerformMacroSubstitutions(
+            setLamExp_CallCC(exp, lamPerformLazySubstitutions(
                                       getLamExp_CallCC(exp), symbols));
             break;
         case LAMEXP_TYPE_LET:
@@ -766,6 +766,6 @@ LamExp *lamPerformMacroSubstitutions(LamExp *exp, SymbolSet *symbols) {
             cant_happen("unrecognized %s", lamExpTypeName(exp->type));
         }
     }
-    LEAVE(lamPerformMacroSubstitutions);
+    LEAVE(lamPerformLazySubstitutions);
     return exp;
 }

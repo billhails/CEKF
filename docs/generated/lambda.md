@@ -9,7 +9,7 @@ LamAliasTable --entries--> LamTypeConstructorType
 LamExpTable --entries--> LamExp
 LamLam --args--> LamVarList
 LamLam --exp--> LamExp
-LamLam --isMacro--> bool
+LamLam --isLazy--> bool
 LamVarList --var--> HashSymbol
 LamVarList --next--> LamVarList
 LamPrimApp --type--> LamPrimOp

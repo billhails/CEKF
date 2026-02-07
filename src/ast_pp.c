@@ -34,7 +34,7 @@
 #include "symbols.h"
 #include "utils.h"
 
-static void ppAstDefMacro(SCharArray *, AstDefMacro *);
+static void ppAstDefLazy(SCharArray *, AstDefLazy *);
 static void ppAstDefMulti(SCharArray *, AstMultiDefine *);
 static void ppAstDefinitions(SCharArray *, AstDefinitions *);
 static void ppAstDefinition(SCharArray *, AstDefinition *);
@@ -132,8 +132,8 @@ static void ppAstDefinition(SCharArray *dest, AstDefinition *definition) {
         break;
     case AST_DEFINITION_TYPE_BLANK:
         break;
-    case AST_DEFINITION_TYPE_MACRO:
-        ppAstDefMacro(dest, definition->val.macro);
+    case AST_DEFINITION_TYPE_LAZY:
+        ppAstDefLazy(dest, definition->val.lazy);
         break;
     case AST_DEFINITION_TYPE_MULTI:
         ppAstDefMulti(dest, definition->val.multi);
@@ -143,13 +143,13 @@ static void ppAstDefinition(SCharArray *dest, AstDefinition *definition) {
     }
 }
 
-static void ppAstDefMacro(SCharArray *dest, AstDefMacro *defMacro) {
-    psprintf(dest, "macro ");
-    ppHashSymbol(dest, defMacro->name);
+static void ppAstDefLazy(SCharArray *dest, AstDefLazy *defLazy) {
+    psprintf(dest, "lazy fn ");
+    ppHashSymbol(dest, defLazy->name);
     psprintf(dest, "(");
-    ppAstFargList(dest, defMacro->definition->altArgs->argList);
+    ppAstFargList(dest, defLazy->definition->altArgs->argList);
     psprintf(dest, ") ");
-    ppAstNest(dest, defMacro->definition->nest);
+    ppAstNest(dest, defLazy->definition->nest);
 }
 
 static void ppAstSymbolList(SCharArray *dest, AstSymbolList *symbolList) {

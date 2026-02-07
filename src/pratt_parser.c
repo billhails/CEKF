@@ -87,7 +87,7 @@ static AstCompositeFunction *functions(PrattParser *);
 static AstDefinition *alias(PrattParser *);
 static AstDefinition *assignment(PrattParser *);
 static AstDefinition *definition(PrattParser *);
-static AstDefinition *defMacro(PrattParser *);
+static AstDefinition *defLazy(PrattParser *);
 static AstDefinition *defun(PrattParser *, bool, DefunType);
 static AstDefinition *importOp(PrattParser *);
 static AstDefinition *exportOp(PrattParser *);
@@ -1286,7 +1286,7 @@ static AstExpressions *makeAstAarglist(ParserInfo PI, char *name,
 }
 
 /**
- * @brief Generate a hygienic operator macro body.
+ * @brief Generate a hygienic operator lazy body.
  */
 static AstDefinition *makeHygenicOperatorBody(ParserInfo PI, HashSymbol *symbol,
                                               AstFargList *fargs,
@@ -1302,18 +1302,18 @@ static AstDefinition *makeHygenicOperatorBody(ParserInfo PI, HashSymbol *symbol,
     PROTECT(body);
     AstAltFunction *altFun = newAstAltFunction(PI, altArgs, body);
     PROTECT(altFun);
-    // Generate a macro instead of a function
-    // This creates: macro symbol(x, y) { impl(x, y) }
-    AstDefinition *res = makeAstDefinition_Macro(PI, symbol, altFun);
+    // Generate a lazy instead of a function
+    // This creates: lazy fn symbol(x, y) { impl(x, y) }
+    AstDefinition *res = makeAstDefinition_Lazy(PI, symbol, altFun);
     // Unprotect all in one go
     UNPROTECT(save);
     return res;
 }
 
-static inline HashSymbol *makeMacroName() { return genSymDollar("opMacro"); }
+static inline HashSymbol *makeLazyName() { return genSymDollar("opLazy"); }
 
 static AstDefinition *makeHygienicNaryOperatorDef(ParserInfo PI, int arity,
-                                                  HashSymbol *macroName,
+                                                  HashSymbol *lazyName,
                                                   AstExpression *impl) {
     char buffer[32];
     // make the formal argument list ()
@@ -1329,9 +1329,9 @@ static AstDefinition *makeHygienicNaryOperatorDef(ParserInfo PI, int arity,
         PROTECT(callArgs);
         arity--;
     }
-    // make the macro definition
+    // make the lazy definition
     AstDefinition *res =
-        makeHygenicOperatorBody(PI, macroName, argList, callArgs, impl);
+        makeHygenicOperatorBody(PI, lazyName, argList, callArgs, impl);
     UNPROTECT(save);
     return res;
 }
@@ -1371,7 +1371,7 @@ static AstDefinition *addOperator(PrattParser *parser, PrattFixity fixity,
         record = newPrattRecord(op, empty, empty, empty);
         PROTECT(record);
     }
-    HashSymbol *hygienicFunc = makeMacroName();
+    HashSymbol *hygienicFunc = makeLazyName();
     bool isBareSymbol = (impl && impl->type == AST_EXPRESSION_TYPE_SYMBOL);
     int scaledPrec = precedence * PRECEDENCE_SCALE;
     AstDefinition *def = NULL;
@@ -2021,7 +2021,7 @@ static AstDefinition *definition(PrattParser *parser) {
         save = PROTECT(res);
     } else if (match(parser, TOK_LAZY())) {
         consume(parser, TOK_FN());
-        res = defMacro(parser);
+        res = defLazy(parser);
         save = PROTECT(res);
     } else if (match(parser, TOK_LINK())) {
         res = link(parser);
@@ -3037,7 +3037,7 @@ static AstFarg *astExpressionToFarg(PrattParser *parser, AstExpression *expr) {
  * @brief validate that the lazy fn arguments are conforming (symbols only, and
  * no alternative args)
  */
-static void validateMacroArgs(PrattParser *parser, AstAltFunction *definition) {
+static void validateLazyArgs(PrattParser *parser, AstAltFunction *definition) {
     AstAltArgs *altArgs = definition->altArgs;
     if (altArgs->next) {
         parserErrorAt(CPI(altArgs->next), parser,
@@ -3061,16 +3061,16 @@ static void validateMacroArgs(PrattParser *parser, AstAltFunction *definition) {
  * the `lazy` and `fn` tokens have already been consumed when this function
  * triggers.
  */
-static AstDefinition *defMacro(PrattParser *parser) {
-    ENTER(defMacro);
+static AstDefinition *defLazy(PrattParser *parser) {
+    ENTER(defLazy);
     PrattToken *tok = peek(parser);
     int save = PROTECT(tok);
     HashSymbol *s = symbol(parser);
     AstAltFunction *definition = altFunction(parser);
     PROTECT(definition);
-    validateMacroArgs(parser, definition);
-    AstDefinition *res = makeAstDefinition_Macro(TOKPI(tok), s, definition);
-    LEAVE(defMacro);
+    validateLazyArgs(parser, definition);
+    AstDefinition *res = makeAstDefinition_Lazy(TOKPI(tok), s, definition);
+    LEAVE(defLazy);
     UNPROTECT(save);
     return res;
 }

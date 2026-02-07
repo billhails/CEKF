@@ -149,12 +149,9 @@ structs:
             symbol: HashSymbol
             originalImpl: AstExpression
 
-    AstDefMacro:
+    AstDefLazy:
         meta:
-            brief: AST Macro Definition
-            description: >-
-                A macro definition in the AST, used to define
-                lazy functions.
+            brief: AST Lazy Function Definition
         data:
             name: HashSymbol
             definition: AstAltFunction
@@ -495,12 +492,12 @@ unions:
             brief: AST Definition
             description: >-
                 A definition in the AST, which can be a function,
-                type definition, alias, or macro.
+                type definition, alias, or lazy function.
         data:
             define: AstDefine
             multi: AstMultiDefine
             typeDef: AstTypeDef
-            macro: AstDefMacro
+            lazy: AstDefLazy
             alias: AstAlias
             blank: void_ptr
             builtinsSlot: void_ptr  # Placeholder for builtins slot

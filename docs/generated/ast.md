@@ -27,8 +27,8 @@ AstExprAlias --name--> HashSymbol
 AstExprAlias --value--> AstExpression
 AstAnnotatedSymbol --symbol--> HashSymbol
 AstAnnotatedSymbol --originalImpl--> AstExpression
-AstDefMacro --name--> HashSymbol
-AstDefMacro --definition--> AstAltFunction
+AstDefLazy --name--> HashSymbol
+AstDefLazy --definition--> AstAltFunction
 AstTypeDef --typeSig--> AstTypeSig
 AstTypeDef --typeBody--> AstTypeBody
 AstTypeSig --symbol--> HashSymbol
@@ -95,7 +95,7 @@ AstLookUpOrSymbol --lookUp--> AstLookUpSymbol
 AstDefinition --define--> AstDefine
 AstDefinition --multi--> AstMultiDefine
 AstDefinition --typeDef--> AstTypeDef
-AstDefinition --macro--> AstDefMacro
+AstDefinition --lazy--> AstDefLazy
 AstDefinition --alias--> AstAlias
 AstDefinition --blank--> void_ptr
 AstDefinition --builtinsSlot--> void_ptr

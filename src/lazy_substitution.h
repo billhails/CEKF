@@ -1,5 +1,5 @@
-#ifndef cekf_macro_substitution_h
-#define cekf_macro_substitution_h
+#ifndef cekf_lazy_substitution_h
+#define cekf_lazy_substitution_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2024  Bill Hails
@@ -21,5 +21,5 @@
 #include "lambda.h"
 #include "utils.h"
 
-LamExp *lamPerformMacroSubstitutions(LamExp *, SymbolSet *);
+LamExp *lamPerformLazySubstitutions(LamExp *, SymbolSet *);
 #endif

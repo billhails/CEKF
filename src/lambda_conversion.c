@@ -33,7 +33,7 @@
 #include "common.h"
 #include "lambda_conversion.h"
 #include "lambda_helper.h"
-#include "macro_substitution.h"
+#include "lazy_substitution.h"
 #include "print_generator.h"
 #include "symbols.h"
 #include "tpmc_logic.h"
@@ -548,9 +548,9 @@ static LamExp *lamConvertLookUp(AstLookUp *lookUp, LamContext *env) {
  * @param env The lambda context to use.
  * @return void
  */
-static void checkMacro(AstDefinition *definition, LamContext *env) {
-    if (definition->type == AST_DEFINITION_TYPE_MACRO) {
-        setSymbolSet(env->macros, getAstDefinition_Macro(definition)->name);
+static void checkLazy(AstDefinition *definition, LamContext *env) {
+    if (definition->type == AST_DEFINITION_TYPE_LAZY) {
+        setSymbolSet(env->macros, getAstDefinition_Lazy(definition)->name);
     }
 }
 
@@ -569,7 +569,7 @@ static LamBindings *convertFuncDefs(AstDefinitions *definitions,
         LEAVE(convertFuncDefs);
         return NULL;
     }
-    checkMacro(definitions->definition, env);
+    checkLazy(definitions->definition, env);
     LamBindings *next = convertFuncDefs(definitions->next, env);
     int save = PROTECT(next);
     LamBindings *this = prependDefinition(definitions->definition, env, next);
@@ -1052,7 +1052,7 @@ static void collectAliases(AstDefinitions *definitions, LamContext *env) {
     case AST_DEFINITION_TYPE_DEFINE:
     case AST_DEFINITION_TYPE_BLANK:
     case AST_DEFINITION_TYPE_TYPEDEF:
-    case AST_DEFINITION_TYPE_MACRO:
+    case AST_DEFINITION_TYPE_LAZY:
     case AST_DEFINITION_TYPE_MULTI:
         break;
     case AST_DEFINITION_TYPE_ALIAS:
@@ -1072,7 +1072,7 @@ static void collectAliases(AstDefinitions *definitions, LamContext *env) {
  * @param args The list of existing macro arguments.
  * @return void
  */
-static void checkDuplicateMacroArg(HashSymbol *arg, LamVarList *args) {
+static void checkDuplicateLazyArg(HashSymbol *arg, LamVarList *args) {
     if (args == NULL)
         return;
     if (arg == args->var) {
@@ -1081,7 +1081,7 @@ static void checkDuplicateMacroArg(HashSymbol *arg, LamVarList *args) {
                         arg->name);
         return;
     }
-    checkDuplicateMacroArg(arg, args->next);
+    checkDuplicateLazyArg(arg, args->next);
 }
 
 /**
@@ -1093,13 +1093,13 @@ static void checkDuplicateMacroArg(HashSymbol *arg, LamVarList *args) {
  * @param argList The AST argument list to collect from.
  * @return A linked list of lambda variable arguments.
  */
-static LamVarList *collectMacroArgs(AstFargList *argList) {
+static LamVarList *collectLazyArgs(AstFargList *argList) {
     if (argList == NULL)
         return NULL;
-    LamVarList *next = collectMacroArgs(argList->next);
+    LamVarList *next = collectLazyArgs(argList->next);
     int save = PROTECT(next);
     HashSymbol *arg = getAstFarg_Symbol(argList->arg);
-    checkDuplicateMacroArg(arg, next);
+    checkDuplicateLazyArg(arg, next);
     LamVarList *this = newLamVarList(CPI(argList), arg, next);
     UNPROTECT(save);
     return this;
@@ -1123,38 +1123,38 @@ static void populateArgsTable(SymbolSet *symbols, LamVarList *args) {
 }
 
 /**
- * @brief Converts an AST Macro Definition to a lambda expression.
+ * @brief Converts an AST Lazy Definition to a lambda expression.
  *
- * This function converts the macro definition into a lambda expression.
- * Macros evaluate their arguments on-demand, so the generated macro
+ * This function converts the lazy definition into a lambda expression.
+ * Lazys evaluate their arguments on-demand, so the generated lazy lambda
  * must wrap each of its arguments in a promise.
  *
- * @param astMacro The AST Macro Definition to convert.
+ * @param astLazy The AST Lazy Definition to convert.
  * @param env The lambda context to use.
  * @return The resulting lambda expression for the macro.
  */
-static LamExp *convertAstMacro(AstDefMacro *astMacro, LamContext *env) {
-    ENTER(convertAstMacro);
+static LamExp *convertAstLazy(AstDefLazy *astLazy, LamContext *env) {
+    ENTER(convertAstLazy);
     // get the list of argument symbols
-    LamVarList *args = collectMacroArgs(astMacro->definition->altArgs->argList);
+    LamVarList *args = collectLazyArgs(astLazy->definition->altArgs->argList);
     int save = PROTECT(args);
     // do a standard conversion of the macro body
-    LamExp *body = convertNest(astMacro->definition->nest, env);
+    LamExp *body = convertNest(astLazy->definition->nest, env);
     PROTECT(body);
     // create a random-access set of the macro argument symbols
     SymbolSet *symbolTable = newSymbolSet();
     PROTECT(symbolTable);
     populateArgsTable(symbolTable, args);
     // force all the argument thunks in the body of the macro
-    body = lamPerformMacroSubstitutions(body, symbolTable);
+    body = lamPerformLazySubstitutions(body, symbolTable);
     PROTECT(body);
     // prepare the resulting lambda expression
-    LamExp *res = makeLamExp_Lam(CPI(astMacro), args, body);
+    LamExp *res = makeLamExp_Lam(CPI(astLazy), args, body);
     PROTECT(res);
-    getLamExp_Lam(res)->isMacro = true;
+    getLamExp_Lam(res)->isLazy = true;
     // remember it's a macro
-    setSymbolSet(env->macros, astMacro->name);
-    LEAVE(convertAstMacro);
+    setSymbolSet(env->macros, astLazy->name);
+    LEAVE(convertAstLazy);
     UNPROTECT(save);
     return res;
 }
@@ -1178,7 +1178,7 @@ static LamTypeDefList *collectTypeDefs(AstDefinitions *definitions,
     case AST_DEFINITION_TYPE_DEFINE:
     case AST_DEFINITION_TYPE_ALIAS:
     case AST_DEFINITION_TYPE_BLANK:
-    case AST_DEFINITION_TYPE_MACRO:
+    case AST_DEFINITION_TYPE_LAZY:
     case AST_DEFINITION_TYPE_MULTI:
         return collectTypeDefs(definitions->next, env);
     case AST_DEFINITION_TYPE_TYPEDEF: {
@@ -1199,20 +1199,20 @@ static LamTypeDefList *collectTypeDefs(AstDefinitions *definitions,
 }
 
 /**
- * @brief Convert and prepend a macro to the list of letRec bindings.
- * @param macro The AST macro definition to convert.
+ * @brief Convert and prepend a lazy definition to the list of letRec bindings.
+ * @param lazy The AST lazy definition to convert.
  * @param env The lambda context to use.
  * @param next The letRec list to prepend to.
- * @return The new letRec bindings with the macro prepended.
+ * @return The new letRec bindings with the lazy definition prepended.
  */
-static LamBindings *prependMacro(AstDefMacro *macro, LamContext *env,
-                                 LamBindings *next) {
-    ENTER(prependMacro);
-    LamExp *exp = convertAstMacro(macro, env);
+static LamBindings *prependLazy(AstDefLazy *lazy, LamContext *env,
+                                LamBindings *next) {
+    ENTER(prependLazy);
+    LamExp *exp = convertAstLazy(lazy, env);
     int save = PROTECT(exp);
-    LamBindings *this = newLamBindings(CPI(macro), macro->name, exp, next);
+    LamBindings *this = newLamBindings(CPI(lazy), lazy->name, exp, next);
     UNPROTECT(save);
-    LEAVE(prependMacro);
+    LEAVE(prependLazy);
     return this;
 }
 
@@ -1273,8 +1273,8 @@ static LamBindings *prependDefinition(AstDefinition *definition,
     case AST_DEFINITION_TYPE_DEFINE:
         result = prependDefine(getAstDefinition_Define(definition), env, next);
         break;
-    case AST_DEFINITION_TYPE_MACRO:
-        result = prependMacro(getAstDefinition_Macro(definition), env, next);
+    case AST_DEFINITION_TYPE_LAZY:
+        result = prependLazy(getAstDefinition_Lazy(definition), env, next);
         break;
     case AST_DEFINITION_TYPE_MULTI:
         result = prependMulti(getAstDefinition_Multi(definition), env, next);
@@ -1429,14 +1429,14 @@ static LamExp *makeUnaryNeg(LamArgs *args) {
  * @param env The environment to search in.
  * @return True if the symbol is a macro, false otherwise.
  */
-static bool isMacro(HashSymbol *symbol, LamContext *env) {
+static bool isLazy(HashSymbol *symbol, LamContext *env) {
     if (env == NULL) {
         return false;
     }
     if (getSymbolSet(env->macros, symbol)) {
         return true;
     }
-    return isMacro(symbol, env->parent);
+    return isLazy(symbol, env->parent);
 }
 
 /**
@@ -1450,7 +1450,7 @@ static bool isMacro(HashSymbol *symbol, LamContext *env) {
  * @param arg The argument to wrap.
  * @return The resulting thunked argument.
  */
-static LamExp *thunkMacroArg(LamExp *arg) {
+static LamExp *thunkLazyArg(LamExp *arg) {
     LamExp *res = makeLamExp_Lam(CPI(arg), NULL, arg);
     return res;
 }
@@ -1460,13 +1460,13 @@ static LamExp *thunkMacroArg(LamExp *arg) {
  * @param args The arguments to wrap.
  * @return The resulting wrapped arguments.
  */
-static LamArgs *thunkMacroArgs(LamArgs *args) {
+static LamArgs *thunkLazyArgs(LamArgs *args) {
     if (args == NULL) {
         return NULL;
     }
-    LamArgs *next = thunkMacroArgs(args->next);
+    LamArgs *next = thunkLazyArgs(args->next);
     int save = PROTECT(next);
-    LamExp *arg = thunkMacroArg(args->exp);
+    LamExp *arg = thunkLazyArg(args->exp);
     PROTECT(arg);
     LamArgs *this = newLamArgs(CPI(arg), arg, next);
     UNPROTECT(save);
@@ -1481,8 +1481,8 @@ static LamArgs *thunkMacroArgs(LamArgs *args) {
  * @param args The arguments to the macro.
  * @return The resulting lambda expression.
  */
-static LamExp *thunkMacroExp(ParserInfo PI, LamExp *callee, LamArgs *args) {
-    args = thunkMacroArgs(args);
+static LamExp *thunkLazyExp(ParserInfo PI, LamExp *callee, LamArgs *args) {
+    args = thunkLazyArgs(args);
     int save = PROTECT(args);
     LamExp *res = makeLamExp_Apply(PI, callee, args);
     UNPROTECT(save);
@@ -1497,11 +1497,11 @@ static LamExp *thunkMacroExp(ParserInfo PI, LamExp *callee, LamArgs *args) {
  * @param args The arguments to the macro.
  * @return The resulting lambda expression.
  */
-static LamExp *thunkMacroSymbol(ParserInfo PI, HashSymbol *symbol,
-                                LamArgs *args) {
+static LamExp *thunkLazySymbol(ParserInfo PI, HashSymbol *symbol,
+                               LamArgs *args) {
     LamExp *exp = newLamExp_Var(PI, symbol);
     int save = PROTECT(exp);
-    LamExp *res = thunkMacroExp(PI, exp, args);
+    LamExp *res = thunkLazyExp(PI, exp, args);
     UNPROTECT(save);
     return res;
 }
@@ -1516,8 +1516,8 @@ static LamExp *thunkMacroSymbol(ParserInfo PI, HashSymbol *symbol,
  */
 static LamExp *makePrimApp(ParserInfo PI, HashSymbol *symbol, LamArgs *args,
                            LamContext *env) {
-    if (isMacro(symbol, env)) {
-        return thunkMacroSymbol(PI, symbol, args);
+    if (isLazy(symbol, env)) {
+        return thunkLazySymbol(PI, symbol, args);
     }
     if (symbol == negSymbol())
         return makeUnaryNeg(args);
@@ -1950,8 +1950,8 @@ static LamExp *convertFunCall(AstFunCall *funCall, LamContext *env) {
             lookUpNameSpaceInLamContext(env, getLamExp_LookUp(function)->nsId);
         LamExp *under = findUnderlyingValue(function);
         if (under->type == LAMEXP_TYPE_VAR &&
-            isMacro(getLamExp_Var(under), nsEnv)) {
-            result = thunkMacroExp(CPI(funCall), function, args);
+            isLazy(getLamExp_Var(under), nsEnv)) {
+            result = thunkLazyExp(CPI(funCall), function, args);
             UNPROTECT(save);
             return result;
         }

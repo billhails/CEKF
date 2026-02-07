@@ -33,12 +33,12 @@ structs:
         meta:
             brief: A lambda expression
             description: >-
-                If isMacro is true,
+                If isLazy is true,
                 all arguments are expected to be thunked (lazy).
         data:
             args: LamVarList
             exp: LamExp
-            isMacro: bool=false
+            isLazy: bool=false
 
     LamVarList:
         meta:

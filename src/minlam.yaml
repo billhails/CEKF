@@ -229,10 +229,6 @@ hashes:
     MinExpTable:
         meta:
             brief: Map from symbols to lambda expressions
-            description: >-
-                This table holds lambda expressions that are associated with
-                symbols in the current context, used for macro arguments where
-                the expressions are passed in unevaluated.
         data:
             entries: MinExp
 
