@@ -68,7 +68,7 @@ void appendStringToSCharArray(SCharArray *array, char *str) {
  */
 SCharVec *sCharArrayToVec(SCharArray *array) {
     SCharVec *vec = newSCharVec(array->size + 1);
-    memcpy(vec->entries, array->entries, array->size);
+    memcpy(vec->entries, array->entries, array->size * sizeof(char));
     vec->entries[array->size] = '\0';
     return vec;
 }
@@ -82,7 +82,33 @@ SCharArray *sCharVecToArray(SCharVec *vec) {
     SCharArray *array = newSCharArray();
     int save = PROTECT(array);
     extendSCharArray(array, vec->size - 1);
-    memcpy(array->entries, vec->entries, vec->size - 1);
+    memcpy(array->entries, vec->entries, (vec->size - 1) * sizeof(char));
+    UNPROTECT(save);
+    return array;
+}
+
+/**
+ * @brief Converts a WCharArray to a WCharVec, adding a null terminator.
+ * @param array The WCharArray to convert.
+ * @return A new WCharVec containing the characters of the array.
+ */
+WCharVec *wCharArrayToVec(WCharArray *array) {
+    WCharVec *vec = newWCharVec(array->size + 1);
+    memcpy(vec->entries, array->entries, array->size * sizeof(Character));
+    vec->entries[array->size] = L'\0';
+    return vec;
+}
+
+/**
+ * @brief Converts a WCharVec to a WCharArray, dropping the null terminator.
+ * @param vec The WCharVec to convert.
+ * @return A new WCharArray containing the characters of the vector.
+ */
+WCharArray *wCharVecToArray(WCharVec *vec) {
+    WCharArray *array = newWCharArray();
+    int save = PROTECT(array);
+    extendWCharArray(array, vec->size - 1);
+    memcpy(array->entries, vec->entries, (vec->size - 1) * sizeof(Character));
     UNPROTECT(save);
     return array;
 }
@@ -233,10 +259,10 @@ bool allSymbolsInSet(SymbolList *vars, SymbolSet *symbols) {
 }
 
 /**
- * @brief Create a new set of symbols that is the union of two sets of symbols.
+ * @brief The union of two sets of symbols.
  * @param a The first set of symbols.
  * @param b The second set of symbols.
- * @return The union of the two sets.
+ * @return a ∪ b.
  */
 SymbolSet *unionSymbolSet(SymbolSet *a, SymbolSet *b) {
     SymbolSet *new = copySymbolSet(a);
@@ -251,11 +277,10 @@ SymbolSet *unionSymbolSet(SymbolSet *a, SymbolSet *b) {
 }
 
 /**
- * @brief Create a new set of symbols that is the intersection of two sets of
- * symbols.
+ * @brief The intersection of two sets of symbols.
  * @param a The first set of symbols.
  * @param b The second set of symbols.
- * @return The intersection of the two sets.
+ * @return a ∩ b.
  */
 SymbolSet *intersectSymbolSet(SymbolSet *a, SymbolSet *b) {
     SymbolSet *new = newSymbolSet();
@@ -272,11 +297,10 @@ SymbolSet *intersectSymbolSet(SymbolSet *a, SymbolSet *b) {
 }
 
 /**
- * @brief Create a new set of symbols that is the difference of two sets of
- * symbols.
+ * @brief  The difference of two sets of symbols.
  * @param a The first set of symbols.
  * @param b The second set of symbols.
- * @return The difference of the two sets (a - b).
+ * @return a - b.
  */
 SymbolSet *differenceSymbolSet(SymbolSet *a, SymbolSet *b) {
     SymbolSet *new = newSymbolSet();
@@ -290,4 +314,25 @@ SymbolSet *differenceSymbolSet(SymbolSet *a, SymbolSet *b) {
     }
     UNPROTECT(save);
     return new;
+}
+
+/**
+ * @brief Check if two sets of symbols are equal.
+ *
+ * @param a The first set of symbols.
+ * @param b The second set of symbols.
+ * @return True if the sets are equal, false otherwise.
+ */
+bool eqSymbolSet(SymbolSet *a, SymbolSet *b) {
+    if (countSymbolSet(a) != countSymbolSet(b)) {
+        return false;
+    }
+    Index i = 0;
+    HashSymbol *current;
+    while ((current = iterateSymbolSet(a, &i)) != NULL) {
+        if (!getSymbolSet(b, current)) {
+            return false;
+        }
+    }
+    return true;
 }
