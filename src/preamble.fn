@@ -25,7 +25,7 @@ namespace
 __builtins__
 
 
-operator "_then_" right 2 amb;
+lazy operator "_then_" right 2 amb;
 operator "_==_" left 5 EQUALTO;
 operator "_!=_" left 5 NOTEQUALTO;
 operator "_≠_" left 5 NOTEQUALTO;
@@ -37,13 +37,13 @@ operator "_<=>_" none 5 COMPARISON;
 operator "_+_" left 10 ADDITION;
 operator "_-_" left 10 SUBTRACTION;
 operator "-_" left 11 NEGATION;
-lazy fn NUMERICIDENTITY(x) { x + 0 }
+fn NUMERICIDENTITY(x) { x + 0 }
 operator "+_" left 11 NUMERICIDENTITY;
 operator "_*_" left 11 MULTIPLICATION;
 operator "_/_" left 11 DIVISION;
 operator "_%_" left 11 MODULUS;
 operator "_**_" left 12 EXPONENTIAL;
-operator "here_" 13 callcc;
+lazy operator "here_" 13 callcc;
 
 typedef cmp { lt | eq | gt }
 typedef bool { false | true }
@@ -86,10 +86,10 @@ operator "not_" 4 NOT;
 // lazy functions thunk their arguments, which gets us short-circuit
 // evaluation for boolean operators.
 lazy fn AND(a, b) { if (a) { b } else { false } }
-operator "_and_" left 3 AND;
+lazy operator "_and_" left 3 AND;
 
 lazy fn OR(a, b) { if (a) { true } else { b } }
-operator "_or_" left 3 OR;
+lazy operator "_or_" left 3 OR;
 
 fn XOR {
     (true, true) { false }
@@ -100,13 +100,13 @@ fn XOR {
 operator "_xor_" left 3 XOR;
 
 lazy fn NAND(a, b) { not (a and b) }
-operator "_nand_" left 3 NAND;
+lazy operator "_nand_" left 3 NAND;
 
 lazy fn NOR(a, b) { not (a or b) }
-operator "_nor_" left 3 NOR;
+lazy operator "_nor_" left 3 NOR;
 
 lazy fn XNOR(a, b) { not (a xor b) }
-operator "_xnor_" left 3 XNOR;
+lazy operator "_xnor_" left 3 XNOR;
 
 operator "_@_" right 10 cons;
 
@@ -161,7 +161,7 @@ fn __error__(line, file, message) {
 
 operator "_of_" right 13 fn (f, g, x) { f(g(x)) };
 
-operator "&_" 14 THUNK;
+lazy operator "&_" 14 THUNK;
 lazy fn THUNK(x) { fn () {x} }
 
 operator "*_" 14 FORCE;

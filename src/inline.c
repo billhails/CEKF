@@ -78,6 +78,9 @@ static LamLam *inlineLam(LamLam *x) {
 static LamPrimApp *inlinePrim(LamPrimApp *x) {
     x->exp1 = inlineExp(x->exp1);
     x->exp2 = inlineExp(x->exp2);
+    if (x->replacement != NULL) {
+        x->replacement = inlineExp(x->replacement);
+    }
     return x;
 }
 

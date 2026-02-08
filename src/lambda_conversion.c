@@ -2283,9 +2283,18 @@ static LamExp *convertAnnotatedSymbol(AstAnnotatedSymbol *annotated,
             LEAVE(convertAnnotatedSymbol);
             return result;
         }
+        // Non-lazy operator: resolve original symbol directly at call site
+        if (!annotated->isLazy) {
+            DEBUG("convertAnnotatedSymbol: %s is non-lazy, using original "
+                  "symbol %s directly",
+                  annotated->symbol->name, originalSym->name);
+            result = newLamExp_Var(CPI(annotated), originalSym);
+            LEAVE(convertAnnotatedSymbol);
+            return result;
+        }
     }
 
-    // Not a constructor - use the hygienic wrapper symbol
+    // Lazy operator: use the hygienic wrapper symbol
     DEBUG("convertAnnotatedSymbol: %s is not a constructor wrapper, using "
           "hygienic function",
           annotated->symbol->name);

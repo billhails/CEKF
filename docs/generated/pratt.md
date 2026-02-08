@@ -49,6 +49,7 @@ PrattFixityConfig --hygienicFunc--> HashSymbol
 PrattFixityConfig --isBareSymbol--> bool
 PrattFixityConfig --export--> bool
 PrattFixityConfig --pattern--> PrattMixfixPattern
+PrattFixityConfig --isLazy--> bool
 PrattFixityConfig --importNsRef--> int
 PrattFixityConfig --importNsSymbol--> HashSymbol
 PrattValue --string--> WCharArray

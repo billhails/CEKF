@@ -22,11 +22,11 @@ let
         (_, _) { false }
     }
 
-    // Test bespoke equality through pattern matching
     fn fold {
         (sub(a, a)) { num(0) }
         (add(a, a)) { mul(num(2), a) }
         (add(a, sub(num(0), a))) { num(0) }
+        (add(sub(num(0), a), a)) { num(0) }
         (x) { x }
     }
 in
@@ -42,3 +42,5 @@ in
     assert(fold(add(mul(var("x"), var("y")), mul(var("y"), var("x"))))
             == mul(num(2), mul(var("x"), var("y"))));
     assert(fold(add(var("x"), sub(num(0), var("x")))) == num(0));
+    assert(mul(var("x"), var("y")) == mul(var("y"), var("x")));
+    assert(mul(var("x"), mul(var("y"), var("z"))) == mul(mul(var("z"), var("y")), var("x")));

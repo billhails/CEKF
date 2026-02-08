@@ -148,6 +148,7 @@ structs:
         data:
             symbol: HashSymbol
             originalImpl: AstExpression
+            isLazy: bool=false
 
     AstDefLazy:
         meta:

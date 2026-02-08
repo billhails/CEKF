@@ -27,6 +27,7 @@ AstExprAlias --name--> HashSymbol
 AstExprAlias --value--> AstExpression
 AstAnnotatedSymbol --symbol--> HashSymbol
 AstAnnotatedSymbol --originalImpl--> AstExpression
+AstAnnotatedSymbol --isLazy--> bool
 AstDefLazy --name--> HashSymbol
 AstDefLazy --definition--> AstAltFunction
 AstTypeDef --typeSig--> AstTypeSig

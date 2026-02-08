@@ -209,6 +209,7 @@ inline:
                 isBareSymbol: bool=false
                 export: bool=false
                 pattern: PrattMixfixPattern=NULL
+                isLazy: bool=false
                 importNsRef: int=-1
                 importNsSymbol: HashSymbol=NULL
 
