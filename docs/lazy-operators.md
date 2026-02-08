@@ -380,3 +380,75 @@ there.
 10. Update `preamble.fn` to use `lazy operator` where needed, plain
     `operator` elsewhere.
 11. Run `make test` and fix any failures.
+
+## Implementation Attempt: Problems Encountered
+
+An implementation following this strategy was attempted and subsequently
+reverted. All code changes compiled cleanly, the parser accepted the new
+`lazy operator` syntax, and many tests passed, but two test regressions
+were identified:
+
+- `test_currying_complete.fn` — segfault or corrupted type error
+- `test_over_application_nested.fn` — crash (exit code 134)
+
+Both tests pass on the original code and fail only with the changes
+applied.
+
+### Root Cause: Type Checker GC Bug
+
+The segfault in `test_currying_complete.fn` was traced via GDB to
+infinite recursion in `prune()` (`tc_analyze.c`), caused by a corrupted
+`TcType` — specifically a function type whose `TcFunction` fields had
+been reclaimed by the garbage collector.
+
+Enabling post-parser stress GC (`forceGcFlag = true` at `main.c` line
+520) reproduced the crash deterministically, confirming a missing
+`PROTECT` somewhere in the type checker rather than a logic error in the
+new code paths.
+
+### Why the Changes Expose This Bug
+
+Previously, all operators went through wrapper functions. An expression
+like `a + b` was converted to `FunCall(opLazy$N, [a, b])`, and the type
+checker processed the single wrapper body (`fn(x, y) { ADDITION(x, y) }`)
+with type variables. With the changes, each `a + b` call site directly
+produces a `LamPrimApp(ADD, a, b)` node, so the type checker processes
+many more `LamPrimApp` nodes with concrete types. This increased GC
+pressure exposes a pre-existing missing-PROTECT bug in the type checker
+that was previously unreachable in practice.
+
+### Key Observations
+
+- The crash requires at least 17 test functions in a single compilation
+  unit to trigger; fewer functions pass. This is consistent with a GC
+  pressure threshold rather than a logic error.
+- The specific trigger is `test_curry_conditionals` (a polymorphic
+  `fn(cond, a, b) { if (cond) { a } else { b } }` partially applied),
+  but only when preceded by enough earlier definitions to raise GC
+  pressure.
+- The crash occurs inside `analyzeApply` when pruning the result type of
+  a function application. The `TcType` object appears valid (recognized
+  as `TCTYPE_TYPE_FUNCTION`) but its underlying `TcFunction` struct has
+  been freed.
+- The `test_over_application_nested.fn` failure was not investigated in
+  detail but may share the same root cause.
+
+### Recommended Next Steps
+
+1. Investigate and fix the missing `PROTECT` in the type checker
+   independently of this feature. Use `forceGcFlag = true` at `main.c`
+   line 520 (in debugging mode) to reproduce. A good starting point is
+   `analyzeApply` case 1 (single-argument application) where `res` is
+   unprotected after `UNPROTECT(save)` before the final `prune(res)`
+   call, and `analyzePrim` where `res` is never protected.
+2. Once the type checker GC bug is fixed, re-attempt this
+   implementation. The changes themselves are straightforward and the
+   approach is sound.
+3. The inliner fix (`inlinePrim` must also inline `prim->replacement`)
+   discovered during the attempt should be included in any future
+   implementation. Without it, bespoke comparator replacements containing
+   un-inlined `LAMEXP_TYPE_CONSTRUCTOR` nodes crash the desugarer.
+
+### Resolution - FIXED
+
+The bug was a missing call to `PROTECT` just before the recently added check for bespoke comparators in the EQ branch of `analyzePrim`. Previously it had been safe not to protect the initial result as it was immediately returned.

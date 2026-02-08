@@ -492,11 +492,12 @@ static TcType *analyzePrim(LamPrimApp *app, TcEnv *env, TcNg *ng) {
     case LAMPRIMOP_TYPE_LE: {
         // Analyze the comparison first
         res = analyzeComparison(app->exp1, app->exp2, env, ng);
+        int save = PROTECT(res);
 
         // For EQ operations, check for bespoke comparator
         if (app->type == LAMPRIMOP_TYPE_EQ) {
             TcType *type1 = analyzeExp(app->exp1, env, ng);
-            int save = PROTECT(type1);
+            PROTECT(type1);
             LamExp *comparator = lookupComparator(type1, env, CPI(app));
             if (comparator != NULL) {
                 // Found a bespoke comparator - create replacement
@@ -509,8 +510,8 @@ static TcType *analyzePrim(LamPrimApp *app, TcEnv *env, TcNg *ng) {
                 PROTECT(apply);
                 app->replacement = newLamExp_Apply(CPI(app), apply);
             }
-            UNPROTECT(save);
         }
+        UNPROTECT(save);
         break;
     }
     case LAMPRIMOP_TYPE_CMP:
@@ -815,9 +816,9 @@ static TcType *analyzeApply(LamApply *apply, TcEnv *env, TcNg *ng) {
                 REPORT_PARSER_INFO(apply->args);
             }
         }
+        res = prune(res);
         UNPROTECT(save);
         // LEAVE(analyzeApply);
-        res = prune(res);
         // #d/#b
         return res;
     }
