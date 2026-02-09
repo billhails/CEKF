@@ -5,7 +5,7 @@ let
         mul(term, term) |
         div(term, term) |
         pow(term, term) |
-        num(number) |
+        num(number)     |
         var(string)
     }
 
@@ -17,9 +17,9 @@ let
         (mul(b, a), mul(a, b)) |
         (div(a, b), div(a, b)) |
         (pow(a, b), pow(a, b)) |
-        (num(a), num(a)) |
-        (var(a), var(a)) { true }
-        (_, _) { false }
+        (num(a), num(a))       |
+        (var(a), var(a))       { true }
+        (_, _)                 { false }
     }
 
     fn fold {

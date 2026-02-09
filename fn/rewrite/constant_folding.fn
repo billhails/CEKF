@@ -33,289 +33,166 @@ fn simplify (e) {
             (_, _) { false }
         }
 
-        fn t2e(term) {
-            switch(term) {
-                (num(n))    { M.bigint(n) }
-                (add(a, b)) { M.apply(M.primop("+"), [t2e(a), t2e(b)]) }
-                (sub(a, b)) { M.apply(M.primop("-"), [t2e(a), t2e(b)]) }
-                (mul(a, b)) { M.apply(M.primop("*"), [t2e(a), t2e(b)]) }
-                (div(a, b)) { M.apply(M.primop("/"), [t2e(a), t2e(b)]) }
-                (mod(a, b)) { M.apply(M.primop("%"), [t2e(a), t2e(b)]) }
-                (pow(a, b)) { M.apply(M.primop("**"), [t2e(a), t2e(b)]) }
-                (other(x))  { x }
-            }
+        fn e2t {
+            (M.bigint(n)) { num(n) }
+            (M.apply(M.primop("+"),  [e1, e2])) { add(e2t(e1), e2t(e2)) }
+            (M.apply(M.primop("-"),  [e1, e2])) { sub(e2t(e1), e2t(e2)) }
+            (M.apply(M.primop("*"),  [e1, e2])) { mul(e2t(e1), e2t(e2)) }
+            (M.apply(M.primop("/"),  [e1, e2])) { div(e2t(e1), e2t(e2)) }
+            (M.apply(M.primop("%"),  [e1, e2])) { mod(e2t(e1), e2t(e2)) }
+            (M.apply(M.primop("**"), [e1, e2])) { pow(e2t(e1), e2t(e2)) }
+            (x)                                 { other(x) }
         }
 
-        fn e2t(expr) {
-            let
-                result = switch(expr) {
-                    (M.bigint(n)) {
-                        num(n)
-                    }
-                    (M.apply(M.primop("+"), [e1, e2])) {
-                        add(e2t(e1), e2t(e2))
-                    }
-                    (M.apply(M.primop("-"), [e1, e2])) {
-                        sub(e2t(e1), e2t(e2))
-                    }
-                    (M.apply(M.primop("*"), [e1, e2])) {
-                        mul(e2t(e1), e2t(e2))
-                    }
-                    (M.apply(M.primop("/"), [e1, e2])) {
-                        div(e2t(e1), e2t(e2))
-                    }
-                    (M.apply(M.primop("%"), [e1, e2])) {
-                        mod(e2t(e1), e2t(e2))
-                    }
-                    (M.apply(M.primop("**"), [e1, e2])) {
-                        pow(e2t(e1), e2t(e2))
-                    }
-                    (x) {
-                        other(x)
-                    }
-                }
-            in
-                result
+        fn t2e {
+            (num(n))    { M.bigint(n) }
+            (add(a, b)) { M.apply(M.primop("+"),  [t2e(a), t2e(b)]) }
+            (sub(a, b)) { M.apply(M.primop("-"),  [t2e(a), t2e(b)]) }
+            (mul(a, b)) { M.apply(M.primop("*"),  [t2e(a), t2e(b)]) }
+            (div(a, b)) { M.apply(M.primop("/"),  [t2e(a), t2e(b)]) }
+            (mod(a, b)) { M.apply(M.primop("%"),  [t2e(a), t2e(b)]) }
+            (pow(a, b)) { M.apply(M.primop("**"), [t2e(a), t2e(b)]) }
+            (other(x))  { x }
         }
 
-// patterns that may be reduced (n is number, x is other)
-// (n op n)
-// (n op x) [for certain n, i.e. 0 or 1]
-// (x op n) [for certain n]
-// (n op (x op n))
-// (n op (n op x))
-// ((x op n) op n)
-// ((n op x) op n)
-// ((x op n) op (x op n))
-// ((x op n) op (n op x))
-// ((n op x) op (x op n))
-// ((n op x) op (n op x))
-//
-// (**) < (*, /) < (+, -)
-//
-        fn sim(term) {
-            let basis = switch(term) {
-                    (num(_)) | (other(_)) { term }
-                    (add(x, y)) { add(sim(x), sim(y)) }
-                    (sub(x, y)) { sub(sim(x), sim(y)) }
-                    (mul(x, y)) { mul(sim(x), sim(y)) }
-                    (div(x, y)) { div(sim(x), sim(y)) }
-                    (mod(x, y)) { mod(sim(x), sim(y)) }
-                    (pow(x, y)) { pow(sim(x), sim(y)) }
-                };
-            in
-                switch(basis) {
-                    // a + b
-                    (add(num(a), num(b))) { num(a + b) }
-                    // 0 + a = a + 0 = a
-                    (add(num(0), a))      |
-                    (add(a, num(0)))      { a }
-                    // a + (0 - a) = 0
-                    (add(a, sub(num(0), a))) |
-                    (add(sub(num(0), a), a)) { num(0) }
-                    // a + (b + x) = a + (x + b) = (a + x) + b = (x + a) + b = (a + b) + x
-                    (add(num(a), add(num(b), x))) |
-                    (add(num(a), add(x, num(b)))) |
-                    (add(add(x, num(a)), num(b))) |
-                    (add(add(num(a), x), num(b))) { sim(add(num(a + b), x)) }
-                    // a + (b - x) = (b - x) + a = (a + b) - x
-                    (add(num(a), sub(num(b), x))) |
-                    (add(sub(num(b), x), num(a))) { sim(sub(num(a + b), x)) }
-                    // a + (x - b) = (x - b) + a = (a - b) + x
-                    (add(num(a), sub(x, num(b)))) |
-                    (add(sub(x, num(b)), num(a))) { sim(add(num(a - b), x)) }
-                    // + + +
-                    // (a + x) + (b + y) = (a + b) + (x + y)
-                    (add(add(num(a), x), add(num(b), y))) |
-                    (add(add(num(a), x), add(y, num(b)))) |
-                    (add(add(x, num(a)), add(num(b), y))) |
-                    (add(add(x, num(a)), add(y, num(b)))) { sim(add(num(a + b), add(x, y))) }
-                    // + + -
-                    // (a + x) + (b - y) = (b - y) + (a + x) = (a + b) + (x - y)
-                    (add(add(num(a), x), sub(num(b), y))) |
-                    (add(sub(num(b), y), add(num(a), x))) |
-                    (add(add(x, num(a)), sub(num(b), y))) |
-                    (add(sub(num(b), y), add(x, num(a)))) { sim(add(num(a + b), sub(x, y))) }
-                    // (a + x) + (y - b) = (y - b) + (a + x) = (a - b) + (x + y)
-                    (add(add(num(a), x), sub(y, num(b)))) |
-                    (add(sub(y, num(b)), add(num(a), x))) |
-                    (add(add(x, num(a)), sub(y, num(b)))) |
-                    (add(sub(y, num(b)), add(x, num(a)))) { sim(add(num(a - b), add(x, y))) }
-                    // - + -
-                    // (a - x) + (b - y) = (b - y) + (a - x) = (a + b) - (x + y)
-                    (add(sub(num(a), x), sub(num(b), y))) |
-                    (add(sub(num(b), y), sub(num(a), x))) { sim(sub(num(a + b), add(x, y))) }
-                    // (x - a) + (b - y) = (b - y) + (x - a) = (b - a) + (x - y)
-                    (add(sub(x, num(a)), sub(num(b), y))) |
-                    (add(sub(num(b), y), sub(x, num(a)))) { sim(add(num(b - a), sub(x, y))) }
-                    // (x - a) + (y - b) = (y - b) + (x - a) = (x + y) - (a + b)
-                    (add(sub(x, num(a)), sub(y, num(b)))) |
-                    (add(sub(y, num(b)), sub(x, num(a)))) { sim(sub(add(x, y), num(a + b))) }
+        fn prep {
+            (add(x, y)) { add(S(x), S(y)) }
+            (sub(x, y)) { sub(S(x), S(y)) }
+            (mul(x, y)) { mul(S(x), S(y)) }
+            (div(x, y)) { div(S(x), S(y)) }
+            (mod(x, y)) { mod(S(x), S(y)) }
+            (pow(x, y)) { pow(S(x), S(y)) }
+            (x)         { x }
+        }
 
-                    (add(a, a)) { sim(mul(num(2), a)) }
-
-                    // a - b
-                    (sub(num(a), num(b))) { num(a - b) }
-                    // a - 0 = a
-                    (sub(a, num(0))) { a }
-                    // MISSING: 0 - a could be reduced to neg(a) or mul(num(-1), a)
-                    // there is no negation operator currently
-
-                    (sub(x, x)) { num(0) }
-
-                    // a - (b + x) = a - (x + b) = (a - b) - x
-                    (sub(num(a), add(num(b), x))) |
-                    (sub(num(a), add(x, num(b))) ) { sim(sub(num(a - b), x)) }
-                    // (a + x) - b = (x + a) - b = (a - b) + x
-                    (sub(add(num(a), x), num(b))) |
-                    (sub(add(x, num(a)), num(b))) { sim(add(num(a - b), x)) }
-                    // (a - x) - b = (a - b) - x
-                    (sub(sub(num(a), x), num(b))) { sim(sub(num(a - b), x)) }
-                    // (x - a) - b = (x - (a + b))
-                    (sub(sub(x, num(a)), num(b))) { sim(sub(x, num(a + b))) }
-                    // a - (b - x) = a - b + x = (a - b) + x
-                    (sub(num(a), sub(num(b), x))) { sim(add(num(a - b), x)) }
-                    // a - (x - b) = a - x + b = (a + b) - x
-                    (sub(num(a), sub(x, num(b)))) { sim(sub(num(a + b), x)) }
-                    // + - +
-                    // (a + x) - (b + y) = (x + a) - (y + b) = (a - b) + (x - y)
-                    (sub(add(num(a), x), add(num(b), y))) |
-                    (sub(add(x, num(a)), add(num(b), y))) |
-                    (sub(add(num(a), x), add(y, num(b)))) |
-                    (sub(add(x, num(a)), add(y, num(b)))) { sim(add(num(a - b), sub(x, y))) }
-                    // - - +
-                    // (a - x) - (b + y) = (a - b) - (x + y)
-                    (sub(sub(num(a), x), add(num(b), y))) |
-                    (sub(sub(num(a), x), add(y, num(b)))) { sim(sub(num(a - b), add(x, y))) }
-                    // (x - a) - (b + y) = (x - (a + b)) - y
-                    (sub(sub(x, num(a)), add(num(b), y))) |
-                    (sub(sub(x, num(a)), add(y, num(b)))) { sim(sub(sub(x, num(a + b)), y)) }
-                    // (a + x) - (b - y) = a + x - b + y = (a - b) + (x + y)
-                    (sub(add(num(a), x), sub(num(b), y))) |
-                    (sub(add(x, num(a)), sub(num(b), y))) { sim(add(num(a - b), add(x, y))) }
-                    // (a + x) - (y - b) = a + x - y + b = (a + b) + (x - y)
-                    (sub(add(num(a), x), sub(y, num(b)))) |
-                    (sub(add(x, num(a)), sub(y, num(b)))) { sim(add(num(a + b), sub(x, y))) }
-                    // (x + a) - (b - y)
-                    (sub(add(x, num(a)), sub(num(b), y))) |
-                    (sub(add(x, num(a)), sub(y, num(b)))) { sim(add(num(a - b), add(x, y))) }
-                    // (x + a) - (y - b)
-                    (sub(add(num(a), x), sub(y, num(b)))) |
-                    (sub(add(x, num(a)), sub(y, num(b)))) { sim(add(num(a + b), sub(x, y))) }
-
-                    // - - -
-                    // (a - x) - (b - y) = a - x - b + y = (a - b) - (x - y)
-                    (sub(sub(num(a), x), sub(num(b), y))) { sim(sub(num(a - b), sub(x, y))) }
-                    // (x - a) - (b - y) = (x - (a + b)) + y
-                    (sub(sub(x, num(a)), sub(num(b), y))) { sim(add(sub(x, num(a + b)), y)) }
-                    // (x - a) - (y - b) = (b - a) + (x - y)
-                    (sub(sub(x, num(a)), sub(y, num(b)))) { sim(add(num(b - a), sub(x, y))) }
-                    // (a - x) - (y - b) = a - x - y + b = (a + b) - (x + y)
-                    (sub(sub(num(a), x), sub(y, num(b)))) { sim(sub(num(a + b), add(x, y))) }
-
-                    // a * b
-                    (mul(num(a), num(b))) { num(a * b) }
-                    // 0 * a = a * 0 = 0
-                    (mul(num(0), a))      |
-                    (mul(a, num(0)))      { num(0) }
-                    // 1 * a = a * 1 = a
-                    (mul(num(1), a))      |
-                    (mul(a, num(1)))      { a }
-                    // x * (1 / x) = 1
-                    (mul(x, div(num(1), x))) |
-                    (mul(div(num(1), x), x)) { num(1) }
-                    // x * x = x ** 2
-                    (mul(a, a)) { pow(a, num(2)) }
-                    // x * x ** n = x ** (n + 1)
-                    (mul(a, pow(a, b))) |
-                    (mul(pow(a, b), a)) { sim(pow(a, add(b, num(1)))) }
-
-                    // MISSING: (-1) * a = -a (if you have negation)
-                    // there is no negation operator currently
-
-                    // a * (b * x) = a * (x * b) = (a * x) * b = (x * a) * b = (a * b) * x
-                    (mul(num(a), mul(num(b), x))) |
-                    (mul(num(a), mul(x, num(b)))) |
-                    (mul(mul(x, num(a)), num(b))) |
-                    (mul(mul(num(a), x), num(b))) { sim(mul(num(a * b), x)) }
-                    // a * (x + b) = a * (b + x) = (x + b) * a = (b + x) * a = (a * b) + (a * x)
-                    (mul(num(a), add(x, num(b)))) |
-                    (mul(num(a), add(num(b), x))) |
-                    (mul(add(x, num(b)), num(a))) |
-                    (mul(add(num(b), x), num(a))) { sim(add(num(a * b), mul(num(a), x))) }
-                    // a * (x - b) = (x - b) * a = (a * x) - (a * b)
-                    (mul(num(a), sub(x, num(b)))) |
-                    (mul(sub(x, num(b)), num(a))) { sim(sub(mul(num(a), x), num(a * b))) }
-                    // a * (b - x) = (b - x) * a = (a * b) - (a * x)
-                    (mul(num(a), sub(num(b), x))) |
-                    (mul(sub(num(b), x), num(a))) { sim(sub(num(a * b), mul(num(a), x))) }
-                    // a * (b / x) = (b / x) * a = (a * b) / x
-                    (mul(num(a), div(num(b), x))) |
-                    (mul(div(num(b), x), num(a))) { sim(div(num(a * b), x)) }
-                    // a * (x / b) = (x / b) * a = (a / b) * x
-                    (mul(num(a), div(x, num(b)))) |
-                    (mul(div(x, num(b)), num(a))) { sim(mul(num(a / b), x)) }
-                    // MISSING: a * (b ** x) - no simple reduction
-                    // MISSING: (a + x) * (b + y) - could expand but increases term count
-                    // x ** a * x ** b = x ** (a + b)
-                    (mul(pow(x, a), pow(x, b))) { sim(pow(x, add(a, b))) }
-                    (mul(a, a)) { sim(pow(a, num(2))) }
-
-                    (div(num(a), num(b))) { num(a / b) }
-                    // a / 1 = a
-                    (div(a, num(1))) { a }
-                    // 0 / a = 0
-                    (div(num(0), _)) { num(0) }
-                    (div(x, x)) { num(1) }
-
-                    // (x / a) / b = x / (a * b)
-                    (div(div(x, num(a)), num(b))) { sim(div(x, num(a * b))) }
-                    // (a / x) / b = (a / b) / x
-                    (div(div(num(a), x), num(b))) { sim(div(num(a / b), x)) }
-                    // a / (b / x) = (a / b) * x
-                    (div(num(a), div(num(b), x))) { sim(mul(num(a / b), x)) }
-                    // a / (x / b) = (a * b) / x
-                    (div(num(a), div(x, num(b))) ) { sim(div(num(a * b), x)) }
-                    // a / (x * b) = a / (b * x) = (a / b) / x
-                    (div(num(a), mul(x, num(b)))) |
-                    (div(num(a), mul(num(b), x))) { sim(div(num(a / b), x)) }
-                    // (a * x) / b = (x * a) / b = (a / b) * x
-                    (div(mul(num(a), x), num(b))) |
-                    (div(mul(x, num(a)), num(b))) { sim(mul(num(a / b), x)) }
-                    // ( x + a) / b = (a + x) / b = (a / b) + (x / b)
-                    (div(add(num(a), x), num(b))) |
-                    (div(add(x, num(a)), num(b))) { sim(add(num(a / b), div(x, num(b)))) }
-                    // (a - x) / b = (a / b) - (x / b)
-                    (div(sub(num(a), x), num(b))) { sim(sub(num(a / b), div(x, num(b)))) }
-                    // (x - a) / b = (x / b) - (a / b)
-                    (div(sub(x, num(a)), num(b))) { sim(sub(div(x, num(b)), num(a / b))) }
-                    // (x / a) * (y / b) = (x * y) / (a * b)
-                    (mul(div(x, num(a)), div(y, num(b)))) { sim(div(mul(x, y), num(a * b))) }
-                    // (a / x) * (b / y) = (a * b) / (x * y)
-                    (mul(div(num(a), x), div(num(b), y))) { sim(div(num(a * b), mul(x, y))) }
-                    // (x/2) / (y/3) = (x/2) * (3/y) = 3x/2y
-                    (div(div(x, num(a)), div(y, num(b)))) { sim(mul(div(x, y), num(b / a))) }
-                    // (2/x) / (3/y) = (2/x) * (y/3) = 2y/3x
-                    (div(div(num(a), x), div(num(b), y))) { sim(mul(num(a / b), div(y, x))) }
-
-                    // a ** b
-                    (pow(num(a), num(b)))       { num(a ** b) }
-                    // x ** 0 = 1 (for x != 0)
-                    (pow(_, num(0)))            { num(1) }
-                    // x ** 1 = x
-                    (pow(x, num(1)))            { x }
-                    // 0 ** n = 0
-                    (pow(num(0), _))            { num(0) }
-                    // 1 ** n = 1
-                    (pow(num(1), _))            { num(1) }
-                    // (x ** a) ** b = x ** (a * b)
-                    (pow(pow(x, a), b))         { sim(pow(x, mul(a, b))) }
-
-                    (x) { x }
-                };
+        fn S(term) {
+            switch(prep(term)) {
+                (add(num(a), num(b))) { num(a + b) }
+                (add(num(0), a)) |
+                (add(a, num(0))) { a }
+                (add(a, sub(num(0), a))) |
+                (add(sub(num(0), a), a)) { num(0) }
+                (add(num(a), add(num(b), x))) |
+                (add(num(a), add(x, num(b)))) |
+                (add(add(x, num(a)), num(b))) |
+                (add(add(num(a), x), num(b))) { S(add(num(a + b), x)) }
+                (add(num(a), sub(num(b), x))) |
+                (add(sub(num(b), x), num(a))) { S(sub(num(a + b), x)) }
+                (add(num(a), sub(x, num(b)))) |
+                (add(sub(x, num(b)), num(a))) { S(add(num(a - b), x)) }
+                (add(add(num(a), x), add(num(b), y))) |
+                (add(add(num(a), x), add(y, num(b)))) |
+                (add(add(x, num(a)), add(num(b), y))) |
+                (add(add(x, num(a)), add(y, num(b)))) { S(add(num(a + b), add(x, y))) }
+                (add(add(num(a), x), sub(num(b), y))) |
+                (add(sub(num(b), y), add(num(a), x))) |
+                (add(add(x, num(a)), sub(num(b), y))) |
+                (add(sub(num(b), y), add(x, num(a)))) { S(add(num(a + b), sub(x, y))) }
+                (add(add(num(a), x), sub(y, num(b)))) |
+                (add(sub(y, num(b)), add(num(a), x))) |
+                (add(add(x, num(a)), sub(y, num(b)))) |
+                (add(sub(y, num(b)), add(x, num(a)))) { S(add(num(a - b), add(x, y))) }
+                (add(sub(num(a), x), sub(num(b), y))) |
+                (add(sub(num(b), y), sub(num(a), x))) { S(sub(num(a + b), add(x, y))) }
+                (add(sub(x, num(a)), sub(num(b), y))) |
+                (add(sub(num(b), y), sub(x, num(a)))) { S(add(num(b - a), sub(x, y))) }
+                (add(sub(x, num(a)), sub(y, num(b)))) |
+                (add(sub(y, num(b)), sub(x, num(a)))) { S(sub(add(x, y), num(a + b))) }
+                (add(a, a)) { S(mul(num(2), a)) }
+                (sub(num(a), num(b))) { num(a - b) }
+                (sub(a, num(0))) { a }
+                (sub(x, x)) { num(0) }
+                (sub(num(a), add(num(b), x))) |
+                (sub(num(a), add(x, num(b)))) { S(sub(num(a - b), x)) }
+                (sub(add(num(a), x), num(b))) |
+                (sub(add(x, num(a)), num(b))) { S(add(num(a - b), x)) }
+                (sub(sub(num(a), x), num(b))) { S(sub(num(a - b), x)) }
+                (sub(sub(x, num(a)), num(b))) { S(sub(x, num(a + b))) }
+                (sub(num(a), sub(num(b), x))) { S(add(num(a - b), x)) }
+                (sub(num(a), sub(x, num(b)))) { S(sub(num(a + b), x)) }
+                (sub(add(num(a), x), add(num(b), y))) |
+                (sub(add(x, num(a)), add(num(b), y))) |
+                (sub(add(num(a), x), add(y, num(b)))) |
+                (sub(add(x, num(a)), add(y, num(b)))) { S(add(num(a - b), sub(x, y))) }
+                (sub(sub(num(a), x), add(num(b), y))) |
+                (sub(sub(num(a), x), add(y, num(b)))) { S(sub(num(a - b), add(x, y))) }
+                (sub(sub(x, num(a)), add(num(b), y))) |
+                (sub(sub(x, num(a)), add(y, num(b)))) { S(sub(sub(x, num(a + b)), y)) }
+                (sub(add(x, num(a)), sub(num(b), y))) { S(add(num(a - b), add(x, y))) }
+                (sub(add(num(a), x), sub(y, num(b)))) |
+                (sub(add(x, num(a)), sub(y, num(b)))) { S(add(num(a + b), sub(x, y))) }
+                (sub(add(x, num(a)), sub(num(b), y))) |
+                (sub(add(x, num(a)), sub(y, num(b)))) { S(add(num(a - b), add(x, y))) }
+                (sub(add(num(a), x), sub(y, num(b)))) |
+                (sub(add(x, num(a)), sub(y, num(b)))) { S(add(num(a + b), sub(x, y))) }
+                (sub(sub(num(a), x), sub(num(b), y))) { S(sub(num(a - b), sub(x, y))) }
+                (sub(sub(x, num(a)), sub(num(b), y))) { S(add(sub(x, num(a + b)), y)) }
+                (sub(sub(x, num(a)), sub(y, num(b)))) { S(add(num(b - a), sub(x, y))) }
+                (sub(sub(num(a), x), sub(y, num(b)))) { S(sub(num(a + b), add(x, y))) }
+                (mul(num(a), num(b))) { num(a * b) }
+                (mul(num(0), a)) |
+                (mul(a, num(0))) { num(0) }
+                (mul(num(1), a)) |
+                (mul(a, num(1))) { a }
+                (mul(x, div(y, x))) |
+                (mul(div(y, x), x)) { y }
+                (mul(a, a)) { S(pow(a, num(2))) }
+                (mul(a, pow(a, b))) |
+                (mul(pow(a, b), a)) { S(pow(a, add(b, num(1)))) }
+                (mul(num(a), mul(num(b), x))) |
+                (mul(num(a), mul(x, num(b)))) |
+                (mul(mul(x, num(a)), num(b))) |
+                (mul(mul(num(a), x), num(b))) { S(mul(num(a * b), x)) }
+                (mul(num(a), add(x, num(b)))) |
+                (mul(num(a), add(num(b), x))) |
+                (mul(add(x, num(b)), num(a))) |
+                (mul(add(num(b), x), num(a))) { S(add(num(a * b), mul(num(a), x))) }
+                (mul(num(a), sub(x, num(b)))) |
+                (mul(sub(x, num(b)), num(a))) { S(sub(mul(num(a), x), num(a * b))) }
+                (mul(num(a), sub(num(b), x))) |
+                (mul(sub(num(b), x), num(a))) { S(sub(num(a * b), mul(num(a), x))) }
+                (mul(num(a), div(num(b), x))) |
+                (mul(div(num(b), x), num(a))) { S(div(num(a * b), x)) }
+                (mul(num(a), div(x, num(b)))) |
+                (mul(div(x, num(b)), num(a))) { S(mul(num(a / b), x)) }
+                (mul(pow(x, a), pow(x, b))) { S(pow(x, add(a, b))) }
+                (mul(a, a)) { S(pow(a, num(2))) }
+                (div(num(a), num(b))) { num(a / b) }
+                (div(a, num(1))) { a }
+                (div(num(0), _)) { num(0) }
+                (div(x, x)) { num(1) }
+                (div(div(x, num(a)), num(b))) { S(div(x, num(a * b))) }
+                (div(div(num(a), x), num(b))) { S(div(num(a / b), x)) }
+                (div(num(a), div(num(b), x))) { S(mul(num(a / b), x)) }
+                (div(num(a), div(x, num(b)))) { S(div(num(a * b), x)) }
+                (div(num(a), mul(x, num(b)))) |
+                (div(num(a), mul(num(b), x))) { S(div(num(a / b), x)) }
+                (div(mul(num(a), x), num(b))) |
+                (div(mul(x, num(a)), num(b))) { S(mul(num(a / b), x)) }
+                (div(add(num(a), x), num(b))) |
+                (div(add(x, num(a)), num(b))) { S(add(num(a / b), div(x, num(b)))) }
+                (div(sub(num(a), x), num(b))) { S(sub(num(a / b), div(x, num(b)))) }
+                (div(sub(x, num(a)), num(b))) { S(sub(div(x, num(b)), num(a / b))) }
+                (mul(div(x, num(a)), div(y, num(b)))) { S(div(mul(x, y), num(a * b))) }
+                (mul(div(num(a), x), div(num(b), y))) { S(div(num(a * b), mul(x, y))) }
+                (div(div(x, num(a)), div(y, num(b)))) { S(mul(div(x, y), num(b / a))) }
+                (div(div(num(a), x), div(num(b), y))) { S(mul(num(a / b), div(y, x))) }
+                (mod(num(a), num(b))) { num(a % b) }
+                (mod(num(0), _)) { num(0) }
+                (mod(_, num(1))) { num(0) }
+                (mod(x, x)) { num(0) }
+                (mod(mod(a, x), x)) { mod(a, x) }
+                (pow(num(a), num(b))) { num(a ** b) }
+                (pow(_, num(0))) { num(1) }
+                (pow(x, num(1))) { x }
+                (pow(num(0), _)) { num(0) }
+                (pow(num(1), _)) { num(1) }
+                (pow(pow(x, a), b)) { S(pow(x, mul(a, b))) }
+                (x) { x }
+            };
         }
     in
-        t2e(sim(e2t(e)))
+        t2e(S(e2t(e)))
 }
 
 fn fold {
