@@ -8,31 +8,44 @@ link "subst.fn" as SUBST;
 link "../listutils.fn" as list;
 link "../dictutils.fn" as DICT;
 
-fn subst (expr, var, arg) { // replace var with arg in expr
-    SUBST.substitute(DICT.make([var], [arg]), expr)
-}
-
 fn reduce {
     (M.amb_expr(expr1, expr2)) {
         // amb_expr(expr, expr)
         M.amb_expr(reduce(expr1), reduce(expr2))
     }
 
-    (M.apply(fun, args)) {
+    (M.apply(fun, aargs)) {
         // apply(expr, list(expr))
+        let redaargs = list.map(reduce, aargs);
+        in
         switch (fun) {
-            (M.lambda(params, body)) |
-            (M.lambdac(params, body)) {
-                let pairs = list.zip(params, args);
-                    newbody = list.foldl(fn (#(p, a), b) {
-                                            subst(b, p, a)
-                                        }, body, pairs);
-                in
-                    reduce(newbody)
+            (M.lambda(fargs, body)) {
+                // handle currying
+                switch (list.length(fargs) <=> list.length(redaargs)) {
+                    (lt) {
+                        // ((λ (f1) body) a1 a2) => reduce(body[f1/a1] a2)
+                        let newaargs = list.take(list.length(fargs), redaargs);
+                            restaargs = list.drop(list.length(fargs), redaargs);
+                            newbody = SUBST.substitute(DICT.make(fargs, newaargs), body);
+                        in  reduce(M.apply(reduce(newbody), restaargs))
+                    }
+                    (gt) {
+                        // ((λ (f1 f2) body) a1) => (λ (f2) body[f1/a1])
+                        let newfargs = list.take(list.length(redaargs), fargs);
+                            newbody = SUBST.substitute(DICT.make(newfargs, redaargs), body);
+                            restfargs = list.drop(list.length(redaargs), fargs);
+                        in  M.lambda(restfargs, newbody);
+                    }
+                    (eq) {
+                        // ((λ (f1 f2) body) a1 a2) => reduce(body[f1/a1, f2/a2])
+                        let newbody = SUBST.substitute(DICT.make(fargs, redaargs), body);
+                        in  reduce(newbody)
+                    }
+                }
             }
 
             (x) {
-                M.apply(reduce(x), list.map(reduce, args))
+                M.apply(reduce(x), redaargs)
             }
         }
     }

@@ -3,12 +3,9 @@
 More of a wish-list than a hard and fast plan.
 
 * Simplify
-  * Merge apply and primapp into apply primop in minlam.
-  * Allow operators to choose between lazy and strict implementations.
   * Add a beta-reduction pass (after cps-transform).
   * Add an eta-reduction pass.
   * Add a constant/operator folding pass after beta and eta reduction.
-    * User defined operators and macros might get in the way of this...
 * Target LLVM
 * `syntax` construct that allows large-scale syntactic structures to be defined by the user.
 * Clean Up.

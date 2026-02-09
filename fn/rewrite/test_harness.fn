@@ -10,10 +10,12 @@ let
     link "cps.fn" as CPS;
     // link "normalize.fn" as N;
     link "closure-convert.fn" as CC;
+    link "curry.fn" as C;
 in
     list.for_each(fn {
         (';' @ s) {
             // print comments
+            puts("; ");
             puts(s);
             puts("\n");
         }
@@ -21,7 +23,8 @@ in
             let
                 a = E.parse(str);
                 b = DS.desugar(a);
-                d = η.reduce(b);
+                c = C.curry(b);
+                d = η.reduce(c);
                 e = CPS.T_c(d, M.var("□"));
                 f = β.reduce(e);
                 g = OF.fold(f);

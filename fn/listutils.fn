@@ -261,6 +261,15 @@ fn unzip {
     }
 }
 
+export operator "unzip_" 8 unzip;
+
+// zipmap: (#a -> #c) -> (#b -> #d) -> list(#(#a, #b)) -> list(#(#c, #d))
+fn zipmap(fl, fr) {
+    fn (#(xs, ys)) { #(fl(xs), fr(ys)) }
+}
+
+export operator "_&&_" left 8 zipmap;
+
 // last: list(#a) -> #a
 unsafe fn last {
     ([a]) { a }

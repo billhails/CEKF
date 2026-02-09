@@ -1,0 +1,66 @@
+namespace
+
+link "../listutils.fn" as list;
+link "minexpr.fn" as M;
+import list operator "_|>_";
+import list operator "_&&_";
+
+fn curry {
+    (M.amb_expr(e1, e2)) {
+        M.amb_expr(curry(e1), curry(e2))
+    }
+
+    (M.apply(e, args)) {
+        M.apply(curry(e), args |> curry)
+    }
+
+    (M.callcc_expr(e)) {
+        M.callcc_expr(curry(e))
+    }
+
+    (M.cond_expr(e, cases)) {
+        M.cond_expr(curry(e), cases |> (identity && curry))
+    }
+
+    (M.if_expr(e1, e2, e3)) {
+        M.if_expr(curry(e1), curry(e2), curry(e3))
+    }
+
+    (M.lambda([], body)) {
+        M.lambda([], curry(body))
+    }
+
+    (M.lambda([a1], body)) {
+        M.lambda([a1], curry(body))
+    }
+
+    (M.lambda(a1 @ rest, body)) {
+        M.lambda([a1], curry(M.lambda(rest, body)))
+    }
+
+    (M.letrec_expr(bindings, body)) {
+        M.letrec_expr(bindings |> (identity && curry), curry(body))
+    }
+
+    (M.lookup(name, id, e)) {
+        M.lookup(name, id, curry(e))
+    }
+
+    (M.make_vec(num, exprs)) {
+        M.make_vec(num, exprs |> curry)
+    }
+
+    (M.match_cases(e, cases)) {
+        M.match_cases(curry(e), cases |> (identity && curry))
+    }
+
+    (M.namespaces(exprs)) {
+        M.namespaces(exprs |> curry)
+    }
+
+    (M.sequence(exprs)) {
+        M.sequence(exprs |> curry)
+    }
+
+    (x) { x }
+}

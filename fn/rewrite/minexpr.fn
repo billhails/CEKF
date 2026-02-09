@@ -3,12 +3,8 @@ namespace
     link "../listutils.fn" as list;
 
     typedef expr {
-        lambdac(list(string), expr) |
-        make_closure(expr, expr) |
-        make_env(list(#(string, expr))) |
-        env_ref(expr, string) |
-        apply_closure(expr, list(expr)) |
         amb_expr(expr, expr) |
+        apply_closure(expr, list(expr)) |
         apply(expr, list(expr)) |
         back_expr |
         bigint(number) |
@@ -16,11 +12,15 @@ namespace
         character(char) |
         cond_expr(expr, list(#(expr, expr))) |
         env_expr |
+        env_ref(expr, string) |
         error_expr |
         if_expr(expr, expr, expr) |
+        lambdac(list(string), expr) |
         lambda(list(string), expr) |
         letrec_expr(list(#(string, expr)), expr) |
         lookup(string, number, expr) |
+        make_closure(expr, expr) |
+        make_env(list(#(string, expr))) |
         make_vec(number, list(expr)) |
         match_cases(expr, list(#(list(number), expr))) |
         namespaces(list(expr)) |
