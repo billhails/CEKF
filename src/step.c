@@ -607,6 +607,15 @@ __attribute__((unused)) static void dumpApplyStats(void) {
 }
 #endif
 
+__attribute__((unused)) static int failStackSize(Fail *f) {
+    int size = 0;
+    while (f != NULL) {
+        size++;
+        f = f->F;
+    }
+    return size;
+}
+
 static void step() {
     if (dump_bytecode_flag)
         dumpByteCode(&state.B, state.L);

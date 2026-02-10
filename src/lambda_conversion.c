@@ -34,6 +34,7 @@
 #include "lambda_conversion.h"
 #include "lambda_helper.h"
 #include "lazy_substitution.h"
+#include "pratt_scanner.h"
 #include "print_generator.h"
 #include "symbols.h"
 #include "tpmc_logic.h"
@@ -1228,6 +1229,9 @@ static LamBindings *prependMultiSymbols(AstSymbolList *symbols, int index,
     }
     LamBindings *rest =
         prependMultiSymbols(symbols->next, index + 1, size, temp, next);
+    if (symbols->symbol == TOK_WILDCARD()) {
+        return rest;
+    }
     int save = PROTECT(rest);
     LamExp *rhs = makeUnpackTuple(CPI(symbols), temp, index, size);
     PROTECT(rhs);

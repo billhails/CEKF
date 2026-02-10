@@ -10,8 +10,20 @@ fn curry {
         M.amb_expr(curry(e1), curry(e2))
     }
 
-    (M.apply(e, args)) {
-        M.apply(curry(e), args |> curry)
+    (M.apply(x=M.primop(_), args)) {
+        M.apply(x, args |> curry)
+    }
+
+    (M.apply(e, [])) {
+        M.apply(curry(e), [])
+    }
+
+    (M.apply(e, [a])) {
+        M.apply(curry(e), [curry(a)])
+    }
+
+    (M.apply(e, a @ rest)) {
+        curry(M.apply(M.apply(e, [curry(a)]), rest))
     }
 
     (M.callcc_expr(e)) {
@@ -19,7 +31,7 @@ fn curry {
     }
 
     (M.cond_expr(e, cases)) {
-        M.cond_expr(curry(e), cases |> (identity && curry))
+        M.cond_expr(curry(e), cases |> identity && curry)
     }
 
     (M.if_expr(e1, e2, e3)) {
@@ -30,16 +42,16 @@ fn curry {
         M.lambda([], curry(body))
     }
 
-    (M.lambda([a1], body)) {
-        M.lambda([a1], curry(body))
+    (M.lambda([a], body)) {
+        M.lambda([a], curry(body))
     }
 
-    (M.lambda(a1 @ rest, body)) {
-        M.lambda([a1], curry(M.lambda(rest, body)))
+    (M.lambda(a @ rest, body)) {
+        M.lambda([a], curry(M.lambda(rest, body)))
     }
 
     (M.letrec_expr(bindings, body)) {
-        M.letrec_expr(bindings |> (identity && curry), curry(body))
+        M.letrec_expr(bindings |> identity && curry, curry(body))
     }
 
     (M.lookup(name, id, e)) {
@@ -51,7 +63,7 @@ fn curry {
     }
 
     (M.match_cases(e, cases)) {
-        M.match_cases(curry(e), cases |> (identity && curry))
+        M.match_cases(curry(e), cases |> identity && curry)
     }
 
     (M.namespaces(exprs)) {

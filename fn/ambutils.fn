@@ -26,8 +26,11 @@ fn integers_from(n) {
    n then integers_from(n + 1)
 }
 
+export operator "_..." 8 integers_from;
+
 fn integers_between(lower, upper) {
-    require(lower <= upper);
+    !: lower <= upper;
     lower then integers_between(lower + 1, upper)
 }
 
+export operator "_.._" 8 integers_between;

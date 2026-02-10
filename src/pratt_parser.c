@@ -3233,7 +3233,7 @@ static AstDefinition *assignment(PrattParser *parser) {
     return res;
 }
 
-static AstSymbolList *symbolList(PrattParser *parser) {
+static AstSymbolList *symbolList(PrattParser *parser, bool allowWildcard) {
     ENTER(symbolList);
     if (match(parser, TOK_CLOSE())) {
         LEAVE(symbolList);
@@ -3244,13 +3244,15 @@ static AstSymbolList *symbolList(PrattParser *parser) {
     HashSymbol *s = NULL;
     if (symbol->type == TOK_ATOM()) {
         s = symbol->value->val.atom;
+    } else if (allowWildcard && symbol->type == TOK_WILDCARD()) {
+        s = TOK_WILDCARD();
     } else {
         parserError(parser, "expected ATOM, got %s", symbol->type->name);
         s = TOK_ERROR();
     }
     AstSymbolList *this = NULL;
     if (match(parser, TOK_COMMA())) {
-        AstSymbolList *rest = symbolList(parser);
+        AstSymbolList *rest = symbolList(parser, allowWildcard);
         PROTECT(rest);
         this = newAstSymbolList(TOKPI(symbol), s, rest);
     } else {
@@ -3269,7 +3271,7 @@ static AstDefinition *multiDefinition(PrattParser *parser) {
     ENTER(multiDefinition);
     PrattToken *tok = peek(parser);
     int save = PROTECT(tok);
-    AstSymbolList *symbols = symbolList(parser);
+    AstSymbolList *symbols = symbolList(parser, true);
     PROTECT(symbols);
     consume(parser, TOK_ASSIGN());
     AstExpression *expr = expression(parser);

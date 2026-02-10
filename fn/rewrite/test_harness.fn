@@ -52,6 +52,6 @@ in
                 // puts(nltab);
                 // M.print_expr(h);
                 // puts("\n\n\n")
-                puts("\n")
+                puts("\n\n")
         }
     }, Samples.data());
