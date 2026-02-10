@@ -8,7 +8,6 @@ More of a wish-list than a hard and fast plan.
   * Add a constant/operator folding pass after beta and eta reduction.
 * Target LLVM
 * `syntax` construct that allows large-scale syntactic structures to be defined by the user.
-* Unpacking a tuple by assignment should allow wildcards.
 * Clean Up.
   * Generate
     * Move all signatures into `signature_helper.py`, not just the shared ones.
