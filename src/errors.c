@@ -54,6 +54,24 @@ void _cant_happen(char *file, int line, const char *message, ...) {
 
 /**
  * Handle a "can happen" error by printing message and setting error flag.
+ * This is the va_list version for forwarding varargs.
+ *
+ * @param I the parser info containing file name and line number (use NULLPI if
+ * not available)
+ * @param message the error message format string
+ * @param args the error message arguments as va_list
+ */
+void vcan_happen(ParserInfo I, const char *message, va_list args) {
+    vfprintf(errout, message, args);
+    if (I.lineNo != 0) {
+        eprintf(" at +%d %s", I.lineNo, I.fileName);
+    }
+    eprintf("\n");
+    errors = true;
+}
+
+/**
+ * Handle a "can happen" error by printing message and setting error flag.
  *
  * @param I the parser info containing file name and line number (use NULLPI if
  * not available)
@@ -63,13 +81,8 @@ void _cant_happen(char *file, int line, const char *message, ...) {
 void can_happen(ParserInfo I, const char *message, ...) {
     va_list args;
     va_start(args, message);
-    vfprintf(errout, message, args);
+    vcan_happen(I, message, args);
     va_end(args);
-    if (I.lineNo != 0) {
-        eprintf(" at +%d %s", I.lineNo, I.fileName);
-    }
-    eprintf("\n");
-    errors = true;
 }
 
 /**

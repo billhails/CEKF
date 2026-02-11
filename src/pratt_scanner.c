@@ -139,16 +139,15 @@ void parserError(PrattParser *parser, const char *message, ...) {
         return;
     parser->panicMode = true;
     va_start(args, message);
-    vfprintf(errout, message, args);
-    va_end(args);
     PrattBufList *bufList = parser->lexer->bufList;
     if (bufList) {
         ParserInfo pi = {.lineNo = bufList->lineNo,
                          .fileName = bufList->fileName->name};
-        can_happen(pi, "");
+        vcan_happen(pi, message, args);
     } else {
-        can_happen(NULLPI, " at EOF");
+        vcan_happen(NULLPI, message, args);
     }
+    va_end(args);
 }
 
 /**
@@ -163,9 +162,8 @@ void parserErrorAt(ParserInfo PI, PrattParser *parser, const char *message,
         return;
     parser->panicMode = true;
     va_start(args, message);
-    vfprintf(errout, message, args);
+    vcan_happen(PI, message, args);
     va_end(args);
-    can_happen(PI, "");
 }
 
 static SCharVec *readFileBytes(char *path) {
