@@ -38,20 +38,6 @@
 static HashSymbol *performVarSubstitutions(HashSymbol *var,
                                            SymbolMap *substitutions);
 
-static void substError(ParserInfo PI, const char *message, ...)
-    __attribute__((format(printf, 2, 3)));
-
-static void substError(ParserInfo PI, const char *message, ...)
-    __attribute__((unused));
-
-static void substError(ParserInfo PI, const char *message, ...) {
-    va_list args;
-    va_start(args, message);
-    vfprintf(errout, message, args);
-    va_end(args);
-    can_happen(PI, "");
-}
-
 static SymbolList *performVarListSubstitutions(SymbolList *varList,
                                                SymbolMap *substitutions) {
     ENTER(performVarListSubstitutions);
