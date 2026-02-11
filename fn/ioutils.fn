@@ -3,7 +3,7 @@ namespace
 fn with_output_to(filename, handler) {
     switch (open(filename, io_write)) {
         (success(filehandle)) {
-            let data = some(handler(filehandle));
+            let data = just(handler(filehandle));
             in
                 close(filehandle);
                 data;
@@ -18,7 +18,7 @@ fn with_output_to(filename, handler) {
 fn with_input_from(filename, handler) {
     switch (open(filename, io_read)) {
         (success(filehandle)) {
-            let data = some(handler(filehandle));
+            let data = just(handler(filehandle));
             in
                 close(filehandle);
                 data;
@@ -33,7 +33,7 @@ fn with_input_from(filename, handler) {
 fn with_buffer(handler) {
     switch (openmem()) {
         (success(filehandle)) {
-            let data = some(handler(filehandle));
+            let data = just(handler(filehandle));
             in
                 close(filehandle);
                 data;
@@ -50,7 +50,7 @@ fn to_string(data) {
         fputv(buf, data);
         fgets(buf);
     })) {
-        (some(result)) { result }
+        (just(result)) { result }
     }
 }
 

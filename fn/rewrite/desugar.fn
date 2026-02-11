@@ -25,7 +25,7 @@ namespace
                         (nothing) {
                             M.apply(M.var(v), list.map(ds, args))
                         }
-                        (some(arity)) {
+                        (just(arity)) {
                             switch (list.length(args) <=> arity) {
                                 (eq) {
                                     M.apply(M.var(v), list.map(ds, args))

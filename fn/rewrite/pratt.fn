@@ -27,12 +27,12 @@ let
                 (lhs, nothing, lexer) {
                     #(lhs, lexer)
                 }
-                (lhs, some(lex.Op(op)), lexer) {
+                (lhs, just(lex.Op(op)), lexer) {
                     infix_bp(op) => fn (#(l_bp, r_bp)) {
                         if (l_bp < min_bp) {
                             #(lhs, lexer)
                         } else {
-                            lex.next(lexer) => unsafe fn (some(#(_, lexer))) {
+                            lex.next(lexer) => unsafe fn (just(#(_, lexer))) {
                                 expr_bp(lexer, r_bp) => fn (#(rhs, lexer)) {
                                     loop(exp.Cons(op, [lhs, rhs]), lex.peek(lexer), lexer)
                                 }
@@ -46,10 +46,10 @@ let
             }
         in
             switch(lex.next(lexer)) {
-                (some(#(lex.Atom(it), lexer))) {
+                (just(#(lex.Atom(it), lexer))) {
                     loop(exp.Atom(it), lex.peek(lexer), lexer)
                 }
-                (some(#(lex.Op(it), lexer))) {
+                (just(#(lex.Op(it), lexer))) {
                     expr_bp(lexer, prefix_bp(it)) => fn (#(rhs, lexer)) {
                         loop(exp.Cons(it, [rhs]), lex.peek(lexer), lexer)
                     }

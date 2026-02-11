@@ -152,7 +152,7 @@ fn alphaconvert(c, e) {
                     (nothing) {
                         error("Unbound variable: " @@ name)
                     }
-                    (x=some(vname)) {
+                    (x=just(vname)) {
                         M.var(vname)
                     }
                 }

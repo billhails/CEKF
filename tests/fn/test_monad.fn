@@ -1,27 +1,27 @@
 let
     fn andThen {
         (nothing, _) { nothing }
-        (some(a), f) { f(a) }
+        (just(a), f) { f(a) }
     }
 
     operator "_>>=_" right 100 andThen;
 
     fn maybePlus(ma, mb) {
-        ma >>= fn(a) { mb >>= fn(b) { some(a + b) } }
+        ma >>= fn(a) { mb >>= fn(b) { just(a + b) } }
     }
 
     fn safeDiv {
         (a, 0) { nothing }
-        (a, b) { some(a / b) }
+        (a, b) { just(a / b) }
     }
 
     fn maybeDiv (ma, mb) {
         ma >>= fn(a) { mb >>= fn(b) { safeDiv(a, b) } }
     }
 in
-    assert(maybePlus(some(5), some(10)) == some(15));
-    assert(maybePlus(some(5), nothing) == nothing);
-    assert(maybePlus(nothing, some(10)) == nothing);
+    assert(maybePlus(just(5), just(10)) == just(15));
+    assert(maybePlus(just(5), nothing) == nothing);
+    assert(maybePlus(nothing, just(10)) == nothing);
     assert(maybePlus(nothing, nothing) == nothing);
-    assert(maybePlus(some(5), maybeDiv(some(15), some(3))) == some(10));
-    assert(maybePlus(some(5), maybeDiv(some(15), some(0))) == nothing);
+    assert(maybePlus(just(5), maybeDiv(just(15), just(3))) == just(10));
+    assert(maybePlus(just(5), maybeDiv(just(15), just(0))) == nothing);

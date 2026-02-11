@@ -14,6 +14,7 @@ fn one_of {
 }
 
 export operator "from_" 8 one_of;
+export operator "one_" 8 one_of;
 
 fn some_of {
     ([]) { back }

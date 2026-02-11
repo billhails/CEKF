@@ -5,7 +5,7 @@ let
     // Define test types
     typedef tree(#t) { leaf | node(#t, tree(#t), tree(#t)) }
     
-    typedef option(#t) { none | some(#t) }
+    typedef option(#t) { none | just(#t) }
     
     typedef result(#ok, #err) { ok(#ok) | err(#err) }
     
@@ -66,17 +66,17 @@ let
     
     // Test option type patterns
     fn test_option_patterns() {
-        let opt1 = some(42);
+        let opt1 = just(42);
             opt2 = none;
         in
         switch (opt1) {
             (none) { assert(false) }
-            (some(x)) { assert(x == 42) }
+            (just(x)) { assert(x == 42) }
         };
         
         switch (opt2) {
             (none) { assert(true) }
-            (some(_)) { assert(false) }
+            (just(_)) { assert(false) }
         };
         true
     }

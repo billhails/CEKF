@@ -5,7 +5,7 @@ let
     dd = dict.insert(1, "hello", dict.insert(2, "goodbye", dict.E));
 in
     print(fn {
-        (maybe.some(s)) { s }
+        (maybe.just(s)) { s }
         (maybe.nothing) { "nothing" }
     }(dict.lookup(2, dd)));
     print(dd);

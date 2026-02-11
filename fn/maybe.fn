@@ -1,29 +1,27 @@
 namespace
 
-typedef maybe(#t) { nothing | some(#t) }
-
 // map: (#t -> #u) -> maybe(#t) -> maybe(#u)
 fn map {
     (_, nothing) { nothing }
-    (f, some(x)) { some(f(x)) }
+    (f, just(x)) { just(f(x)) }
 }
 
 // bind: maybe(#t) -> (#t -> maybe(#u)) -> maybe(#u)
 fn bind {
-    (some(x), f) { f(x) }
+    (just(x), f) { f(x) }
     (nothing, _) { nothing }
 }
 
 // // safediv: number -> number -> maybe(number)
 // fn safediv {
 //     (_, 0) { nothing }
-//     (x, y) { some(x / y) }
+//     (x, y) { just(x / y) }
 // }
 //
 // // eval(expr) -> maybe(number)
 //
 // fn eval {
-//    (val(n)) { some(n) }
+//    (val(n)) { just(n) }
 //    (div(x, y)) {
 //        bind(eval(x), fn (n) {
 //            bind(eval(y), fn (m) {
@@ -36,7 +34,7 @@ fn bind {
 // // do notation
 //
 // fn eval {
-//    (val(n)) { return(n) } // return == some
+//    (val(n)) { return(n) } // return == just
 //    (div(x, y)) {
 //        do n <- eval(x) // a <- b rest == bind(b, fn(a) { rest })
 //           m <- eval(y)

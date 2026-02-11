@@ -1,6 +1,8 @@
 let
     link "ambutils.fn" as amb;
-    link "listutils.fn" as list;
+    import amb operators;
+    link "listutils.fn" as lst;
+    import lst operators;
 
     // A wine merchant has six barrels of wine and beer containing:
     //
@@ -20,13 +22,13 @@ let
     fn barrels_of_fun() {
         let
             barrels = [30, 32, 36, 38, 40, 62];
-            beer = amb.one_of(barrels);
-            wine = list.exclude([beer], barrels);
-            barrel_1 = amb.one_of(wine);
-            barrel_2 = amb.one_of(list.exclude([barrel_1], wine));
-            purchase = amb.some_of(list.exclude([barrel_1, barrel_2], wine));
+            beer = one barrels;
+            wine = barrels except [beer];
+            wine_1 = one wine;
+            wine_2 = one wine except [wine_1];
+            purchase = some wine except [wine_1, wine_2];
         in
-            amb.require((barrel_1 + barrel_2) * 2 == list.sum(purchase));
+            !: (wine_1 + wine_2) * 2 == total purchase;
             beer
     }
 in

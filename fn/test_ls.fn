@@ -2,7 +2,7 @@ let
   fn ls(dir) {
     let
         fn helper {
-            (some(name), dh) {
+            (just(name), dh) {
                 let
                 path = dir @@ "/" @@ name;
                 in
@@ -29,6 +29,6 @@ let
   }
 in
     ls(switch (argv(0)) {
-        (some(name)) { name }
+        (just(name)) { name }
         (nothing) { "." }
     })

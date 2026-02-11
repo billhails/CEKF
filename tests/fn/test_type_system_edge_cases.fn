@@ -63,14 +63,14 @@ let
     // Test: Polymorphic option type
     fn test_polymorphic_option() {
         let
-            typedef option(#t) { some(#t) | none }
+            typedef option(#t) { just(#t) | none }
             
             fn unwrap_or {
-                (some(x), _) { x }
+                (just(x), _) { x }
                 (none, default) { default }
             }
             
-            opt1 = some(42);
+            opt1 = just(42);
             opt2 = none;
             
             r1 = unwrap_or(opt1, 0);
@@ -112,17 +112,17 @@ let
     // Test: Nested polymorphic types
     fn test_nested_polymorphic() {
         let
-            typedef option(#t) { some(#t) | none }
+            typedef option(#t) { just(#t) | none }
             
             fn map_option {
                 (none, _) { none }
-                (some(x), f) { some(f(x)) }
+                (just(x), f) { just(f(x)) }
             }
             
-            opt = some(5);
+            opt = just(5);
             doubled = map_option(opt, fn(x) { x * 2 });
         in
-            assert(doubled == some(10));
+            assert(doubled == just(10));
     }
     
     // Test: Polymorphic tree type
@@ -165,15 +165,15 @@ let
     // Test: List of polymorphic types
     fn test_list_of_options() {
         let
-            typedef option(#t) { some(#t) | none }
+            typedef option(#t) { just(#t) | none }
             
             fn count_somes {
                 ([]) { 0 }
-                (some(_) @ t) { 1 + count_somes(t) }
+                (just(_) @ t) { 1 + count_somes(t) }
                 (none @ t) { count_somes(t) }
             }
             
-            opts = [some(1), none, some(2), some(3), none];
+            opts = [just(1), none, just(2), just(3), none];
             count = count_somes(opts);
         in
             assert(count == 3);

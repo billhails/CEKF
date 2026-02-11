@@ -366,17 +366,17 @@ let
         let
             typedef option(#t) {
                 none |
-                some(#t)
+                just(#t)
             }
             
             lazy fn MAKE_SOME(x) {
-                some(x)
+                just(x)
             }
             
             lazy fn GET_OR_DEFAULT(opt, def) {
                 switch (opt) {
                     (none) { def }
-                    (some(v)) { v }
+                    (just(v)) { v }
                 }
             }
             

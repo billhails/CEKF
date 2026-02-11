@@ -52,7 +52,7 @@ fn with_results(handler, statement) {
     let
         fn _with_results(keys) {
             switch(sqlite3_fetch(statement)) {
-                (some(row)) {
+                (just(row)) {
                     handler(dict.make(keys, row));
                     _with_results(keys)
                 }

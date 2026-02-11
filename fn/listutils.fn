@@ -22,6 +22,12 @@ fn unique(lst) {
     in helper(lst, [])
 }
 
+// distinct: list(#a) -> bool
+fn distinct {
+    ([]) { true }
+    (h @ t) { not member(h, t) and distinct(t) }
+}
+
 // exclude: list(#t) -> list(#t) -> list(#t)
 fn exclude(items, lst) {
     let fn helper {
@@ -227,6 +233,8 @@ unsafe fn nth {
 fn sum(lst) {
     foldl(fn (elm, acc) { elm + acc }, 0, lst)
 }
+
+export operator "total_" left 8 sum;
 
 // product: list(number) -> number
 fn product(lst) {

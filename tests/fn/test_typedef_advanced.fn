@@ -99,17 +99,17 @@ let
     fn test_generic_option() {
         let
             typedef option(#t) {
-                some(#t) |
+                just(#t) |
                 none
             }
         in {
             let
-                x = some(42);
+                x = just(42);
                 y = none;
             in {
                 let get_or_default = fn(opt, def) {
                     switch (opt) {
-                        (some(v)) { v }
+                        (just(v)) { v }
                         (none) { def }
                     }
                 };

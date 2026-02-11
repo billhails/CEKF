@@ -119,7 +119,7 @@ namespace
                 (M.var(name)) {
                     switch (D.lookup(name, c)) {
                         (nothing) { e }
-                        (some(v)) { v }
+                        (just(v)) { v }
                     }
                 }
 

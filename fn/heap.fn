@@ -1,8 +1,6 @@
 let
     typedef heap(#t) { E | T(number, #t, heap(#t), heap(#t)) }
 
-    typedef maybe(#t) { none | some(#t) }
-
     fn merge {
       (E, h) | (h, E) { h }
       (h1=T(_, x, a1, b1), h2=T(_, y, a2, b2)) {
@@ -33,7 +31,7 @@ let
 
     fn findMin {
       (E)             { none }
-      (T(_, x, _, _)) { some(x) }
+      (T(_, x, _, _)) { just(x) }
     }
 
     fn deleteMin {
@@ -55,7 +53,7 @@ let
             fn helper {
                 (hp, lst) {
                     switch(findMin(hp)) {
-                        (some(min)) {
+                        (just(min)) {
                             helper(deleteMin(hp), min @ lst)
                         }
                         (none) {

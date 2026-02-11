@@ -224,7 +224,7 @@ let
                                         #(tagged(base, wildcard),
                                           dict.insert(name, base, d))
                                     }
-                                    (some(other)) {
+                                    (just(other)) {
                                         #(tagged(base, comparison(other)), d)
                                     }
                                 }
@@ -268,7 +268,7 @@ let
                 let fn h {
                     (symbol(s)) {
                         switch (dict.lookup(s, substs)) {
-                            (some(v)) { symbol(v) }
+                            (just(v)) { symbol(v) }
                             (nothing) { symbol(s) }
                         }
                     }
@@ -541,7 +541,7 @@ let
                 (s = final(_, _, _, _, _), d) {
                     let label = makeLabel(s);
                     in switch (dict.lookup(label, d)) {
-                            (some(rc)) { dict.insert(label, rc + 1, d) }
+                            (just(rc)) { dict.insert(label, rc + 1, d) }
                             (nothing) { dict.insert(label, 1, d) }
                         }
                 }
@@ -555,7 +555,7 @@ let
                     in collectArcs(arcs, d) => fn (d) {
                         let label = makeLabel(s);
                         in switch (dict.lookup(label, d)) {
-                            (some(rc)) { dict.insert(label, rc + 1, d); }
+                            (just(rc)) { dict.insert(label, rc + 1, d); }
                             (nothing) { dict.insert(label, 1, d); }
                         }
                     }
@@ -569,7 +569,7 @@ let
         let
             fn getRc(s) {
                 switch(dict.lookup(makeLabel(s), rcs)) {
-                    (some(n)) { n }
+                    (just(n)) { n }
                     (nothing) { 0 }
                 };
             }

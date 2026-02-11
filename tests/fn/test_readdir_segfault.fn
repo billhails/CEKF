@@ -16,7 +16,7 @@ let
                 in
                 closedir(dirhandle);
                 switch(entry) {
-                    (some(name)) {
+                    (just(name)) {
                         // Should get a filename string
                         assert(typeof name == "list(char)");
                         assert(list.length(name) > 0);
