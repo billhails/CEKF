@@ -28,7 +28,6 @@
 
 #include "ast.h"
 #include "bigint.h"
-#include "file_id.h"
 #include "memory.h"
 #include "pratt.h"
 #include "pratt_debug.h"
@@ -39,6 +38,7 @@
 #include "print_generator.h"
 #include "symbols.h"
 #include "unicode.h"
+#include "utils.h"
 #include "wrapper_synthesis.h"
 
 #ifdef DEBUG_PRATT_PARSER
@@ -46,6 +46,8 @@
 #else
 #include "debugging_off.h"
 #endif
+
+typedef enum { DEFUN_FUNCTION, DEFUN_PRINTER, DEFUN_COMPARATOR } DefunType;
 
 // minimal multiplier for converting declared precedence levels to
 // internal values, to guarantee that adding or subtracting 1 from
@@ -65,7 +67,7 @@
 // right associative infix operators parse the rhs with prec - 1
 // pareslets for grouping know their own matching close brace
 
-AstStringArray *include_paths = NULL;
+StringArray *include_paths = NULL;
 
 static AstAltArgs *altArgs(PrattParser *);
 static AstAltFunction *altFunction(PrattParser *);
@@ -85,8 +87,8 @@ static AstCompositeFunction *functions(PrattParser *);
 static AstDefinition *alias(PrattParser *);
 static AstDefinition *assignment(PrattParser *);
 static AstDefinition *definition(PrattParser *);
-static AstDefinition *defMacro(PrattParser *);
-static AstDefinition *defun(PrattParser *, bool, bool);
+static AstDefinition *defLazy(PrattParser *);
+static AstDefinition *defun(PrattParser *, bool, DefunType);
 static AstDefinition *importOp(PrattParser *);
 static AstDefinition *exportOp(PrattParser *);
 static AstDefinition *link(PrattParser *);
@@ -123,8 +125,6 @@ static AstExpression *list(PrattRecord *, PrattParser *, AstExpression *,
                            PrattToken *);
 static AstExpression *lookUp(PrattRecord *, PrattParser *, AstExpression *,
                              PrattToken *);
-static AstExpression *macro(PrattRecord *, PrattParser *, AstExpression *,
-                            PrattToken *);
 static AstExpression *makeAtom(PrattRecord *, PrattParser *, AstExpression *,
                                PrattToken *);
 static AstExpression *makeChar(PrattRecord *, PrattParser *, AstExpression *,
@@ -164,7 +164,7 @@ static AstExpressions *statements(PrattParser *, HashSymbol *);
 static AstFileIdArray *fileIdStack = NULL;
 static AstFunCall *switchFC(PrattParser *parser);
 static AstLookUpOrSymbol *scopedSymbol(PrattParser *);
-static AstNameSpace *parseLink(PrattParser *, unsigned char *, HashSymbol *);
+static AstNameSpace *parseLink(PrattParser *, SCharVec *, HashSymbol *);
 static AstNest *nestBody(PrattParser *, HashSymbol *);
 static AstNest *childNest(PrattParser *, HashSymbol *);
 static AstNest *nest(PrattParser *);
@@ -182,8 +182,8 @@ static HashSymbol *symbol(PrattParser *);
 static HashSymbol *typeVariable(PrattParser *);
 static PrattRecord *fetchRecord(PrattParser *, HashSymbol *);
 static PrattTrie *makePrattTrie(PrattParser *, PrattTrie *);
-static PrattUnicode *rawString(PrattParser *);
-static PrattUnicode *str(PrattParser *);
+static WCharArray *rawString(PrattParser *);
+static WCharArray *str(PrattParser *);
 static void storeNameSpace(PrattParser *, AstNameSpace *);
 static void synchronize(PrattParser *parser);
 static PrattExportedOps *captureNameSpaceOperatorExports(PrattParser *parser);
@@ -203,9 +203,25 @@ void disablePrattDebug(void) { DEBUGGING_OFF(); }
 static PrattParsers *parserStack = NULL;
 static PrattNsOpsArray *nsOpsCache = NULL;
 
-static HashSymbol *unicodeToSymbol(PrattUnicode *unicode) {
+/**
+ * Create a file id from a fileName.
+ *
+ * @param fileName the fileName
+ * @return the agnostic file id, or NULL if the file does not exist
+ */
+FileId *makeFileId(SCharVec *mbStr) {
+    struct stat stats;
+    if (stat(mbStr->entries, &stats) == 0) {
+        FileId *res = newFileId(stats.st_dev, stats.st_ino, mbStr);
+        return res;
+    } else {
+        return NULL;
+    }
+}
+
+static HashSymbol *unicodeToSymbol(WCharArray *unicode) {
     size_t len = wcstombs(NULL, unicode->entries, 0);
-    PrattCVec *mbStr = newPrattCVec(len + 1);
+    SCharVec *mbStr = newSCharVec(len + 1);
     int save = PROTECT(mbStr);
     wcstombs(mbStr->entries, unicode->entries, len + 1);
     HashSymbol *res = newSymbol(mbStr->entries);
@@ -256,11 +272,11 @@ static void addRecord(PrattRecordTable *table, HashSymbol *tok,
     PrattRecord *record = newPrattRecord(
         tok,
         (PrattFixityConfig){prefix, prefixPrec * PRECEDENCE_SCALE, NULL, NULL,
-                            false, false, NULL, -1, NULL},
+                            false, false, NULL, false, -1, NULL},
         (PrattFixityConfig){infix, infixPrec * PRECEDENCE_SCALE, NULL, NULL,
-                            false, false, NULL, -1, NULL},
+                            false, false, NULL, false, -1, NULL},
         (PrattFixityConfig){postfix, postfixPrec * PRECEDENCE_SCALE, NULL, NULL,
-                            false, false, NULL, -1, NULL});
+                            false, false, NULL, false, -1, NULL});
     int save = PROTECT(record);
     setPrattRecordTable(table, record->symbol, record);
     UNPROTECT(save);
@@ -287,6 +303,7 @@ static PrattParser *makePrattParser(void) {
     addRecord(table, TOK_COMMA(), NULL, 0, NULL, 0, NULL, 0);
     addRecord(table, TOK_ELSE(), NULL, 0, NULL, 0, NULL, 0);
     addRecord(table, TOK_EOF(), NULL, 0, NULL, 0, NULL, 0);
+    addRecord(table, TOK_EQ(), NULL, 0, NULL, 0, NULL, 0);
     addRecord(table, TOK_ERROR(), NULL, 0, NULL, 0, NULL, 0);
     addRecord(table, TOK_EXPORT(), NULL, 0, NULL, 0, NULL, 0);
     addRecord(table, TOK_FN(), fn, 0, NULL, 0, NULL, 0);
@@ -300,8 +317,8 @@ static PrattParser *makePrattParser(void) {
     addRecord(table, TOK_LCURLY(), nestExpr, 0, makeStruct, 0, NULL, 0);
     addRecord(table, TOK_LET(), NULL, 0, NULL, 0, NULL, 0);
     addRecord(table, TOK_LINK(), NULL, 0, NULL, 0, NULL, 0);
+    addRecord(table, TOK_LAZY(), NULL, 0, NULL, 0, NULL, 0);
     addRecord(table, TOK_LSQUARE(), list, 0, NULL, 0, NULL, 0);
-    addRecord(table, TOK_MACRO(), macro, 0, NULL, 0, NULL, 0);
     addRecord(table, TOK_NAMESPACE(), NULL, 0, NULL, 0, NULL, 0);
     addRecord(table, TOK_NUMBER(), makeNumber, 0, NULL, 0, NULL, 0);
     addRecord(table, TOK_OPEN(), grouping, 0, call, 14, NULL, 0);
@@ -349,27 +366,24 @@ makeAstCompositeFunction(AstAltFunction *functions,
 }
 
 /**
- * @brief Try to create an AgnosticFileId from a prefix and a file name.
+ * @brief Try to create a FileId from a prefix and a file name.
  *
  * This function constructs a file path by concatenating the prefix and file
- * name, and then attempts to create an AgnosticFileId from that path. If the
- * AgnosticFileId creation fails, it frees the allocated buffer.
+ * name, and then attempts to create a FileId from that path. If the
+ * FileId creation fails, it frees the allocated buffer.
  *
  * @param prefix The prefix path to prepend to the file name.
  * @param file The file name to append to the prefix.
- * @return A pointer to the AgnosticFileId if successful, or NULL if the file
+ * @return A pointer to the FileId if successful, or NULL if the file
  * does not exist.
  */
-static AgnosticFileId *tryFile(char *prefix, char *file) {
-    char *buf = malloc(sizeof(char) * (strlen(prefix) + 1 + strlen(file) + 10));
-    if (buf == NULL) {
-        perror("out of memory");
-        exit(1);
-    }
-    sprintf(buf, "%s/%s", prefix, file);
-    AgnosticFileId *result = makeAgnosticFileId(buf);
-    if (result == NULL)
-        free(buf);
+static FileId *tryFile(SCharVec *prefix, SCharVec *file) {
+    SCharVec *mbStr = newSCharVec(prefix->size + file->size); // assumes null
+                                                              // terminator
+    int save = PROTECT(mbStr);
+    sprintf(mbStr->entries, "%s/%s", prefix->entries, file->entries);
+    FileId *result = makeFileId(mbStr);
+    UNPROTECT(save);
     return result;
 }
 
@@ -381,21 +395,34 @@ static AgnosticFileId *tryFile(char *prefix, char *file) {
  *
  * @param initialPrefix The initial prefix to use for the search.
  * @param fileToFind The name of the file to search for.
- * @return A pointer to the AgnosticFileId if found, or NULL if not found.
+ * @return A pointer to the FileId if found, or NULL if not found.
  */
-static AgnosticFileId *searchForFile(char *initialPrefix, char *fileToFind) {
-    AgnosticFileId *result = NULL;
+static FileId *searchForFile(SCharVec *initialPrefix, SCharVec *fileToFind) {
+    FileId *result = NULL;
     result = tryFile(initialPrefix, fileToFind);
     if (result != NULL)
         return result;
     if (include_paths != NULL) {
         for (Index i = 0; i < include_paths->size; i++) {
-            result = tryFile(include_paths->entries[i], fileToFind);
-            if (result != NULL)
+            SCharVec *vec = stringToSCharVec(include_paths->entries[i]);
+            int save = PROTECT(vec);
+            result = tryFile(vec, fileToFind);
+            UNPROTECT(save);
+            if (result != NULL) {
                 return result;
+            }
         }
     }
     return NULL;
+}
+
+static SCharVec *symbolToVec(HashSymbol *symbol) {
+    size_t len = strlen(symbol->name);
+    SCharVec *mbStr = newSCharVec(len + 1);
+    int save = PROTECT(mbStr);
+    strcpy(mbStr->entries, symbol->name);
+    UNPROTECT(save);
+    return mbStr;
 }
 
 /**
@@ -404,55 +431,64 @@ static AgnosticFileId *searchForFile(char *initialPrefix, char *fileToFind) {
  * @param parser The PrattParser.
  * @return The name of the current file, or "no_file" if not available.
  */
-static char *currentPrattFile(PrattParser *parser) {
-    char *no_file = "no_file";
+static SCharVec *currentPrattFile(PrattParser *parser) {
     if (parser == NULL)
-        return no_file;
+        return NULL;
     if (parser->lexer == NULL)
-        return no_file;
+        return NULL;
     if (parser->lexer->bufList == NULL)
-        return no_file;
-    return parser->lexer->bufList->fileName->name;
+        return NULL;
+    return symbolToVec(parser->lexer->bufList->fileName);
 }
 
 /**
  * @brief Calculate the path for a file based on the current parser's context.
  */
-static AgnosticFileId *calculatePath(unsigned char *file, PrattParser *parser) {
-    if (*file == '/') {
-        // Take ownership of the fileName by duplicating it so the
-        // AgnosticFileId can free it during GC finalization.
-        return makeAgnosticFileId(safeStrdup((char *)file));
+static FileId *calculatePath(SCharVec *file, PrattParser *parser) {
+    if (*file->entries == '/') {
+        return makeFileId(file);
     }
-    char *currentFile = currentPrattFile(parser);
+    FileId *result = NULL;
+    SCharVec *dot = newSCharVec(2);
+    int save = PROTECT(dot);
+    strcpy(dot->entries, ".");
+    SCharVec *currentFile = currentPrattFile(parser);
     if (currentFile == NULL) {
-        return searchForFile(".", (char *)file);
+        result = searchForFile(dot, file);
+        UNPROTECT(save);
+        return result;
     }
-    currentFile = strdup(currentFile);
-    char *slash = strrchr(currentFile, '/');
+    PROTECT(currentFile);
+    char *slash = strrchr(currentFile->entries, '/');
     if (slash == NULL) {
-        free(currentFile);
-        return searchForFile(".", (char *)file);
+        result = searchForFile(dot, file);
+        UNPROTECT(save);
+        return result;
     }
-    *slash = '\0';
-    AgnosticFileId *result = searchForFile(currentFile, (char *)file);
-    free(currentFile);
+    // *slash = '\0';
+    size_t prefixLen = slash - currentFile->entries;
+    SCharVec *prefix = newSCharVec(prefixLen + 1);
+    PROTECT(prefix);
+    strncpy(prefix->entries, currentFile->entries, prefixLen);
+    prefix->entries[prefixLen] = '\0';
+    result = searchForFile(prefix, file);
+    UNPROTECT(save);
     return result;
 }
 
 /**
  * @brief Check if a file ID is already in the file ID stack.
  *
- * This function checks if the given AgnosticFileId is already present in the
+ * This function checks if the given FileId is already present in the
  * AstFileIdArray.
  *
- * @param id The AgnosticFileId to check.
+ * @param id The FileId to check.
  * @param array The AstFileIdArray to search in.
  * @return true if the file ID is found, false otherwise.
  */
-static bool fileIdInArray(AgnosticFileId *id, AstFileIdArray *array) {
+static bool fileIdInArray(FileId *id, AstFileIdArray *array) {
     for (Index i = 0; i < array->size; ++i) {
-        if (cmpAgnosticFileId(id, array->entries[i]) == CMP_EQ)
+        if (eqFileId(id, array->entries[i]))
             return true;
     }
     return false;
@@ -473,7 +509,7 @@ static void synchronize(PrattParser *parser) {
             return;
         if (check(parser, TOK_FN()))
             return;
-        if (check(parser, TOK_MACRO()))
+        if (check(parser, TOK_LAZY()))
             return;
         if (check(parser, TOK_IF()))
             return;
@@ -729,8 +765,8 @@ static PrattExportedOps *captureNameSpaceOperatorExports(PrattParser *parser) {
     while ((sym = iteratePrattRecordTable(parser->rules, &i, &rec)) != NULL) {
         if (!(rec->prefix.export || rec->infix.export || rec->postfix.export))
             continue;
-        static PrattFixityConfig emptyConfig = {NULL,  0,    NULL, NULL, false,
-                                                false, NULL, -1,   NULL};
+        static PrattFixityConfig emptyConfig = {NULL,  0,    NULL,  NULL, false,
+                                                false, NULL, false, -1,   NULL};
         PrattFixityConfig prefixCfg =
             rec->prefix.export ? rec->prefix : emptyConfig;
         PrattFixityConfig infixCfg =
@@ -750,8 +786,8 @@ static PrattRecord *ensureTargetRecord(PrattParser *parser, HashSymbol *op) {
     PrattRecord *target = NULL;
     if (!getPrattRecordTable(parser->rules, op, &target) || target == NULL) {
         // Create a blank record so we can import individual fixities
-        PrattFixityConfig empty = {NULL,  0,    NULL, NULL, false,
-                                   false, NULL, -1,   NULL};
+        PrattFixityConfig empty = {NULL,  0,    NULL,  NULL, false,
+                                   false, NULL, false, -1,   NULL};
         target = newPrattRecord(op, empty, empty, empty);
         int save = PROTECT(target);
         setPrattRecordTable(parser->rules, op, target);
@@ -775,6 +811,7 @@ static inline void mergeFixity(PrattParser *parser, PrattFixityConfig *target,
             target->op = source->op;
             target->importNsRef = nsRef;
             target->importNsSymbol = nsSymbol;
+            target->isLazy = source->isLazy;
             // Add secondary keywords to importing parser's trie
             if (source->pattern != NULL) {
                 for (Index i = 1; i < source->pattern->keywords->size; ++i) {
@@ -838,13 +875,13 @@ static void mergeFixityImport(PrattParser *parser, PrattRecord *target,
  * @param symbol The HashSymbol representing the nameSpace symbol.
  * @return An AstNameSpace containing the parsed nameSpace or an error.
  */
-static AstNameSpace *parseLink(PrattParser *parser, unsigned char *fileName,
+static AstNameSpace *parseLink(PrattParser *parser, SCharVec *fileName,
                                HashSymbol *symbol) {
     // check the file exists
-    AgnosticFileId *fileId = calculatePath(fileName, parser);
+    FileId *fileId = calculatePath(fileName, parser);
     int save = PROTECT(fileId);
     if (fileId == NULL) {
-        parserError(parser, "cannot find file \"%s\"", fileName);
+        parserError(parser, "cannot find file \"%s\"", fileName->entries);
         AstNameSpace *ns =
             newAstNameSpace(BUFPI(parser->lexer->bufList), symbol, -1);
         UNPROTECT(save);
@@ -860,7 +897,8 @@ static AstNameSpace *parseLink(PrattParser *parser, unsigned char *fileName,
     }
     // check for a recursive include
     if (fileIdInArray(fileId, fileIdStack)) {
-        parserError(parser, "recursive include detected for %s", fileId->name);
+        parserError(parser, "recursive include detected for %s",
+                    fileId->fileName->entries);
         AstNameSpace *ns =
             newAstNameSpace(BUFPI(parser->lexer->bufList), symbol, -1);
         UNPROTECT(save);
@@ -873,10 +911,10 @@ static AstNameSpace *parseLink(PrattParser *parser, unsigned char *fileName,
     // careful, 2 pushes in a row could realloc the save stack on push 1
     int save2 = PROTECT(fileId);
     AstDefinitions *definitions =
-        prattParseLink(parser, fileId->name, &resultParser);
+        prattParseLink(parser, fileId->fileName->entries, &resultParser);
     REPLACE_PROTECT(save2, resultParser);
     PROTECT(definitions);
-    // save the new nameSpace and it's parser
+    // save the new nameSpace and its parser
     AstNameSpaceImpl *impl =
         newAstNameSpaceImpl(BUFPI(parser->lexer->bufList), fileId, definitions);
     PROTECT(impl);
@@ -1179,9 +1217,9 @@ static AstDefinitions *definitions(PrattParser *parser, HashSymbol *terminal) {
  * - It cannot contain whitespace.
  *
  * @param parser The PrattParser to report errors to.
- * @param operator The PrattUnicode operator string to validate.
+ * @param operator The WCharArray operator string to validate.
  */
-static bool validateOperator(PrattParser *parser, PrattUnicode *operator) {
+static bool validateOperator(PrattParser *parser, WCharArray *operator) {
     if (wcslen(operator->entries) == 0) {
         parserError(parser, "operator cannot be empty string");
         return false;
@@ -1249,7 +1287,7 @@ static AstExpressions *makeAstAarglist(ParserInfo PI, char *name,
 }
 
 /**
- * @brief Generate a hygienic operator macro body.
+ * @brief Generate a hygienic operator lazy body.
  */
 static AstDefinition *makeHygenicOperatorBody(ParserInfo PI, HashSymbol *symbol,
                                               AstFargList *fargs,
@@ -1265,18 +1303,18 @@ static AstDefinition *makeHygenicOperatorBody(ParserInfo PI, HashSymbol *symbol,
     PROTECT(body);
     AstAltFunction *altFun = newAstAltFunction(PI, altArgs, body);
     PROTECT(altFun);
-    // Generate a macro instead of a function
-    // This creates: macro symbol(x, y) { impl(x, y) }
-    AstDefinition *res = makeAstDefinition_Macro(PI, symbol, altFun);
+    // Generate a lazy instead of a function
+    // This creates: lazy fn symbol(x, y) { impl(x, y) }
+    AstDefinition *res = makeAstDefinition_Lazy(PI, symbol, altFun);
     // Unprotect all in one go
     UNPROTECT(save);
     return res;
 }
 
-static inline HashSymbol *makeMacroName() { return genSymDollar("opMacro"); }
+static inline HashSymbol *makeLazyName() { return genSymDollar("opLazy"); }
 
 static AstDefinition *makeHygienicNaryOperatorDef(ParserInfo PI, int arity,
-                                                  HashSymbol *macroName,
+                                                  HashSymbol *lazyName,
                                                   AstExpression *impl) {
     char buffer[32];
     // make the formal argument list ()
@@ -1292,9 +1330,9 @@ static AstDefinition *makeHygienicNaryOperatorDef(ParserInfo PI, int arity,
         PROTECT(callArgs);
         arity--;
     }
-    // make the macro definition
+    // make the lazy definition
     AstDefinition *res =
-        makeHygenicOperatorBody(PI, macroName, argList, callArgs, impl);
+        makeHygenicOperatorBody(PI, lazyName, argList, callArgs, impl);
     UNPROTECT(save);
     return res;
 }
@@ -1312,12 +1350,13 @@ static AstDefinition *makeHygienicNaryOperatorDef(ParserInfo PI, int arity,
  * @param associativity The associativity type of the operator (left, right,
  * none).
  * @param precedence The precedence level of the operator.
- * @param operator The PrattUnicode representation of the operator.
+ * @param operator The WCharArray representation of the operator.
  * @param impl The AstExpression implementation of the operator.
  */
 static AstDefinition *addOperator(PrattParser *parser, PrattFixity fixity,
                                   PrattAssoc associativity, int precedence,
-                                  PrattUnicode *operator, AstExpression *impl) {
+                                  WCharArray *operator, AstExpression *impl,
+                                  bool isLazy) {
     HashSymbol *op = unicodeToSymbol(operator);
     // Only look for an existing operator in the current (local) parser scope.
     // This allows inner scopes to shadow operators defined in outer scopes.
@@ -1329,12 +1368,12 @@ static AstDefinition *addOperator(PrattParser *parser, PrattFixity fixity,
         record = copyPrattRecord(record);
         PROTECT(record);
     } else {
-        PrattFixityConfig empty = {NULL,  0,    NULL, NULL, false,
-                                   false, NULL, -1,   NULL};
+        PrattFixityConfig empty = {NULL,  0,    NULL,  NULL, false,
+                                   false, NULL, false, -1,   NULL};
         record = newPrattRecord(op, empty, empty, empty);
         PROTECT(record);
     }
-    HashSymbol *hygienicFunc = makeMacroName();
+    HashSymbol *hygienicFunc = makeLazyName();
     bool isBareSymbol = (impl && impl->type == AST_EXPRESSION_TYPE_SYMBOL);
     int scaledPrec = precedence * PRECEDENCE_SCALE;
     AstDefinition *def = NULL;
@@ -1348,7 +1387,13 @@ static AstDefinition *addOperator(PrattParser *parser, PrattFixity fixity,
         }
         fixityConfig = &record->prefix;
         fixityConfig->op = userPrefix;
-        def = makeHygienicNaryOperatorDef(CPI(impl), 1, hygienicFunc, impl);
+        if (isLazy) {
+            def = makeHygienicNaryOperatorDef(CPI(impl), 1, hygienicFunc, impl);
+        } else if (isBareSymbol) {
+            def = newAstDefinition_Blank(CPI(impl));
+        } else {
+            def = makeAstDefinition_Define(CPI(impl), hygienicFunc, impl);
+        }
     } break;
     case PRATTFIXITY_TYPE_INFIX: {
         if (record->infix.op) {
@@ -1366,7 +1411,13 @@ static AstDefinition *addOperator(PrattParser *parser, PrattFixity fixity,
             (associativity == PRATTASSOC_TYPE_LEFT)    ? userInfixLeft
             : (associativity == PRATTASSOC_TYPE_RIGHT) ? userInfixRight
                                                        : userInfixNone;
-        def = makeHygienicNaryOperatorDef(CPI(impl), 2, hygienicFunc, impl);
+        if (isLazy) {
+            def = makeHygienicNaryOperatorDef(CPI(impl), 2, hygienicFunc, impl);
+        } else if (isBareSymbol) {
+            def = newAstDefinition_Blank(CPI(impl));
+        } else {
+            def = makeAstDefinition_Define(CPI(impl), hygienicFunc, impl);
+        }
     } break;
     case PRATTFIXITY_TYPE_POSTFIX: {
         if (record->postfix.op) {
@@ -1381,7 +1432,13 @@ static AstDefinition *addOperator(PrattParser *parser, PrattFixity fixity,
         }
         fixityConfig = &record->postfix;
         fixityConfig->op = userPostfix;
-        def = makeHygienicNaryOperatorDef(CPI(impl), 1, hygienicFunc, impl);
+        if (isLazy) {
+            def = makeHygienicNaryOperatorDef(CPI(impl), 1, hygienicFunc, impl);
+        } else if (isBareSymbol) {
+            def = newAstDefinition_Blank(CPI(impl));
+        } else {
+            def = makeAstDefinition_Define(CPI(impl), hygienicFunc, impl);
+        }
     } break;
     default:
         cant_happen("unknown fixity type %s", prattFixityName(fixity));
@@ -1392,6 +1449,7 @@ static AstDefinition *addOperator(PrattParser *parser, PrattFixity fixity,
     fixityConfig->originalImpl = impl;
     fixityConfig->hygienicFunc = hygienicFunc;
     fixityConfig->isBareSymbol = isBareSymbol;
+    fixityConfig->isLazy = isLazy;
     if (isNewOperator) {
         parser->trie = insertPrattTrie(parser->trie, op);
     }
@@ -1451,7 +1509,7 @@ AstExpression *userMixfix(PrattRecord *record, PrattParser *parser,
         arity--;
         if (arity > 0 || !(pattern->endsWithHole)) {
             // Consume the next keyword
-            PrattUnicode *kw = keywords->entries[kwIndex++];
+            WCharArray *kw = keywords->entries[kwIndex++];
             PrattToken *nextTok = peek(parser);
             HashSymbol *nextSym = unicodeToSymbol(kw);
             if (!isAtomSymbol(nextTok, nextSym)) {
@@ -1474,6 +1532,7 @@ AstExpression *userMixfix(PrattRecord *record, PrattParser *parser,
     // implementation
     AstExpression *func = makeAstExpression_AnnotatedSymbol(
         TOKPI(tok), fixityConfig->hygienicFunc, fixityConfig->originalImpl);
+    getAstExpression_AnnotatedSymbol(func)->isLazy = fixityConfig->isLazy;
     PROTECT(func);
     if (fixityConfig->importNsRef >= 0) {
         func = makeAstExpression_LookUp(TOKPI(tok), fixityConfig->importNsRef,
@@ -1533,7 +1592,8 @@ static AstExpression *userPostfixMix(PrattRecord *record, PrattParser *parser,
 static AstDefinition *addMixfixOperator(PrattParser *parser,
                                         PrattMixfixPattern *pattern,
                                         PrattAssoc associativity,
-                                        int precedence, AstExpression *impl) {
+                                        int precedence, AstExpression *impl,
+                                        bool isLazy) {
     // Add secondary keywords to trie (no conflict check - precedence handles
     // disambiguation)
     for (Index i = 1; i < pattern->keywords->size; ++i) {
@@ -1541,9 +1601,9 @@ static AstDefinition *addMixfixOperator(PrattParser *parser,
         parser->trie = insertPrattTrie(parser->trie, inner);
     }
     PrattFixity fixity = getFixityFromPattern(pattern);
-    PrattUnicode *operator = pattern->keywords->entries[0];
-    (void)addOperator(parser, fixity, associativity, precedence, operator,
-                      impl);
+    WCharArray *operator = pattern->keywords->entries[0];
+    (void)addOperator(parser, fixity, associativity, precedence, operator, impl,
+                      isLazy);
     HashSymbol *op = unicodeToSymbol(operator);
     // Store the mixfix pattern in the PrattRecord for later parsing
     PrattRecord *record = NULL;
@@ -1552,8 +1612,15 @@ static AstDefinition *addMixfixOperator(PrattParser *parser,
     switch (fixity) {
     case PRATTFIXITY_TYPE_PREFIX:
         record->prefix.op = userPrefixMix;
-        def = makeHygienicNaryOperatorDef(CPI(impl), pattern->arity,
-                                          record->prefix.hygienicFunc, impl);
+        if (isLazy) {
+            def = makeHygienicNaryOperatorDef(
+                CPI(impl), pattern->arity, record->prefix.hygienicFunc, impl);
+        } else if (record->prefix.isBareSymbol) {
+            def = newAstDefinition_Blank(CPI(impl));
+        } else {
+            def = makeAstDefinition_Define(CPI(impl),
+                                           record->prefix.hygienicFunc, impl);
+        }
         if (record->prefix.pattern != NULL) {
             parserErrorAt(CPI(impl), parser,
                           "attempt to redefine mixfix operator \"%ls\"",
@@ -1563,8 +1630,15 @@ static AstDefinition *addMixfixOperator(PrattParser *parser,
         break;
     case PRATTFIXITY_TYPE_INFIX:
         record->infix.op = userInfixMix;
-        def = makeHygienicNaryOperatorDef(CPI(impl), pattern->arity,
-                                          record->infix.hygienicFunc, impl);
+        if (isLazy) {
+            def = makeHygienicNaryOperatorDef(CPI(impl), pattern->arity,
+                                              record->infix.hygienicFunc, impl);
+        } else if (record->infix.isBareSymbol) {
+            def = newAstDefinition_Blank(CPI(impl));
+        } else {
+            def = makeAstDefinition_Define(CPI(impl),
+                                           record->infix.hygienicFunc, impl);
+        }
         if (record->infix.pattern != NULL) {
             parserErrorAt(CPI(impl), parser,
                           "attempt to redefine mixfix operator \"%ls\"",
@@ -1574,8 +1648,15 @@ static AstDefinition *addMixfixOperator(PrattParser *parser,
         break;
     case PRATTFIXITY_TYPE_POSTFIX:
         record->postfix.op = userPostfixMix;
-        def = makeHygienicNaryOperatorDef(CPI(impl), pattern->arity,
-                                          record->postfix.hygienicFunc, impl);
+        if (isLazy) {
+            def = makeHygienicNaryOperatorDef(
+                CPI(impl), pattern->arity, record->postfix.hygienicFunc, impl);
+        } else if (record->postfix.isBareSymbol) {
+            def = newAstDefinition_Blank(CPI(impl));
+        } else {
+            def = makeAstDefinition_Define(CPI(impl),
+                                           record->postfix.hygienicFunc, impl);
+        }
         if (record->postfix.pattern != NULL) {
             parserErrorAt(CPI(impl), parser,
                           "attempt to redefine mixfix operator \"%ls\"",
@@ -1723,14 +1804,13 @@ static PrattParser *meldParsers(PrattParser *to, PrattParser *from) {
     }
 }
 
-static PrattUnicode *prattUnicodeSubstr(PrattUnicode *str, Index start,
-                                        Index end) {
-    PrattUnicode *res = newPrattUnicode();
+static WCharArray *prattUnicodeSubstr(WCharArray *str, Index start, Index end) {
+    WCharArray *res = newWCharArray();
     int save = PROTECT(res);
     for (Index i = start; i < end; i++) {
-        pushPrattUnicode(res, str->entries[i]);
+        pushWCharArray(res, str->entries[i]);
     }
-    pushPrattUnicode(res, '\0');
+    pushWCharArray(res, '\0');
     UNPROTECT(save);
     return res;
 }
@@ -1774,7 +1854,7 @@ static int patternStateTable[11][3] = {
 };
 
 static PrattMixfixPattern *
-parseMixfixPattern(ParserInfo PI, PrattParser *parser, PrattUnicode *str) {
+parseMixfixPattern(ParserInfo PI, PrattParser *parser, WCharArray *str) {
     // A mixfix pattern is a sequence of keywords and holes.
     // A hole is represented by an underscore character '_'.
     PrattStrings *strings = newPrattStrings();
@@ -1800,7 +1880,7 @@ parseMixfixPattern(ParserInfo PI, PrattParser *parser, PrattUnicode *str) {
         case PATTERN_STATE_C:
             break;
         case PATTERN_STATE_CU: {
-            PrattUnicode *kw = prattUnicodeSubstr(str, start, i);
+            WCharArray *kw = prattUnicodeSubstr(str, start, i);
             int save = PROTECT(kw);
             pushPrattStrings(strings, kw);
             UNPROTECT(save);
@@ -1814,7 +1894,7 @@ parseMixfixPattern(ParserInfo PI, PrattParser *parser, PrattUnicode *str) {
         case PATTERN_STATE_UC:
             break;
         case PATTERN_STATE_UCU: {
-            PrattUnicode *kw = prattUnicodeSubstr(str, start, i);
+            WCharArray *kw = prattUnicodeSubstr(str, start, i);
             int save = PROTECT(kw);
             pushPrattStrings(strings, kw);
             UNPROTECT(save);
@@ -1823,13 +1903,13 @@ parseMixfixPattern(ParserInfo PI, PrattParser *parser, PrattUnicode *str) {
         case PATTERN_STATE_CUF:
             break;
         case PATTERN_STATE_CCF: {
-            PrattUnicode *kw = prattUnicodeSubstr(str, start, i);
+            WCharArray *kw = prattUnicodeSubstr(str, start, i);
             int save = PROTECT(kw);
             pushPrattStrings(strings, kw);
             UNPROTECT(save);
         } break;
         case PATTERN_STATE_UCF: {
-            PrattUnicode *kw = prattUnicodeSubstr(str, start, i);
+            WCharArray *kw = prattUnicodeSubstr(str, start, i);
             int save = PROTECT(kw);
             pushPrattStrings(strings, kw);
             UNPROTECT(save);
@@ -1885,7 +1965,8 @@ static PrattAssoc parseOptionalAssociativity(PrattParser *parser) {
  * for error reporting.
  */
 static AstDefinition *operatorWithPattern(PrattParser *parser, PrattToken *tok,
-                                          PrattMixfixPattern *pattern) {
+                                          PrattMixfixPattern *pattern,
+                                          bool isLazy) {
     ENTER(operatorWithPattern);
     int save = PROTECT(tok);
     PROTECT(pattern);
@@ -1920,7 +2001,7 @@ static AstDefinition *operatorWithPattern(PrattParser *parser, PrattToken *tok,
     AstExpression *impl = expression(parser);
     PROTECT(impl);
     AstDefinition *def =
-        addMixfixOperator(parser, pattern, assoc, precedence, impl);
+        addMixfixOperator(parser, pattern, assoc, precedence, impl, isLazy);
     LEAVE(operatorWithPattern);
     UNPROTECT(save);
     return def;
@@ -1929,15 +2010,15 @@ static AstDefinition *operatorWithPattern(PrattParser *parser, PrattToken *tok,
 /**
  * Parse `operator <pattern> [<associativity>] <precedence> <implementation>;`
  */
-static AstDefinition *operator(PrattParser *parser) {
+static AstDefinition *operator(PrattParser *parser, bool isLazy) {
     ENTER(operator);
     PrattToken *tok = peek(parser);
     int save = PROTECT(tok);
-    PrattUnicode *str = rawString(parser);
+    WCharArray *str = rawString(parser);
     PROTECT(str);
     PrattMixfixPattern *pattern = parseMixfixPattern(TOKPI(tok), parser, str);
     PROTECT(pattern);
-    AstDefinition *def = operatorWithPattern(parser, tok, pattern);
+    AstDefinition *def = operatorWithPattern(parser, tok, pattern, isLazy);
     LEAVE(operator);
     UNPROTECT(save);
     return def;
@@ -1947,7 +2028,7 @@ static AstDefinition *operator(PrattParser *parser) {
  * @brief Parse a definition.
  *
  * This fuction parses a definition, which can be an assignment,
- * a typedef, a function, a printer, a macro, a link, an alias,
+ * a typedef, a function, a printer, a lazy fn, a link, an alias,
  * a prefix, an infix, or a postfix operator.
  *
  * @param parser The PrattParser to use for parsing.
@@ -1972,16 +2053,25 @@ static AstDefinition *definition(PrattParser *parser) {
         save = PROTECT(res);
     } else if (match(parser, TOK_UNSAFE())) {
         consume(parser, TOK_FN());
-        res = defun(parser, true, false);
+        res = defun(parser, true, DEFUN_FUNCTION);
         save = PROTECT(res);
     } else if (match(parser, TOK_FN())) {
-        res = defun(parser, false, false);
+        res = defun(parser, false, DEFUN_FUNCTION);
         save = PROTECT(res);
     } else if (match(parser, TOK_PRINT())) {
-        res = defun(parser, false, true);
+        res = defun(parser, false, DEFUN_PRINTER);
         save = PROTECT(res);
-    } else if (match(parser, TOK_MACRO())) {
-        res = defMacro(parser);
+    } else if (match(parser, TOK_EQ())) {
+        res = defun(parser, false, DEFUN_COMPARATOR);
+        save = PROTECT(res);
+    } else if (match(parser, TOK_LAZY())) {
+        if (check(parser, TOK_OPERATOR())) {
+            match(parser, TOK_OPERATOR());
+            res = operator(parser, true);
+        } else {
+            consume(parser, TOK_FN());
+            res = defLazy(parser);
+        }
         save = PROTECT(res);
     } else if (match(parser, TOK_LINK())) {
         res = link(parser);
@@ -1996,7 +2086,7 @@ static AstDefinition *definition(PrattParser *parser) {
         res = exportOp(parser);
         save = PROTECT(res);
     } else if (match(parser, TOK_OPERATOR())) {
-        res = operator(parser);
+        res = operator(parser, false);
         save = PROTECT(res);
     } else {
         PrattToken *tok = next(parser);
@@ -2085,20 +2175,59 @@ static AstDefinition *exportOp(PrattParser *parser) {
                           "expected 'operators' or a fixity after export");
             res = newAstDefinition_Blank(TOKPI(atom));
         }
+    } else if (match(parser, TOK_LAZY())) {
+        if (!match(parser, TOK_OPERATOR())) {
+            parserError(parser, "expected 'operator' after 'lazy' in export");
+            LEAVE(exportOp);
+            UNPROTECT(save);
+            return newAstDefinition_Blank(TOKPI(tok));
+        }
+        // export lazy operator <pattern> ...
+        PrattToken *opTok = peek(parser);
+        PROTECT(opTok);
+        WCharArray *str = rawString(parser);
+        PROTECT(str);
+        PrattMixfixPattern *pattern =
+            parseMixfixPattern(TOKPI(opTok), parser, str);
+        PROTECT(pattern);
+        res = operatorWithPattern(parser, opTok, pattern, true);
+        PROTECT(res);
+        if (pattern != NULL) {
+            HashSymbol *op = unicodeToSymbol(pattern->keywords->entries[0]);
+            PrattRecord *rec = NULL;
+            if (!getPrattRecordTable(parser->rules, op, &rec) || rec == NULL) {
+                parserError(parser,
+                            "cannot export non-local operator '%s' in pattern",
+                            op->name);
+            } else {
+                PrattFixity fixity = getFixityFromPattern(pattern);
+                switch (fixity) {
+                case PRATTFIXITY_TYPE_PREFIX:
+                    rec->prefix.export = true;
+                    break;
+                case PRATTFIXITY_TYPE_INFIX:
+                    rec->infix.export = true;
+                    break;
+                case PRATTFIXITY_TYPE_POSTFIX:
+                    rec->postfix.export = true;
+                    break;
+                }
+            }
+        }
     } else if (match(parser, TOK_OPERATOR())) {
         // for export operator, the syntax includes the definition of the
         // operator: export operator <pattern> [<associativity>] <precedence>
         // <implementation>; Parse the pattern string first
         PrattToken *opTok = peek(parser);
         PROTECT(opTok);
-        PrattUnicode *str = rawString(parser);
+        WCharArray *str = rawString(parser);
         PROTECT(str);
         PrattMixfixPattern *pattern =
             parseMixfixPattern(TOKPI(opTok), parser, str);
         PROTECT(pattern);
 
         // Now parse the operator definition using the already-parsed pattern
-        res = operatorWithPattern(parser, opTok, pattern);
+        res = operatorWithPattern(parser, opTok, pattern, false);
         PROTECT(res);
 
         // Mark the operator as exported
@@ -2221,7 +2350,7 @@ static AstDefinition *importOp(PrattParser *parser) {
         }
     } else if (match(parser, TOK_OPERATOR())) {
         // import <ns> operator <pattern>;
-        PrattUnicode *str = rawString(parser);
+        WCharArray *str = rawString(parser);
         PROTECT(str);
         PrattMixfixPattern *pattern =
             parseMixfixPattern(TOKPI(tok), parser, str);
@@ -2994,20 +3123,20 @@ static AstFarg *astExpressionToFarg(PrattParser *parser, AstExpression *expr) {
 }
 
 /**
- * @brief validate that the macro arguments are conforming (symbols only, and no
- * alternative args)
+ * @brief validate that the lazy fn arguments are conforming (symbols only, and
+ * no alternative args)
  */
-static void validateMacroArgs(PrattParser *parser, AstAltFunction *definition) {
+static void validateLazyArgs(PrattParser *parser, AstAltFunction *definition) {
     AstAltArgs *altArgs = definition->altArgs;
     if (altArgs->next) {
         parserErrorAt(CPI(altArgs->next), parser,
-                      "cannot supply alternative arguments to a macro");
+                      "cannot supply alternative arguments to a lazy fn");
     } else {
         AstFargList *args = altArgs->argList;
         while (args) {
             if (args->arg->type != AST_FARG_TYPE_SYMBOL) {
                 parserErrorAt(CPI(args->arg), parser,
-                              "macro arguments can only be simple symbols");
+                              "lazy fn arguments can only be simple symbols");
                 break;
             }
             args = args->next;
@@ -3016,20 +3145,21 @@ static void validateMacroArgs(PrattParser *parser, AstAltFunction *definition) {
 }
 
 /**
- * @brief parse a macro definition.
+ * @brief parse a lazy fn definition.
  *
- * the `macro` token has already been consumed when this function triggers.
+ * the `lazy` and `fn` tokens have already been consumed when this function
+ * triggers.
  */
-static AstDefinition *defMacro(PrattParser *parser) {
-    ENTER(defMacro);
+static AstDefinition *defLazy(PrattParser *parser) {
+    ENTER(defLazy);
     PrattToken *tok = peek(parser);
     int save = PROTECT(tok);
     HashSymbol *s = symbol(parser);
     AstAltFunction *definition = altFunction(parser);
     PROTECT(definition);
-    validateMacroArgs(parser, definition);
-    AstDefinition *res = makeAstDefinition_Macro(TOKPI(tok), s, definition);
-    LEAVE(defMacro);
+    validateLazyArgs(parser, definition);
+    AstDefinition *res = makeAstDefinition_Lazy(TOKPI(tok), s, definition);
+    LEAVE(defLazy);
     UNPROTECT(save);
     return res;
 }
@@ -3039,7 +3169,7 @@ static AstDefinition *defMacro(PrattParser *parser) {
  *
  * The `fn` token has already been consumed when this function is triggered.
  */
-static AstDefinition *defun(PrattParser *parser, bool unsafe, bool isPrinter) {
+static AstDefinition *defun(PrattParser *parser, bool unsafe, DefunType type) {
     ENTER(defun);
     PrattToken *tok = peek(parser);
     int save = PROTECT(tok);
@@ -3047,8 +3177,10 @@ static AstDefinition *defun(PrattParser *parser, bool unsafe, bool isPrinter) {
     AstCompositeFunction *f = compositeFunction(parser);
     f->unsafe = unsafe;
     PROTECT(f);
-    if (isPrinter) {
+    if (type == DEFUN_PRINTER) {
         s = makePrintName("print$", s->name);
+    } else if (type == DEFUN_COMPARATOR) {
+        s = makePrintName("eq$", s->name);
     }
     AstExpression *expr = newAstExpression_Fun(CPI(f), f);
     PROTECT(expr);
@@ -3101,7 +3233,7 @@ static AstDefinition *assignment(PrattParser *parser) {
     return res;
 }
 
-static AstSymbolList *symbolList(PrattParser *parser) {
+static AstSymbolList *symbolList(PrattParser *parser, bool allowWildcard) {
     ENTER(symbolList);
     if (match(parser, TOK_CLOSE())) {
         LEAVE(symbolList);
@@ -3112,13 +3244,15 @@ static AstSymbolList *symbolList(PrattParser *parser) {
     HashSymbol *s = NULL;
     if (symbol->type == TOK_ATOM()) {
         s = symbol->value->val.atom;
+    } else if (allowWildcard && symbol->type == TOK_WILDCARD()) {
+        s = TOK_WILDCARD();
     } else {
         parserError(parser, "expected ATOM, got %s", symbol->type->name);
         s = TOK_ERROR();
     }
     AstSymbolList *this = NULL;
     if (match(parser, TOK_COMMA())) {
-        AstSymbolList *rest = symbolList(parser);
+        AstSymbolList *rest = symbolList(parser, allowWildcard);
         PROTECT(rest);
         this = newAstSymbolList(TOKPI(symbol), s, rest);
     } else {
@@ -3137,7 +3271,7 @@ static AstDefinition *multiDefinition(PrattParser *parser) {
     ENTER(multiDefinition);
     PrattToken *tok = peek(parser);
     int save = PROTECT(tok);
-    AstSymbolList *symbols = symbolList(parser);
+    AstSymbolList *symbols = symbolList(parser, true);
     PROTECT(symbols);
     consume(parser, TOK_ASSIGN());
     AstExpression *expr = expression(parser);
@@ -3259,7 +3393,7 @@ static AstTypeSymbols *typeVariables(PrattParser *parser) {
  */
 static AstDefinition *link(PrattParser *parser) {
     ENTER(link);
-    PrattUnicode *path = rawString(parser);
+    WCharArray *path = rawString(parser);
     int save = PROTECT(path);
     AstDefinition *res = NULL;
     if (path == NULL) {
@@ -3269,11 +3403,10 @@ static AstDefinition *link(PrattParser *parser) {
         HashSymbol *name = symbol(parser);
         // Convert wide character path to multibyte
         size_t len = wcstombs(NULL, path->entries, 0);
-        PrattCVec *mbPath = newPrattCVec(len + 1);
+        SCharVec *mbPath = newSCharVec(len + 1);
         PROTECT(mbPath);
         wcstombs(mbPath->entries, path->entries, len + 1);
-        AstNameSpace *ns =
-            parseLink(parser, (unsigned char *)mbPath->entries, name);
+        AstNameSpace *ns = parseLink(parser, mbPath, name);
         PROTECT(ns);
         storeNameSpace(parser, ns);
         res = newAstDefinition_Blank(CPI(ns));
@@ -3286,7 +3419,7 @@ static AstDefinition *link(PrattParser *parser) {
 /**
  * @brief parses a raw double-quoted string for a link directive.
  */
-static PrattUnicode *rawString(PrattParser *parser) {
+static WCharArray *rawString(PrattParser *parser) {
     ENTER(rawString);
     PrattToken *tok = next(parser);
     validateLastAlloc();
@@ -3300,9 +3433,9 @@ static PrattUnicode *rawString(PrattParser *parser) {
         return tok->value->val.string;
     } else {
         parserError(parser, "expected string, got %s", tok->type->name);
-        PrattUnicode *err = newPrattUnicode();
+        WCharArray *err = newWCharArray();
         int save = PROTECT(err);
-        pushPrattUnicode(err, 0);
+        pushWCharArray(err, 0);
         LEAVE(rawString);
         UNPROTECT(save);
         return err;
@@ -3312,13 +3445,13 @@ static PrattUnicode *rawString(PrattParser *parser) {
 /**
  * @brief parses a subsequent string, appending it to the current.
  */
-static void appendString(PrattParser *parser, PrattUnicode *this) {
+static void appendString(PrattParser *parser, WCharArray *this) {
     ENTER(appendString);
-    PrattUnicode *next = rawString(parser);
+    WCharArray *next = rawString(parser);
     int save = PROTECT(next);
     this->size--; // backup over '\0'
     for (Index i = 0; i < next->size; i++) {
-        pushPrattUnicode(this, next->entries[i]);
+        pushWCharArray(this, next->entries[i]);
     }
     UNPROTECT(save);
     if (check(parser, TOK_STRING())) {
@@ -3330,9 +3463,9 @@ static void appendString(PrattParser *parser, PrattUnicode *this) {
 /**
  * @brief parses any sequence of adjacent strings into a single string.
  */
-static PrattUnicode *str(PrattParser *parser) {
+static WCharArray *str(PrattParser *parser) {
     ENTER(str);
-    PrattUnicode *this = rawString(parser);
+    WCharArray *this = rawString(parser);
     int save = PROTECT(this);
     if (check(parser, TOK_STRING())) {
         appendString(parser, this);
@@ -3798,21 +3931,6 @@ static AstExpression *unsafe(PrattRecord *record __attribute__((unused)),
 }
 
 /**
- * @brief parselet triggered by a prefix `macro` token.
- *
- * We can't actually allow anonymous macro expressions but need to ensure
- * `macro` is registered as a prefix operator so that it can't be
- * overridden.
- */
-static AstExpression *macro(PrattRecord *record __attribute__((unused)),
-                            PrattParser *parser,
-                            AstExpression *lhs __attribute__((unused)),
-                            PrattToken *tok) {
-    parserErrorAt(TOKPI(tok), parser, "can't declare macros as expressions");
-    return errorExpression(TOKPI(tok));
-}
-
-/**
  * @brief parselet triggered by a prefix `fn` token.
  */
 static AstExpression *fn(PrattRecord *record __attribute__((unused)),
@@ -3943,6 +4061,7 @@ static AstExpression *userPrefix(PrattRecord *record, PrattParser *parser,
     // implementation
     AstExpression *func = makeAstExpression_AnnotatedSymbol(
         TOKPI(tok), record->prefix.hygienicFunc, record->prefix.originalImpl);
+    getAstExpression_AnnotatedSymbol(func)->isLazy = record->prefix.isLazy;
     PROTECT(func);
     if (record->prefix.importNsRef >= 0) {
         func = makeAstExpression_LookUp(TOKPI(tok), record->prefix.importNsRef,
@@ -3979,6 +4098,7 @@ static AstExpression *userInfixCommon(PrattRecord *record, PrattParser *parser,
     // implementation
     AstExpression *func = makeAstExpression_AnnotatedSymbol(
         TOKPI(tok), record->infix.hygienicFunc, record->infix.originalImpl);
+    getAstExpression_AnnotatedSymbol(func)->isLazy = record->infix.isLazy;
     PROTECT(func);
     if (record->infix.importNsRef >= 0) {
         func = makeAstExpression_LookUp(TOKPI(tok), record->infix.importNsRef,
@@ -4051,6 +4171,7 @@ static AstExpression *userPostfix(PrattRecord *record,
     // implementation
     AstExpression *func = makeAstExpression_AnnotatedSymbol(
         TOKPI(tok), record->postfix.hygienicFunc, record->postfix.originalImpl);
+    getAstExpression_AnnotatedSymbol(func)->isLazy = record->postfix.isLazy;
     PROTECT(func);
     if (record->postfix.importNsRef >= 0) {
         func = makeAstExpression_LookUp(TOKPI(tok), record->postfix.importNsRef,
@@ -4163,7 +4284,7 @@ static AstExpression *makeChar(PrattRecord *record __attribute__((unused)),
 /**
  * @brief utility to convert a string to a nested list of conses of characters.
  */
-static AstFunCall *makeStringList(ParserInfo PI, PrattUnicode *str) {
+static AstFunCall *makeStringList(ParserInfo PI, WCharArray *str) {
     AstExpression *nil = newAstExpression_Symbol(PI, nilSymbol());
     int save = PROTECT(nil);
     AstFunCall *res = newAstFunCall(PI, nil, NULL);
@@ -4205,7 +4326,7 @@ static AstExpression *makeString(PrattRecord *record __attribute__((unused)),
     }
 #endif
     enqueueToken(parser->lexer, tok);
-    PrattUnicode *uni = str(parser);
+    WCharArray *uni = str(parser);
     int save = PROTECT(uni);
     AstFunCall *list = makeStringList(TOKPI(tok), uni);
     PROTECT(list);

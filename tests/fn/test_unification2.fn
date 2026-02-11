@@ -1,0 +1,15 @@
+let
+    typedef term {
+        num(number) |
+        mul(term, term)
+    }
+
+    fn fixed {
+        (mul(mul(num(1), x), x)) { 1 }
+        (mul(x, mul(num(1), x))) { 2 }
+        (x) { 3 }
+    }
+in
+    assert(fixed(mul(mul(num(1), num(2)), num(2))) == 1);
+    assert(fixed(mul(num(2), mul(num(1), num(2)))) == 2);
+    assert(fixed(mul(num(1), num(2))) == 3);

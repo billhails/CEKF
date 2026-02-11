@@ -22,8 +22,8 @@ class DiscriminatedUnion(SimpleStruct):
         self.enum = DiscriminatedUnionEnum(self.name, self.fields, body)
 
     def build(self, catalog):
-        catalog.add(self.union)
-        catalog.add(self.enum)
+        catalog.add(self.union, self.isExternal())
+        catalog.add(self.enum, self.isExternal())
 
     def makeField(self, fieldName, fieldData):
         return DiscriminatedUnionField(self.name, fieldName, fieldData)
@@ -81,14 +81,14 @@ class DiscriminatedUnion(SimpleStruct):
         print(f'            cant_happen("unrecognised type %d in mark{myName}", _x{a}type); {c}')
         print(f"    }} {c}")
 
-    def printCompareFunctionBody(self, catalog):
-        c = self.comment('printCompareFunctionBody')
+    def printEqFunctionBody(self, catalog):
+        c = self.comment('printEqFunctionBody')
         myName=self.getName()
         a = AccessorHelper.accessor(self.isInline(catalog))
         print(f"    if (a{a}type != b{a}type) return false; {c}")
         print(f"    switch(a{a}type) {{ {c}")
         for field in self.fields:
-            field.printCompareCase(self.isInline(catalog), catalog)
+            field.printEqCase(self.isInline(catalog), catalog)
         print(f"        default: {c}")
         print(f'            cant_happen("unrecognised type %d in eq{myName}", a{a}type); {c}')
         print(f"    }} {c}")

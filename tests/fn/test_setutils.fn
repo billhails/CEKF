@@ -12,7 +12,6 @@ let
             assert(1 IN s);
             assert(3 IN s);
             assert(not 6 IN s);
-            puts("test_contains passed\n");
             true;
     }
 
@@ -27,7 +26,6 @@ let
             assert(3 IN su);
             assert(4 IN su);
             assert(5 IN su);
-            puts("test_union passed\n");
             true;
     }
 
@@ -43,7 +41,6 @@ let
             assert(4 IN si);
             assert(not 5 IN si);
             assert(not 6 IN si);
-            puts("test_intersection passed\n");
             true;
     }
 
@@ -59,7 +56,6 @@ let
             assert(not 4 IN sd);
             assert(not 5 IN sd);
             assert(not 6 IN sd);
-            puts("test_difference 1 passed\n");
             true;
     }
 
@@ -75,7 +71,6 @@ let
             assert(not 4 IN sd);
             assert(5 IN sd);
             assert(6 IN sd);
-            puts("test_difference 2 passed\n");
             true;
     }
 
@@ -85,4 +80,3 @@ in
     test_intersection();
     test_difference1();
     test_difference2();
-    puts("All SET tests passed\n");

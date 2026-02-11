@@ -1,0 +1,16 @@
+// Over-application exposes let/lambda desugaring bug
+// Same root cause as namespace-let-bytecode bug:
+// Let bindings desugar to lambda applications `((lambda (r1) body) value)`.
+// When the value expression involves over-application, the VM exits 
+// prematurely when reaching the NULL continuation, before applying
+// the lambda that represents the let body.
+// The assertion never runs because the lambda `(lambda (r1) assert(false))`
+// is never applied.
+
+let
+    fun1 = fn (x, y) { fn (z) { x + y + z } };
+    r1 = fun1(1, 2, 3);  // Over-application: after this completes with result 6,
+                          // the lambda `(lambda (r1) assert(false))` should be
+                          // applied, but the VM exits instead.
+in
+    assert(false); // never gets here

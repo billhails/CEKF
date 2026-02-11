@@ -19,7 +19,6 @@ let
                 assert(result1 == 120);
                 assert(result2 == 3628800);
                 assert(result3 == 1);
-                puts("Tail recursion tests passed\n")
             }
     }
     
@@ -39,7 +38,6 @@ let
                 assert(result1 == 120);
                 assert(result2 == 3628800);
                 assert(result3 == 1);
-                puts("Non-tail recursion tests passed\n")
             }
     }
     
@@ -64,7 +62,6 @@ let
             assert(not is_even(5));
             assert(is_even(100));
             assert(is_odd(99));
-            puts("Mutual recursion tests passed\n")
     }
     
     // Test: Nested recursion
@@ -85,7 +82,6 @@ let
             assert(result2 == 4);
             assert(result3 == 7);
             assert(result4 == 29);
-            puts("Nested recursion (Ackermann) tests passed\n")
     }
     
     // Test: Recursion with list processing
@@ -118,7 +114,6 @@ let
             assert(reversed == [5, 4, 3, 2, 1]);
             assert(empty_sum == 0);
             assert(empty_product == 1);
-            puts("List recursion tests passed\n")
     }
     
     // Test: Recursion with multiple arguments
@@ -138,7 +133,6 @@ let
             assert(result2 == 25);
             assert(result3 == 1);
             assert(result4 == 5);
-            puts("Multi-argument recursion tests passed\n")
     }
     
     // Test: Deep recursion stress test (Fibonacci)
@@ -160,7 +154,6 @@ let
             assert(fib(10) == 55);
             assert(fib(15) == 610);
             assert(fib(20) == 6765);
-            puts("Fibonacci recursion tests passed\n")
     }
     
     // Test: Recursion with pattern matching complexity
@@ -206,7 +199,6 @@ let
             assert(single_depth == 1);
             assert(empty_sum == 0);
             assert(empty_depth == 0);
-            puts("Recursive pattern matching tests passed\n")
     }
     
     // Main test runner
@@ -219,7 +211,6 @@ let
         test_multi_arg_recursion();
         test_fibonacci();
         test_recursive_patterns();
-        puts("All recursion tests completed successfully!")
     }
 in
     main();

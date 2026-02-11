@@ -2,7 +2,7 @@ let
     link "maybe.fn" as maybe;
 in
     print(fn {
-        (maybe.some(x)) { x }
+        (maybe.just(x)) { x }
         (maybe.nothing) { 0 }
-    }(maybe.some(1)))
+    }(maybe.just(1)))
     // maybe.nothing

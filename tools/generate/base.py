@@ -33,23 +33,25 @@ class Base:
     def __init__(self, name, body):
         self.name = name
         self.tagged = False
-        self.bespokeCmpImplementation = False
-        self.extraCmpArgs = {}
+        self.bespokeEqImplementation = False
+        self.extraEqArgs = {}
         self.hasDocs = False
         self.brief = None
         self.description = None
-        if "parserInfo" in body:
-            self.parserInfo = body["parserInfo"]
-        else:
-            self.parserInfo = None
+        self.parserInfo = None
+        self.eqIgnore = []  # List of field names to ignore in equality comparison
         if "meta" in body:
             meta = body["meta"]
+            if "parserInfo" in meta:
+                self.parserInfo = meta["parserInfo"]
             if "brief" in meta:
                 self.hasDocs = True
                 self.brief = meta["brief"]
             if "description" in meta:
                 self.hasDocs = True
                 self.description = meta["description"]
+            if "eqIgnore" in meta:
+                self.eqIgnore = meta["eqIgnore"]
 
     def printBaseDocumentation(self):
         if self.hasDocs:
@@ -62,10 +64,20 @@ class Base:
                 print(f" * {line}")
             print(" */")
 
-    def getParserInfo(self, default):
-        if self.parserInfo is not None:
-            return self.parserInfo
-        return default
+    def getParserInfo(self):
+        if self.parserInfo is None:
+            return False
+        return self.parserInfo
+    
+    def setParserInfo(self, info):
+        if self.parserInfo is None:
+            self.parserInfo = info
+
+    def setExternal(self, external):
+        self.external = external
+    
+    def isExternal(self):
+        return getattr(self, 'external', False)
 
     def formatDescription(self):
         """
@@ -113,8 +125,8 @@ class Base:
     def isSelfInitializing(self):
         return False
 
-    def noteExtraCmpArgs(self, args):
-        self.extraCmpArgs = args
+    def noteExtraEqArgs(self, args):
+        self.extraEqArgs = args
 
     def objTypeArray(self):
         return []
@@ -127,7 +139,7 @@ class Base:
 
     def comment(self, method):
         """Generate method comment using class name automatically."""
-        return CommentGen.method_comment(self.__class__.__name__, method)
+        return CommentGen.method_comment_with_impl(self, method)
 
     def hasParserInfo(self, catalog):
         return False
@@ -192,13 +204,13 @@ class Base:
     def printPrintDeclaration(self, catalog):
         pass
 
-    def printCompareDeclaration(self, catalog):
+    def printEqDeclaration(self, catalog):
         pass
 
     def printPrintFunction(self, catalog):
         pass
 
-    def printCompareFunction(self, catalog):
+    def printEqFunction(self, catalog):
         pass
 
     def printMarkObjCase(self, catalog):
@@ -258,6 +270,12 @@ class Base:
     def printExtendDeclaration(self, catalog):
         pass
 
+    def printAppendDeclaration(self, catalog):
+        pass
+
+    def printAddDeclaration(self, catalog):
+        pass
+
     def printSizeDeclaration(self, catalog):
         pass
 
@@ -291,6 +309,12 @@ class Base:
     def printPokeFunction(self, catalog):
         pass
 
+    def printAppendFunction(self, catalog):
+        pass
+
+    def printAddFunction(self, catalog):
+        pass
+
     def printExtendFunction(self, catalog):
         pass
 
@@ -315,8 +339,8 @@ class Base:
     def isVector(self):
         return False
 
-    def noteBespokeCmpImplementation(self):
-        self.bespokeCmpImplementation = True
+    def noteBespokeEqImplementation(self):
+        self.bespokeEqImplementation = True
 
     def makeCopyCommand(self, arg, catalog):
         return arg

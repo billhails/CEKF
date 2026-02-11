@@ -116,4 +116,3 @@ in
     test_reproducibility();
     test_various_seeds();
     
-    puts("All rand() tests completed successfully!")

@@ -10,7 +10,7 @@ PrattTrie --character--> character
 PrattTrie --terminal--> HashSymbol
 PrattTrie --siblings--> PrattTrie
 PrattTrie --children--> PrattTrie
-PrattBuffer --data--> PrattWVec
+PrattBuffer --data--> WCharVec
 PrattBuffer --start--> wstring
 PrattBuffer --offset--> int
 PrattBufList --lineNo--> int
@@ -42,8 +42,6 @@ PrattMixfixPattern --arity--> int
 PrattMixfixPattern --associativity--> PrattAssoc
 PrattMixfixPattern --startsWithHole--> bool
 PrattMixfixPattern --endsWithHole--> bool
-PrattWVec["(PrattWVec)"] --entries--> character
-PrattCVec["(PrattCVec)"] --entries--> schar
 PrattFixityConfig --op--> PrattParselet
 PrattFixityConfig --prec--> int
 PrattFixityConfig --originalImpl--> AstExpression
@@ -51,9 +49,10 @@ PrattFixityConfig --hygienicFunc--> HashSymbol
 PrattFixityConfig --isBareSymbol--> bool
 PrattFixityConfig --export--> bool
 PrattFixityConfig --pattern--> PrattMixfixPattern
+PrattFixityConfig --isLazy--> bool
 PrattFixityConfig --importNsRef--> int
 PrattFixityConfig --importNsSymbol--> HashSymbol
-PrattValue --string--> PrattUnicode
+PrattValue --string--> WCharArray
 PrattValue --number--> MaybeBigInt
 PrattValue --character--> character
 PrattValue --atom--> HashSymbol
@@ -61,9 +60,8 @@ PrattAssoc["enum PrattAssoc"]
 PrattNumberState["enum PrattNumberState"]
 PrattStringState["enum PrattStringState"]
 PrattFixity["enum PrattFixity"]
-PrattStrings["PrattStrings[]"] --entries--> PrattUnicode
+PrattStrings["PrattStrings[]"] --entries--> WCharArray
 PrattParsers["PrattParsers[]"] --entries--> PrattParser
-PrattUnicode["PrattUnicode[]"] --entries--> character
 PrattNsOpsArray["PrattNsOpsArray[]"] --entries--> PrattExportedOps
 ```
 

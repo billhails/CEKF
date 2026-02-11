@@ -56,17 +56,17 @@ void ppLamAmb(LamAmb *amb) {
     eprintf(")");
 }
 
-static void _ppLamVarList(LamVarList *varList) {
+static void _ppLamVarList(SymbolList *varList) {
     if (varList == NULL)
         return;
-    ppHashSymbol(varList->var);
+    ppHashSymbol(varList->symbol);
     if (varList->next != NULL) {
         eprintf(" ");
         _ppLamVarList(varList->next);
     }
 }
 
-void ppLamVarList(LamVarList *varList) {
+void ppLamVarList(SymbolList *varList) {
     eprintf("(");
     _ppLamVarList(varList);
     eprintf(")");

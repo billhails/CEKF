@@ -23,16 +23,16 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "common.h"
-#include "annotate.h"
-#include "memory.h"
-#include "step.h"
 #include "anf.h"
-#include "cekf.h"
-#include "symbol.h"
+#include "annotate.h"
 #include "arithmetic.h"
-#include "opaque.h"
 #include "builtin_io.h"
+#include "cekf.h"
+#include "common.h"
+#include "memory.h"
+#include "opaque.h"
+#include "step.h"
+#include "symbol.h"
 #include "wrapper_synthesis.h"
 
 static int bytesAllocated = 0;
@@ -49,10 +49,10 @@ int forceGcFlag = 0;
 #endif
 
 /**
- * The ProtectionStack structure is used to ensure objects that are in the process
- * of being constructed are not collected by the garbage collector. It is the structure
- * that is operated on by the PROTECT, REPLACE_PROTECT and UNPROTECT macros, which
- * push and pop objects to be protected from collection.
+ * The ProtectionStack structure is used to ensure objects that are in the
+ * process of being constructed are not collected by the garbage collector. It
+ * is the structure that is operated on by the PROTECT, REPLACE_PROTECT and
+ * UNPROTECT macros, which push and pop objects to be protected from collection.
  */
 typedef struct ProtectionStack {
     Header header;
@@ -73,62 +73,60 @@ void reportMemory() {
 
 static Header *allocated = NULL;
 
-void validateLastAlloc() {
-    lastAlloc = NULL;
-}
+void validateLastAlloc() { lastAlloc = NULL; }
 
 /**
  * Returns a string representation of the given ObjType.
  * Used for debugging output.
- * 
+ *
  * It defers to the generated typenameXXXObj functions
  * for the various groups of generated object types, but
  * handles the primitive object types itself.
- * 
+ *
  * @param type the ObjType to be named
  * @return string representation of the ObjType
  */
-__attribute__((unused))
-static const char *typeName(ObjType type) {
+__attribute__((unused)) static const char *typeName(ObjType type) {
     switch (type) {
-        case OBJTYPE_OPAQUE:
-            return "opaque";
-        case OBJTYPE_HASHTABLE:
-            return "hashtable";
-        case OBJTYPE_PROTECTION:
-            return "protection";
-        case OBJTYPE_BIGINT:
-            return "bigint";
-        case OBJTYPE_AGNOSTICFILEID:
-            return "file_id";
-        case OBJTYPE_MAYBEBIGINT:
-            return "maybebigint";
+    case OBJTYPE_OPAQUE:
+        return "opaque";
+    case OBJTYPE_HASHTABLE:
+        return "hashtable";
+    case OBJTYPE_PROTECTION:
+        return "protection";
+    case OBJTYPE_BIGINT:
+        return "bigint";
+    case OBJTYPE_MAYBEBIGINT:
+        return "maybebigint";
         ANF_OBJTYPE_CASES()
-            return typenameAnfObj(type);
+        return typenameAnfObj(type);
         AST_OBJTYPE_CASES()
-            return typenameAstObj(type);
+        return typenameAstObj(type);
         LAMBDA_OBJTYPE_CASES()
-            return typenameLambdaObj(type);
+        return typenameLambdaObj(type);
+        MINLAM_OBJTYPE_CASES()
+        return typenameMinlamObj(type);
         TPMC_OBJTYPE_CASES()
-            return typenameTpmcObj(type);
+        return typenameTpmcObj(type);
         TC_OBJTYPE_CASES()
-            return typenameTcObj(type);
+        return typenameTcObj(type);
         BUILTINS_OBJTYPE_CASES()
-            return typenameBuiltinsObj(type);
+        return typenameBuiltinsObj(type);
         PRATT_OBJTYPE_CASES()
-            return typenamePrattObj(type);
+        return typenamePrattObj(type);
         CEKFS_OBJTYPE_CASES()
-            return typenameCekfsObj(type);
+        return typenameCekfsObj(type);
         ANF_KONT_OBJTYPE_CASES()
-            return typenameAnf_kontObj(type);
+        return typenameAnf_kontObj(type);
         CPS_KONT_OBJTYPE_CASES()
-            return typenameCps_kontObj(type);
-        default: {
-            static char buf[64];
-            snprintf(buf, sizeof(buf), "%d", type);
-            return buf;
-        }
-            
+        return typenameCps_kontObj(type);
+        UTILS_OBJTYPE_CASES()
+        return typenameUtilsObj(type);
+    default: {
+        static char buf[64];
+        snprintf(buf, sizeof(buf), "%d", type);
+        return buf;
+    }
     }
 }
 
@@ -154,8 +152,15 @@ bool disableGC() {
 }
 
 #define INITIAL_PROTECTION 8
-#define NEW_PROTECT(size) ((ProtectionStack *)allocate(sizeof(ProtectionStack) + size * sizeof(Header *), OBJTYPE_PROTECTION))
-#define FREE_PROTECT(p) ((void)reallocate(p, sizeof(ProtectionStack) + ((ProtectionStack *)p)->capacity * sizeof(Header *), 0))
+#define NEW_PROTECT(size)                                                      \
+    ((ProtectionStack *)allocate(sizeof(ProtectionStack) +                     \
+                                     size * sizeof(Header *),                  \
+                                 OBJTYPE_PROTECTION))
+#define FREE_PROTECT(p)                                                        \
+    ((void)reallocate(p,                                                       \
+                      sizeof(ProtectionStack) +                                \
+                          ((ProtectionStack *)p)->capacity * sizeof(Header *), \
+                      0))
 
 void initProtection(void) {
 #ifdef DEBUG_LOG_GC
@@ -169,19 +174,18 @@ void initProtection(void) {
 /**
  * invoked by the REPLACE_PROTECT macro
  */
-void replaceProtect(Index i, Header *obj) {
-    protected->stack[i] = obj;
-}
+void replaceProtect(Index i, Header *obj) { protected->stack[i] = obj; }
 
 /**
  * Invoked by the PROTECT macro.
  * Pushes the given object onto the ProtectionStack
  * and returns the stack pointer index of the pushed object.
- * 
+ *
  * This function ensures that it will never attempt a memory allocation
  * (which might trigger a garbage collection) before the object to be protected
  * is safely on the ProtectionStack.
- * It does this by reallocating the stack to a larger size if the stack is at capacity
+ * It does this by reallocating the stack to a larger size if the stack is at
+ * capacity
  * **after** pushing the object onto the stack.
  */
 Index protect(Header *obj) {
@@ -196,7 +200,7 @@ Index protect(Header *obj) {
     protected->stack[protected->sp++] = obj;
     if (protected->sp == protected->capacity) {
 #ifdef DEBUG_LOG_GC
-        eprintf("protect old stack: %p\n", (void *) protected);
+        eprintf("protect old stack: %p\n", (void *)protected);
 #endif
         ProtectionStack *tmp = NEW_PROTECT(protected->capacity * 2);
         tmp->capacity = protected->capacity * 2;
@@ -204,12 +208,12 @@ Index protect(Header *obj) {
         COPY_ARRAY(Header *, tmp->stack, protected->stack, protected->sp);
         protected = tmp;
 #ifdef DEBUG_LOG_GC
-        eprintf("protect new stack: %p\n", (void *) protected);
+        eprintf("protect new stack: %p\n", (void *)protected);
 #endif
     }
 #ifdef DEBUG_LOG_GC
-    eprintf("PROTECT(%s) done -> %d (%d)\n", typeName(obj->type),
-            protected->sp, protected->capacity);
+    eprintf("PROTECT(%s) done -> %d (%d)\n", typeName(obj->type), protected->sp,
+            protected->capacity);
 #endif
     return protected->sp - 1;
 }
@@ -235,9 +239,9 @@ void unProtect(Index index) {
  */
 void *reallocate(void *pointer, size_t oldSize, size_t newSize) {
 #ifdef DEBUG_LOG_GC
-    eprintf
-        ("reallocate bytesAllocated %d + newsize %lu - oldsize %lu [%d] pointer %p\n",
-         bytesAllocated, newSize, oldSize, numAlloc, pointer);
+    eprintf("reallocate bytesAllocated %d + newsize %lu - oldsize %lu [%d] "
+            "pointer %p\n",
+            bytesAllocated, newSize, oldSize, numAlloc, pointer);
     if (newSize > oldSize)
         numAlloc++;
     if (newSize < oldSize)
@@ -256,9 +260,9 @@ void *reallocate(void *pointer, size_t oldSize, size_t newSize) {
 
     if (newSize > oldSize) {
 #ifdef DEBUG_STRESS_GC
-if (forceGcFlag || bytesAllocated > nextGC) {
-        collectGarbage();
-}
+        if (forceGcFlag || bytesAllocated > nextGC) {
+            collectGarbage();
+        }
 #else
         if (bytesAllocated > nextGC) {
             collectGarbage();
@@ -269,7 +273,7 @@ if (forceGcFlag || bytesAllocated > nextGC) {
     if (newSize == 0) {
 #ifdef DEBUG_STRESS_GC
         if (forceGcFlag) {
-            char *zerop = (char *) pointer;
+            char *zerop = (char *)pointer;
             for (size_t i = 0; i < oldSize; i++) {
                 zerop[i] = '\0';
             }
@@ -299,10 +303,10 @@ if (forceGcFlag || bytesAllocated > nextGC) {
  */
 void *allocate(size_t size, ObjType type) {
 #ifdef DEBUG_LOG_GC
-    eprintf("allocate type %s %d %lu [%d]\n", typeName(type),
-            bytesAllocated, size, numAlloc);
+    eprintf("allocate type %s %d %lu [%d]\n", typeName(type), bytesAllocated,
+            size, numAlloc);
 #endif
-    Header *newObj = (Header *) reallocate(NULL, (size_t) 0, size);
+    Header *newObj = (Header *)reallocate(NULL, (size_t)0, size);
     newObj->type = type;
     newObj->keep = false;
     newObj->next = allocated;
@@ -312,7 +316,7 @@ void *allocate(size_t size, ObjType type) {
     } else {
         lastAlloc = NULL;
     }
-    return (void *) newObj;
+    return (void *)newObj;
 }
 
 /**
@@ -324,7 +328,7 @@ static void markProtectionObj(Header *h) {
     eprintf("markProtectionObj\n");
 #endif
     MARK(h);
-    ProtectionStack *protected = (ProtectionStack *) h;
+    ProtectionStack *protected = (ProtectionStack *)h;
     for (Index i = 0; i < protected->sp; ++i) {
         markObj(protected->stack[i], i);
     }
@@ -337,7 +341,7 @@ static void markProtectionObj(Header *h) {
  * Part of the mark phase of the mark-sweep garbage collection,
  * marks the given object by dispatching to the appropriate
  * type-specific marking function.
- * 
+ *
  * @param h pointer to the Header of the object to be marked
  * @param i index on the ProtectionStack, for debugging output
  */
@@ -346,126 +350,129 @@ void markObj(Header *h, Index i) {
     // eprintf("markObj [%d]%s %p\n", i, typeName(h->type), h);
 #endif
     switch (h->type) {
-        case OBJTYPE_OPAQUE:
-            markOpaque((Opaque *) h);
-            break;
-        case OBJTYPE_MAYBEBIGINT:
-            markMaybeBigInt((MaybeBigInt *) h);
-            break;
-        case OBJTYPE_BIGINT:
-            markBigInt((BigInt *) h);
-            break;
-        case OBJTYPE_AGNOSTICFILEID:
-            markAgnosticFileId((AgnosticFileId *)h);
-            break;
-        case OBJTYPE_HASHTABLE:
-            markHashTableObj(h);
-            break;
-        case OBJTYPE_PROTECTION:
-            markProtectionObj(h);
-            break;
+    case OBJTYPE_OPAQUE:
+        markOpaque((Opaque *)h);
+        break;
+    case OBJTYPE_MAYBEBIGINT:
+        markMaybeBigInt((MaybeBigInt *)h);
+        break;
+    case OBJTYPE_BIGINT:
+        markBigInt((BigInt *)h);
+        break;
+    case OBJTYPE_HASHTABLE:
+        markHashTableObj(h);
+        break;
+    case OBJTYPE_PROTECTION:
+        markProtectionObj(h);
+        break;
         CEKFS_OBJTYPE_CASES()
-            markCekfsObj(h);
-            break;
+        markCekfsObj(h);
+        break;
         PRATT_OBJTYPE_CASES()
-            markPrattObj(h);
-            break;
+        markPrattObj(h);
+        break;
         ANF_OBJTYPE_CASES()
-            markAnfObj(h);
-            break;
+        markAnfObj(h);
+        break;
         AST_OBJTYPE_CASES()
-            markAstObj(h);
-            break;
+        markAstObj(h);
+        break;
         LAMBDA_OBJTYPE_CASES()
-            markLambdaObj(h);
-            break;
+        markLambdaObj(h);
+        break;
+        MINLAM_OBJTYPE_CASES()
+        markMinlamObj(h);
+        break;
         TPMC_OBJTYPE_CASES()
-            markTpmcObj(h);
-            break;
+        markTpmcObj(h);
+        break;
         TC_OBJTYPE_CASES()
-            markTcObj(h);
-            break;
+        markTcObj(h);
+        break;
         BUILTINS_OBJTYPE_CASES()
-            markBuiltinsObj(h);
-            break;
+        markBuiltinsObj(h);
+        break;
         ANF_KONT_OBJTYPE_CASES()
-            markAnf_kontObj(h);
-            break;
+        markAnf_kontObj(h);
+        break;
         CPS_KONT_OBJTYPE_CASES()
-            markCps_kontObj(h);
-            break;
-        default:
-            cant_happen("unrecognised ObjType %d in markObj at [%d]", h->type,
-                        i);
+        markCps_kontObj(h);
+        break;
+        UTILS_OBJTYPE_CASES()
+        markUtilsObj(h);
+        break;
+    default:
+        cant_happen("unrecognised ObjType %d in markObj at [%d]", h->type, i);
     }
 }
 
 /**
  * Frees the given ProtectionStack object.
  */
-static void freeProtectionObj(Header *h) {
-    FREE_PROTECT(h);
-}
+static void freeProtectionObj(Header *h) { FREE_PROTECT(h); }
 
 /**
  * Frees the given object by dispatching to the appropriate
  * type-specific free function.
- * 
+ *
  * @param h pointer to the Header of the object to be freed
  */
 void freeObj(Header *h) {
     switch (h->type) {
-        case OBJTYPE_OPAQUE:
-            freeOpaque((Opaque *) h);
-            break;
-        case OBJTYPE_BIGINT:
-            freeBigInt((BigInt *) h);
-            break;
-        case OBJTYPE_MAYBEBIGINT:
-            freeMaybeBigInt((MaybeBigInt *) h);
-            break;
-        case OBJTYPE_AGNOSTICFILEID:
-            freeAgnosticFileId((AgnosticFileId *) h);
-            break;
-        case OBJTYPE_HASHTABLE:
-            freeHashTableObj(h);
-            break;
-        case OBJTYPE_PROTECTION:
-            freeProtectionObj(h);
-            break;
+    case OBJTYPE_OPAQUE:
+        freeOpaque((Opaque *)h);
+        break;
+    case OBJTYPE_BIGINT:
+        freeBigInt((BigInt *)h);
+        break;
+    case OBJTYPE_MAYBEBIGINT:
+        freeMaybeBigInt((MaybeBigInt *)h);
+        break;
+    case OBJTYPE_HASHTABLE:
+        freeHashTableObj(h);
+        break;
+    case OBJTYPE_PROTECTION:
+        freeProtectionObj(h);
+        break;
         CEKFS_OBJTYPE_CASES()
-            freeCekfsObj(h);
-            break;
+        freeCekfsObj(h);
+        break;
         PRATT_OBJTYPE_CASES()
-            freePrattObj(h);
-            break;
+        freePrattObj(h);
+        break;
         ANF_OBJTYPE_CASES()
-            freeAnfObj(h);
-            break;
+        freeAnfObj(h);
+        break;
         AST_OBJTYPE_CASES()
-            freeAstObj(h);
-            break;
+        freeAstObj(h);
+        break;
+        MINLAM_OBJTYPE_CASES()
+        freeMinlamObj(h);
+        break;
         LAMBDA_OBJTYPE_CASES()
-            freeLambdaObj(h);
-            break;
+        freeLambdaObj(h);
+        break;
         TPMC_OBJTYPE_CASES()
-            freeTpmcObj(h);
-            break;
+        freeTpmcObj(h);
+        break;
         TC_OBJTYPE_CASES()
-            freeTcObj(h);
-            break;
+        freeTcObj(h);
+        break;
         BUILTINS_OBJTYPE_CASES()
-            freeBuiltinsObj(h);
-            break;
+        freeBuiltinsObj(h);
+        break;
         ANF_KONT_OBJTYPE_CASES()
-            freeAnf_kontObj(h);
-            break;
+        freeAnf_kontObj(h);
+        break;
         CPS_KONT_OBJTYPE_CASES()
-            freeCps_kontObj(h);
-            break;
-        default:
-            cant_happen("unrecognised ObjType %d in freeObj at %p", h->type,
-                        (void *) h);
+        freeCps_kontObj(h);
+        break;
+        UTILS_OBJTYPE_CASES()
+        freeUtilsObj(h);
+        break;
+    default:
+        cant_happen("unrecognised ObjType %d in freeObj at %p", h->type,
+                    (void *)h);
     }
 }
 
@@ -475,7 +482,7 @@ void freeObj(Header *h) {
  */
 static void markProtected() {
     if (protected != NULL)
-        markProtectionObj((Header *) protected);
+        markProtectionObj((Header *)protected);
 }
 
 /**
@@ -504,13 +511,13 @@ static void mark() {
 /**
  * The sweep phase of the mark-sweep garbage collection.
  * Frees all unmarked objects and clears the marks on the marked objects.
- * 
+ *
  * The Header component structure common to all memory-managed structures
  * contains a 'keep' field which is used as the mark bit,
- * and a 'next' field which is used to link all allocated objects into a single list.
- * Any object whose 'keep' field is false is simply snipped from the list and freed.
- * Any object whose 'keep' field is true has its 'keep' field cleared for the
- * next garbage collection cycle.
+ * and a 'next' field which is used to link all allocated objects into a single
+ * list. Any object whose 'keep' field is false is simply snipped from the list
+ * and freed. Any object whose 'keep' field is true has its 'keep' field cleared
+ * for the next garbage collection cycle.
  */
 static void sweep() {
     Header *current = allocated;
@@ -521,9 +528,8 @@ static void sweep() {
             current->keep = false;
         } else {
 #ifdef DEBUG_LOG_GC
-            eprintf("sweep discard %p\n", (void *) current);
-            eprintf("              type %s\n",
-                    typeName(current->type));
+            eprintf("sweep discard %p\n", (void *)current);
+            eprintf("              type %s\n", typeName(current->type));
 #endif
             *previous = current->next;
             freeObj(current);
@@ -534,7 +540,7 @@ static void sweep() {
 
 /**
  * Performs a garbage collection cycle if garbage collection is enabled.
- * 
+ *
  * The cycle consists of a mark phase and a sweep phase.
  * After the collection, the threshold for the next collection
  * is set to double the current bytes allocated.

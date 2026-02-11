@@ -4,13 +4,12 @@ A-Normal Form (ANF) structures to be converted to bytecode.
 
 ```mermaid
 flowchart LR
-AnfSymbolTable --entries--> NULL
-AnfIntTable --entries--> int
 AnfEnv --isLocal--> bool
 AnfEnv --isNameSpace--> bool
+AnfEnv --isCapturing--> bool
 AnfEnv --nBindings--> int
 AnfEnv --nsEnvs--> AnfEnvArray
-AnfEnv --table--> AnfIntTable
+AnfEnv --table--> IntMap
 AnfEnv --next--> AnfEnv
 AexpLam --nArgs--> int
 AexpLam --letRecOffset--> int

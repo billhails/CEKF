@@ -9,7 +9,7 @@ print Array fn (pt, a = array(low, high, d) {
         fn helper {
             (n)) {
                 switch(dic.lookup(n, d)) {
-                    (some(v)) {
+                    (just(v)) {
                         pt(v);
                         if (n < high - 1) {
                             puts(", ");

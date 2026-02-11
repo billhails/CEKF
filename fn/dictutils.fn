@@ -102,7 +102,7 @@ fn balance {
 // #t -> Dict(#t, #u) -> Maybe(#u)
 fn lookup {
     (_, E) | (_, EE) { nothing }
-    (k, D(_, _, #(k, y), _)) { some(y) }
+    (k, D(_, _, #(k, y), _)) { just(y) }
     (k, D(_, a, #(y, _), b)) {
         if (k < y) {
             lookup(k, a)

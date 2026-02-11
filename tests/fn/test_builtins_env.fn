@@ -10,7 +10,7 @@ let
         let home = getenv("HOME");
         in
         switch(home) {
-            (some(val)) {
+            (just(val)) {
                 // Should be a string (list of chars)
                 assert(typeof val == "list(char)");
                 // Should have some length (path is not empty)
@@ -32,7 +32,7 @@ let
         in
         switch(nonexist) {
             (nothing) { assert(true) } // Expected
-            (some(_)) { 
+            (just(_)) { 
                 // Very unlikely someone set this variable
                 // but not an error
                 assert(true)
@@ -45,7 +45,7 @@ let
         let path = getenv("PATH");
         in
         switch(path) {
-            (some(val)) {
+            (just(val)) {
                 assert(typeof val == "list(char)");
                 assert(list.length(val) > 0);
                 true
@@ -64,7 +64,7 @@ let
         in
         switch(empty) {
             (nothing) { assert(true) } // Expected for empty name
-            (some(_)) { assert(true) }  // Also acceptable
+            (just(_)) { assert(true) }  // Also acceptable
         }
     }
     
@@ -86,4 +86,3 @@ in
     test_getenv_empty();
     test_multiple_getenv();
     
-    puts("All getenv() tests completed successfully!")

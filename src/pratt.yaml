@@ -20,11 +20,13 @@ config:
     name: pratt
     description: Pratt Parser support
     parserInfo: false
+    includes:
+    - utils.h
     limited_includes:
-    - file_id.h
     - ast_helper.h
     - ast_debug.h
     - pratt_functions.h
+    - utils_debug.h
 
 structs:
     # Scanner token parsing
@@ -50,7 +52,7 @@ structs:
                 A buffer of wide characters that is both used during parsing
                 and returned by the token parser (like yytext).
         data:
-            data: PrattWVec
+            data: WCharVec
             start: wstring=NULL
             offset: int=0
 
@@ -145,21 +147,6 @@ structs:
             startsWithHole: bool
             endsWithHole: bool
 
-vectors:
-    PrattWVec:
-        meta:
-            brief: A fixed-length wchar_t string.
-            description: >-
-        data:
-            entries: character
-
-    PrattCVec:
-        meta:
-            brief: A fixed-length char string.
-            description: >-
-        data:
-            entries: schar
-
 enums:
     PrattAssoc:
         meta:
@@ -222,6 +209,7 @@ inline:
                 isBareSymbol: bool=false
                 export: bool=false
                 pattern: PrattMixfixPattern=NULL
+                isLazy: bool=false
                 importNsRef: int=-1
                 importNsSymbol: HashSymbol=NULL
 
@@ -234,7 +222,7 @@ unions:
                 character, or atom. This is used to represent the value of
                 the token in the parse tree.
         data:
-            string: PrattUnicode
+            string: WCharArray
             number: MaybeBigInt
             character: character
             atom: HashSymbol
@@ -269,7 +257,7 @@ arrays:
                 An array of Unicode strings that is used to hold
                 multiple keywords for the PrattMixfixPattern structure.
         data:
-            entries: PrattUnicode
+            entries: WCharArray
 
     PrattParsers:
         meta:
@@ -281,15 +269,6 @@ arrays:
                 to user-defined operators or imported nameSpaces.
         data:
             entries: PrattParser
-
-    PrattUnicode:
-        meta:
-            brief: An array of UTF-32 encoded Unicode characters.
-            description: >-
-                A UTF-32 encoded array that is used to hold
-                Unicode strings after parsing.
-        data:
-            entries: character
 
     PrattNsOpsArray:
         meta:
@@ -304,9 +283,5 @@ arrays:
 primitives: !include primitives.yaml
 
 external:
-    AstExpression:
-        data:
-            cname: "struct AstExpression *"
-            printFn: printAstExpression
-            markFn: markAstExpression
-            valued: true
+- !include ast.yaml
+- !include utils.yaml

@@ -1,0 +1,2 @@
+namespace
+    fn data() { 1 }

@@ -1,7 +1,7 @@
 let
     link "import_operator_kw.fn" as ops;
 
-    macro CONDITIONAL(test, consequent, alternative) {
+    lazy fn CONDITIONAL(test, consequent, alternative) {
         fn {
             (true) { consequent }
             (false) { alternative }

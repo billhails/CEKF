@@ -30,33 +30,15 @@ from .switch_helper import SwitchHelper
 class Catalog:
     """Central registry managing all entities in a schema."""
     
-    def __init__(self, typeName):
-        self.typeName = typeName
+    def __init__(self):
         self.contents = {}
-        self.parserInfo = False
 
-    def add(self, value):
+    def add(self, value, external):
+        value.setExternal(external)
         name = value.getName()
         if name in self.contents:
-            raise Exception("attempt to overwtite " + name + " in catalog")
+            raise Exception("attempt to overwrite " + name + " in catalog")
         self.contents[name] = value
-
-    def tag(self, t):
-        if t in self.contents:
-            self.contents[t].tag()
-
-    def noteExtraCmpArgs(self, args):
-        for key in self.contents:
-            self.contents[key].noteExtraCmpArgs(args)
-
-    def noteParserInfo(self):
-        self.parserInfo = True
-
-    def noteBespokeCmpImplementation(self, name):
-        if name in self.contents:
-            self.contents[name].noteBespokeCmpImplementation()
-        else:
-            raise Exception("bespoke cmp implementation declared for nonexistant entry " + name)
 
     def get(self, key):
         key = key.strip()
@@ -73,9 +55,9 @@ class Catalog:
     def getParserInfo(self, key):
         key = key.strip()
         if key in self.contents:
-            return self.contents[key].getParserInfo(self.parserInfo)
+            return self.contents[key].getParserInfo()
         else:
-            return self.parserInfo
+            raise Exception("key '" + key + "' not found in catalog")
 
     def _dispatch(self, method_name, *args):
         """
@@ -86,8 +68,9 @@ class Catalog:
             *args: Arguments to pass to the method (usually self for catalog)
         """
         for entity in self.contents.values():
-            method = getattr(entity, method_name)
-            method(*args)
+            if not entity.isExternal():
+                method = getattr(entity, method_name)
+                method(*args)
 
     def printHelperNewDeclarations(self):
         self._dispatch('printHelperNewDeclarations', self)
@@ -98,17 +81,17 @@ class Catalog:
     def printSetterDeclarations(self):
         self._dispatch('printSetterDeclarations', self)
 
-    def generateVisitor(self, target):
+    def generateVisitor(self, packageName, target):
         """Generate complete visitor boilerplate"""
         output = []
         
         # Includes
-        output.append(f'#include "{self.typeName}.h"\n')
+        output.append(f'#include "{packageName}.h"\n')
         output.append('#include "memory.h"\n\n')
-        output.append(f'#include "{self.typeName}_{target}.h"\n\n')
+        output.append(f'#include "{packageName}_{target}.h"\n\n')
         
         # Conditional debugging include
-        debug_macro = f"DEBUG_{self.typeName.upper()}_{target.upper()}"
+        debug_macro = f"DEBUG_{packageName.upper()}_{target.upper()}"
         output.append(f'#ifdef {debug_macro}\n')
         output.append('#  include "debugging_on.h"\n')
         output.append('#else\n')
@@ -139,27 +122,27 @@ class Catalog:
 
     def printTypedefs(self):
         for entity in self.contents.values():
-            if entity.isEnum():
+            if entity.isEnum() and not entity.isExternal():
                 entity.printTypedef(self)
         for entity in self.contents.values():
-            if entity.isArray():
+            if entity.isArray() and not entity.isExternal():
                 entity.printTypedef(self)
         for entity in self.contents.values():
-            if entity.isUnion():
+            if entity.isUnion() and not entity.isExternal():
                 entity.printTypedef(self)
         # Print inline structs first (no dependencies, can be used by other structs)
         for entity in self.contents.values():
-            if entity.isStruct() and entity.isInline(self):
+            if entity.isStruct() and entity.isInline(self) and not entity.isExternal():
                 entity.printTypedef(self)
         # Then print regular structs
         for entity in self.contents.values():
-            if entity.isStruct() and not entity.isInline(self):
+            if entity.isStruct() and not entity.isInline(self) and not entity.isExternal():
                 entity.printTypedef(self)
         for entity in self.contents.values():
-            if entity.isHash():
+            if entity.isHash() and not entity.isExternal():
                 entity.printTypedef(self)
         for entity in self.contents.values():
-            if entity.isVector():
+            if entity.isVector() and not entity.isExternal():
                 entity.printTypedef(self)
 
     def printInitDeclarations(self):
@@ -219,6 +202,12 @@ class Catalog:
     def printPokeDeclarations(self):
         self._dispatch('printPokeDeclaration', self)
 
+    def printAppendDeclarations(self):
+        self._dispatch('printAppendDeclaration', self)
+
+    def printAddDeclarations(self):
+        self._dispatch('printAddDeclaration', self)
+
     def printExtendDeclarations(self):
         self._dispatch('printExtendDeclaration', self)
 
@@ -254,6 +243,12 @@ class Catalog:
 
     def printPokeFunctions(self):
         self._dispatch('printPokeFunction', self)
+
+    def printAppendFunctions(self):
+        self._dispatch('printAppendFunction', self)
+
+    def printAddFunctions(self):
+        self._dispatch('printAddFunction', self)
 
     def printExtendFunctions(self):
         self._dispatch('printExtendFunction', self)
@@ -300,14 +295,14 @@ class Catalog:
     def printPrintFunctions(self):
         self._dispatch('printPrintFunction', self)
 
-    def printCompareFunctions(self):
-        self._dispatch('printCompareFunction', self)
+    def printEqFunctions(self):
+        self._dispatch('printEqFunction', self)
 
     def printPrintDeclarations(self):
         self._dispatch('printPrintDeclaration', self)
 
-    def printCompareDeclarations(self):
-        self._dispatch('printCompareDeclaration', self)
+    def printEqDeclarations(self):
+        self._dispatch('printEqDeclaration', self)
 
     def printDefines(self):
         self._dispatch('printDefines', self)
@@ -327,38 +322,40 @@ class Catalog:
     def printMermaid(self):
         self._dispatch('printMermaid', self)
 
-    def printMarkObjFunction(self):
+    def printMarkObjFunction(self, packageName):
         SwitchHelper.print_switch_function(
-            self, 'printMarkObjFunction', 'mark{Type}Obj', 'struct Header *h',
+            self, packageName, 'printMarkObjFunction', 'mark{Type}Obj', 'struct Header *h',
             'printMarkObjCase',
-            f'cant_happen("unrecognised type %d in mark{self.typeName.capitalize()}Obj\\n", h->type);'
+            f'cant_happen("unrecognised type %d in mark{packageName.capitalize()}Obj\\n", h->type);'
         )
 
-    def printFreeObjFunction(self):
+    def printFreeObjFunction(self, packageName):
         SwitchHelper.print_switch_function(
-            self, 'printFreeObjFunction', 'free{Type}Obj', 'struct Header *h',
+            self, packageName, 'printFreeObjFunction', 'free{Type}Obj', 'struct Header *h',
             'printFreeObjCase',
-            f'cant_happen("unrecognised type %d in free{self.typeName.capitalize()}Obj\\n", h->type);'
+            f'cant_happen("unrecognised type %d in free{packageName.capitalize()}Obj\\n", h->type);'
         )
 
-    def printTypeObjFunction(self):
+    def printTypeObjFunction(self, packageName):
         SwitchHelper.print_switch_function(
-            self, 'printTypeObjFunction', 'typename{Type}Obj', 'int type',
+            self, packageName, 'printTypeObjFunction', 'typename{Type}Obj', 'int type',
             'printTypeObjCase',
             'return "???"; // no error, can be used during error reporting',
             'char *'
         )
 
-    def printObjTypeDefine(self):
+    def printObjTypeDefine(self, packageName):
         objTypeArray = []
         for entity in self.contents.values():
-            objTypeArray += entity.objTypeArray()
-        print("#define {typeName}_OBJTYPES() \\\n{a}".format(a=', \\\n'.join(objTypeArray), typeName=self.typeName.upper()))
+            if not entity.isExternal():
+                objTypeArray += entity.objTypeArray()
+        print("#define {packageName}_OBJTYPES() \\\n{a}".format(a=', \\\n'.join(objTypeArray), packageName=packageName.upper()))
 
-    def printObjCasesDefine(self):
-        print(f"#define {self.typeName.upper()}_OBJTYPE_CASES() \\")
+    def printObjCasesDefine(self, packageName):
+        print(f"#define {packageName.upper()}_OBJTYPE_CASES() \\")
         for entity in self.contents.values():
-            objType = entity.objTypeArray()
-            if len(objType) == 1:
-                print(f'case {objType[0]}:\\')
+            if not entity.isExternal():
+                objType = entity.objTypeArray()
+                if len(objType) == 1:
+                    print(f'case {objType[0]}:\\')
         print("")

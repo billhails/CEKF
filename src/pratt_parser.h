@@ -21,12 +21,13 @@
 #include "ast.h"
 #include "common.h"
 #include "pratt.h"
+#include "utils.h"
 
 #ifdef DEBUG_PRATT_PARSER
 void disablePrattDebug(void);
 #endif
-void ppAstNest(AstUTF8 *, AstNest *);
-void ppAstProg(AstUTF8 *, AstProg *);
+void ppAstNest(SCharArray *, AstNest *);
+void ppAstProg(SCharArray *, AstProg *);
 int initFileIdStack(void);
 int initParserStack(void);
 int initNsOpsCache(void);

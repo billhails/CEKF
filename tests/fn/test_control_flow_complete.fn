@@ -435,4 +435,3 @@ in
     test_and_short_circuit();
     test_or_short_circuit();
     
-    puts("All control flow tests passed!\n")

@@ -62,10 +62,10 @@ byte:
 
 file_id:
     data:
-        cname: "struct AgnosticFileId *"
-        printFn: printAgnosticFileId
-        compareFn: cmpAgnosticFileId
-        markFn: markAgnosticFileId
+        cname: "struct FileId *"
+        printFn: printFileId
+        eqFn: eqFileId
+        markFn: markFileId
         valued: true
 
 opaque:
@@ -110,7 +110,7 @@ BigInt:
         cname: "struct BigInt *"
         printFn: "printBigInt"
         markFn: "markBigInt"
-        compareFn: "cmpBigInt"
+        cmpFn: "cmpBigInt"
         valued: true
 
 MaybeBigInt:
@@ -118,7 +118,7 @@ MaybeBigInt:
         cname: "struct MaybeBigInt *"
         printFn: "printMaybeBigInt"
         markFn: "markMaybeBigInt"
-        compareFn: "cmpMaybeBigInt"
+        cmpFn: "cmpMaybeBigInt"
         valued: true
 
 string:
@@ -163,3 +163,14 @@ size:
         printf: "%zu"
         valued: true
 
+device:
+    data:
+        cname: dev_t
+        printf: "%lu"
+        valued: true
+
+inode:
+    data:
+        cname: ino_t
+        printf: "%lu"
+        valued: true

@@ -1,3 +1,4 @@
+
 #
 # CEKF - VM supporting amb
 # Copyright (C) 2022-2024  Bill Hails
@@ -24,9 +25,10 @@ config:
         complicated. The complexity is reduced downstream by conversion
         to simple lambda form.
     parserInfo: true
+    includes:
+    - utils.h
     limited_includes:
     - bigint.h
-    - file_id.h
 
 
 structs:
@@ -146,13 +148,11 @@ structs:
         data:
             symbol: HashSymbol
             originalImpl: AstExpression
+            isLazy: bool=false
 
-    AstDefMacro:
+    AstDefLazy:
         meta:
-            brief: AST Macro Definition
-            description: >-
-                A macro definition in the AST, used to define
-                lazy functions.
+            brief: AST Lazy Function Definition
         data:
             name: HashSymbol
             definition: AstAltFunction
@@ -493,12 +493,12 @@ unions:
             brief: AST Definition
             description: >-
                 A definition in the AST, which can be a function,
-                type definition, alias, or macro.
+                type definition, alias, or lazy function.
         data:
             define: AstDefine
             multi: AstMultiDefine
             typeDef: AstTypeDef
-            macro: AstDefMacro
+            lazy: AstDefLazy
             alias: AstAlias
             blank: void_ptr
             builtinsSlot: void_ptr  # Placeholder for builtins slot
@@ -560,15 +560,6 @@ unions:
             assertion: AstExpression
             error: AstExpression
 
-hashes:
-    AstIntTable:
-        meta:
-            brief: AST Integer Table
-            description: >-
-                A hash table mapping symbols to integers.
-        data:
-            entries: int
-
 arrays:
     AstNameSpaceArray:
         meta:
@@ -588,14 +579,6 @@ arrays:
         data:
             entries: file_id
 
-    AstStringArray:
-        meta:
-            brief: AST String Array
-            description: >-
-                A simple array of strings.
-        data:
-            entries: string
-
     AstExpressionArray:
         meta:
             brief: AST Expression Array
@@ -603,11 +586,5 @@ arrays:
                 A simple array of AST expressions, used by the Pratt parser.
         data:
             entries: AstExpression
-
-    AstUTF8:
-        meta:
-            brief: A UTF-8 encoded string.
-        data:
-            entries: uchar
 
 primitives: !include primitives.yaml

@@ -9,5 +9,3 @@ in
     assert(~5 == -5);
     assert(3 plus 4 == 7);
 
-    // We did not import the Postfix; don't use it here (negative tests handled elsewhere)
-    puts("Selective operator import OK\n")

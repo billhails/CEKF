@@ -1,5 +1,5 @@
 #ifndef cekf_ast_helper_h
-#  define cekf_ast_helper_h
+#define cekf_ast_helper_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2023  Bill Hails
@@ -18,11 +18,15 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#  include "ast.h"
-#  include "hash.h"
-#  include "memory.h"
+#include "ast.h"
+#include "hash.h"
+#include "memory.h"
 
-extern AstNameSpaceArray *nameSpaces;
+struct FileId;
+
+struct AstNameSpaceArray;
+
+extern struct AstNameSpaceArray *nameSpaces;
 
 void markAstSymbolTable(void);
 
@@ -32,9 +36,12 @@ void initNameSpaces();
 
 void forceInitNameSpaces();
 
-int lookUpNameSpace(AgnosticFileId *);
+int lookUpNameSpace(struct FileId *);
 
-AstProg *astNestToProg(AstNest *nest);
+struct AstProg;
+struct AstNest;
+
+struct AstProg *astNestToProg(struct AstNest *nest);
 
 void markNameSpaces();
 

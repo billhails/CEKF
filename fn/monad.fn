@@ -10,19 +10,19 @@ fn safe_div {
         nothing
     }
     (x, y) {
-        some(x / y)
+        just(x / y)
     }
 }
 
 fn eval2 {
-    (val(n)) { some(n) }
+    (val(n)) { just(n) }
     (div(x, y)) {
         switch (eval2(x)) {
             (none) { none }
-            (some(vx)) {
+            (just(vx)) {
                 switch (eval2(y)) {
                     (none) { none }
-                    (some(vy)) { safe_div(vx, vy) }
+                    (just(vy)) { safe_div(vx, vy) }
                 }
             }
         }
@@ -32,12 +32,12 @@ fn eval2 {
 operator "_>>=_" left 12 fn (m, f) {
     switch (m) {
         (none) { none }
-        (some(v)) { f(v) }
+        (just(v)) { f(v) }
     }
 };
 
 fn return {
-    (v) { some(v) }
+    (v) { just(v) }
 }
 
 fn eval {

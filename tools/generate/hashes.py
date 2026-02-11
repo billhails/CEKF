@@ -240,8 +240,8 @@ class SimpleHash(Base):
         pad(depth)
         print(f'printHashTable((HashTable *)_x{a}{prefix}{field}, depth + 1); {c}')
 
-    def printCompareField(self, catalog, isInline, field, depth, prefix=''):
-        c = self.comment('printCompareField')
+    def printEqField(self, catalog, isInline, field, depth, prefix=''):
+        c = self.comment('printEqField')
         pad(depth)
         print(f"return false; {c}")
 

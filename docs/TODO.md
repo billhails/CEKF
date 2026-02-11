@@ -2,8 +2,15 @@
 
 More of a wish-list than a hard and fast plan.
 
+* Simplify
+  * Add a beta-reduction pass (after cps-transform).
+  * Add an eta-reduction pass.
+  * Add a constant/operator folding pass after beta and eta reduction.
 * Target LLVM
 * `syntax` construct that allows large-scale syntactic structures to be defined by the user.
+* Clean Up.
+  * Generate
+    * Move all signatures into `signature_helper.py`, not just the shared ones.
 * More numbers:
   * NaN for division by Zero etc.
   * Matrices.
@@ -29,4 +36,3 @@ More of a wish-list than a hard and fast plan.
 * (internal) have a NEWZ variant of NEW that bzero's its result.
 * Builtins
   * `now()` builtin returns current time in milliseconds.
-  * `iter()` returns consecutive integers starting from 0

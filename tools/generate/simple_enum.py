@@ -75,13 +75,13 @@ class SimpleEnum(Base):
         """Enums don't need GC protection"""
         return False
 
-    def printCompareField(self, catalog, isInline, field, depth, prefix=''):
+    def printEqField(self, catalog, isInline, field, depth, prefix=''):
         pad(depth)
-        c = self.comment('printCompareField')
+        c = self.comment('printEqField')
         a = '.' if isInline else '->'
         print(f"switch (a{a}{prefix}{field}) {{ {c}")
         for field in self.fields:
-            field.printCompareCase(depth + 1)
+            field.printEqCase(depth + 1)
         pad(depth)
         print(f'}} {c}')
 

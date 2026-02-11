@@ -1,18 +1,19 @@
 let
     link "ambutils.fn" as amb;
+    import amb operators;
 
     fn pythagorean_triples() {
         let
-            z = amb.integers_from(1);
-            x = amb.integers_between(1, z);
-            y = amb.integers_between(x, z);
+            z = 1 ... ;
+            x = 1 .. z;
+            y = x .. z;
         in
-            amb.require(x**2 + y**2 == z**2);
-            [x, y, z]
+            !: x**2 + y**2 == z**2;
+            [z, y, x]
     }
 in {
     let triple = pythagorean_triples();
     in
         print(triple);
-        amb.require(<triple > 20) // until
+        !: <triple > 500;
 }

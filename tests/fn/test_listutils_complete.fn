@@ -144,4 +144,3 @@ in
     test_sortBy_strings();
     test_combined_operations();
     
-    puts("All listutils tests completed successfully!")

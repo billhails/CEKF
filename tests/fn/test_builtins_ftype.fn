@@ -88,4 +88,3 @@ in
     test_ftype_empty();
     test_ftype_current_dir();
     
-    puts("All ftype() tests completed successfully!")

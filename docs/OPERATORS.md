@@ -1,5 +1,9 @@
 # Operators (and macros)
 
+Important update if you are reading this: the keyword `macro` has since been
+replaced with the sequence `lazy fn` in the parser to better reflect its
+nature. However the semantics are unchanged.
+
 Some issues with the initial implementation.
 
 I'd thought I could get away with a pure parser-only implementation of

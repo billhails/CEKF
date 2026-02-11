@@ -84,7 +84,7 @@ oi --> scanner
 parser --> ast(AST) -->
 lc([Lambda Conversion]):::process --> tpmc([Pattern Matching Compiler]):::process
 lc <---> pg([Print Function Generator]):::process
-lc <---> me([Macro Expansion]):::process
+lc <---> me([Lazy Function Expansion]):::process
 tpmc --> vs([Variable Substitution]):::process
 vs --> lc
 lc <--> des([Desugaring]):::process
@@ -97,7 +97,9 @@ tc --> lambda2(Plain Lambda Form)
 lambda2 --> ci([Constructor Inlining]):::process
 ci --> lambda3(Inlined Lambda)
 subgraph anf-rewrite-2
-   alpha(["ɑ-Conversion"]):::process
+   desugaring(["Desugaring"]):::process
+   desugaring --> lambda_ds(desugared lambda)
+   lambda_ds --> alpha(["ɑ-Conversion"]):::process
    alpha --> lambda_a(alphatized lambda)
    lambda_a --> anfr([ANF Rewrite]):::process
    anfr --> lambda_b(New ANF)
@@ -109,7 +111,7 @@ subgraph anf-rewrite-2
    lambda_c --> betar(["β-Reduction WiP"]):::process
    betar --> lambda_d(simplified)
 end
-lambda3 --> alpha
+lambda3 --> desugaring
 lambda3 --> anfc
 lambda_a --> anfc([A-Normal Form Conversion]):::process
 anfc --> anf(ANF)
@@ -124,6 +126,7 @@ bc --> cekf([CEKF Runtime VM]):::process
 The "anf-rewrite-2" section is a WiP on the `anf-rewrite-2` branch. Although that branch started as a rewrite of the ANF transform, it became apparent that the CEK machine itself was blocking optimizations and so the intention is to target a more "traditional" register machine with an eye towards LLVM in the longer term. On that branch the ɑ-conversion is complete and incorporated (though it achieves nothing for the ANF path it is required for CPS.) The ANF rewrite is complete but abandoned, and the CPS transform is also complete.
 
 The various components named in the diagram above are linked to their implementation entry point here:
+
 * Scanner [pratt_scanner.c](src/pratt_scanner.c)
 * Parser [pratt_parser.c](src/pratt_parser.c)
 * AST [ast.yaml](src/ast.yaml)
@@ -131,7 +134,7 @@ The various components named in the diagram above are linked to their implementa
 * Tpmc [tpmc_logic.c](src/tpmc_logic.c)
 * Print Function Generator [print_generator.c](src/print_generator.c)
 * Variable Substitution [lambda_substitution.c](src/lambda_substitution.c)
-* Macro Expansion [macro_substitution.c](src/macro_substitution.c)
+* Lazy Function Expansion [lazy_substitution.c](src/lazy_substitution.c)
 * Plain Lambda Form [lambda.yaml](src/lambda.yaml)
 * Simplification [lambda_simplify.c](src/lambda_simplify.c)
 * Type Checking [tc_analyze.c](src/tc_analyze.c)

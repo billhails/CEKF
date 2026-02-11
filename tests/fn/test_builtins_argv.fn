@@ -11,7 +11,7 @@ let
         let arg0 = argv(0);
         in
         switch(arg0) {
-            (some(val)) {
+            (just(val)) {
                 // If we have an argument, it should be a string (list of chars)
                 assert(typeof val == "list(char)");
                 // It should have some length
@@ -32,7 +32,7 @@ let
         in
         switch(arg100) {
             (nothing) { assert(true) } // Expected for high index
-            (some(_)) { assert(true) }  // Also ok if many args provided
+            (just(_)) { assert(true) }  // Also ok if many args provided
         }
     }
     
@@ -42,7 +42,7 @@ let
             a1 = argv(1);
             a2 = argv(2);
         in
-        // All should return either some or nothing
+        // All should return either just or nothing
         // Just verify the pattern works
         assert(true)
     }
@@ -54,7 +54,7 @@ let
         // Negative indices should return nothing
         switch(arg_neg) {
             (nothing) { assert(true) }
-            (some(_)) { assert(true) } // Implementation dependent
+            (just(_)) { assert(true) } // Implementation dependent
         }
     }
 
@@ -64,4 +64,3 @@ in
     test_multiple_indices();
     test_negative_index();
     
-    puts("All argv() tests completed successfully!")

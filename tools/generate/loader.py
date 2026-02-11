@@ -27,12 +27,17 @@ import os
 class Loader(yaml.SafeLoader):
     """YAML loader that supports !include directive for file inclusion"""
 
+    _visited_files = set()
+
     def __init__(self, stream):
         self._root = os.path.split(stream.name)[0]
         super(Loader, self).__init__(stream)
 
     def include(self, node):
         fileName = os.path.join(self._root, self.construct_scalar(node))
+        if fileName in self._visited_files:
+            return {}
+        self._visited_files.add(fileName)
         with open(fileName, 'r') as f:
             return yaml.load(f, Loader)
 

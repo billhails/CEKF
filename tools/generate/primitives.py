@@ -40,16 +40,24 @@ class Primitive(Base):
                 self.markFn = data['markFn']
             else:
                 self.markFn = None
+            if 'newFn' in data:
+                self.newFn = data['newFn']
+            else:
+                self.newFn = None
             if 'printf' in data:
                 self.printFn = 'printf'
                 self.printf = data['printf']
             else:
                 self.printFn = data['printFn']
             self.valued = data['valued']
-            if 'compareFn' in data:
-                self.compareFn = data['compareFn']
+            if 'eqFn' in data:
+                self.eqFn = data['eqFn']
             else:
-                self.compareFn = None
+                self.eqFn = None
+            if 'cmpFn' in data:
+                self.cmpFn = data['cmpFn']
+            else:
+                self.cmpFn = None
             if 'copyFn' in data:
                 self.copyFn = data['copyFn']
             else:
@@ -94,7 +102,10 @@ class Primitive(Base):
             markFn=self.markFn
             pad(depth)
             a = '.' if isInline else '->'
-            print(f"{markFn}(_x{a}{prefix}{field}); {c}")
+            if markFn == 'markHashTable':
+                print(f'{markFn}((HashTable *)(_x{a}{prefix}{field})); {c}')
+            else:
+                print(f"{markFn}(_x{a}{prefix}{field}); {c}")
 
     def printProtectField(self, isInline, field, depth, prefix=''):
         c = self.comment('printProtectField')
@@ -108,14 +119,18 @@ class Primitive(Base):
     def getTypeDeclaration(self, catalog):
         return TypeHelper.primitive_type(self.cname)
 
-    def printCompareField(self, catalog, isInline, field, depth, prefix=''):
-        c = self.comment('printCompareField')
+    def printEqField(self, catalog, isInline, field, depth, prefix=''):
+        c = self.comment('printEqField')
         pad(depth)
         a = '.' if isInline else '->'
-        if self.compareFn is None:
-            print(f"if (a{a}{prefix}{field} != b{a}{prefix}{field}) return false; {c}")
+        # use the custom equality function if provided
+        if self.eqFn is not None:
+            print(f"if (!{self.eqFn}(a{a}{prefix}{field}, b{a}{prefix}{field})) return false; {c}")
+        elif self.cmpFn is not None:
+            # cmpFn returns enum Cmp, so compare with CMP_EQ
+            print(f"if ({self.cmpFn}(a{a}{prefix}{field}, b{a}{prefix}{field}) != CMP_EQ) return false; {c}")
         else:
-            print(f"if ({self.compareFn}(a{a}{prefix}{field}, b{a}{prefix}{field})) return false; {c}")
+            print(f"if (a{a}{prefix}{field} != b{a}{prefix}{field}) return false; {c}")
 
     def printPrintHashField(self, depth):
         c = self.comment('printPrintHashField')
@@ -146,6 +161,9 @@ class Primitive(Base):
         a = '.' if isInline else '->'
         if self.copyFn is None:
             print(f"_x{a}{prefix}{field} = o{a}{prefix}{field}; {c}")
+        elif self.copyFn == 'copyHashTable':
+            print(f'_x{a}{prefix}{field} = {self.newFn}(); {c}')
+            print(f'copyHashTable((HashTable *)_x{a}{prefix}{field}, (HashTable *)o{a}{prefix}{field}); {c}')
         else:
             print(f"_x{a}{prefix}{field} = {self.copyFn}(o{a}{prefix}{field}); {c}")
 
@@ -154,3 +172,11 @@ class Primitive(Base):
 
     def getDefineArg(self):
         return '_x' if self.valued else ''
+
+    def isSelfInitializing(self):
+        return self.newFn is not None
+    
+    def getConstructorName(self):
+        if self.newFn is None:
+            raise ValueError(f"Primitive {self.name} has no known constructor")
+        return self.newFn

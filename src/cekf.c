@@ -269,7 +269,7 @@ static Value charArrayToList(CharacterArray *c) {
 }
 
 // converts a list of char to a utf8 string.
-CharVec *listToUtf8(Value v) {
+SCharVec *listToUtf8(Value v) {
 #ifdef SAFETY_CHECKS
     if (v.type != VALUE_TYPE_VEC) {
         cant_happen("unexpected %s", valueTypeName(v.type));
@@ -278,7 +278,7 @@ CharVec *listToUtf8(Value v) {
     CharacterArray *unicode = listToCharArray(v);
     int save = PROTECT(unicode);
     size_t size = wcstombs(NULL, unicode->entries, 0);
-    CharVec *buf = newCharVec((int)(size + 1));
+    SCharVec *buf = newSCharVec((int)(size + 1));
     PROTECT(buf);
     wcstombs(buf->entries, unicode->entries, size + 1);
     UNPROTECT(save);

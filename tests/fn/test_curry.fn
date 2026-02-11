@@ -20,15 +20,8 @@ in
     assert(test_curry(2, add(3)) == 5);
     unsafe switch(makeWriter()) {
         (success(#(fp, fg))) {
-            puts("Testing curried fput:\n");
             fp("Hello, ");
             fp("world!\n");
-            puts(typeof fp);
-            puts("\n");
-            puts(typeof fg);
-            puts("\n");
-            puts(fg());
-            puts("Testing curried fput done\n");
-            assert(true)
+            assert(fg() == "Hello, world!\n");
         }
     }

@@ -33,7 +33,6 @@ Location --loc--> index
 Location --lineNo--> int
 Location --fileName--> string
 Vec["(Vec)"] --entries--> Value
-CharVec["(CharVec)"] --entries--> schar
 Value --none--> void_ptr
 Value --stdint--> int
 Value --bigint--> BigInt

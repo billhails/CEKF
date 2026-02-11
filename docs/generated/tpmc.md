@@ -4,16 +4,15 @@ Term Pattern Matching Compiler types
 
 ```mermaid
 flowchart LR
-TpmcVariableTable --entries--> NULL
-TpmcSubstitutionTable --entries--> HashSymbol
 TpmcPatternTable --entries--> TpmcPattern
 TpmcStateTable --entries--> TpmcState
 TpmcMatchRules --rules--> TpmcMatchRuleArray
-TpmcMatchRules --rootVariables--> TpmcVariableArray
+TpmcMatchRules --rootVariables--> SymbolArray
 TpmcMatchRule --action--> TpmcState
 TpmcMatchRule --patterns--> TpmcPatternArray
 TpmcComparisonPattern --previous--> TpmcPattern
 TpmcComparisonPattern --current--> TpmcPattern
+TpmcComparisonPattern --requiredPath--> HashSymbol
 TpmcAssignmentPattern --name--> HashSymbol
 TpmcAssignmentPattern --value--> TpmcPattern
 TpmcConstructorPattern --tag--> HashSymbol
@@ -27,11 +26,11 @@ TpmcTestState --arcs--> TpmcArcArray
 TpmcFinalState --action--> LamExp
 TpmcState --refCount--> int
 TpmcState --stamp--> int
-TpmcState --freeVariables--> TpmcVariableTable
+TpmcState --freeVariables--> SymbolSet
 TpmcState --state--> TpmcStateValue
 TpmcArc --state--> TpmcState
 TpmcArc --test--> TpmcPattern
-TpmcArc --freeVariables--> TpmcVariableTable
+TpmcArc --freeVariables--> SymbolSet
 TpmcArcList --arc--> TpmcArc
 TpmcArcList --next--> TpmcArcList
 TpmcIntList --integer--> int
@@ -48,11 +47,9 @@ TpmcStateValue --test--> TpmcTestState
 TpmcStateValue --final--> TpmcFinalState
 TpmcStateValue --error--> void_ptr
 TpmcMatchRuleArray["TpmcMatchRuleArray[]"] --entries--> TpmcMatchRule
-TpmcVariableArray["TpmcVariableArray[]"] --entries--> HashSymbol
 TpmcPatternArray["TpmcPatternArray[]"] --entries--> TpmcPattern
 TpmcStateArray["TpmcStateArray[]"] --entries--> TpmcState
 TpmcArcArray["TpmcArcArray[]"] --entries--> TpmcArc
-TpmcIntArray["TpmcIntArray[]"] --entries--> int
 TpmcMatrix["TpmcMatrix[][]"] --entries--> TpmcPattern
 ```
 

@@ -24,11 +24,11 @@ fn new (str) {
 }
 
 fn next {
-    (Lexer(h @ t)) { some(#(h, Lexer(t))) }
+    (Lexer(h @ t)) { just(#(h, Lexer(t))) }
     (Lexer([])) { nothing }
 }
 
 fn peek {
-    (Lexer(h @ _)) { some(h) }
+    (Lexer(h @ _)) { just(h) }
     (Lexer([])) { nothing }
 }

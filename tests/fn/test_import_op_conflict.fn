@@ -18,20 +18,5 @@ let
     // Test infix operator - should call ifx.subtract
     test_infix = 10 - 3;
 in
-    {
-        // Print results
-        puts("test_prefix (expected -5): ");
-        putn(test_prefix);
-        puts("\n");
-        
-        puts("test_infix (expected 7): ");
-        putn(test_infix);
-        puts("\n");
-        
-        // Both should work correctly with their respective namespace implementations
-        if (test_prefix == -5 and test_infix == 7) {
-            puts("PASS\n")
-        } else {
-            puts("FAIL\n")
-        }
-    }
+    // Both should work correctly with their respective namespace implementations
+    assert(test_prefix == -5 and test_infix == 7)

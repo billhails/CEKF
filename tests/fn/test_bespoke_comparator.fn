@@ -1,0 +1,46 @@
+let
+    typedef term {
+        add(term, term) |
+        sub(term, term) |
+        mul(term, term) |
+        div(term, term) |
+        pow(term, term) |
+        num(number)     |
+        var(string)
+    }
+
+    EQ term {
+        (add(a, b), add(a, b)) |
+        (add(b, a), add(a, b)) |
+        (sub(a, b), sub(a, b)) |
+        (mul(a, b), mul(a, b)) |
+        (mul(b, a), mul(a, b)) |
+        (div(a, b), div(a, b)) |
+        (pow(a, b), pow(a, b)) |
+        (num(a), num(a))       |
+        (var(a), var(a))       { true }
+        (_, _)                 { false }
+    }
+
+    fn fold {
+        (sub(a, a)) { num(0) }
+        (add(a, a)) { mul(num(2), a) }
+        (add(a, sub(num(0), a))) { num(0) }
+        (add(sub(num(0), a), a)) { num(0) }
+        (x) { x }
+    }
+in
+    // Test non-matching patterns return original
+    assert(fold(sub(num(5), num(3))) == sub(num(5), num(3)));
+    // Test that sub-patterns use bespoke semantic equality
+    assert(fold(sub(mul(var("x"), var("y")), mul(var("x"), var("y"))))
+            == num(0));
+    assert(fold(sub(mul(var("x"), var("y")), mul(var("y"), var("x"))))
+            == num(0));
+    assert(fold(add(mul(var("x"), var("y")), mul(var("x"), var("y"))))
+            == mul(num(2), mul(var("x"), var("y"))));
+    assert(fold(add(mul(var("x"), var("y")), mul(var("y"), var("x"))))
+            == mul(num(2), mul(var("x"), var("y"))));
+    assert(fold(add(var("x"), sub(num(0), var("x")))) == num(0));
+    assert(mul(var("x"), var("y")) == mul(var("y"), var("x")));
+    assert(mul(var("x"), mul(var("y"), var("z"))) == mul(mul(var("z"), var("y")), var("x")));

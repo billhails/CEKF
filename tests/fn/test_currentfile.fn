@@ -9,7 +9,4 @@ let
     
 in {
     assert(currentFile == expectedFile);
-    puts("currentFile is: ");
-    puts(currentFile);
-    puts("\n");
 }

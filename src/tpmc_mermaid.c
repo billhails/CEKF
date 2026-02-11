@@ -15,48 +15,37 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#include <string.h>
-#include <stdlib.h>
+#include "tpmc_mermaid.h"
 #include "common.h"
 #include "symbol.h"
-#include "tpmc_mermaid.h"
+#include "utils.h"
+#include <stdlib.h>
+#include <string.h>
 
 int tpmc_mermaid_flag = 0;
 char *tpmc_mermaid_function = NULL;
 
-static char *mermaidState(TpmcState *state);
+static SCharVec *mermaidState(TpmcState *state, SymbolSet *seen);
 static void mermaidPattern(TpmcPattern *pattern);
 
-static TpmcVariableTable *seen = NULL;
-
-static int initSeenTable() {
-    seen = newTpmcVariableTable();
-    return PROTECT(seen);
-}
-
-static void terminateSeenTable(int save) {
-    UNPROTECT(save);
-    seen = NULL;
-}
-
-static bool seenName(char *name) {
+static bool seenName(char *name, SymbolSet *seen) {
     HashSymbol *symbol = newSymbol(name);
-    if (getTpmcVariableTable(seen, symbol))
+    if (getSymbolSet(seen, symbol))
         return true;
-    setTpmcVariableTable(seen, symbol);
+    setSymbolSet(seen, symbol);
     return false;
 }
 
-static void mermaidFreeVariables(TpmcVariableTable *freeVariables) {
+static void mermaidFreeVariables(SymbolSet *freeVariables) {
     printf("[");
     if (freeVariables != NULL) {
         Index i = 0;
         Index count = 0;
         HashSymbol *key;
-        while ((key = iterateTpmcVariableTable(freeVariables, &i)) != NULL) {
+        while ((key = iterateSymbolSet(freeVariables, &i)) != NULL) {
             printf("%s", key->name);
             count++;
-            if (count < countTpmcVariableTable(freeVariables)) {
+            if (count < countSymbolSet(freeVariables)) {
                 printf(" ");
             }
         }
@@ -64,37 +53,37 @@ static void mermaidFreeVariables(TpmcVariableTable *freeVariables) {
     printf("]");
 }
 
-static char *mermaidStateName(TpmcState *state) {
+static SCharVec *mermaidStateName(TpmcState *state, SymbolSet *seen) {
     static char buf[512];
     switch (state->state->type) {
-        case TPMCSTATEVALUE_TYPE_TEST:
-            sprintf(buf, "T%d", state->stamp);
-            if (!seenName(buf)) {
-                printf("%s(\"%s\\n", buf,
-                       state->state->val.test->path->name);
-                mermaidFreeVariables(state->freeVariables);
-                printf("\\n(arcs %d)\")\n", countTpmcArcArray(state->state->val.test->arcs));
-            }
-            break;
-        case TPMCSTATEVALUE_TYPE_FINAL:
-            sprintf(buf, "F%d", state->stamp);
-            if (!seenName(buf)) {
-                printf("%s(\"", buf);
-                ppLamExp(state->state->val.final->action);
-                printf("\\n");
-                mermaidFreeVariables(state->freeVariables);
-                printf("\")\n");
-            }
-            break;
-        case TPMCSTATEVALUE_TYPE_ERROR:
-            sprintf(buf, "ERROR");
-            printf("%s\n", buf);
-            break;
-        default:
-            cant_happen("unrecognised statevalue type %d in mermaidStateName",
-                        state->state->type);
+    case TPMCSTATEVALUE_TYPE_TEST:
+        sprintf(buf, "T%d", state->stamp);
+        if (!seenName(buf, seen)) {
+            printf("%s(\"%s<br/>", buf, state->state->val.test->path->name);
+            mermaidFreeVariables(state->freeVariables);
+            printf("<br/>(arcs %d)\")\n",
+                   countTpmcArcArray(state->state->val.test->arcs));
+        }
+        break;
+    case TPMCSTATEVALUE_TYPE_FINAL:
+        sprintf(buf, "F%d", state->stamp);
+        if (!seenName(buf, seen)) {
+            printf("%s(\"", buf);
+            ppLamExp(state->state->val.final->action);
+            printf("<br/>");
+            mermaidFreeVariables(state->freeVariables);
+            printf("\")\n");
+        }
+        break;
+    case TPMCSTATEVALUE_TYPE_ERROR:
+        sprintf(buf, "ERROR");
+        printf("%s\n", buf);
+        break;
+    default:
+        cant_happen("unrecognised statevalue type %d in mermaidStateName",
+                    state->state->type);
     }
-    return strdup(buf);
+    return stringToSCharVec(buf);
 }
 
 static void mermaidConstructorComponents(TpmcPatternArray *patterns) {
@@ -110,98 +99,106 @@ static void mermaidPattern(TpmcPattern *pattern) {
     printf("%s:", pattern->path->name);
     TpmcPatternValue *value = pattern->pattern;
     switch (value->type) {
-        case TPMCPATTERNVALUE_TYPE_VAR:
-            printf("var %s", value->val.var->name);
-            break;
-        case TPMCPATTERNVALUE_TYPE_COMPARISON:
-            mermaidPattern(value->val.comparison->previous);
-            printf("==");
-            mermaidPattern(value->val.comparison->current);
-            break;
-        case TPMCPATTERNVALUE_TYPE_ASSIGNMENT:
-            printf("assignment");
-            break;
-        case TPMCPATTERNVALUE_TYPE_WILDCARD:
-            printf("_");
-            break;
-        case TPMCPATTERNVALUE_TYPE_CHARACTER:
-            printf("'%c'", value->val.character);
-            break;
-        case TPMCPATTERNVALUE_TYPE_BIGINTEGER:
-            fprintMaybeBigInt(stdout, value->val.bigInteger);
-            break;
-        case TPMCPATTERNVALUE_TYPE_CONSTRUCTOR:
-            printf("%s(", value->val.constructor->tag->name);
-            mermaidConstructorComponents(value->val.constructor->components);
-            printf(")");
-            break;
-        case TPMCPATTERNVALUE_TYPE_TUPLE:
-            printf("#(");
-            mermaidConstructorComponents(value->val.tuple);
-            printf(")");
-            break;
-        default:
-            cant_happen("unrecognised type %s", tpmcPatternValueTypeName(value->type));
+    case TPMCPATTERNVALUE_TYPE_VAR:
+        printf("var %s", value->val.var->name);
+        break;
+    case TPMCPATTERNVALUE_TYPE_COMPARISON:
+        mermaidPattern(value->val.comparison->previous);
+        printf("==");
+        mermaidPattern(value->val.comparison->current);
+        break;
+    case TPMCPATTERNVALUE_TYPE_ASSIGNMENT:
+        printf("assignment");
+        break;
+    case TPMCPATTERNVALUE_TYPE_WILDCARD:
+        printf("_");
+        break;
+    case TPMCPATTERNVALUE_TYPE_CHARACTER:
+        printf("'%c'", value->val.character);
+        break;
+    case TPMCPATTERNVALUE_TYPE_BIGINTEGER:
+        fprintMaybeBigInt(stdout, value->val.bigInteger);
+        break;
+    case TPMCPATTERNVALUE_TYPE_CONSTRUCTOR:
+        printf("%s(", value->val.constructor->tag->name);
+        mermaidConstructorComponents(value->val.constructor->components);
+        printf(")");
+        break;
+    case TPMCPATTERNVALUE_TYPE_TUPLE:
+        printf("#(");
+        mermaidConstructorComponents(value->val.tuple);
+        printf(")");
+        break;
+    default:
+        cant_happen("unrecognised type %s",
+                    tpmcPatternValueTypeName(value->type));
     }
 }
 
 static void mermaidArcLabel(TpmcArc *arc) {
     printf("\"");
     mermaidPattern(arc->test);
-    printf("\\n");
+    printf("<br/>");
     mermaidFreeVariables(arc->freeVariables);
     printf("\"");
 }
 
-static void mermaidArc(char *stateName, TpmcArc *arc) {
-    char *targetState = mermaidState(arc->state);
-    printf("%s --", stateName);
+static void mermaidArc(SCharVec *stateName, TpmcArc *arc, SymbolSet *seen) {
+    SCharVec *targetState = mermaidState(arc->state, seen);
+    int save = PROTECT(targetState);
+    printf("%s --", stateName->entries);
     mermaidArcLabel(arc);
-    printf("--> %s\n", targetState);
-    free(targetState);
+    printf("--> %s\n", targetState->entries);
+    UNPROTECT(save);
 }
 
-static void mermaidTestState(char *name, TpmcTestState *testState) {
+static void mermaidTestState(SCharVec *name, TpmcTestState *testState,
+                             SymbolSet *seen) {
     for (Index i = 0; i < countTpmcArcArray(testState->arcs); i++) {
-        mermaidArc(name, testState->arcs->entries[i]);
+        mermaidArc(name, testState->arcs->entries[i], seen);
     }
 }
 
-static void mermaidStateValue(char *name, TpmcStateValue *value) {
+static void mermaidStateValue(SCharVec *name, TpmcStateValue *value,
+                              SymbolSet *seen) {
     if (value == NULL) {
         return;
     }
     switch (value->type) {
-        case TPMCSTATEVALUE_TYPE_TEST:
-            mermaidTestState(name, value->val.test);
-            break;
-        case TPMCSTATEVALUE_TYPE_FINAL:
-        case TPMCSTATEVALUE_TYPE_ERROR:
-            break;
-        default:
-            cant_happen
-                ("unrecognised statevalue type %d in mermaidStateValue",
-                 value->type);
+    case TPMCSTATEVALUE_TYPE_TEST:
+        mermaidTestState(name, value->val.test, seen);
+        break;
+    case TPMCSTATEVALUE_TYPE_FINAL:
+    case TPMCSTATEVALUE_TYPE_ERROR:
+        break;
+    default:
+        cant_happen("unrecognised statevalue type %d in mermaidStateValue",
+                    value->type);
     }
 }
 
-static char *mermaidState(TpmcState *state) {
+static SCharVec *mermaidState(TpmcState *state, SymbolSet *seen) {
     if (state == NULL) {
-        return "";
+        return stringToSCharVec("");
     }
-    char *name = mermaidStateName(state);
-    mermaidStateValue(name, state->state);
+    SCharVec *name = mermaidStateName(state, seen);
+    int save = PROTECT(name);
+    mermaidStateValue(name, state->state, seen);
+    UNPROTECT(save);
     return name;
 }
 
 void tpmcMermaid(TpmcState *state) {
     if (tpmc_mermaid_flag) {
-        int save = initSeenTable();
-        printf("## %s\n", tpmc_mermaid_function);
+        SymbolSet *seen = newSymbolSet();
+        int save = PROTECT(seen);
         printf("```mermaid\n");
-        printf("flowchart TD\n");
-        free(mermaidState(state));
+        printf("---\n");
+        printf("title: %s\n", tpmc_mermaid_function);
+        printf("---\n");
+        printf("flowchart LR\n");
+        mermaidState(state, seen);
         printf("```\n");
-        terminateSeenTable(save);
+        UNPROTECT(save);
     }
 }

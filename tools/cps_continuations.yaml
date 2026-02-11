@@ -5,70 +5,22 @@
 # needs to create a closure to capture the continuation of a computation.
 #
 # Note: Only T_k transformations need continuation scaffolding.
-# T_c transformations pass LamExp* as regular function parameters.
+# T_c transformations pass MinExp* as regular function parameters.
 
 config:
   name: cps_kont
   description: "Continuation scaffolding for CPS transform"
   parserInfo: false
-  currency: LamExp
+  currency: MinExp
   includes:
-    - lambda.h
+    - minlam.h
   limited_includes:
-    - lambda_debug.h
+    - minlam_debug.h
 
 primitives: !include ../src/primitives.yaml
 
 external:
-  LamExp:
-    meta:
-      brief: Lambda expressions
-    data:
-      cname: "struct LamExp *"
-      printFn: printLamExp
-      markFn: markLamExp
-      valued: true
-  LamArgs:
-    meta:
-      brief: List of LamExp
-    data:
-      cname: "struct LamArgs *"
-      printFn: printLamArgs
-      markFn: markLamArgs
-      valued: true
-  LamBindings:
-    meta:
-      brief: List of LamBindings
-    data:
-      cname: "struct LamBindings *"
-      printFn: printLamBindings
-      markFn: markLamBindings
-      valued: true
-  LamCondCases:
-    meta:
-      brief: List of LamCondCases
-    data:
-      cname: "struct LamCondCases *"
-      printFn: printLamCondCases
-      markFn: markLamCondCases
-      valued: true
-  LamMatchList:
-    data:
-      cname: "struct LamMatchList *"
-      printFn: printLamMatchList
-      markFn: markLamMatchList
-      valued: true
-  LamPrimOp:
-    data:
-      cname: "enum LamPrimOp"
-      printf: "%d"
-      valued: true
-  LamSequence:
-    data:
-      cname: "struct LamSequence *"
-      printFn: printLamSequence
-      markFn: markLamSequence
-      valued: true
+- !include ../src/minlam.yaml
 
 # Naming convention, since each kont is argument to T_k and never
 # to T_c, we use Tk for continuations constructed by T_k, and
@@ -95,9 +47,9 @@ continuations:
           }
       }
     free_vars:
-      c: LamExp
-      exprt: LamExp
-      exprf: LamExp
+      c: MinExp
+      exprt: MinExp
+      exprf: MinExp
 
   TcIff:
     transformer: T_k
@@ -117,9 +69,9 @@ continuations:
         }
       }
     free_vars:
-      sk: LamExp
-      exprt: LamExp
-      exprf: LamExp
+      sk: MinExp
+      exprt: MinExp
+      exprf: MinExp
 
   TcApply1:
     transformer: T_k
@@ -136,8 +88,8 @@ continuations:
           }
       }
     free_vars:
-      es: LamArgs
-      c: LamExp
+      es: MinExprList
+      c: MinExp
 
   TcApply2:
     transformer: T_k
@@ -154,8 +106,8 @@ continuations:
           }
       }
     free_vars:
-      sf: LamExp
-      c: LamExp
+      sf: MinExp
+      c: MinExp
 
   TkCond:
     transformer: T_k
@@ -177,8 +129,8 @@ continuations:
           }
       }
     free_vars:
-      c: LamExp
-      branches: LamCondCases
+      c: MinExp
+      branches: MinCondCases
 
   TcCond:
     transformer: T_k
@@ -200,8 +152,8 @@ continuations:
           }
       }
     free_vars:
-      sk: LamExp
-      branches: LamCondCases
+      sk: MinExp
+      branches: MinCondCases
 
   TkS1:
     transformer: T_k
@@ -218,7 +170,7 @@ continuations:
           }
       }
     free_vars:
-      t: LamArgs
+      t: MinExprList
       k: CpsKont
 
   TkS2:
@@ -237,7 +189,7 @@ continuations:
       }
     free_vars:
       k: CpsKont
-      hd: LamExp
+      hd: MinExp
 
   TcCallCC:
     transformer: T_k
@@ -252,89 +204,7 @@ continuations:
           })
       }
     free_vars:
-      c: LamExp
-
-  TkConstruct:
-    transformer: T_k
-    key: k_construct
-    context: |
-      (E.construct(name, tag, args)) {
-          Ts_k(args, fn (sargs) {
-              k(E.construct(name, tag, sargs))
-          })
-      }
-    free_vars:
-      name: HashSymbol
-      tag: int
-      k: CpsKont
-
-  TcConstruct:
-    transformer: T_k
-    key: c_construct
-    context: |
-      (E.construct(name, tag, args)) {
-          Ts_k(args, fn (sargs) {
-              E.apply(c, [E.construct(name, tag, sargs)])
-          })
-      }
-    free_vars:
-      name: HashSymbol
-      tag: int
-      c: LamExp
-
-  TkDeconstruct:
-    transformer: T_k
-    key: k_deconstruct
-    context: |
-      (E.deconstruct(name, nsId, vec, expr)) {
-          T_k(expr, fn (sexpr) {
-              k(E.deconstruct(name, nsId, vec, sexpr))
-          })
-      }
-    free_vars:
-      name: HashSymbol
-      nsId: int
-      vec: int
-      k: CpsKont
-
-  TcDeconstruct:
-    transformer: T_k
-    key: c_deconstruct
-    context: |
-      (E.deconstruct(name, nsId, vec, expr)) {
-          T_k(expr, fn (sexpr) {
-              E.apply(c, [E.deconstruct(name, nsId, vec, sexpr)])
-          })
-      }
-    free_vars:
-      name: HashSymbol
-      nsId: int
-      vec: int
-      c: LamExp
-
-  TkMakeTuple:
-    transformer: T_k
-    key: k_maketuple
-    context: |
-      (E.make_tuple(args)) {
-        Ts_k(args, fn (sargs) {
-          k(E.make_tuple(sargs))
-        })
-      }
-    free_vars:
-      k: CpsKont
-
-  TcMakeTuple:
-    transformer: T_k
-    key: c_maketuple
-    context: |
-      (E.make_tuple(args)) {
-        Ts_k(args, fn (sargs) {
-          E.apply(c, [E.make_tuple(sargs)])
-        })
-      }
-    free_vars:
-      c: LamExp
+      c: MinExp
 
   TkMakeVec:
     transformer: T_k
@@ -346,7 +216,6 @@ continuations:
         })
       }
     free_vars:
-      size: int
       k: CpsKont
 
   TcMakeVec:
@@ -359,8 +228,7 @@ continuations:
         })
       }
     free_vars:
-      size: int
-      c: LamExp
+      c: MinExp
 
   TkMatch:
     transformer: T_k
@@ -377,8 +245,8 @@ continuations:
           })
         }
     free_vars:
-      c: LamExp
-      cases: LamMatchList
+      c: MinExp
+      cases: MinMatchList
 
   TcMatch:
     transformer: T_k
@@ -395,8 +263,8 @@ continuations:
           })), [c])
       }
     free_vars:
-      sk: LamExp
-      cases: LamMatchList
+      sk: MinExp
+      cases: MinMatchList
 
   TkNameSpaces:
     transformer: T_k
@@ -420,7 +288,7 @@ continuations:
         })
       }
     free_vars:
-      c: LamExp
+      c: MinExp
 
   TkPrimApp1:
     transformer: T_k
@@ -435,8 +303,8 @@ continuations:
       }
     free_vars:
       k: CpsKont
-      e2: LamExp
-      p: LamPrimOp
+      e2: MinExp
+      p: MinPrimOp
 
   TkPrimApp2:
     transformer: T_k
@@ -451,8 +319,8 @@ continuations:
       }
     free_vars:
       k: CpsKont
-      s1: LamExp
-      p: LamPrimOp
+      s1: MinExp
+      p: MinPrimOp
 
   TcPrimApp1:
     transformer: T_k
@@ -466,9 +334,9 @@ continuations:
         }) ///////////////////////////////////////////
       }
     free_vars:
-      c: LamExp
-      e2: LamExp
-      p: LamPrimOp
+      c: MinExp
+      e2: MinExp
+      p: MinPrimOp
 
   TcPrimApp2:
     transformer: T_k
@@ -482,33 +350,9 @@ continuations:
         })
       }
     free_vars:
-      c: LamExp
-      s1: LamExp
-      p: LamPrimOp
-
-  TkPrint:
-    transformer: T_k
-    key: k_print
-    context: |
-      (E.print_exp(expr)) {
-        T_k(expr, fn (sexpr) {
-          k(E.print_exp(sexpr))
-        })
-      }
-    free_vars:
-      k: CpsKont
-
-  TcPrint:
-    transformer: T_k
-    key: c_print
-    context: |
-      (E.print_exp(expr)) {
-          T_k(expr, fn (sexpr) {
-              E.apply(c, [E.print_exp(sexpr)])
-          })
-      }
-    free_vars:
-      c: LamExp
+      c: MinExp
+      s1: MinExp
+      p: MinPrimOp
 
   TkSequence:
     transformer: T_k
@@ -522,7 +366,7 @@ continuations:
       }
     free_vars:
       k: CpsKont
-      exprs: LamSequence
+      exprs: MinExprList
 
   TcSequence:
     transformer: T_k
@@ -535,81 +379,5 @@ continuations:
         })
       }
     free_vars:
-      c: LamExp
-      exprs: LamSequence
-
-  TkTag:
-    transformer: T_k
-    key: k_tag
-    context: |
-      (E.tag(expr)) {
-        T_k(expr, fn (sexpr) {
-          k(E.tag(sexpr))
-        })
-      }
-    free_vars:
-      k: CpsKont
-
-  TcTag:
-    transformer: T_k
-    key: c_tag
-    context: |
-      (E.tag(expr)) {
-        T_k(expr, fn (sexpr) {
-          E.apply(c, [E.tag(sexpr)])
-        })
-      }
-    free_vars:
-      c: LamExp
-
-  TkTupleIndex:
-    transformer: T_k
-    key: k_tupleindex
-    context: |
-      (E.tuple_index(size, index, expr)) {
-        T_k(expr, fn (sexpr) {
-          k(E.tuple_index(size, index, sexpr))
-        })
-      }
-    free_vars:
-      size: int
-      index: int
-      k: CpsKont
-
-  TcTupleIndex:
-    transformer: T_k
-    key: c_tupleindex
-    context: |
-      (E.tuple_index(size, index, expr)) {
-        T_k(expr, fn (sexpr) {
-          E.apply(c, [E.tuple_index(size, index, sexpr)])
-        })
-      }
-    free_vars:
-      size: int
-      index: int
-      c: LamExp
-
-  TkTypeOf:
-    transformer: T_k
-    key: k_typeOf
-    context: |
-      (E.typeOf_expr(expr)) {
-        T_k(expr, fn (sexpr) {
-          k(E.typeOf_expr(sexpr))
-        })
-      }
-    free_vars:
-      k: CpsKont
-
-  TcTypeOf:
-    transformer: T_k
-    key: c_typeOf
-    context: |
-      (E.typeOf_expr(expr)) {
-        T_k(expr, fn (sexpr) {
-          E.apply(c, [E.typeOf_expr(sexpr)])
-        })
-      }
-    free_vars:
-      c: LamExp
+      c: MinExp
+      exprs: MinExprList

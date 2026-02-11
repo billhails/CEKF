@@ -308,4 +308,3 @@ in
     test_mixed_chaining();
     test_with_comparisons();
     
-    puts("All logic tests passed!\n")

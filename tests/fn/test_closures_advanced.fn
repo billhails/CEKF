@@ -358,4 +358,3 @@ in
     test_closure_with_conditional();
     test_closure_lifetime();
     
-    puts("All advanced closure tests passed!\n")

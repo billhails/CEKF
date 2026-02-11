@@ -1,23 +1,57 @@
 let
     link "samples.fn" as Samples;
+    link "beta_reduce.fn" as β;
+    link "eta_reduce.fn" as η;
+    link "constant_folding.fn" as OF;
     link "expr.fn" as E;
+    link "minexpr.fn" as M;
     link "../listutils.fn" as list;
     link "desugar.fn" as DS;
     link "cps.fn" as CPS;
+    // link "normalize.fn" as N;
     link "closure-convert.fn" as CC;
+    link "curry.fn" as C;
 in
-    list.for_each(fn (str) {
-        let
-            expr = E.parse(str);
-            dexpr = DS.desugar(expr);
-            cexpr = CPS.T_c(dexpr, E.var("□"));
-            tab = "\n    ";
-        in
-            E.print_expr(expr);
-            puts(" ==>");
-            puts(tab);
-            E.print_expr(CC.shared_closure_convert(cexpr));
-            puts(tab);
-            E.print_expr(CC.flat_closure_convert(cexpr));
-            puts("\n\n")
-    }, Samples.data);
+    list.for_each(fn {
+        (';' @ s) {
+            // print comments
+            puts("; ");
+            puts(s);
+            puts("\n");
+        }
+        (str) {
+            let
+                a = E.parse(str);
+                b = DS.desugar(a);
+                c = C.curry(b);
+                d = η.reduce(c);
+                e = CPS.T_c(d, M.var("□"));
+                f = β.reduce(e);
+                g = OF.fold(f);
+                h = CC.shared_closure_convert(g);
+                nltab = "\n    ";
+            in
+                E.print_expr(a);
+                // puts("\n==> desugar");
+                // puts(nltab);
+                // M.print_expr(b);
+                // puts("\n==> eta reduce");
+                // puts(nltab);
+                // M.print_expr(d);
+                // puts("\n==> cps transform");
+                // puts(nltab);
+                // M.print_expr(e);
+                // puts("\n==> beta reduce");
+                // puts(nltab);
+                // M.print_expr(f);
+                // puts("\n==> operator folding");
+                // puts(nltab);
+                puts("\n    ");
+                M.print_expr(g);
+                // puts("\n==> shared closure convert");
+                // puts(nltab);
+                // M.print_expr(h);
+                // puts("\n\n\n")
+                puts("\n\n")
+        }
+    }, Samples.data());

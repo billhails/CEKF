@@ -22,6 +22,12 @@ fn unique(lst) {
     in helper(lst, [])
 }
 
+// distinct: list(#a) -> bool
+fn distinct {
+    ([]) { true }
+    (h @ t) { not member(h, t) and distinct(t) }
+}
+
 // exclude: list(#t) -> list(#t) -> list(#t)
 fn exclude(items, lst) {
     let fn helper {
@@ -228,6 +234,8 @@ fn sum(lst) {
     foldl(fn (elm, acc) { elm + acc }, 0, lst)
 }
 
+export operator "total_" left 8 sum;
+
 // product: list(number) -> number
 fn product(lst) {
     foldl(fn (elm, acc) { elm * acc }, 1, lst)
@@ -240,7 +248,7 @@ fn zip(a, b) {
 
 export operator "_zip_" left 8 zip;
 
-// zipwith: (#a -> #b -> #c) -> list(#a) -> list(#b) -> list(#c)
+// zip_with: (#a -> #b -> #c) -> list(#a) -> list(#b) -> list(#c)
 fn zip_with(f, a, b) {
     let fn helper {
         (h1 @ t1, h2 @ t2, acc) {
@@ -260,6 +268,15 @@ fn unzip {
         }
     }
 }
+
+export operator "unzip_" 8 unzip;
+
+// pairmap: (#a -> #c) -> (#b -> #d) -> #(#a, #b) -> #(#c, #d)
+fn pairmap(l, r) {
+    fn (#(ls, rs)) { #(l(ls), r(rs)) }
+}
+
+export operator "_&&_" left 9 pairmap;
 
 // last: list(#a) -> #a
 unsafe fn last {

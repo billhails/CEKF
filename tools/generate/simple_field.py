@@ -111,9 +111,9 @@ class SimpleField:
         obj = catalog.get(self.typeName)
         obj.printPrintHashField(depth)
 
-    def printCompareLine(self, isInline, catalog, depth):
+    def printEqLine(self, isInline, catalog, depth):
         obj = catalog.get(self.typeName)
-        obj.printCompareField(catalog, isInline, self.name, depth)
+        obj.printEqField(catalog, isInline, self.name, depth)
 
     def printPrintLine(self, isInline, catalog, depth):
         obj = catalog.get(self.typeName)
@@ -131,9 +131,9 @@ class SimpleField:
         obj = catalog.get(self.typeName)
         obj.printCopyField(obj.isInline(catalog), f"{self.name}[{key}]", depth)
 
-    def printCompareArrayLine(self, isInline, catalog, key, depth):
+    def printEqArrayLine(self, isInline, catalog, key, depth):
         obj = catalog.get(self.typeName)
-        obj.printCompareField(catalog, isInline, f"{self.name}[{key}]", depth)
+        obj.printEqField(catalog, isInline, f"{self.name}[{key}]", depth)
 
     def printStructTypedefLine(self, catalog):
         c = self.comment('printStructTypedefLine')

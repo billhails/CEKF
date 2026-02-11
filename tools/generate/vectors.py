@@ -12,7 +12,7 @@ from .comment_gen import CommentGen
 from .type_helper import TypeHelper
 from .signature_helper import SignatureHelper
 from .accessor_helper import AccessorHelper
-from .compare_helper import CompareHelper
+from .compare_helper import EqHelper
 from .objtype_helper import ObjectTypeHelper
 
 
@@ -106,19 +106,19 @@ class SimpleVector(Base):
         pad(depth)
         print(f'print{myName}(_x{a}{prefix}{field}, depth+1); {c}')
 
-    def printCompareField(self, catalog, isInline, field, depth, prefix=''):
-        c = self.comment('printCompareField')
+    def printEqField(self, catalog, isInline, field, depth, prefix=''):
+        c = self.comment('printEqField')
         myName=self.getName()
-        extraCmpArgs = self.getExtraCmpAargs(catalog)
+        extraEqArgs = self.getExtraEqAargs(catalog)
         a = '.' if isInline else '->'
         pad(depth)
-        print(f"if (!eq{myName}(a{a}{prefix}{field}, b{a}{prefix}{field}{extraCmpArgs})) return false; {c}")
+        print(f"if (!eq{myName}(a{a}{prefix}{field}, b{a}{prefix}{field}{extraEqArgs})) return false; {c}")
 
-    def getExtraCmpFargs(self, catalog):
-        return CompareHelper.get_extra_formal_args(self.extraCmpArgs, lambda t: self.getCtype(t, catalog))
+    def getExtraEqFargs(self, catalog):
+        return EqHelper.get_extra_formal_args(self.extraEqArgs, lambda t: self.getCtype(t, catalog))
 
-    def getExtraCmpAargs(self, catalog):
-        return CompareHelper.get_extra_actual_args(self.extraCmpArgs)
+    def getExtraEqAargs(self, catalog):
+        return EqHelper.get_extra_actual_args(self.extraEqArgs)
 
     def objTypeArray(self):
         return ObjectTypeHelper.obj_type_array(self.getName())
@@ -174,16 +174,16 @@ class SimpleVector(Base):
         decl=self.getPrintSignature(catalog)
         print(f"{decl}; {c}")
 
-    def printCompareDeclaration(self, catalog):
-        c = self.comment('printCompareDeclaration')
-        decl=self.getCompareSignature(catalog)
+    def printEqDeclaration(self, catalog):
+        c = self.comment('printEqDeclaration')
+        decl=self.getEqSignature(catalog)
         print(f"{decl}; {c}")
 
-    def getCompareSignature(self, catalog):
+    def getEqSignature(self, catalog):
         myType = self.getTypeDeclaration(catalog)
         myName = self.getName()
-        extraCmpArgs = self.getExtraCmpFargs(catalog)
-        return SignatureHelper.compare_signature(myName, myType, extraCmpArgs)
+        extraEqArgs = self.getExtraEqFargs(catalog)
+        return SignatureHelper.eq_signature(myName, myType, extraEqArgs)
 
     def printMarkFunction(self, catalog):
         decl = self.getMarkSignature(catalog)
@@ -202,15 +202,15 @@ class SimpleVector(Base):
         print(f"}} {c}")
         print("")
 
-    def printCompareFunction(self, catalog):
-        decl = self.getCompareSignature(catalog)
-        if self.bespokeCmpImplementation:
+    def printEqFunction(self, catalog):
+        decl = self.getEqSignature(catalog)
+        if self.bespokeEqImplementation:
             print("// Bespoke implementation required for")
             print(f"// {decl}")
             print("")
             return
         myName = self.getName()
-        c = self.comment('printCompareFunction')
+        c = self.comment('printEqFunction')
         print(f"/**")
         print(f" * Compares two {myName} vectors for deep equality.")
         print(f" */")
@@ -219,7 +219,7 @@ class SimpleVector(Base):
         print(f"    if (a == NULL || b == NULL) return false; {c}")
         print(f"    if (a->size != b->size) return false; {c}")
         print(f"    for (Index i = 0; i < a->size; i++) {{ {c}")
-        self.entries.printCompareArrayLine(False, catalog, "i", 2)
+        self.entries.printEqArrayLine(False, catalog, "i", 2)
         print(f"    }} {c}")
         print(f"    return true; {c}")
         print(f"}} {c}")

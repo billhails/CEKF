@@ -15,7 +15,6 @@ let
             assert(int_result == 42);
             assert(char_result == 'a');
             assert(list_result == [1, 2, 3]);
-            puts("Polymorphic identity test passed\n")
     }
     
     // Test: Polymorphic list operations
@@ -33,7 +32,6 @@ let
             assert(int_list_len == 3);
             assert(char_list_len == 3);
             assert(nested_list_len == 3);
-            puts("Polymorphic lists test passed\n")
     }
     
     // Test: Type inference with arithmetic
@@ -46,7 +44,6 @@ let
             assert(a == 8);
             assert(b == 20);
             assert(c == 28);
-            puts("Type inference arithmetic test passed\n")
     }
     
     // Test: Type inference with conditionals
@@ -61,20 +58,19 @@ let
         in
             assert(r1 == 5);
             assert(r2 == 5);
-            puts("Type inference conditionals test passed\n")
     }
     
     // Test: Polymorphic option type
     fn test_polymorphic_option() {
         let
-            typedef option(#t) { some(#t) | none }
+            typedef option(#t) { just(#t) | none }
             
             fn unwrap_or {
-                (some(x), _) { x }
+                (just(x), _) { x }
                 (none, default) { default }
             }
             
-            opt1 = some(42);
+            opt1 = just(42);
             opt2 = none;
             
             r1 = unwrap_or(opt1, 0);
@@ -82,7 +78,6 @@ let
         in
             assert(r1 == 42);
             assert(r2 == 99);
-            puts("Polymorphic option test passed\n")
     }
     
     // Test: Polymorphic either type
@@ -112,24 +107,22 @@ let
             assert(l2 == 0);
             assert(r1 == 0);
             assert(r2 == 20);
-            puts("Polymorphic either test passed\n")
     }
     
     // Test: Nested polymorphic types
     fn test_nested_polymorphic() {
         let
-            typedef option(#t) { some(#t) | none }
+            typedef option(#t) { just(#t) | none }
             
             fn map_option {
                 (none, _) { none }
-                (some(x), f) { some(f(x)) }
+                (just(x), f) { just(f(x)) }
             }
             
-            opt = some(5);
+            opt = just(5);
             doubled = map_option(opt, fn(x) { x * 2 });
         in
-            assert(doubled == some(10));
-            puts("Nested polymorphic test passed\n")
+            assert(doubled == just(10));
     }
     
     // Test: Polymorphic tree type
@@ -146,7 +139,6 @@ let
             size = tree_size(t);
         in
             assert(size == 3);
-            puts("Polymorphic tree test passed\n")
     }
     
     // Test: Type with multiple parameters
@@ -168,25 +160,23 @@ let
         in
             assert(first == 10);
             assert(second == 'x');
-            puts("Multi-param type test passed\n")
     }
     
     // Test: List of polymorphic types
     fn test_list_of_options() {
         let
-            typedef option(#t) { some(#t) | none }
+            typedef option(#t) { just(#t) | none }
             
             fn count_somes {
                 ([]) { 0 }
-                (some(_) @ t) { 1 + count_somes(t) }
+                (just(_) @ t) { 1 + count_somes(t) }
                 (none @ t) { count_somes(t) }
             }
             
-            opts = [some(1), none, some(2), some(3), none];
+            opts = [just(1), none, just(2), just(3), none];
             count = count_somes(opts);
         in
             assert(count == 3);
-            puts("List of options test passed\n")
     }
     
     // Test: Recursive polymorphic function
@@ -202,7 +192,6 @@ let
         in
             assert(r1 == [3, 2, 1]);
             assert(r2 == ['c', 'b', 'a']);
-            puts("Recursive polymorphic test passed\n")
     }
     
     // Test: Higher-order polymorphic function
@@ -220,7 +209,6 @@ let
         in
             assert(r1 == 7);
             assert(r2 == 12);
-            puts("Higher-order polymorphic test passed\n")
     }
     
     // Test: Polymorphic result type
@@ -245,7 +233,6 @@ let
             assert(not is_ok(r2));
             assert(not is_err(r1));
             assert(is_err(r2));
-            puts("Polymorphic result test passed\n")
     }
 
     // Main test runner
@@ -263,7 +250,6 @@ let
         test_recursive_polymorphic();
         test_higher_order_polymorphic();
         test_polymorphic_result();
-        puts("All type system tests completed successfully!")
     }
 
 in

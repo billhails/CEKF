@@ -13,13 +13,13 @@ class SwitchHelper:
     """
 
     @staticmethod
-    def print_switch_function(catalog, method_name, func_name, param_decl, case_method, default_action, return_type='void'):
+    def print_switch_function(catalog, packageName, method_name, func_name, param_decl, case_method, default_action, return_type='void'):
         """
         Print a switch-based dispatcher function.
         
         Args:
             catalog: The catalog containing entities
-            method_name: Name of the catalog method (e.g., 'printMarkObjFunction')
+            packageName: The package name (e.g., 'Lambda')
             func_name: Name of function to generate (e.g., 'mark{Type}Obj')
             param_decl: Parameter declaration (e.g., 'struct Header *h')
             case_method: Method name to call on each entity for case generation
@@ -27,7 +27,7 @@ class SwitchHelper:
             return_type: Return type of function (default 'void')
         """
         c = CommentGen.method_comment('Catalog', method_name)
-        type_cap = catalog.typeName.capitalize()
+        type_cap = packageName.capitalize()
         func_full_name = func_name.format(Type=type_cap)
         
         print(f'{return_type} {func_full_name}({param_decl}) {{ {c}')
@@ -38,8 +38,9 @@ class SwitchHelper:
         
         # Generate cases from entities
         for entity in catalog.contents.values():
-            method = getattr(entity, case_method)
-            method(catalog)
+            if not entity.isExternal():
+                method = getattr(entity, case_method)
+                method(catalog)
         
         # Default case
         print(f'        default: {c}')

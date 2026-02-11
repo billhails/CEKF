@@ -17,14 +17,14 @@
  */
 
 #include "builtins_helper.h"
-#include <string.h>
-#include <stdio.h>
+#include "builtin_io.h"
+#include "builtin_sqlite.h"
 #include "builtins_impl.h"
 #include "memory.h"
 #include "symbol.h"
 #include "tc_analyze.h"
-#include "builtin_sqlite.h"
-#include "builtin_io.h"
+#include <stdio.h>
+#include <string.h>
 
 static void registerRand(BuiltIns *registry);
 static void registerIncr(BuiltIns *registry);
@@ -49,6 +49,7 @@ static void registerIsSymbol(BuiltIns *registry);
 static void registerIsUpper(BuiltIns *registry);
 static void registerIsValid(BuiltIns *registry);
 static void registerIsXdigit(BuiltIns *registry);
+static void registerGetDec(BuiltIns *registry);
 static void registerChr(BuiltIns *registry);
 static void registerArgv(BuiltIns *registry, int argc, int cargc, char *argv[]);
 static void registerGetEnv(BuiltIns *registry);
@@ -97,9 +98,7 @@ Value makeBasic(Value v, int code) {
     }
 }
 
-static TcType *makeAnyType(void) {
-    return makeFreshVar("any");
-}
+static TcType *makeAnyType(void) { return makeFreshVar("any"); }
 
 TcType *pushAnyArg(BuiltInArgs *args) {
     TcType *anyType = makeAnyType();
@@ -137,12 +136,13 @@ static char *makeInternalName(char *external) {
     // allocate buffer for "builtin$" + external + NUL
     size_t n = strlen(external);
     size_t len = n + 8 + 1; // 8 = strlen("builtin$")
-    char *buf = (char *) safeMalloc(len);
+    char *buf = (char *)safeMalloc(len);
     sprintf(buf, "builtin$%s", external);
     return buf;
 }
 
-void pushNewBuiltIn(BuiltIns *registry, char *name, TcType *ret, BuiltInArgs *args, void *impl) {
+void pushNewBuiltIn(BuiltIns *registry, char *name, TcType *ret,
+                    BuiltInArgs *args, void *impl) {
     HashSymbol *external = newSymbol(name);
     char *internalC = makeInternalName(name);
     HashSymbol *internal = newSymbol(internalC);
@@ -179,6 +179,7 @@ BuiltIns *registerBuiltIns(int argc, int cargc, char *argv[]) {
     registerIsUpper(res);
     registerIsValid(res);
     registerIsXdigit(res);
+    registerGetDec(res);
     registerChr(res);
     registerIO(res);
     registerSQLite(res);
@@ -214,7 +215,8 @@ static void registerAssert(BuiltIns *registry) {
     int save = PROTECT(args);
     TcType *boolean = makeBoolean();
     PROTECT(boolean);
-    pushNewBuiltIn(registry, "assertion", boolean, args, (void *)builtin_assert);
+    pushNewBuiltIn(registry, "assertion", boolean, args,
+                   (void *)builtin_assert);
     UNPROTECT(save);
 }
 
@@ -231,10 +233,12 @@ static void registerOrd(BuiltIns *registry) {
 static void registerUnicodeCategory(BuiltIns *registry) {
     BuiltInArgs *args = newBuiltInArgs();
     int save = PROTECT(args);
-    TcType *resultType = makeTypeSig(newSymbol("unicode_general_category_type"), NULL, -1);
+    TcType *resultType =
+        makeTypeSig(newSymbol("unicode_general_category_type"), NULL, -1);
     PROTECT(resultType);
     pushCharacterArg(args);
-    pushNewBuiltIn(registry, "unicode_category", resultType, args, (void *)builtin_unicode_category);
+    pushNewBuiltIn(registry, "unicode_category", resultType, args,
+                   (void *)builtin_unicode_category);
     UNPROTECT(save);
 }
 
@@ -248,13 +252,15 @@ static void registerChr(BuiltIns *registry) {
     UNPROTECT(save);
 }
 
-static void registerArgv(BuiltIns *registry, int argc, int cargc, char *argv[]) {
+static void registerArgv(BuiltIns *registry, int argc, int cargc,
+                         char *argv[]) {
     BuiltInArgs *args = newBuiltInArgs();
     int save = PROTECT(args);
     pushIntegerArg(args);
     TcType *maybeStringType = makeMaybeStringType();
     PROTECT(maybeStringType);
-    pushNewBuiltIn(registry, "argv", maybeStringType, args, (void *)builtin_args);
+    pushNewBuiltIn(registry, "argv", maybeStringType, args,
+                   (void *)builtin_args);
     UNPROTECT(save);
     builtin_args_argc = argc;
     builtin_args_cargc = cargc;
@@ -267,7 +273,8 @@ static void registerGetEnv(BuiltIns *registry) {
     pushStringArg(args);
     TcType *maybeStringType = makeMaybeStringType();
     PROTECT(maybeStringType);
-    pushNewBuiltIn(registry, "getenv", maybeStringType, args, (void *)builtin_getenv);
+    pushNewBuiltIn(registry, "getenv", maybeStringType, args,
+                   (void *)builtin_getenv);
     UNPROTECT(save);
 }
 
@@ -275,7 +282,8 @@ static void registerRealPart(BuiltIns *registry) {
     BuiltInArgs *args = newBuiltInArgs();
     int save = PROTECT(args);
     TcType *integerType = pushIntegerArg(args);
-    pushNewBuiltIn(registry, "com_real", integerType, args, (void *)builtin_real_part);
+    pushNewBuiltIn(registry, "com_real", integerType, args,
+                   (void *)builtin_real_part);
     UNPROTECT(save);
 }
 
@@ -283,7 +291,8 @@ static void registerImagPart(BuiltIns *registry) {
     BuiltInArgs *args = newBuiltInArgs();
     int save = PROTECT(args);
     TcType *integerType = pushIntegerArg(args);
-    pushNewBuiltIn(registry, "com_imag", integerType, args, (void *)builtin_imag_part);
+    pushNewBuiltIn(registry, "com_imag", integerType, args,
+                   (void *)builtin_imag_part);
     UNPROTECT(save);
 }
 
@@ -291,7 +300,8 @@ static void registerMagPart(BuiltIns *registry) {
     BuiltInArgs *args = newBuiltInArgs();
     int save = PROTECT(args);
     TcType *integerType = pushIntegerArg(args);
-    pushNewBuiltIn(registry, "com_mag", integerType, args, (void *)builtin_mag_part);
+    pushNewBuiltIn(registry, "com_mag", integerType, args,
+                   (void *)builtin_mag_part);
     UNPROTECT(save);
 }
 
@@ -299,7 +309,8 @@ static void registerThetaPart(BuiltIns *registry) {
     BuiltInArgs *args = newBuiltInArgs();
     int save = PROTECT(args);
     TcType *integerType = pushIntegerArg(args);
-    pushNewBuiltIn(registry, "com_theta", integerType, args, (void *)builtin_theta_part);
+    pushNewBuiltIn(registry, "com_theta", integerType, args,
+                   (void *)builtin_theta_part);
     UNPROTECT(save);
 }
 
@@ -409,7 +420,8 @@ static void registerIsNumber(BuiltIns *registry) {
     TcType *boolean = makeBoolean();
     PROTECT(boolean);
     pushCharacterArg(args);
-    pushNewBuiltIn(registry, "isnumber", boolean, args, (void *)builtin_isnumber);
+    pushNewBuiltIn(registry, "isnumber", boolean, args,
+                   (void *)builtin_isnumber);
     UNPROTECT(save);
 }
 
@@ -459,7 +471,8 @@ static void registerIsSymbol(BuiltIns *registry) {
     TcType *boolean = makeBoolean();
     PROTECT(boolean);
     pushCharacterArg(args);
-    pushNewBuiltIn(registry, "issymbol", boolean, args, (void *)builtin_issymbol);
+    pushNewBuiltIn(registry, "issymbol", boolean, args,
+                   (void *)builtin_issymbol);
     UNPROTECT(save);
 }
 
@@ -489,6 +502,17 @@ static void registerIsXdigit(BuiltIns *registry) {
     TcType *boolean = makeBoolean();
     PROTECT(boolean);
     pushCharacterArg(args);
-    pushNewBuiltIn(registry, "isxdigit", boolean, args, (void *)builtin_isxdigit);
+    pushNewBuiltIn(registry, "isxdigit", boolean, args,
+                   (void *)builtin_isxdigit);
+    UNPROTECT(save);
+}
+
+static void registerGetDec(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    TcType *integer = newTcType_BigInteger();
+    PROTECT(integer);
+    pushCharacterArg(args);
+    pushNewBuiltIn(registry, "getdec", integer, args, (void *)builtin_getdec);
     UNPROTECT(save);
 }

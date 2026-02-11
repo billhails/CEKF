@@ -1,0 +1,80 @@
+// Test cases for multi-occurrence pseudo-unification (3+ occurrences)
+
+let
+    fn lst {
+        ([a, a, a]) { 0 }
+        (_) { 1 }
+    }
+
+    fn triple {
+        (a, a, a) { 0 }
+        (_, _, _) { 1 }
+    }
+
+    fn quad {
+        (a, a, a, a) { 0 }
+        (_, _, _, _) { 1 }
+    }
+
+    fn quint {
+        (a, a, a, a, a) { 42 }
+        (_, _, _, _, _) { 99 }
+    }
+
+    fn two_pairs {
+        (a, a, b, b) { 0 }
+        (_, _, _, _) { 1 }
+    }
+
+    typedef nested { nested(number, number, number) }
+
+    fn nested_triple {
+        (nested(a, a, a)) { 0 }
+        (_) { 1 }
+    }
+
+    typedef tree {
+        leaf(number) |
+        node(tree, number, tree)
+    }
+
+    fn all_same_tree {
+        (node(leaf(a), a, leaf(a))) { true }
+        (_) { false }
+    }
+
+in
+    assert(lst([5, 5, 5]) == 0);
+    assert(lst([5, 5, 6]) == 1);
+
+    assert(triple(5, 5, 5) == 0);
+    assert(triple(5, 5, 6) == 1);
+    assert(triple(5, 6, 5) == 1);
+    assert(triple(6, 5, 5) == 1);
+
+    assert(quad(3, 3, 3, 3) == 0);
+    assert(quad(3, 3, 3, 4) == 1);
+    assert(quad(3, 4, 3, 3) == 1);
+
+    assert(quint(7, 7, 7, 7, 7) == 42);
+    assert(quint(7, 7, 7, 7, 8) == 99);
+
+    assert(two_pairs(1, 1, 2, 2) == 0);
+    assert(two_pairs(1, 1, 1, 1) == 0);
+    assert(two_pairs(1, 2, 2, 2) == 1);
+    assert(two_pairs(1, 1, 2, 3) == 1);
+
+    assert(nested_triple(nested(5, 5, 5)) == 0);
+    assert(nested_triple(nested(5, 5, 6)) == 1);
+    assert(nested_triple(nested(5, 6, 5)) == 1);
+    assert(nested_triple(nested(6, 5, 5)) == 1);
+
+    assert(all_same_tree(node(leaf(5), 5, leaf(5))));
+    assert(not(all_same_tree(node(leaf(5), 6, leaf(5)))));
+    assert(not(all_same_tree(node(leaf(5), 5, leaf(6)))));
+
+    assert(triple('x', 'x', 'x') == 0);
+    assert(triple('x', 'y', 'x') == 1);
+
+    assert(triple([1,2], [1,2], [1,2]) == 0);
+    assert(triple([1,2], [1,3], [1,2]) == 1);

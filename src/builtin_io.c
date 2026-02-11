@@ -152,7 +152,7 @@ static Value builtin_fputc(Vec *args) {
 
 static Value builtin_fputs(Vec *args) {
     Opaque *data = args->entries[0].val.opaque;
-    CharVec *buf = listToUtf8(args->entries[1]);
+    SCharVec *buf = listToUtf8(args->entries[1]);
     int save = PROTECT(buf);
     fprintf((FILE *)data->data, "%s", buf->entries);
     UNPROTECT(save);
@@ -160,7 +160,7 @@ static Value builtin_fputs(Vec *args) {
 }
 
 static Value builtin_puts(Vec *args) {
-    CharVec *buf = listToUtf8(args->entries[0]);
+    SCharVec *buf = listToUtf8(args->entries[0]);
     int save = PROTECT(buf);
     printf("%s", buf->entries);
     UNPROTECT(save);
@@ -205,7 +205,7 @@ static void opaque_io_closedir(Opaque *data) {
 }
 
 static Value builtin_open(Vec *args) {
-    CharVec *fileName = listToUtf8(args->entries[0]);
+    SCharVec *fileName = listToUtf8(args->entries[0]);
     int save = PROTECT(fileName);
     int mode = args->entries[1].val.stdint;
     FILE *file = NULL;
@@ -251,7 +251,7 @@ static Value builtin_open_memstream(Vec *args __attribute__((unused))) {
 }
 
 static Value builtin_opendir(Vec *args) {
-    CharVec *dirname = listToUtf8(args->entries[0]);
+    SCharVec *dirname = listToUtf8(args->entries[0]);
     int save = PROTECT(dirname);
     DIR *dir = opendir(dirname->entries);
     if (dir == NULL) {
@@ -277,7 +277,7 @@ static Value builtin_opendir(Vec *args) {
 
 static Value builtin_ftype(Vec *args) {
     struct stat statbuf;
-    CharVec *dirname = listToUtf8(args->entries[0]);
+    SCharVec *dirname = listToUtf8(args->entries[0]);
     int save = PROTECT(dirname);
     int status = stat(dirname->entries, &statbuf);
     UNPROTECT(save);

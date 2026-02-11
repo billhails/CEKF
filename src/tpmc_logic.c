@@ -18,26 +18,27 @@
  * Term Pattern Matching Compiler logic
  */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include "common.h"
 #include "tpmc_logic.h"
-#include "tpmc_translate.h"
+#include "ast_helper.h"
+#include "common.h"
+#include "lambda_pp.h"
+#include "lambda_substitution.h"
+#include "memory.h"
+#include "symbol.h"
 #include "tpmc.h"
 #include "tpmc_debug.h"
 #include "tpmc_match.h"
-#include "ast_helper.h"
-#include "symbol.h"
-#include "memory.h"
-#include "lambda_substitution.h"
-#include "lambda_pp.h"
 #include "tpmc_mermaid.h"
 #include "tpmc_pp.h"
+#include "tpmc_translate.h"
 #include "types.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #ifdef DEBUG_TPMC_LOGIC
-#  include "debugging_on.h"
+#include "debugging_on.h"
 #else
-#  include "debugging_off.h"
+#include "debugging_off.h"
 #endif
 
 static TpmcPattern *convertPattern(AstFarg *arg, LamContext *env);
@@ -45,16 +46,16 @@ static TpmcPattern *convertPattern(AstFarg *arg, LamContext *env);
 /**
  * @brief Creates an array of root variables, one per top-level argument.
  * @param nArgs The number of arguments.
- * @return A new TpmcVariableArray representing the root variables.
+ * @return A new SymbolArray representing the root variables.
  */
-static TpmcVariableArray *createRootVariables(int nArgs) {
+static SymbolArray *createRootVariables(int nArgs) {
     ENTER(createRootVariables);
-    TpmcVariableArray *rootVariables = newTpmcVariableArray();
+    SymbolArray *rootVariables = newSymbolArray();
     int save = PROTECT(rootVariables);
     for (int i = 0; i < nArgs; i++) {
         HashSymbol *s = genSym("p$");
         IFDEBUG(eprintf("%s", s->name));
-        pushTpmcVariableArray(rootVariables, s);
+        pushSymbolArray(rootVariables, s);
     }
     UNPROTECT(save);
     LEAVE(createRootVariables);
@@ -83,8 +84,10 @@ static TpmcPattern *makeWildCardPattern() {
     return pattern;
 }
 
-static TpmcPattern *makeLookUpPattern(AstLookUpSymbol *lookUp, LamContext *env) {
-    LamTypeConstructorInfo *info = lookUpScopedAstSymbolInLamContext(env, lookUp);
+static TpmcPattern *makeLookUpPattern(AstLookUpSymbol *lookUp,
+                                      LamContext *env) {
+    LamTypeConstructorInfo *info =
+        lookUpScopedAstSymbolInLamContext(env, lookUp);
     if (info == NULL) {
         cant_happen("makeLookUpPattern() passed invalid constructor");
     }
@@ -93,8 +96,7 @@ static TpmcPattern *makeLookUpPattern(AstLookUpSymbol *lookUp, LamContext *env) 
     TpmcConstructorPattern *constructor =
         newTpmcConstructorPattern(lookUp->symbol, lookUp->nsId, info, args);
     PROTECT(constructor);
-    TpmcPatternValue *val =
-        newTpmcPatternValue_Constructor(constructor);
+    TpmcPatternValue *val = newTpmcPatternValue_Constructor(constructor);
     PROTECT(val);
     TpmcPattern *pattern = newTpmcPattern(val);
     UNPROTECT(save);
@@ -137,37 +139,41 @@ static TpmcPattern *makeAssignmentPattern(AstNamedArg *named, LamContext *env) {
     return pattern;
 }
 
-static void getSymbolAndNameSpace(AstLookUpOrSymbol *los, LamContext *env, HashSymbol **name, int *nameSpace) {
+static void getSymbolAndNameSpace(AstLookUpOrSymbol *los, LamContext *env,
+                                  HashSymbol **name, int *nameSpace) {
     switch (los->type) {
-        case AST_LOOKUPORSYMBOL_TYPE_LOOKUP:
-            *name = los->val.lookUp->symbol;
-            *nameSpace = los->val.lookUp->nsId;
-            break;
-        case AST_LOOKUPORSYMBOL_TYPE_SYMBOL:{
-                *nameSpace = lookUpCurrentNameSpaceInLamContext(env);
-                *name = los->val.symbol;
-            }
-            break;
-        default:
-            cant_happen("unrecognized %s", astLookUpOrSymbolTypeName(los->type));
+    case AST_LOOKUPORSYMBOL_TYPE_LOOKUP:
+        *name = los->val.lookUp->symbol;
+        *nameSpace = los->val.lookUp->nsId;
+        break;
+    case AST_LOOKUPORSYMBOL_TYPE_SYMBOL: {
+        *nameSpace = lookUpCurrentNameSpaceInLamContext(env);
+        *name = los->val.symbol;
+    } break;
+    default:
+        cant_happen("unrecognized %s", astLookUpOrSymbolTypeName(los->type));
     }
 }
 
 static char *getLookUpName(AstLookUpOrSymbol *los) {
     switch (los->type) {
-        case AST_LOOKUPORSYMBOL_TYPE_LOOKUP:
-            return los->val.lookUp->symbol->name;
-        case AST_LOOKUPORSYMBOL_TYPE_SYMBOL:
-            return los->val.symbol->name;
-        default:
-            cant_happen("unrecognized %s", astLookUpOrSymbolTypeName(los->type));
+    case AST_LOOKUPORSYMBOL_TYPE_LOOKUP:
+        return los->val.lookUp->symbol->name;
+    case AST_LOOKUPORSYMBOL_TYPE_SYMBOL:
+        return los->val.symbol->name;
+    default:
+        cant_happen("unrecognized %s", astLookUpOrSymbolTypeName(los->type));
     }
 }
 
 static TpmcPattern *makeConstructorPattern(AstUnpack *unpack, LamContext *env) {
-    LamTypeConstructorInfo *info = lookUpScopedAstConstructorInLamContext(env, unpack->symbol);
+    LamTypeConstructorInfo *info =
+        lookUpScopedAstConstructorInLamContext(env, unpack->symbol);
     if (info == NULL) {
-        cant_happen("makeConstructorPattern() passed invalid constructor: '%s'", getLookUpName(unpack->symbol));
+        cant_happen("makeConstructorPattern() passed invalid constructor: '%s' "
+                    "in %s line %d",
+                    getLookUpName(unpack->symbol), CPI(unpack).fileName,
+                    CPI(unpack).lineNo);
     }
     TpmcPatternArray *patterns = convertArgList(unpack->argList, env);
     int save = PROTECT(patterns);
@@ -212,25 +218,25 @@ static TpmcPattern *makeCharacterPattern(Character character) {
 
 static TpmcPattern *convertPattern(AstFarg *arg, LamContext *env) {
     switch (arg->type) {
-        case AST_FARG_TYPE_WILDCARD:
-            return makeWildCardPattern();
-        case AST_FARG_TYPE_SYMBOL:
-            return makeVarPattern(arg->val.symbol, env);
-        case AST_FARG_TYPE_NAMED:
-            return makeAssignmentPattern(arg->val.named, env);
-        case AST_FARG_TYPE_UNPACK:
-            return makeConstructorPattern(arg->val.unpack, env);
-        case AST_FARG_TYPE_TUPLE:
-            return makeTuplePattern(arg->val.tuple, env);
-        case AST_FARG_TYPE_NUMBER:
-            return makeMaybeBigIntegerPattern(arg->val.number);
-        case AST_FARG_TYPE_CHARACTER:
-            return makeCharacterPattern(arg->val.character);
-        case AST_FARG_TYPE_LOOKUP:
-            return makeLookUpPattern(arg->val.lookUp, env);
-        default:
-            cant_happen("unrecognized arg type %s in convertPattern",
-                        astFargTypeName(arg->type));
+    case AST_FARG_TYPE_WILDCARD:
+        return makeWildCardPattern();
+    case AST_FARG_TYPE_SYMBOL:
+        return makeVarPattern(arg->val.symbol, env);
+    case AST_FARG_TYPE_NAMED:
+        return makeAssignmentPattern(arg->val.named, env);
+    case AST_FARG_TYPE_UNPACK:
+        return makeConstructorPattern(arg->val.unpack, env);
+    case AST_FARG_TYPE_TUPLE:
+        return makeTuplePattern(arg->val.tuple, env);
+    case AST_FARG_TYPE_NUMBER:
+        return makeMaybeBigIntegerPattern(arg->val.number);
+    case AST_FARG_TYPE_CHARACTER:
+        return makeCharacterPattern(arg->val.character);
+    case AST_FARG_TYPE_LOOKUP:
+        return makeLookUpPattern(arg->val.lookUp, env);
+    default:
+        cant_happen("unrecognized arg type %s in convertPattern",
+                    astFargTypeName(arg->type));
     }
 }
 
@@ -241,14 +247,11 @@ static TpmcPattern *convertPattern(AstFarg *arg, LamContext *env) {
  * @param env The lambda context.
  * @return A new match rule representing the converted function.
  */
-static TpmcMatchRule *convertSingle(AstFargList *argList,
-                                    LamExp *body,
+static TpmcMatchRule *convertSingle(AstFargList *argList, LamExp *body,
                                     LamContext *env) {
     TpmcPatternArray *patterns = convertArgList(argList, env);
     int save = PROTECT(patterns);
-    TpmcFinalState *finalState = newTpmcFinalState(body);
-    PROTECT(finalState);
-    TpmcStateValue *stateVal = newTpmcStateValue_Final(finalState);
+    TpmcStateValue *stateVal = makeTpmcStateValue_Final(body);
     PROTECT(stateVal);
     TpmcState *state = tpmcMakeState(stateVal);
     PROTECT(state);
@@ -267,10 +270,8 @@ static TpmcMatchRule *convertSingle(AstFargList *argList,
  * @param env The lambda context.
  * @return A new array of match rules representing the converted function.
  */
-static TpmcMatchRuleArray *convertComposite(int nbodies,
-                                            AstFargList **argLists,
-                                            LamExp **bodies,
-                                            LamContext *env) {
+static TpmcMatchRuleArray *convertComposite(int nbodies, AstFargList **argLists,
+                                            LamExp **bodies, LamContext *env) {
     TpmcMatchRuleArray *result = newTpmcMatchRuleArray();
     int save = PROTECT(result);
     for (int i = 0; i < nbodies; i++) {
@@ -288,86 +289,111 @@ static TpmcState *makeErrorState() {
     int save = PROTECT(stateVal);
     TpmcState *state = tpmcMakeState(stateVal);
     PROTECT(state);
-    state->freeVariables = newTpmcVariableTable();
+    state->freeVariables = newSymbolSet();
     UNPROTECT(save);
     return state;
 }
 
-static void renamePattern(TpmcPattern *pattern, HashSymbol *variable);
+static void renamePattern(TpmcPattern *pattern, HashSymbol *variable,
+                          ParserInfo I);
 
 static void renameComparisonPattern(TpmcComparisonPattern *pattern,
-                                    HashSymbol *path) {
-    renamePattern(pattern->current, path);      // previous will already have been named
+                                    HashSymbol *path, ParserInfo I) {
+#ifdef DEBUG_TPMC_MATCH
+    eprintf("renameComparisonPattern ENTER: path=%s, previous=%p, current=%p\n",
+            path ? path->name : "NULL", (void *)pattern->previous,
+            (void *)pattern->current);
+    if (pattern->previous) {
+        eprintf(
+            "  previous->path BEFORE=%s, type=%d\n",
+            pattern->previous->path ? pattern->previous->path->name : "NULL",
+            pattern->previous->pattern ? pattern->previous->pattern->type : -1);
+    }
+#endif
+    renamePattern(pattern->current, path,
+                  I); // previous will already have been named
+    // Record the path that must be bound before this comparison can execute
+    pattern->requiredPath = pattern->previous->path;
+#ifdef DEBUG_TPMC_MATCH
+    eprintf("renameComparisonPattern EXIT: pattern path=%s, previous->path=%s, "
+            "current->path=%s, requiredPath=%s\n",
+            path ? path->name : "NULL",
+            pattern->previous->path ? pattern->previous->path->name : "NULL",
+            pattern->current->path ? pattern->current->path->name : "NULL",
+            pattern->requiredPath ? pattern->requiredPath->name : "NULL");
+#endif
 }
 
 static void renameAssignmentPattern(TpmcAssignmentPattern *pattern,
-                                    HashSymbol *path) {
-    renamePattern(pattern->value, path);
+                                    HashSymbol *path, ParserInfo I) {
+    renamePattern(pattern->value, path, I);
 }
 
 static void renameConstructorPattern(TpmcConstructorPattern *pattern,
-                                     HashSymbol *path) {
+                                     HashSymbol *path, ParserInfo I) {
     TpmcPatternArray *components = pattern->components;
     char buf[512];
     for (Index i = 0; i < components->size; i++) {
         if (snprintf(buf, 512, "%s$%d", path->name, i) >= 511) {
-            can_happen("maximum path depth exceeded");
+            can_happen(I, "maximum path depth exceeded");
         }
         DEBUG("renameConstructorPattern: %s", buf);
         HashSymbol *newPath = newSymbol(buf);
-        renamePattern(components->entries[i], newPath);
+        renamePattern(components->entries[i], newPath, I);
     }
 }
 
-static void renameTuplePattern(TpmcPatternArray *components,
-                                     HashSymbol *path) {
+static void renameTuplePattern(TpmcPatternArray *components, HashSymbol *path,
+                               ParserInfo I) {
     char buf[512];
     for (Index i = 0; i < components->size; i++) {
         if (snprintf(buf, 512, "%s$%d", path->name, i) >= 511) {
-            can_happen("maximum path depth exceeded");
+            can_happen(I, "maximum path depth exceeded");
         }
         DEBUG("renameTuplePattern: %s", buf);
         HashSymbol *newPath = newSymbol(buf);
-        renamePattern(components->entries[i], newPath);
+        renamePattern(components->entries[i], newPath, I);
     }
 }
 
-static void renamePattern(TpmcPattern *pattern, HashSymbol *variable) {
+static void renamePattern(TpmcPattern *pattern, HashSymbol *variable,
+                          ParserInfo I) {
     pattern->path = variable;
     switch (pattern->pattern->type) {
-        case TPMCPATTERNVALUE_TYPE_VAR:
-        case TPMCPATTERNVALUE_TYPE_BIGINTEGER:
-        case TPMCPATTERNVALUE_TYPE_WILDCARD:
-        case TPMCPATTERNVALUE_TYPE_CHARACTER:
-            break;
-        case TPMCPATTERNVALUE_TYPE_COMPARISON:
-            renameComparisonPattern(pattern->pattern->val.comparison,
-                                    variable);
-            break;
-        case TPMCPATTERNVALUE_TYPE_ASSIGNMENT:
-            renameAssignmentPattern(pattern->pattern->val.assignment,
-                                    variable);
-            break;
-        case TPMCPATTERNVALUE_TYPE_CONSTRUCTOR:
-            renameConstructorPattern(pattern->pattern->val.constructor,
-                                     variable);
-            break;
-        case TPMCPATTERNVALUE_TYPE_TUPLE:
-            renameTuplePattern(pattern->pattern->val.tuple, variable);
-            break;
-        default:
-            cant_happen("unrecognised pattern type %s", tpmcPatternValueTypeName(pattern->pattern->type));
+    case TPMCPATTERNVALUE_TYPE_VAR:
+    case TPMCPATTERNVALUE_TYPE_BIGINTEGER:
+    case TPMCPATTERNVALUE_TYPE_WILDCARD:
+    case TPMCPATTERNVALUE_TYPE_CHARACTER:
+        break;
+    case TPMCPATTERNVALUE_TYPE_COMPARISON:
+        renameComparisonPattern(pattern->pattern->val.comparison, variable, I);
+        break;
+    case TPMCPATTERNVALUE_TYPE_ASSIGNMENT:
+        renameAssignmentPattern(pattern->pattern->val.assignment, variable, I);
+        break;
+    case TPMCPATTERNVALUE_TYPE_CONSTRUCTOR:
+        renameConstructorPattern(pattern->pattern->val.constructor, variable,
+                                 I);
+        break;
+    case TPMCPATTERNVALUE_TYPE_TUPLE:
+        renameTuplePattern(pattern->pattern->val.tuple, variable, I);
+        break;
+    default:
+        cant_happen("unrecognised pattern type %s",
+                    tpmcPatternValueTypeName(pattern->pattern->type));
     }
 }
 
-static void renameRule(TpmcMatchRule *rule, TpmcVariableArray *rootVariables, ParserInfo I) {
+static void renameRule(TpmcMatchRule *rule, SymbolArray *rootVariables,
+                       ParserInfo I) {
     if (rule->patterns->size != rootVariables->size) {
-        can_happen("inconsistent number of arguments (%d vs %d) in +%d %s", rule->patterns->size, rootVariables->size, I.lineNo, I.fileName);
+        can_happen(I, "inconsistent number of arguments (%d vs %d)",
+                   rule->patterns->size, rootVariables->size);
         // will crash otherwise.
         exit(1);
     }
     for (Index i = 0; i < rule->patterns->size; i++) {
-        renamePattern(rule->patterns->entries[i], rootVariables->entries[i]);
+        renamePattern(rule->patterns->entries[i], rootVariables->entries[i], I);
     }
 }
 
@@ -378,23 +404,36 @@ static void renameRules(TpmcMatchRules *input, ParserInfo I) {
 }
 
 static TpmcPattern *replaceComparisonPattern(TpmcPattern *pattern,
-                                             TpmcPatternTable *seen);
+                                             TpmcPatternTable *seen,
+                                             ParserInfo I);
 
 static TpmcPattern *replaceVarPattern(TpmcPattern *pattern,
                                       TpmcPatternTable *seen) {
     TpmcPattern *other = NULL;
     if (getTpmcPatternTable(seen, pattern->pattern->val.var, &other)) {
         if (other->pattern->type == TPMCPATTERNVALUE_TYPE_ASSIGNMENT) {
-            // FIXME should be possible to allow this? assignments are just variable bindings
-            // would be necessary to refine the patternsMatchingPattern algorithm in tpmc_match.c:mixture()
-            can_happen("cannot compare assignment (var %s)",
-                       pattern->pattern->val.var->name);
+            // Case B: assignment first (x=1, x)
+            // The assignment binds the variable at its position and matches
+            // its inner pattern. This VAR just needs to compare against that
+            // position. Use the assignment pattern as 'previous' - renaming
+            // will assign it the correct path.
+            TpmcPatternValue *val =
+                makeTpmcPatternValue_Comparison(other, pattern);
+            int save = PROTECT(val);
+            TpmcPattern *result = newTpmcPattern(val);
+            UNPROTECT(save);
+            return result;
         }
-        TpmcComparisonPattern *comp =
-            newTpmcComparisonPattern(other, pattern);
-        int save = PROTECT(comp);
-        TpmcPatternValue *val = newTpmcPatternValue_Comparison(comp);
-        PROTECT(val);
+        if (other->pattern->type == TPMCPATTERNVALUE_TYPE_COMPARISON) {
+            // Multiple occurrences: extract the original binding site (first
+            // occurrence) All comparisons should point to the original VAR
+            // pattern, not to intermediate COMPARISON patterns
+            other = other->pattern->val.comparison->previous;
+        }
+        TpmcPatternValue *val = makeTpmcPatternValue_Comparison(other, pattern);
+        int save = PROTECT(val);
+        // Note: requiredPath is set later in renameComparisonPattern when paths
+        // are assigned
         TpmcPattern *result = newTpmcPattern(val);
         UNPROTECT(save);
         return result;
@@ -405,195 +444,334 @@ static TpmcPattern *replaceVarPattern(TpmcPattern *pattern,
 }
 
 static TpmcPattern *replaceAssignmentPattern(TpmcPattern *pattern,
-                                             TpmcPatternTable *seen) {
+                                             TpmcPatternTable *seen,
+                                             ParserInfo I) {
     TpmcPattern *other = NULL;
-    if (getTpmcPatternTable
-        (seen, pattern->pattern->val.assignment->name, &other)) {
-        can_happen("cannot compare assignment (var %s)",
-                   pattern->pattern->val.assignment->name->name);
+    if (getTpmcPatternTable(seen, pattern->pattern->val.assignment->name,
+                            &other)) {
+        // After Case A pattern swapping in replaceComparisonRule, assignment
+        // should only see itself or another assignment in 'seen', never a VAR
+        if (other->pattern->type == TPMCPATTERNVALUE_TYPE_VAR) {
+            cant_happen("found VAR in seen when processing ASSIGNMENT - "
+                        "pattern swapping failed");
+        }
+        // Assignment-after-assignment is OK (duplicate assignment names)
     } else {
         setTpmcPatternTable(seen, pattern->pattern->val.assignment->name,
                             pattern);
     }
-    pattern->pattern->val.assignment->value =
-        replaceComparisonPattern(pattern->pattern->val.assignment->value,
-                                 seen);
+    pattern->pattern->val.assignment->value = replaceComparisonPattern(
+        pattern->pattern->val.assignment->value, seen, I);
     return pattern;
 }
 
 static TpmcPattern *replaceConstructorPattern(TpmcPattern *pattern,
-                                              TpmcPatternTable *seen) {
+                                              TpmcPatternTable *seen,
+                                              ParserInfo I) {
     TpmcPatternArray *components =
         pattern->pattern->val.constructor->components;
     for (Index i = 0; i < components->size; ++i) {
         components->entries[i] =
-            replaceComparisonPattern(components->entries[i], seen);
+            replaceComparisonPattern(components->entries[i], seen, I);
     }
     return pattern;
 }
 
 static TpmcPattern *replaceTuplePattern(TpmcPattern *pattern,
-                                        TpmcPatternTable *seen) {
+                                        TpmcPatternTable *seen, ParserInfo I) {
     TpmcPatternArray *components = pattern->pattern->val.tuple;
     for (Index i = 0; i < components->size; ++i) {
         components->entries[i] =
-            replaceComparisonPattern(components->entries[i], seen);
+            replaceComparisonPattern(components->entries[i], seen, I);
     }
     return pattern;
 }
 
 static TpmcPattern *replaceComparisonPattern(TpmcPattern *pattern,
-                                             TpmcPatternTable *seen) {
+                                             TpmcPatternTable *seen,
+                                             ParserInfo I) {
     switch (pattern->pattern->type) {
-        case TPMCPATTERNVALUE_TYPE_BIGINTEGER:
-        case TPMCPATTERNVALUE_TYPE_WILDCARD:
-        case TPMCPATTERNVALUE_TYPE_CHARACTER:
-            return pattern;
-        case TPMCPATTERNVALUE_TYPE_VAR:
-            return replaceVarPattern(pattern, seen);
-        case TPMCPATTERNVALUE_TYPE_ASSIGNMENT:
-            return replaceAssignmentPattern(pattern, seen);
-        case TPMCPATTERNVALUE_TYPE_TUPLE:
-            return replaceTuplePattern(pattern, seen);
-        case TPMCPATTERNVALUE_TYPE_CONSTRUCTOR:
-            return replaceConstructorPattern(pattern, seen);
-        case TPMCPATTERNVALUE_TYPE_COMPARISON:
-            cant_happen
-                ("encounterted nested comparison pattern during replaceComparisonPattern");
-        default:
-            cant_happen("unrecognised pattern type %s", tpmcPatternValueTypeName(pattern->pattern->type));
+    case TPMCPATTERNVALUE_TYPE_BIGINTEGER:
+    case TPMCPATTERNVALUE_TYPE_WILDCARD:
+    case TPMCPATTERNVALUE_TYPE_CHARACTER:
+        return pattern;
+    case TPMCPATTERNVALUE_TYPE_VAR:
+        return replaceVarPattern(pattern, seen);
+    case TPMCPATTERNVALUE_TYPE_ASSIGNMENT:
+        return replaceAssignmentPattern(pattern, seen, I);
+    case TPMCPATTERNVALUE_TYPE_TUPLE:
+        return replaceTuplePattern(pattern, seen, I);
+    case TPMCPATTERNVALUE_TYPE_CONSTRUCTOR:
+        return replaceConstructorPattern(pattern, seen, I);
+    case TPMCPATTERNVALUE_TYPE_COMPARISON:
+        cant_happen("encounterted nested comparison pattern during "
+                    "replaceComparisonPattern");
+    default:
+        cant_happen("unrecognised pattern type %s",
+                    tpmcPatternValueTypeName(pattern->pattern->type));
     }
 }
 
-static void replaceComparisonRule(TpmcMatchRule *rule) {
+static void replaceComparisonRule(TpmcMatchRule *rule, ParserInfo I) {
+    // Pre-pass: detect Case A (VAR then ASSIGNMENT with same name) and swap
+    // them This transforms (x, x=1) into (x=1, x) so Case B logic handles it
+    TpmcPatternTable *varPositions = newTpmcPatternTable();
+    int save = PROTECT(varPositions);
+
+    // First pass: record VAR positions
+    for (Index i = 0; i < rule->patterns->size; i++) {
+        TpmcPattern *pattern = rule->patterns->entries[i];
+        if (pattern->pattern->type == TPMCPATTERNVALUE_TYPE_VAR) {
+            setTpmcPatternTable(varPositions, pattern->pattern->val.var,
+                                pattern);
+        }
+    }
+
+    // Second pass: detect and swap Case A patterns
+    for (Index i = 0; i < rule->patterns->size; i++) {
+        TpmcPattern *pattern = rule->patterns->entries[i];
+        if (pattern->pattern->type == TPMCPATTERNVALUE_TYPE_ASSIGNMENT) {
+            TpmcPattern *varPattern = NULL;
+            if (getTpmcPatternTable(varPositions,
+                                    pattern->pattern->val.assignment->name,
+                                    &varPattern)) {
+                // Found Case A: swap the VAR and ASSIGNMENT positions
+                // Find the VAR's index
+                for (Index j = 0; j < i; j++) {
+                    if (rule->patterns->entries[j] == varPattern) {
+                        // Swap patterns
+                        rule->patterns->entries[j] = pattern;
+                        rule->patterns->entries[i] = varPattern;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    // Now process comparisons normally (Case B logic handles swapped patterns)
     TpmcPatternTable *seen = newTpmcPatternTable();
-    int save = PROTECT(seen);
+    PROTECT(seen);
     for (Index i = 0; i < rule->patterns->size; i++) {
         rule->patterns->entries[i] =
-            replaceComparisonPattern(rule->patterns->entries[i], seen);
+            replaceComparisonPattern(rule->patterns->entries[i], seen, I);
     }
     UNPROTECT(save);
     validateLastAlloc();
 }
 
-static void replaceComparisonRules(TpmcMatchRules *input) {
+static void replaceComparisonRules(TpmcMatchRules *input, ParserInfo I) {
     for (Index i = 0; i < input->rules->size; i++) {
-        replaceComparisonRule(input->rules->entries[i]);
+        replaceComparisonRule(input->rules->entries[i], I);
     }
 }
 
-static TpmcPattern *collectPatternSubstitutions(TpmcPattern *pattern, TpmcSubstitutionTable
-                                                *substitutions);
+static TpmcPattern *collectPatternSubstitutions(ParserInfo PI,
+                                                TpmcPattern *pattern,
+                                                SymbolMap *substitutions);
 
-static TpmcPattern *collectVarSubstitutions(TpmcPattern *pattern, TpmcSubstitutionTable
-                                            *substitutions) {
-    setTpmcSubstitutionTable(substitutions, pattern->pattern->val.var,
-                             pattern->path);
+static bool occursInPattern(HashSymbol *var, TpmcPattern *pattern,
+                            HashSymbol *assignmentPath);
+
+static bool isPathAncestor(HashSymbol *ancestor, HashSymbol *descendant) {
+    // Check if ancestor path is a prefix of descendant path
+    // e.g., "p$0" is ancestor of "p$0$1"
+    const char *ancestorStr = ancestor->name;
+    const char *descendantStr = descendant->name;
+    size_t ancestorLen = strlen(ancestorStr);
+
+    // Check if descendant starts with ancestor and the next char is '$' or end
+    if (strncmp(ancestorStr, descendantStr, ancestorLen) == 0) {
+        char nextChar = descendantStr[ancestorLen];
+        return nextChar == '$' || nextChar == '\0';
+    }
+    return false;
+}
+
+static bool occursInPattern(HashSymbol *var, TpmcPattern *pattern,
+                            HashSymbol *assignmentPath) {
+    // If this pattern's path is a descendant of the assignment path, we have a
+    // cycle
+    if (assignmentPath != NULL &&
+        isPathAncestor(assignmentPath, pattern->path)) {
+        // If this pattern actually contains the variable we're looking for,
+        // it's a true cycle
+        if (pattern->pattern->type == TPMCPATTERNVALUE_TYPE_VAR &&
+            pattern->pattern->val.var == var) {
+            return true;
+        }
+        // Even if this specific pattern isn't the variable, stop recursing to
+        // prevent infinite loops The cycle detection happens at the pattern
+        // level, not the variable level
+        return false;
+    }
+
+    switch (pattern->pattern->type) {
+    case TPMCPATTERNVALUE_TYPE_BIGINTEGER:
+    case TPMCPATTERNVALUE_TYPE_WILDCARD:
+    case TPMCPATTERNVALUE_TYPE_CHARACTER:
+        return false;
+    case TPMCPATTERNVALUE_TYPE_VAR:
+        return pattern->pattern->val.var == var;
+    case TPMCPATTERNVALUE_TYPE_ASSIGNMENT:
+        // Check if variable occurs in the assignment value, passing the
+        // assignment path
+        return occursInPattern(var, pattern->pattern->val.assignment->value,
+                               pattern->path);
+    case TPMCPATTERNVALUE_TYPE_CONSTRUCTOR: {
+        TpmcPatternArray *components =
+            pattern->pattern->val.constructor->components;
+        for (Index i = 0; i < components->size; ++i) {
+            if (occursInPattern(var, components->entries[i], assignmentPath)) {
+                return true;
+            }
+        }
+        return false;
+    }
+    case TPMCPATTERNVALUE_TYPE_TUPLE: {
+        TpmcPatternArray *components = pattern->pattern->val.tuple;
+        for (Index i = 0; i < components->size; ++i) {
+            if (occursInPattern(var, components->entries[i], assignmentPath)) {
+                return true;
+            }
+        }
+        return false;
+    }
+    case TPMCPATTERNVALUE_TYPE_COMPARISON: {
+        TpmcComparisonPattern *comp = pattern->pattern->val.comparison;
+        return occursInPattern(var, comp->previous, assignmentPath) ||
+               occursInPattern(var, comp->current, assignmentPath);
+    }
+    default:
+        cant_happen("unrecognised pattern type %s",
+                    tpmcPatternValueTypeName(pattern->pattern->type));
+    }
+}
+
+static TpmcPattern *collectVarSubstitutions(TpmcPattern *pattern,
+                                            SymbolMap *substitutions) {
+    setSymbolMap(substitutions, pattern->pattern->val.var, pattern->path);
     TpmcPatternValue *wc = newTpmcPatternValue_WildCard();
     pattern->pattern = wc;
     return pattern;
 }
 
-static TpmcPattern *collectAssignmentSubstitutions(TpmcPattern *pattern, TpmcSubstitutionTable
-                                                   *substitutions) {
-    setTpmcSubstitutionTable(substitutions,
-                             pattern->pattern->val.assignment->name,
-                             pattern->path);
-    // we no longer need to remember this is an assignment now we have the substitution
+static TpmcPattern *collectAssignmentSubstitutions(ParserInfo PI,
+                                                   TpmcPattern *pattern,
+                                                   SymbolMap *substitutions) {
+    HashSymbol *assignedVar = pattern->pattern->val.assignment->name;
     TpmcPattern *value = pattern->pattern->val.assignment->value;
-    return collectPatternSubstitutions(value, substitutions);
+
+    // Perform occurs-in check to detect circular assignments like x = #(1, x)
+    if (occursInPattern(assignedVar, value, NULL)) {
+        can_happen(PI,
+                   "occurs-in check failed: variable %s cannot match a "
+                   "structure containing itself",
+                   assignedVar->name);
+        // Return a wildcard pattern to avoid further processing issues
+        TpmcPatternValue *wc = newTpmcPatternValue_WildCard();
+        pattern->pattern = wc;
+        return pattern;
+    }
+
+    setSymbolMap(substitutions, assignedVar, pattern->path);
+    // we no longer need to remember this is an assignment now we have the
+    // substitution
+    return collectPatternSubstitutions(PI, value, substitutions);
 }
 
-static TpmcPattern *collectConstructorSubstitutions(TpmcPattern *pattern, TpmcSubstitutionTable
-                                                    *substitutions) {
+static TpmcPattern *collectConstructorSubstitutions(ParserInfo PI,
+                                                    TpmcPattern *pattern,
+                                                    SymbolMap *substitutions) {
     TpmcPatternArray *components =
         pattern->pattern->val.constructor->components;
     for (Index i = 0; i < components->size; ++i) {
-        components->entries[i] =
-            collectPatternSubstitutions(components->entries[i],
-                                        substitutions);
+        components->entries[i] = collectPatternSubstitutions(
+            PI, components->entries[i], substitutions);
     }
     return pattern;
 }
 
-static TpmcPattern *collectTupleSubstitutions(TpmcPattern *pattern, TpmcSubstitutionTable *substitutions) {
-    TpmcPatternArray *components =
-        pattern->pattern->val.tuple;
+static TpmcPattern *collectTupleSubstitutions(ParserInfo PI,
+                                              TpmcPattern *pattern,
+                                              SymbolMap *substitutions) {
+    TpmcPatternArray *components = pattern->pattern->val.tuple;
     for (Index i = 0; i < components->size; ++i) {
-        components->entries[i] =
-            collectPatternSubstitutions(components->entries[i],
-                                        substitutions);
+        components->entries[i] = collectPatternSubstitutions(
+            PI, components->entries[i], substitutions);
     }
     return pattern;
 }
 
-static TpmcPattern *collectComparisonSubstitutions(TpmcPattern *pattern, TpmcSubstitutionTable
-                                                   *substitutions) {
+static TpmcPattern *collectComparisonSubstitutions(ParserInfo PI,
+                                                   TpmcPattern *pattern,
+                                                   SymbolMap *substitutions) {
+    // Process previous to collect substitutions - this is where the variable
+    // name should be bound (first occurrence)
     TpmcPattern *previous = pattern->pattern->val.comparison->previous;
     pattern->pattern->val.comparison->previous =
-        collectPatternSubstitutions(previous, substitutions);
-    pattern->pattern->val.comparison->current =
-        collectPatternSubstitutions(pattern->pattern->val.comparison->current,
-                                    substitutions);
+        collectPatternSubstitutions(PI, previous, substitutions);
+    // Note: Do NOT process current for substitutions.
+    // The current is only used for the equality comparison in the DFA,
+    // not for substitution into the body. The variable name was already
+    // bound by previous. Processing current would incorrectly add its path
+    // to free variables and potentially overwrite the correct substitution.
     return pattern;
 }
 
 static void performActionSubstitution(TpmcState *state,
-                                      TpmcSubstitutionTable *substitutions) {
+                                      SymbolMap *substitutions) {
     if (state->state->type != TPMCSTATEVALUE_TYPE_FINAL) {
-        cant_happen
-            ("attempt to call performActionSubstitution on non-final state");
+        cant_happen(
+            "attempt to call performActionSubstitution on non-final state");
     }
     state->state->val.final->action =
-        lamPerformSubstitutions(state->state->val.final->action,
-                                substitutions);
+        lamPerformSubstitutions(state->state->val.final->action, substitutions);
 }
 
-static void populateFreeVariables(TpmcState *state,
-                                  TpmcSubstitutionTable *substitutions) {
+static void populateFreeVariables(TpmcState *state, SymbolMap *substitutions) {
     if (state->state->type != TPMCSTATEVALUE_TYPE_FINAL) {
-        cant_happen
-            ("attempt to call populateFreeCariables on non-final state");
+        cant_happen("attempt to call populateFreeCariables on non-final state");
     }
-    state->freeVariables = newTpmcVariableTable();
+    state->freeVariables = newSymbolSet();
     Index i = 0;
     HashSymbol *path = NULL;
     HashSymbol *key;
-    while ((key =
-            iterateTpmcSubstitutionTable(substitutions, &i, &path)) != NULL) {
-        setTpmcVariableTable(state->freeVariables, path);
+    while ((key = iterateSymbolMap(substitutions, &i, &path)) != NULL) {
+        setSymbolSet(state->freeVariables, path);
     }
 }
 
-static TpmcPattern *collectPatternSubstitutions(TpmcPattern *pattern, TpmcSubstitutionTable
-                                                *substitutions) {
+static TpmcPattern *collectPatternSubstitutions(ParserInfo PI,
+                                                TpmcPattern *pattern,
+                                                SymbolMap *substitutions) {
     switch (pattern->pattern->type) {
-        case TPMCPATTERNVALUE_TYPE_BIGINTEGER:
-        case TPMCPATTERNVALUE_TYPE_WILDCARD:
-        case TPMCPATTERNVALUE_TYPE_CHARACTER:
-            return pattern;
-        case TPMCPATTERNVALUE_TYPE_VAR:
-            return collectVarSubstitutions(pattern, substitutions);
-        case TPMCPATTERNVALUE_TYPE_ASSIGNMENT:
-            return collectAssignmentSubstitutions(pattern, substitutions);
-        case TPMCPATTERNVALUE_TYPE_CONSTRUCTOR:
-            return collectConstructorSubstitutions(pattern, substitutions);
-        case TPMCPATTERNVALUE_TYPE_TUPLE:
-            return collectTupleSubstitutions(pattern, substitutions);
-        case TPMCPATTERNVALUE_TYPE_COMPARISON:
-            return collectComparisonSubstitutions(pattern, substitutions);
-        default:
-            cant_happen("unrecognised pattern type %s", tpmcPatternValueTypeName(pattern->pattern->type));
+    case TPMCPATTERNVALUE_TYPE_BIGINTEGER:
+    case TPMCPATTERNVALUE_TYPE_WILDCARD:
+    case TPMCPATTERNVALUE_TYPE_CHARACTER:
+        return pattern;
+    case TPMCPATTERNVALUE_TYPE_VAR:
+        return collectVarSubstitutions(pattern, substitutions);
+    case TPMCPATTERNVALUE_TYPE_ASSIGNMENT:
+        return collectAssignmentSubstitutions(PI, pattern, substitutions);
+    case TPMCPATTERNVALUE_TYPE_CONSTRUCTOR:
+        return collectConstructorSubstitutions(PI, pattern, substitutions);
+    case TPMCPATTERNVALUE_TYPE_TUPLE:
+        return collectTupleSubstitutions(PI, pattern, substitutions);
+    case TPMCPATTERNVALUE_TYPE_COMPARISON:
+        return collectComparisonSubstitutions(PI, pattern, substitutions);
+    default:
+        cant_happen("unrecognised pattern type %s",
+                    tpmcPatternValueTypeName(pattern->pattern->type));
     }
 }
 
-static void performRuleSubstitutions(TpmcMatchRule *rule) {
-    TpmcSubstitutionTable *substitutions = newTpmcSubstitutionTable();
+static void performRuleSubstitutions(ParserInfo PI, TpmcMatchRule *rule) {
+    SymbolMap *substitutions = newSymbolMap();
     int save = PROTECT(substitutions);
     for (Index i = 0; i < rule->patterns->size; i++) {
-        rule->patterns->entries[i] =
-            collectPatternSubstitutions(rule->patterns->entries[i],
-                                        substitutions);
+        rule->patterns->entries[i] = collectPatternSubstitutions(
+            PI, rule->patterns->entries[i], substitutions);
     }
     performActionSubstitution(rule->action, substitutions);
     populateFreeVariables(rule->action, substitutions);
@@ -601,12 +779,13 @@ static void performRuleSubstitutions(TpmcMatchRule *rule) {
 }
 
 /**
- * @brief Iterates `performRuleSubstitutions` over all rules in a TpmcMatchRules.
+ * @brief Iterates `performRuleSubstitutions` over all rules in a
+ * TpmcMatchRules.
  * @param input The match rules to process.
  */
-static void performRulesSubstitutions(TpmcMatchRules *input) {
+static void performRulesSubstitutions(ParserInfo PI, TpmcMatchRules *input) {
     for (Index i = 0; i < input->rules->size; i++) {
-        performRuleSubstitutions(input->rules->entries[i]);
+        performRuleSubstitutions(PI, input->rules->entries[i]);
     }
 }
 
@@ -662,55 +841,54 @@ static TpmcMatrix *convertToMatrix(TpmcMatchRules *input) {
 /**
  * Helper for `arrayToVarList`.
  */
-static LamVarList *_arrayToVarList(ParserInfo I, TpmcVariableArray *array, Index count) {
+static SymbolList *_arrayToVarList(ParserInfo I, SymbolArray *array,
+                                   Index count) {
     if (count == array->size) {
         return NULL;
     }
-    LamVarList *next = _arrayToVarList(I, array, count + 1);
+    SymbolList *next = _arrayToVarList(I, array, count + 1);
     int save = PROTECT(next);
-    LamVarList *this = newLamVarList(I, array->entries[count], next);
+    SymbolList *this = newSymbolList(I, array->entries[count], next);
     UNPROTECT(save);
     return this;
 }
 
 /**
- * @brief Converts a TpmcVariableArray into a LamVarList, preserving the order.
+ * @brief Converts a SymbolArray into a SymbolList, preserving the order.
  * @param I Parser information.
- * @param array The TpmcVariableArray to convert.
- * @return A new LamVarList representing the variables in the array.
+ * @param array The SymbolArray to convert.
+ * @return A new SymbolList representing the variables in the array.
  */
-static LamVarList *arrayToVarList(ParserInfo I, TpmcVariableArray *array) {
+static SymbolList *arrayToVarList(ParserInfo I, SymbolArray *array) {
     return _arrayToVarList(I, array, 0);
 }
 
 /**
- * @brief Converts the AST formal argument lists and bodies of a composite function
- *        into a single lambda that switches on its arguments.
- * @context This function is the entry point to the Term Pattern Matching Compiler (TPMC)
+ * @brief Converts the AST formal argument lists and bodies of a composite
+ * function into a single lambda that switches on its arguments.
+ * @context This function is the entry point to the Term Pattern Matching
+ * Compiler (TPMC)
  * @param allow_unsafe whether to allow a non-exhaustive pattern match.
  * @param I Parser information.
- * @param nArgs The number of arguments (each component function must have the same number of arguments).
+ * @param nArgs The number of arguments (each component function must have the
+ * same number of arguments).
  * @param nbodies The number of bodies (component functions).
  * @param argLists The argument lists.
  * @param bodies The function bodies.
  * @return A new lambda representing the converted function.
  */
-LamLam *tpmcConvert(bool allow_unsafe,
-                    ParserInfo I,
-                    int nArgs,
-                    int nbodies,
-                    AstFargList **argLists,
-                    LamExp **bodies,
-                    LamContext *env) {
-    TpmcVariableArray *rootVariables = createRootVariables(nArgs);
+LamLam *tpmcConvert(bool allow_unsafe, ParserInfo I, int nArgs, int nbodies,
+                    AstFargList **argLists, LamExp **bodies, LamContext *env) {
+    SymbolArray *rootVariables = createRootVariables(nArgs);
     int save = PROTECT(rootVariables);
-    TpmcMatchRuleArray *rules = convertComposite(nbodies, argLists, bodies, env);
+    TpmcMatchRuleArray *rules =
+        convertComposite(nbodies, argLists, bodies, env);
     PROTECT(rules);
     TpmcMatchRules *input = newTpmcMatchRules(rules, rootVariables);
     REPLACE_PROTECT(save, input);
-    replaceComparisonRules(input);
+    replaceComparisonRules(input, I);
     renameRules(input, I);
-    performRulesSubstitutions(input);
+    performRulesSubstitutions(I, input);
     TpmcMatrix *matrix = convertToMatrix(input);
     PROTECT(matrix);
     IFDEBUG(ppTpmcMatrix(matrix));
@@ -723,12 +901,13 @@ LamLam *tpmcConvert(bool allow_unsafe,
     }
     TpmcState *errorState = makeErrorState();
     PROTECT(errorState);
-    TpmcState *dfa = tpmcMatch(matrix, finalStates, errorState, knownStates, allow_unsafe, I);
+    TpmcState *dfa = tpmcMatch(matrix, finalStates, errorState, knownStates,
+                               allow_unsafe, I);
     PROTECT(dfa);
     tpmcMermaid(dfa);
     LamExp *body = tpmcTranslate(I, dfa);
     PROTECT(body);
-    LamVarList *args = arrayToVarList(I, rootVariables);
+    SymbolList *args = arrayToVarList(I, rootVariables);
     PROTECT(args);
     LamLam *res = newLamLam(I, args, body);
     PROTECT(res);

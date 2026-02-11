@@ -496,4 +496,3 @@ in
     test_char_pattern();
     test_string_pattern();
     
-    puts("All deep pattern matching tests passed!\n")

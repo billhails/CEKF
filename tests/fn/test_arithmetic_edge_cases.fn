@@ -156,4 +156,3 @@ in
     test_multiplication_edges();
     test_arithmetic_comparisons();
     test_chained_operations();
-    puts("All arithmetic edge case tests completed successfully!")

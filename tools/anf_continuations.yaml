@@ -8,53 +8,16 @@ config:
   name: anf_kont
   description: "Continuation scaffolding for ANF normalization"
   parserInfo: false
-  currency: LamExp
+  currency: MinExp
   includes:
-    - lambda.h
+    - minlam.h
   limited_includes:
-    - lambda_debug.h
+    - minlam_debug.h
 
 primitives: !include ../src/primitives.yaml
 
 external:
-  LamExp:
-    meta:
-      brief: Lambda expressions
-    data:
-      cname: "struct LamExp *"
-      printFn: printLamExp
-      markFn: markLamExp
-      valued: true
-  LamArgs:
-    meta:
-      brief: List of LamExp
-    data:
-      cname: "struct LamArgs *"
-      printFn: printLamArgs
-      markFn: markLamArgs
-      valued: true
-  LamBindings:
-    meta:
-      brief: List of LamBindings
-    data:
-      cname: "struct LamBindings *"
-      printFn: printLamBindings
-      markFn: markLamBindings
-      valued: true
-  LamCondCases:
-    meta:
-      brief: List of LamCondCases
-    data:
-      cname: "struct LamCondCases *"
-      printFn: printLamCondCases
-      markFn: markLamCondCases
-      valued: true
-  LamMatchList:
-    data:
-      cname: "struct LamMatchList *"
-      printFn: printLamMatchList
-      markFn: markLamMatchList
-      valued: true
+- !include ../src/minlam.yaml
 
 continuations:
   normalizeTerm:
@@ -78,21 +41,6 @@ continuations:
     free_vars:
       k: AnfKont
 
-  normalizeLet:
-    key: let
-    brief: "Continuation for let-expression bindings"
-    context: |
-      (match e
-          ...
-          (`(let ,bindings ,body)
-              (normalize-bindings bindings
-                  [λ (anfbindings)
-                      `(let ,anfbindings
-                            ,(normalize body k))])))
-    free_vars:
-      body: LamExp
-      k: AnfKont
-
   normalizeIff:
     key: iff
     brief: "Continuation for if-expression test"
@@ -107,8 +55,8 @@ continuations:
                               ,(normalize-term e2)))])))
     free_vars:
       k: AnfKont
-      e1: LamExp
-      e2: LamExp
+      e1: MinExp
+      e2: MinExp
 
   normalizeApplyOuter:
     key: callOuter
@@ -122,7 +70,7 @@ continuations:
                       (normalize-names Ms
                           (λ (ts) (k `(,t . ,ts))))]))))
     free_vars:
-      Ms: LamArgs
+      Ms: MinExprList
       k: AnfKont
 
   normalizeApplyInner:
@@ -137,7 +85,7 @@ continuations:
                       (normalize-names Ms
                           [λ (ts) (k `(,t . ,ts))])))))
     free_vars:
-      t: LamExp
+      t: MinExp
       k: AnfKont
 
   normalizeNamesOuter:
@@ -151,7 +99,7 @@ continuations:
                   (normalize-names (cdr Ms) (λ (ts)
                       (k `(,t . ,ts))))]))))
     free_vars:
-      Ms: LamArgs
+      Ms: MinExprList
       k: AnfKont
 
   normalizeNamesInner:
@@ -165,7 +113,7 @@ continuations:
                   (normalize-names (cdr Ms) [λ (ts)
                       (k `(,t . ,ts))])]))))
     free_vars:
-      t: LamExp
+      t: MinExp
       k: AnfKont
 
   normalizeLetRec:
@@ -180,7 +128,7 @@ continuations:
                       `(letrec ,anfbindings
                                 ,(normalize body k))])))
     free_vars:
-      body: LamExp
+      body: MinExp
       k: AnfKont
 
   normalizeBindingsOuter:
@@ -199,7 +147,7 @@ continuations:
                           (k `((,x ,anfval) . ,anfrest))))]))))
     free_vars:
       x: HashSymbol
-      rest: LamBindings
+      rest: MinBindings
       k: AnfKont
 
   normalizeBindingsInner:
@@ -218,33 +166,7 @@ continuations:
                           (k `((,x ,anfval) . ,anfrest))])))))
     free_vars:
       x: HashSymbol
-      anfVal: LamExp
-      k: AnfKont
-
-  normalizeConstruct:
-    key: construct
-    brief: "Continuation for type constructor application"
-    context: |
-      (match e
-          ...
-          (`(construct ,name ,tag . ,Ms)
-              (normalize-names Ms
-                  [λ (ts) (k `(construct ,name ,tag . ,ts))])))
-    free_vars:
-      name: HashSymbol
-      tag: int
-      k: AnfKont
-
-  normalizeMakeTuple:
-    key: makeTuple
-    brief: "Continuation for tuple construction"
-    context: |
-      (match e
-          ...
-          (`(make-tuple . ,Ms)
-              (normalize-names Ms
-                  [λ (ts) (k `(make-tuple . ,ts))])))
-    free_vars:
+      anfVal: MinExp
       k: AnfKont
 
   normalizeMakeVec:
@@ -257,22 +179,6 @@ continuations:
               (normalize-names Ms
                   [λ (ts) (k `(make-vec ,nArgs . ,ts))])))
     free_vars:
-      nArgs: int
-      k: AnfKont
-
-  normalizeDeconstruct:
-    key: deconstruct
-    brief: "Continuation for deconstruct operation"
-    context: |
-      (match e
-          ...
-          (`(deconstruct ,name ,nsId ,vec ,e0)
-              (normalize-name e0
-                  [λ (t) (k `(deconstruct ,name ,nsId ,vec ,t))])))
-    free_vars:
-      name: HashSymbol
-      nsId: int
-      vec: int
       k: AnfKont
 
   normalizeCond:
@@ -286,7 +192,7 @@ continuations:
                   [λ (t)
                     (k `(cond ,t ,(normalize-cases cases)))])))
     free_vars:
-      cases: LamCondCases
+      cases: MinCondCases
       k: AnfKont
 
   normalizeMatch:
@@ -301,7 +207,7 @@ continuations:
                       (k `(match-expr ,t
                                       ,(normalize-match-cases cases)))])))
     free_vars:
-      cases: LamMatchList
+      cases: MinMatchList
       k: AnfKont
 
   normalizePrimappOuter:
@@ -318,7 +224,7 @@ continuations:
                               (k `(primitive-apply ,type ,anfE1 ,anfE2))))])))
     free_vars:
       type: int
-      e2: LamExp
+      e2: MinExp
       k: AnfKont
 
   normalizePrimappInner:
@@ -335,57 +241,7 @@ continuations:
                               (k `(primitive-apply ,type ,anfE1 ,anfE2))])))))
     free_vars:
       type: int
-      anfE1: LamExp
-      k: AnfKont
-
-  normalizePrint:
-    key: print
-    brief: "Continuation for print expression"
-    context: |
-      (match e
-          ...
-          (`(print ,e0)
-              (normalize-name e0
-                  [λ (anfE0) (k `(print ,anfE0))])))
-    free_vars:
-      k: AnfKont
-
-  normalizeTypeOf:
-    key: typeOf
-    brief: "Continuation for typeOf expression"
-    context: |
-      (match e
-          ...
-          (`(typeOf ,e0)
-              (normalize-name e0
-                  [λ (anfE0) (k `(typeOf ,anfE0))])))
-    free_vars:
-      k: AnfKont
-
-  normalizeTupleIndex:
-    key: tupleIndex
-    brief: "Continuation for tuple access"
-    context: |
-      (match e
-          ...
-          (`(tuple-index ,vec ,size ,e0)
-              (normalize-name e0
-                  [λ (t0) (k `(tuple-index ,vec ,size ,t0))])))
-    free_vars:
-      vec: int
-      size: int
-      k: AnfKont
-
-  normalizeTag:
-    key: tag
-    brief: "Continuation for tag extraction"
-    context: |
-      (match e
-          ...
-          (`(tag ,e0)
-              (normalize-name e0
-                  [λ (t0) (k `(tag ,t0))])))
-    free_vars:
+      anfE1: MinExp
       k: AnfKont
 
   normalizeCallCC:

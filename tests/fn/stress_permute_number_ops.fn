@@ -7,7 +7,6 @@
 let
     link "listutils.fn" as lst;
     import lst operators;
-    operator "_|?_" left 8 fn (lst, f) { lst.filter(f, lst) };   
 
     fn genStdInts() {
         [4, 0, -4]

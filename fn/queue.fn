@@ -1,5 +1,4 @@
 let
-    link "maybe.fn" as maybe;
     link "listutils.fn" as list;
 
     fn enq (t, #(head, tail)) {
@@ -8,10 +7,10 @@ let
 
     fn deq {
         (#(h @ head, tail)) {
-            #(maybe.some(h), #(head, tail))
+            #(just(h), #(head, tail))
         }
         (x = #(_, [])) {
-            #(maybe.nothing, x)
+            #(nothing, x)
         }
         (#(_, tail)) {
             deq(#(list.reverse(tail), []))

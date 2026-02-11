@@ -39,7 +39,6 @@ let
             assert(doubled == [2, 4, 6, 8, 10]);
             assert(evens == [2, 4]);
             assert(sum == 15);
-            puts("Map/Filter/Fold tests passed\n")
     }
     
     // Test: Closures capturing variables
@@ -67,7 +66,6 @@ let
             assert(add10(7) == 17);
             assert(counter(1) == 101);
             assert(counter(5) == 105);
-            puts("Closure tests passed\n")
     }
     
     // Test: Nested closures
@@ -91,7 +89,6 @@ let
         in
             assert(mult2_3(4) == 24);
             assert(mult2_5(4) == 40);
-            puts("Nested closure tests passed\n")
     }
     
     // Test: Function composition
@@ -114,7 +111,6 @@ let
             assert(double_then_square(3) == 36);
             assert(square_then_double(3) == 18);
             assert(inc_then_double(5) == 12);
-            puts("Function composition tests passed\n")
     }
     
     // Test: Currying
@@ -144,7 +140,6 @@ let
             assert(add5(7) == 12);
             assert(mult3(4) == 12);
             assert(mult3(10) == 30);
-            puts("Currying tests passed\n")
     }
     
     // Test: Partial application
@@ -166,7 +161,6 @@ let
             assert(sub10(7) == 3);
             assert(div100(10) == 10);
             assert(div100(5) == 20);
-            puts("Partial application tests passed\n")
     }
     
     // Test: Functions returning functions
@@ -200,7 +194,6 @@ let
             assert(is_percentage(0));
             assert(is_percentage(100));
             assert(not is_percentage(101));
-            puts("Function factory tests passed\n")
     }
     
     // Test: Higher-order functions with multiple parameters
@@ -227,7 +220,6 @@ let
             assert(twice(double, 3) == 12);
             assert(apply_n(inc, 5, 0) == 5);
             assert(apply_n(double, 3, 2) == 16);
-            puts("Complex higher-order function tests passed\n")
     }
     
     // Test: Closure variable capture edge cases
@@ -253,7 +245,6 @@ let
         in
             assert(add_func(10) == 15);
             assert(mult_func(10) == 60);
-            puts("Closure capture tests passed\n")
     }
     
     // Main test runner
@@ -267,7 +258,6 @@ let
         test_function_factories();
         test_complex_higher_order();
         test_closure_capture();
-        puts("All higher-order function tests completed successfully!")
     }
 
 in

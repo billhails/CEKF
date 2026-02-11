@@ -2,4 +2,4 @@ let
     lhs = 2;
     rhs = -4/4;
 in
-    print lhs ** rhs;
+    assert(lhs ** rhs == 1/2);

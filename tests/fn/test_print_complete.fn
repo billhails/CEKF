@@ -241,4 +241,3 @@ in
     test_print_list_edge_cases();
     test_print_char_list();
     
-    puts("All print system tests passed!\n")

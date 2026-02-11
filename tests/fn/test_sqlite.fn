@@ -10,5 +10,5 @@ in
                     let
                         name = dict.lookup("name", row);
                     in
-                        assert(name == some(basic_string("EGYPTIAN HIEROGLYPH AA018")));
+                        assert(name == just(basic_string("EGYPTIAN HIEROGLYPH AA018")));
                 }))));

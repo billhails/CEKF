@@ -14,6 +14,7 @@ fn one_of {
 }
 
 export operator "from_" 8 one_of;
+export operator "one_" 8 one_of;
 
 fn some_of {
     ([]) { back }
@@ -26,8 +27,11 @@ fn integers_from(n) {
    n then integers_from(n + 1)
 }
 
+export operator "_..." 8 integers_from;
+
 fn integers_between(lower, upper) {
-    require(lower <= upper);
+    !: lower <= upper;
     lower then integers_between(lower + 1, upper)
 }
 
+export operator "_.._" 8 integers_between;

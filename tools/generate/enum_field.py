@@ -63,8 +63,8 @@ class EnumField:
         v = v.upper().replace('AST', 'AST_')
         return v
 
-    def printCompareCase(self, depth):
-        c = self.comment('printCompareCase')
+    def printEqCase(self, depth):
+        c = self.comment('printEqCase')
         typeName = self.makeTypeName()
         pad(depth)
         print(f'case {typeName}: {c}')

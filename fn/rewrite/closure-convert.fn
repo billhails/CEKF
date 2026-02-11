@@ -1,26 +1,27 @@
 namespace
 link "../listutils.fn" as list;
 link "../dictutils.fn" as DICT;
-link "expr.fn" as E;
+link "minexpr.fn" as M;
 link "transform.fn" as TR;
 link "freevars.fn" as FV;
 link "gensym.fn" as GS;
 link "subst.fn" as SUBST;
 
 fn closure_convert {
-    (exp=E.lambda(params, body)) {
+    (exp=M.lambda(params, body)) {
         let
             senv = GS.genstring("env");
             sparams = senv @ params;
             fv = FV.free(exp);
-            venv = list.map(fn (v) { #(v, E.var(v)) }, fv);
-            sub = DICT.make(fv, list.map(fn (v) { E.env_ref(E.var(senv), v) }, fv));
+            venv = list.map(fn (v) { #(v, M.var(v)) }, fv);
+            sub = DICT.make(fv, list.map(fn (v) { M.env_ref(M.var(senv), v) }, fv));
             vbody = SUBST.substitute(sub, body);
         in
-            E.make_closure(E.lambdac(sparams, vbody), E.make_env(venv))
+            M.make_closure(M.lambdac(sparams, vbody), M.make_env(venv))
     }
-    (E.apply(func, args)) {
-        E.apply_closure(func, args)
+    (x=M.apply(M.primop(_), _)) { x }
+    (M.apply(func, args)) {
+        M.apply_closure(func, args)
     }
     (x) { x }
 }

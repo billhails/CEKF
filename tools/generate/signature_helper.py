@@ -14,7 +14,7 @@ class SignatureHelper:
     - free: void freeName(Type _x)
     - print: void printName(Type _x, int depth)
     - copy: Type copyName(Type _x)
-    - compare: bool eqName(Type a, Type b)
+    - eq: bool eqName(Type a, Type b)
     - new: Type newName(...args)
     """
     
@@ -39,9 +39,9 @@ class SignatureHelper:
         return f"{type_decl} copy{name}({type_decl} o)"
     
     @staticmethod
-    def compare_signature(name, type_decl, extra_args=""):
+    def eq_signature(name, type_decl, extra_args=""):
         """
-        Generate compare function signature: bool eqName(Type a, Type b[, extra...])
+        Generate equality function signature: bool eqName(Type a, Type b[, extra...])
         
         Args:
             name: Function base name

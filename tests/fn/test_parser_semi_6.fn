@@ -1,10 +1,11 @@
 // Test: statements with multiple sequential semicolons
 let
+    fn id(x) { x }
     a = 1;
     b = 2;
     c = 3
 in {
-    puts("one");;
-    puts("two");;;
-    puts("three")
+    assert(id("one") == "one");;
+    assert(id("two") == "two");;;
+    assert(id("three") == "three")
 }

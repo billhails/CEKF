@@ -154,6 +154,10 @@ Value builtin_unicode_category(Vec *args) {
     }
 }
 
+Value builtin_getdec(Vec *args) {
+    return value_Stdint(unicode_getdec(args->entries[0].val.character));
+}
+
 Value builtin_isalnum(Vec *args) {
     return unicode_isalnum(args->entries[0].val.character) ? vTrue : vFalse;
 }
@@ -255,7 +259,7 @@ Value builtin_args(Vec *args) {
 }
 
 Value builtin_getenv(Vec *args) {
-    CharVec *name = listToUtf8(args->entries[0]);
+    SCharVec *name = listToUtf8(args->entries[0]);
     int save = PROTECT(name);
     char *value = getenv(name->entries);
     if (value == NULL) {

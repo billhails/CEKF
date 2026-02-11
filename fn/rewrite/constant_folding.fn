@@ -1,0 +1,311 @@
+namespace
+
+// operator and constant folding
+
+link "minexpr.fn" as M;
+link "../listutils.fn" as list;
+
+fn simplify (e) {
+    let
+        // a more convenient form for doing algebra
+        typedef term {
+            num(number) |
+            add(term, term) |
+            sub(term, term) |
+            mul(term, term) |
+            div(term, term) |
+            mod(term, term) |
+            pow(term, term) |
+            other(M.expr)
+        }
+
+        // add and mul commute so either order should compare equal
+        EQ term {
+            (add(a, b), add(a, b)) |
+            (add(b, a), add(a, b)) |
+            (sub(a, b), sub(a, b)) |
+            (mul(a, b), mul(a, b)) |
+            (mul(b, a), mul(a, b)) |
+            (div(a, b), div(a, b)) |
+            (mod(a, b), mod(a, b)) |
+            (num(a), num(a)) |
+            (other(a), other(a)) { true }
+            (_, _) { false }
+        }
+
+        fn e2t {
+            (M.bigint(n)) { num(n) }
+            (M.apply(M.primop("+"),  [e1, e2])) { add(e2t(e1), e2t(e2)) }
+            (M.apply(M.primop("-"),  [e1, e2])) { sub(e2t(e1), e2t(e2)) }
+            (M.apply(M.primop("*"),  [e1, e2])) { mul(e2t(e1), e2t(e2)) }
+            (M.apply(M.primop("/"),  [e1, e2])) { div(e2t(e1), e2t(e2)) }
+            (M.apply(M.primop("%"),  [e1, e2])) { mod(e2t(e1), e2t(e2)) }
+            (M.apply(M.primop("**"), [e1, e2])) { pow(e2t(e1), e2t(e2)) }
+            (x)                                 { other(x) }
+        }
+
+        fn t2e {
+            (num(n))    { M.bigint(n) }
+            (add(a, b)) { M.apply(M.primop("+"),  [t2e(a), t2e(b)]) }
+            (sub(a, b)) { M.apply(M.primop("-"),  [t2e(a), t2e(b)]) }
+            (mul(a, b)) { M.apply(M.primop("*"),  [t2e(a), t2e(b)]) }
+            (div(a, b)) { M.apply(M.primop("/"),  [t2e(a), t2e(b)]) }
+            (mod(a, b)) { M.apply(M.primop("%"),  [t2e(a), t2e(b)]) }
+            (pow(a, b)) { M.apply(M.primop("**"), [t2e(a), t2e(b)]) }
+            (other(x))  { x }
+        }
+
+        fn prep {
+            (add(x, y)) { add(S(x), S(y)) }
+            (sub(x, y)) { sub(S(x), S(y)) }
+            (mul(x, y)) { mul(S(x), S(y)) }
+            (div(x, y)) { div(S(x), S(y)) }
+            (mod(x, y)) { mod(S(x), S(y)) }
+            (pow(x, y)) { pow(S(x), S(y)) }
+            (x)         { x }
+        }
+
+        fn S(term) {
+            switch(prep(term)) {
+                (add(num(a), num(b))) { num(a + b) }
+                (add(num(0), a)) |
+                (add(a, num(0))) { a }
+                (add(a, sub(num(0), a))) |
+                (add(sub(num(0), a), a)) { num(0) }
+                (add(num(a), add(num(b), x))) |
+                (add(num(a), add(x, num(b)))) |
+                (add(add(x, num(a)), num(b))) |
+                (add(add(num(a), x), num(b))) { S(add(num(a + b), x)) }
+                (add(num(a), sub(num(b), x))) |
+                (add(sub(num(b), x), num(a))) { S(sub(num(a + b), x)) }
+                (add(num(a), sub(x, num(b)))) |
+                (add(sub(x, num(b)), num(a))) { S(add(num(a - b), x)) }
+                (add(add(num(a), x), add(num(b), y))) |
+                (add(add(num(a), x), add(y, num(b)))) |
+                (add(add(x, num(a)), add(num(b), y))) |
+                (add(add(x, num(a)), add(y, num(b)))) { S(add(num(a + b), add(x, y))) }
+                (add(add(num(a), x), sub(num(b), y))) |
+                (add(sub(num(b), y), add(num(a), x))) |
+                (add(add(x, num(a)), sub(num(b), y))) |
+                (add(sub(num(b), y), add(x, num(a)))) { S(add(num(a + b), sub(x, y))) }
+                (add(add(num(a), x), sub(y, num(b)))) |
+                (add(sub(y, num(b)), add(num(a), x))) |
+                (add(add(x, num(a)), sub(y, num(b)))) |
+                (add(sub(y, num(b)), add(x, num(a)))) { S(add(num(a - b), add(x, y))) }
+                (add(sub(num(a), x), sub(num(b), y))) |
+                (add(sub(num(b), y), sub(num(a), x))) { S(sub(num(a + b), add(x, y))) }
+                (add(sub(x, num(a)), sub(num(b), y))) |
+                (add(sub(num(b), y), sub(x, num(a)))) { S(add(num(b - a), sub(x, y))) }
+                (add(sub(x, num(a)), sub(y, num(b)))) |
+                (add(sub(y, num(b)), sub(x, num(a)))) { S(sub(add(x, y), num(a + b))) }
+                (add(a, a)) { S(mul(num(2), a)) }
+                (sub(num(a), num(b))) { num(a - b) }
+                (sub(a, num(0))) { a }
+                (sub(x, x)) { num(0) }
+                (sub(num(a), add(num(b), x))) |
+                (sub(num(a), add(x, num(b)))) { S(sub(num(a - b), x)) }
+                (sub(add(num(a), x), num(b))) |
+                (sub(add(x, num(a)), num(b))) { S(add(num(a - b), x)) }
+                (sub(sub(num(a), x), num(b))) { S(sub(num(a - b), x)) }
+                (sub(sub(x, num(a)), num(b))) { S(sub(x, num(a + b))) }
+                (sub(num(a), sub(num(b), x))) { S(add(num(a - b), x)) }
+                (sub(num(a), sub(x, num(b)))) { S(sub(num(a + b), x)) }
+                (sub(add(num(a), x), add(num(b), y))) |
+                (sub(add(x, num(a)), add(num(b), y))) |
+                (sub(add(num(a), x), add(y, num(b)))) |
+                (sub(add(x, num(a)), add(y, num(b)))) { S(add(num(a - b), sub(x, y))) }
+                (sub(sub(num(a), x), add(num(b), y))) |
+                (sub(sub(num(a), x), add(y, num(b)))) { S(sub(num(a - b), add(x, y))) }
+                (sub(sub(x, num(a)), add(num(b), y))) |
+                (sub(sub(x, num(a)), add(y, num(b)))) { S(sub(sub(x, num(a + b)), y)) }
+                (sub(add(x, num(a)), sub(num(b), y))) { S(add(num(a - b), add(x, y))) }
+                (sub(add(num(a), x), sub(y, num(b)))) |
+                (sub(add(x, num(a)), sub(y, num(b)))) { S(add(num(a + b), sub(x, y))) }
+                (sub(add(x, num(a)), sub(num(b), y))) |
+                (sub(add(x, num(a)), sub(y, num(b)))) { S(add(num(a - b), add(x, y))) }
+                (sub(add(num(a), x), sub(y, num(b)))) |
+                (sub(add(x, num(a)), sub(y, num(b)))) { S(add(num(a + b), sub(x, y))) }
+                (sub(sub(num(a), x), sub(num(b), y))) { S(sub(num(a - b), sub(x, y))) }
+                (sub(sub(x, num(a)), sub(num(b), y))) { S(add(sub(x, num(a + b)), y)) }
+                (sub(sub(x, num(a)), sub(y, num(b)))) { S(add(num(b - a), sub(x, y))) }
+                (sub(sub(num(a), x), sub(y, num(b)))) { S(sub(num(a + b), add(x, y))) }
+                (mul(num(a), num(b))) { num(a * b) }
+                (mul(num(0), a)) |
+                (mul(a, num(0))) { num(0) }
+                (mul(num(1), a)) |
+                (mul(a, num(1))) { a }
+                (mul(x, div(y, x))) |
+                (mul(div(y, x), x)) { y }
+                (mul(a, a)) { S(pow(a, num(2))) }
+                (mul(a, pow(a, b))) |
+                (mul(pow(a, b), a)) { S(pow(a, add(b, num(1)))) }
+                (mul(num(a), mul(num(b), x))) |
+                (mul(num(a), mul(x, num(b)))) |
+                (mul(mul(x, num(a)), num(b))) |
+                (mul(mul(num(a), x), num(b))) { S(mul(num(a * b), x)) }
+                (mul(num(a), add(x, num(b)))) |
+                (mul(num(a), add(num(b), x))) |
+                (mul(add(x, num(b)), num(a))) |
+                (mul(add(num(b), x), num(a))) { S(add(num(a * b), mul(num(a), x))) }
+                (mul(num(a), sub(x, num(b)))) |
+                (mul(sub(x, num(b)), num(a))) { S(sub(mul(num(a), x), num(a * b))) }
+                (mul(num(a), sub(num(b), x))) |
+                (mul(sub(num(b), x), num(a))) { S(sub(num(a * b), mul(num(a), x))) }
+                (mul(num(a), div(num(b), x))) |
+                (mul(div(num(b), x), num(a))) { S(div(num(a * b), x)) }
+                (mul(num(a), div(x, num(b)))) |
+                (mul(div(x, num(b)), num(a))) { S(mul(num(a / b), x)) }
+                (mul(pow(x, a), pow(x, b))) { S(pow(x, add(a, b))) }
+                (mul(a, a)) { S(pow(a, num(2))) }
+                (div(num(a), num(b))) { num(a / b) }
+                (div(a, num(1))) { a }
+                (div(num(0), _)) { num(0) }
+                (div(x, x)) { num(1) }
+                (div(div(x, num(a)), num(b))) { S(div(x, num(a * b))) }
+                (div(div(num(a), x), num(b))) { S(div(num(a / b), x)) }
+                (div(num(a), div(num(b), x))) { S(mul(num(a / b), x)) }
+                (div(num(a), div(x, num(b)))) { S(div(num(a * b), x)) }
+                (div(num(a), mul(x, num(b)))) |
+                (div(num(a), mul(num(b), x))) { S(div(num(a / b), x)) }
+                (div(mul(num(a), x), num(b))) |
+                (div(mul(x, num(a)), num(b))) { S(mul(num(a / b), x)) }
+                (div(add(num(a), x), num(b))) |
+                (div(add(x, num(a)), num(b))) { S(add(num(a / b), div(x, num(b)))) }
+                (div(sub(num(a), x), num(b))) { S(sub(num(a / b), div(x, num(b)))) }
+                (div(sub(x, num(a)), num(b))) { S(sub(div(x, num(b)), num(a / b))) }
+                (mul(div(x, num(a)), div(y, num(b)))) { S(div(mul(x, y), num(a * b))) }
+                (mul(div(num(a), x), div(num(b), y))) { S(div(num(a * b), mul(x, y))) }
+                (div(div(x, num(a)), div(y, num(b)))) { S(mul(div(x, y), num(b / a))) }
+                (div(div(num(a), x), div(num(b), y))) { S(mul(num(a / b), div(y, x))) }
+                (mod(num(a), num(b))) { num(a % b) }
+                (mod(num(0), _)) { num(0) }
+                (mod(_, num(1))) { num(0) }
+                (mod(x, x)) { num(0) }
+                (mod(mod(a, x), x)) { mod(a, x) }
+                (pow(num(a), num(b))) { num(a ** b) }
+                (pow(_, num(0))) { num(1) }
+                (pow(x, num(1))) { x }
+                (pow(num(0), _)) { num(0) }
+                (pow(num(1), _)) { num(1) }
+                (pow(pow(x, a), b)) { S(pow(x, mul(a, b))) }
+                (x) { x }
+            };
+        }
+    in
+        t2e(S(e2t(e)))
+}
+
+fn fold {
+    (M.amb_expr(expr1, expr2)) {
+        // amb_expr(expr, expr)
+        M.amb_expr(fold(expr1), fold(expr2))
+    }
+
+    (x = M.apply(fun, args)) {
+        // apply(expr, list(expr))
+        {
+        let f = fold(fun);
+            a = list.map(fold, args);
+        in
+            switch (f) {
+                (M.primop(_)) {
+                    simplify(M.apply(f, a))
+                }
+                (_) {
+                    M.apply(f, a)
+                }
+            }
+        }
+    }
+
+    (x = M.back_expr) |
+    (x = M.primop(_)) |
+    (x = M.env_expr) |
+    (x = M.error_expr) |
+    (x = M.bigint(_)) |
+    (x = M.character(_)) |
+    (x = M.var(_)) |
+    (x = M.stdint(_)) {
+        x
+    }
+
+    (M.callcc_expr(e)) {
+        // callcc_expr(expr)
+        M.callcc_expr(fold(e))
+    }
+
+    (M.cond_expr(test, branches)) {
+        // cond_expr(expr, list(#(expr, expr)))
+        let #(vals, results) = list.unzip(branches);
+        in
+            M.cond_expr(fold(test),
+                        list.zip(list.map(fold, vals),
+                                list.map(fold, results)))
+    }
+
+    (M.if_expr(exprc, exprt, exprf)) {
+        // if_expr(expr, expr, expr)
+        let exprc = fold(exprc);
+        in
+            switch (exprc) {
+                (M.bigint(n)) {
+                    if (n != 0) {
+                        fold(exprt)
+                    } else {
+                        fold(exprf)
+                    }
+                }
+                (_) {
+                    M.if_expr(exprc, fold(exprt), fold(exprf))
+                }
+            }
+    }
+
+    (M.lambda(params, body)) {
+        // lambda(list(string), expr)
+        M.lambda(params, fold(body))
+    }
+
+    (M.letrec_expr(bindings, expr)) {
+        // letrec_expr(list(#(string, expr)), expr)
+        let #(vars, exprs) = list.unzip(bindings);
+            newexprs = list.map(fold, exprs);
+            newbindings = list.zip(vars, newexprs);
+        in
+            M.letrec_expr(newbindings, fold(expr))
+    }
+
+    (M.lookup(name, index, expr)) {
+        // lookup(string, number, expr)
+        M.lookup(name, index, fold(expr))
+    }
+
+    (M.make_vec(size, args)) {
+        // make_vec(number, list(expr))
+        M.make_vec(size, list.map(fold, args))
+    }
+
+    (M.match_cases(test, cases)) {
+        // match_cases(expr, list(#(list(number), expr)))
+        let #(vals, results) = list.unzip(cases);
+        in
+            M.match_cases(fold(test),
+                        list.zip(vals, list.map(fold, results)))
+    }
+
+    (M.namespaces(exprs)) {
+        // namespaces(list(expr))
+        M.namespaces(list.map(fold, exprs))
+    }
+
+    (M.sequence(exprs)) {
+        // sequence(list(expr))
+        M.sequence(list.map(fold, exprs))
+    }
+
+    (x) {
+        M.print_expr(x);
+        puts("\n");
+        error("fold: unsupported expression")
+    }
+}

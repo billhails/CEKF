@@ -2,11 +2,6 @@ namespace
     link "../listutils.fn" as list;
 
     typedef expr {
-        lambdac(list(string), expr) |
-        make_closure(expr, expr) |
-        make_env(list(#(string, expr))) |
-        env_ref(expr, string) |
-        apply_closure(expr, list(expr)) |
         amb_expr(expr, expr) |
         apply(expr, list(expr)) |
         back_expr |
@@ -14,9 +9,9 @@ namespace
         callcc_expr(expr) |
         character(char) |
         cond_expr(expr, list(#(expr, expr))) |
-        constant(string) |
+        constant(string, number) |
         constructor_info(string) |
-        construct(string, list(expr)) |
+        construct(string, number, list(expr)) |
         deconstruct(string, number, expr) |
         env_expr |
         error_expr |
@@ -79,59 +74,6 @@ namespace
 
     // Printer for expressions
     fn print_expr {
-        (x=lambdac(args, expr)) {
-            puts("(λ* (");
-            print_list(args, puts, " ");
-            puts(") ");
-            print_expr(expr);
-            puts(")");
-            x;
-        }
-        (x=make_closure(func, env)) {
-            puts("(CLO ");
-            print_expr(func);
-            puts(" ");
-            print_expr(env);
-            puts(")");
-            x;
-        }
-        (x=make_env(bindings)) {
-            puts("{ ");
-            print_list(bindings, fn(#(name, expr)) {
-                puts(name);
-                switch (expr) {
-                    (var(name2)) {
-                        if (name == name2) {
-                            ""
-                        } else {
-                            puts(": ");
-                            print_expr(expr);
-                            ""
-                        }
-                    }
-                    (_) {
-                        puts(": ");
-                        print_expr(expr);
-                        ""
-                    }
-                }
-            }, ", ");
-            puts(" }");
-            x;
-        }
-        (x=env_ref(env, name)) {
-            print_expr(env);
-            puts(".");
-            puts(name);
-            x;
-        }
-        (x=apply_closure(closure, args)) {
-            puts("(A/C ");
-            print_expr(closure);
-            print_sequence(args);
-            puts(")");
-            x;
-        }
         (x=callcc_expr(e)) {
             puts("(call/cc ");
             print_expr(e);
@@ -262,16 +204,20 @@ namespace
             puts(")");
             x;
         }
-        (x=construct(name, args)) {
+        (x=construct(name, tg, args)) {
             puts("(construct ");
             puts(name);
+            putc(' ');
+            putn(tg);
             print_sequence(args);
             puts(")");
             x;
         }
-        (x=constant(name)) {
+        (x=constant(name, tg)) {
             puts("(constant ");
             puts(name);
+            putc(' ');
+            putn(tg);
             puts(")");
             x;
         }
@@ -400,9 +346,9 @@ namespace
 
             fn to_expr {
                 (atom("back")) { back_expr }
-                (atom("true")) { constant("true") }
-                (atom("false")) { constant("false") }
-                (atom("null")) { constant("null") }
+                (atom("true")) { constant("true", 1) }
+                (atom("false")) { constant("false", 0) }
+                (atom("null")) { constant("null", 0) }
                 (atom(['\'', c, '\''])) { character(c) }
                 (sexp([atom("env")])) { env_expr }
                 (sexp([atom("error")])) { error_expr }
@@ -418,12 +364,18 @@ namespace
                     (sexp([e1, e2])) { #(to_expr(e1), to_expr(e2)) }
                     (_) { error("Invalid cond branch") }
                 }, branches)) }
-                (sexp([atom("constant"), atom(name)])) { constant(name) }
+                (sexp([atom("constant"), atom(name), atom(tg)])) { constant(name, to_number(tg)) }
                 (sexp([atom("constructor_info"), atom(name)])) { constructor_info(name) }
-                (sexp(atom("construct") @ atom(name) @ args)) { construct(name, list.map(to_expr, args)) }
-                (sexp([atom("deconstruct"), atom(name), atom(index), e])) { deconstruct(name, to_number(index), to_expr(e)) }
+                (sexp(atom("construct") @ atom(name) @ atom(tg) @ args)) {
+                    construct(name, to_number(tg), list.map(to_expr, args))
+                }
+                (sexp([atom("deconstruct"), atom(name), atom(index), e])) {
+                    deconstruct(name, to_number(index), to_expr(e))
+                }
                 (sexp([atom("lambda"), sexp(args), body])) |
-                (sexp([atom("\u03bb;"),      sexp(args), body])) { lambda(list.map(atom_to_string, args), to_expr(body)) }
+                (sexp([atom("\u03bb;"),      sexp(args), body])) {
+                    lambda(list.map(atom_to_string, args), to_expr(body))
+                }
                 (sexp(atom("begin") @ exprs)) { sequence(list.map(to_expr, exprs)) }
                 (sexp([atom("let"), sexp(bindings), body])) {
                     let bindingsList = list.map (fn {
@@ -468,6 +420,7 @@ namespace
                 (sexp([atom("-"), e1, e2])) { primapp("-", to_expr(e1), to_expr(e2)) }
                 (sexp([atom("*"), e1, e2])) { primapp("*", to_expr(e1), to_expr(e2)) }
                 (sexp([atom("/"), e1, e2])) { primapp("/", to_expr(e1), to_expr(e2)) }
+                (sexp([atom("%"), e1, e2])) { primapp("%", to_expr(e1), to_expr(e2)) }
                 (sexp([atom("**"), e1, e2])) { primapp("**", to_expr(e1), to_expr(e2)) }
                 (sexp([atom("=="), e1, e2])) { primapp("==", to_expr(e1), to_expr(e2)) }
                 (sexp([atom("="), e1, e2])) { primapp("=", to_expr(e1), to_expr(e2)) }
@@ -475,7 +428,6 @@ namespace
                 (sexp([atom(">"), e1, e2])) { primapp(">", to_expr(e1), to_expr(e2)) }
                 (sexp([atom("<="), e1, e2])) { primapp("<=", to_expr(e1), to_expr(e2)) }
                 (sexp([atom(">="), e1, e2])) { primapp(">=", to_expr(e1), to_expr(e2)) }
-                (sexp([atom("set!"), e1, e2])) { primapp("set!", to_expr(e1), to_expr(e2)) }
                 (sexp([atom("print"), e])) { print_exp(to_expr(e)) }
                 (sexp([atom("tag"), e])) { tag(to_expr(e)) }
                 (sexp([atom("tuple_index"), atom(size), atom(index), e])) { tuple_index(1, 1, to_expr(e)) }

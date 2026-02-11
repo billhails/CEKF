@@ -63,14 +63,14 @@ class KontinuationGenerator:
             }
 
             # Add struct to catalog
-            catalog.add(SimpleStruct(struct_name, struct_yaml))
+            catalog.add(SimpleStruct(struct_name, struct_yaml), False)
             
             # Add to union mapping
             union_data[key] = struct_name
         
         # Add discriminated union to catalog
         union_yaml = {'data': union_data}
-        catalog.add(DiscriminatedUnion(kont_env_union, union_yaml))
+        catalog.add(DiscriminatedUnion(kont_env_union, union_yaml), False)
         
         # Add continuation struct with parameterized name
         catalog.add(SimpleStruct(kont_struct, {
@@ -81,7 +81,7 @@ class KontinuationGenerator:
                 'env': kont_env_union,
                 'wrapper': wrapper_type
             }
-        }))
+        }), False)
         
     def generate_kont_impl_inc(self, output: TextIO, catalog: Catalog, includes) -> None:
         self._write_header(output, includes, 'inc')

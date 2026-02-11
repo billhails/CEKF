@@ -1,12 +1,9 @@
 // Test that macros are typed with lazy arguments
 
-print("Testing lazy function types:");
-print("");
-
 {
 let
     // Define a simple macro
-    macro lazy_or(a, b) {
+    lazy fn lazy_or(a, b) {
         a or b
     }
     
@@ -18,22 +15,12 @@ let
     lazy_type = typeof lazy_or;
     strict_type = typeof strict_or;
 in
-    print("lazy_or type: " @@ typeof lazy_or);
-    print("strict_or type: " @@ typeof strict_or);
-    print("");
+    assert(lazy_type == "#() -> bool -> #() -> bool -> bool");
+    assert(strict_type == "bool -> bool -> bool");
     
     // Both should work when called normally
     assert(lazy_or(true, false) == true);
     assert(strict_or(true, false) == true);
     
-    print("Direct calls work");
-    print("");
-    print("Lazy type has (#()) markers: " @@ lazy_type);
-    print("Strict type is normal: " @@ strict_type);
-    // They should be different
     assert(lazy_type != strict_type);
-    print("Types are correctly different");
 };
-
-print("");
-print("Lazy type tracking tests passed\n");

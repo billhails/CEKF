@@ -1,5 +1,5 @@
 #ifndef cekf_types_h
-#  define cekf_types_h
+#define cekf_types_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2023  Bill Hails
@@ -17,13 +17,13 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  *
- * typedefs to allow different sizes of data and to avoid using primitive types directly.
- * for example we may want characters to be wchar_t at some point.
+ * typedefs to allow different sizes of data and to avoid using primitive types
+ * directly. for example we may want characters to be wchar_t at some point.
  */
 
-#  include <stdint.h>
-#  include <stddef.h>
-#  include <wchar.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <wchar.h>
 
 /*
  * on my machine:
@@ -43,7 +43,7 @@
 
 typedef uint8_t Byte;
 typedef wchar_t Character;
-typedef unsigned short int Word;
+typedef unsigned int Word;
 typedef int Integer;
 typedef unsigned int Index;
 typedef double Double;
@@ -56,4 +56,4 @@ typedef struct StackFrame {
 
 #define END_CONTROL UINT64_MAX
 
- #endif
+#endif

@@ -359,4 +359,3 @@ in
     test_nested_equality();
     test_concat_chains();
     
-    puts("All list tests passed!\n")

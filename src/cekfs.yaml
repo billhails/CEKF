@@ -176,12 +176,6 @@ vectors:
         data:
             entries: Value
 
-    CharVec:
-        meta:
-            brief: A vector of chars
-        data:
-            entries: schar
-
 stacks:
     Stack:
         meta:
@@ -248,9 +242,4 @@ enums:
 primitives: !include primitives.yaml
 
 external:
-    BuiltInImplementation:
-        data:
-            cname: "struct BuiltInImplementation *"
-            printFn: printBuiltInImplementation
-            markFn: markBuiltInImplementation
-            valued: true
+- !include builtins.yaml

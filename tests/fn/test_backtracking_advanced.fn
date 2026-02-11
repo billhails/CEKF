@@ -295,4 +295,3 @@ in
     test_then_in_calls();
     test_backtrack_arithmetic();
     
-    puts("All advanced backtracking tests passed!\n")

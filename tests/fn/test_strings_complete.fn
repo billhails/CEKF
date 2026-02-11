@@ -163,4 +163,3 @@ in
     test_string_patterns();
     test_long_strings();
     test_mixed_content();
-    puts("All string tests completed successfully!")

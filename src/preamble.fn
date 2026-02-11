@@ -25,7 +25,7 @@ namespace
 __builtins__
 
 
-operator "_then_" right 2 amb;
+lazy operator "_then_" right 2 amb;
 operator "_==_" left 5 EQUALTO;
 operator "_!=_" left 5 NOTEQUALTO;
 operator "_≠_" left 5 NOTEQUALTO;
@@ -37,19 +37,19 @@ operator "_<=>_" none 5 COMPARISON;
 operator "_+_" left 10 ADDITION;
 operator "_-_" left 10 SUBTRACTION;
 operator "-_" left 11 NEGATION;
-macro NUMERICIDENTITY(x) { x + 0 }
+fn NUMERICIDENTITY(x) { x + 0 }
 operator "+_" left 11 NUMERICIDENTITY;
 operator "_*_" left 11 MULTIPLICATION;
 operator "_/_" left 11 DIVISION;
 operator "_%_" left 11 MODULUS;
 operator "_**_" left 12 EXPONENTIAL;
-operator "here_" 13 callcc;
+lazy operator "here_" 13 callcc;
 
 typedef cmp { lt | eq | gt }
 typedef bool { false | true }
 typedef list(#t) { nil | cons(#t, list(#t)) }
 alias string = list(char);
-typedef maybe(#t) { nothing | some(#t) }
+typedef maybe(#t) { nothing | just(#t) }
 typedef try(#f, #s) { failure(#f) | success(#s) }
 typedef basic_type { basic_null | basic_number(number) | basic_string(string) | basic_char(char) }
 typedef io_mode { io_read | io_write | io_append }
@@ -83,13 +83,13 @@ fn NOT {
 }
 operator "not_" 4 NOT;
 
-// macros aren't really macros, they're just lazy functions but that gets
-// us most of the same behaviour.
-macro AND(a, b) { if (a) { b } else { false } }
-operator "_and_" left 3 AND;
+// lazy functions thunk their arguments, which gets us short-circuit
+// evaluation for boolean operators.
+lazy fn AND(a, b) { if (a) { b } else { false } }
+lazy operator "_and_" left 3 AND;
 
-macro OR(a, b) { if (a) { true } else { b } }
-operator "_or_" left 3 OR;
+lazy fn OR(a, b) { if (a) { true } else { b } }
+lazy operator "_or_" left 3 OR;
 
 fn XOR {
     (true, true) { false }
@@ -99,14 +99,14 @@ fn XOR {
 }
 operator "_xor_" left 3 XOR;
 
-macro NAND(a, b) { not (a and b) }
-operator "_nand_" left 3 NAND;
+lazy fn NAND(a, b) { not (a and b) }
+lazy operator "_nand_" left 3 NAND;
 
-macro NOR(a, b) { not (a or b) }
-operator "_nor_" left 3 NOR;
+lazy fn NOR(a, b) { not (a or b) }
+lazy operator "_nor_" left 3 NOR;
 
-macro XNOR(a, b) { not (a xor b) }
-operator "_xnor_" left 3 XNOR;
+lazy fn XNOR(a, b) { not (a xor b) }
+lazy operator "_xnor_" left 3 XNOR;
 
 operator "_@_" right 10 cons;
 
@@ -136,6 +136,18 @@ fn factorial (n) {
 
 operator "_!" 13 factorial;
 
+fn gcd {
+    (0, b) { b }
+    (a, 0) { a }
+    (a, b) {
+        if (a > b) {
+            gcd(a - b, b)
+        } else {
+            gcd(a, b - a)
+        }
+    }
+}
+
 fn __error__(line, file, message) {
     puts("error: ");
     puts(message);
@@ -149,8 +161,8 @@ fn __error__(line, file, message) {
 
 operator "_of_" right 13 fn (f, g, x) { f(g(x)) };
 
-operator "&_" 14 THUNK;
-macro THUNK(x) { fn () {x} }
+lazy operator "&_" 14 THUNK;
+lazy fn THUNK(x) { fn () {x} }
 
 operator "*_" 14 FORCE;
 fn FORCE(thunk) { thunk() }

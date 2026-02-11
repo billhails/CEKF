@@ -3,59 +3,55 @@
 
 let
 
-    // Test: Basic macro definition and use
+    // Test: Basic lazy fn definition and use
     fn test_basic_macro() {
         let
-            macro DOUBLE(x) { x + x }
+            lazy fn DOUBLE(x) { x + x }
             result = DOUBLE(5);
         in
             assert(result == 10);
-            puts("Basic macro test passed\n")
     }
 
     // Test: Macro with multiple arguments
     fn test_multi_arg_macro() {
         let
-            macro ADD(a, b) { a + b }
-            macro MULT(a, b) { a * b }
+            lazy fn ADD(a, b) { a + b }
+            lazy fn MULT(a, b) { a * b }
 
             sum = ADD(3, 4);
             product = MULT(5, 6);
         in
             assert(sum == 7);
             assert(product == 30);
-            puts("Multi-argument macro test passed\n")
     }
 
     // Test: Macro argument evaluation (should be lazy)
     fn test_macro_lazy_eval() {
         let
-            macro FIRST(a, b) { a }
+            lazy fn FIRST(a, b) { a }
 
             fn explode() { back }
 
             result = FIRST(42, explode()) then 999;
         in
             assert(result == 42);
-            puts("Macro lazy evaluation test passed\n")
     }
 
-    // Test: Nested macro calls
+    // Test: Nested lazy fn calls
     fn test_nested_macros() {
         let
-            macro DOUBLE(x) { x + x }
-            macro QUAD(x) { DOUBLE(DOUBLE(x)) }
+            lazy fn DOUBLE(x) { x + x }
+            lazy fn QUAD(x) { DOUBLE(DOUBLE(x)) }
 
             result = QUAD(3);
         in
             assert(result == 12);
-            puts("Nested macro test passed\n")
     }
 
     // Test: Macro with conditional
     fn test_macro_conditional() {
         let
-            macro MAX(a, b) {
+            lazy fn MAX(a, b) {
                 if (a > b) { a } else { b }
             }
 
@@ -64,26 +60,24 @@ let
         in
             assert(result1 == 10);
             assert(result2 == 8);
-            puts("Macro conditional test passed\n")
     }
 
     // Test: Macro with explicit parameters (not variable capture)
     fn test_macro_parameters() {
         let
-            macro ADD_TEN(y) { 10 + y }
+            lazy fn ADD_TEN(y) { 10 + y }
 
             result1 = ADD_TEN(5);
             result2 = ADD_TEN(15);
         in
             assert(result1 == 15);
             assert(result2 == 25);
-            puts("Macro parameters test passed\n")
     }
 
     // Test: Macro with pattern matching
     fn test_macro_pattern() {
         let
-            macro HEAD(lst) {
+            lazy fn HEAD(lst) {
                 switch (lst) {
                     ([]) { back }
                     (h @ dummy) { h }
@@ -93,7 +87,6 @@ let
             result = HEAD([1, 2, 3]);
         in
             assert(result == 1);
-            puts("Macro pattern matching test passed\n")
     }
 
     // Test: Macro with function calls
@@ -102,33 +95,31 @@ let
             fn double { (x) { x * 2 } }
             fn triple { (x) { x * 3 } }
 
-            macro APPLY_BOTH(f, g, x) {
+            lazy fn APPLY_BOTH(f, g, x) {
                 f(x) + g(x)
             }
 
             result = APPLY_BOTH(double, triple, 5);
         in
             assert(result == 25);
-            puts("Macro function calls test passed\n")
     }
 
     // Test: Macro with list operations
     fn test_macro_list_ops() {
         let
-            macro CONS_TWICE(x, lst) {
+            lazy fn CONS_TWICE(x, lst) {
                 x @ x @ lst
             }
 
             result = CONS_TWICE(5, [1, 2, 3]);
         in
             assert(result == [5, 5, 1, 2, 3]);
-            puts("Macro list operations test passed\n")
     }
 
     // Test: Short-circuit AND macro
     fn test_short_circuit_and() {
         let
-            macro AND(a, b) {
+            lazy fn AND(a, b) {
                 if (a) { b } else { false }
             }
 
@@ -139,13 +130,12 @@ let
         in
             assert(result1 == false);
             assert(result2 == true);
-            puts("Short-circuit AND test passed\n")
     }
 
     // Test: Short-circuit OR macro
     fn test_short_circuit_or() {
         let
-            macro OR(a, b) {
+            lazy fn OR(a, b) {
                 if (a) { true } else { b }
             }
 
@@ -156,13 +146,12 @@ let
         in
             assert(result1 == true);
             assert(result2 == true);
-            puts("Short-circuit OR test passed\n")
     }
 
     // Test: Macro with recursion
     fn test_macro_recursion() {
         let
-            macro APPLY_TWICE(f, x) {
+            lazy fn APPLY_TWICE(f, x) {
                 f(f(x))
             }
 
@@ -171,13 +160,12 @@ let
             result = APPLY_TWICE(inc, 5);
         in
             assert(result == 7);
-            puts("Macro recursion test passed\n")
     }
 
-    // Test: Complex macro expression
+    // Test: Complex lazy fn expression
     fn test_complex_macro() {
         let
-            macro COMPUTE(a, b, c) {
+            lazy fn COMPUTE(a, b, c) {
                 let
                     sum = a + b;
                     prod = sum * c;
@@ -188,17 +176,16 @@ let
             result = COMPUTE(2, 3, 4);
         in
             assert(result == 20);
-            puts("Complex macro test passed\n")
     }
 
     // Test: Macro with tuple
     fn test_macro_tuple() {
         let
-            macro MAKE_PAIR(a, b) {
+            lazy fn MAKE_PAIR(a, b) {
                 #(a, b)
             }
 
-            macro SWAP_PAIR(p) {
+            lazy fn SWAP_PAIR(p) {
                 switch (p) {
                     (#(x, y)) { #(y, x) }
                 }
@@ -209,7 +196,6 @@ let
         in
             assert(pair == #(1, 2));
             assert(swapped == #(2, 1));
-            puts("Macro tuple test passed\n")
     }
 
     // Test: Macro argument used multiple times
@@ -219,33 +205,31 @@ let
                 let x = 1 then 2 then 3; in x
             }
 
-            macro USE_TWICE(x) {
+            lazy fn USE_TWICE(x) {
                 #(x, x)
             }
 
             result = USE_TWICE(counter());
         in
             assert(result == #(1, 1));
-            puts("Macro multi-use test passed\n")
     }
 
     // Test: Macro with let binding shadowing argument
     fn test_macro_arg_shadowing() {
         let
-            macro SHADOW_ARG(x) {
+            lazy fn SHADOW_ARG(x) {
                 let x = 100; in x + 1
             }
 
             result = SHADOW_ARG(42);
         in
             assert(result == 101);  // Should use shadowed x=100, not argument
-            puts("Macro argument shadowing test passed\n")
     }
 
     // Test: Macro with nested let shadowing
     fn test_macro_nested_shadow() {
         let
-            macro NESTED_SHADOW(a, b) {
+            lazy fn NESTED_SHADOW(a, b) {
                 let
                     a = 10;
                 in {
@@ -259,13 +243,12 @@ let
             result = NESTED_SHADOW(1, 2);
         in
             assert(result == 30);  // Should use shadowed values 10 and 20
-            puts("Macro nested shadowing test passed\n")
     }
 
     // Test: Macro argument partially shadowed
     fn test_macro_partial_shadow() {
         let
-            macro PARTIAL_SHADOW(x, y) {
+            lazy fn PARTIAL_SHADOW(x, y) {
                 let
                     x = 5;
                 in
@@ -275,13 +258,12 @@ let
             result = PARTIAL_SHADOW(100, 200);
         in
             assert(result == 205);  // 5 (shadowed x) + 200 (original y)
-            puts("Macro partial shadowing test passed\n")
     }
 
     // Test: Macro with let binding using argument
     fn test_macro_let_using_arg() {
         let
-            macro LET_WITH_ARG(x) {
+            lazy fn LET_WITH_ARG(x) {
                 let
                     y = x;  // Simple assignment to force evaluation
                     z = y + 10;
@@ -292,31 +274,29 @@ let
             result = LET_WITH_ARG(5);
         in
             assert(result == 30);  // (5 + 10) * 2
-            puts("Macro let using argument test passed\n")
     }
 
     // Test: Macro with multiple let bindings and shadowing
-    // Tests that macro parameter 'a' can be shadowed in let binding
+    // Tests that lazy fn parameter 'a' can be shadowed in let binding
     fn test_macro_multiple_lets() {
         let
-            macro MULTI_LET(a) {
+            lazy fn MULTI_LET(a) {
                 let
                     val_a = a;  // Use original 'a'
                     b = val_a + 1;
                     a = b + 1;  // Shadow 'a' - this should work
                 in
-                    a + b  // Uses shadowed 'a', not macro parameter
+                    a + b  // Uses shadowed 'a', not lazy fn parameter
             }
             result = MULTI_LET(10);
         in
             assert(result == 23);  // a=12, b=11, sum=23
-            puts("Macro multiple lets test passed\n")
     }
 
     // Test: Macro with deeply nested let and argument access
     fn test_macro_deep_let_nesting() {
         let
-            macro DEEP_NEST(x) {
+            lazy fn DEEP_NEST(x) {
                 let
                     a = x;
                 in {
@@ -338,13 +318,12 @@ let
             result = DEEP_NEST(5);
         in
             assert(result == 13);  // d=8 (5+1+1+1), d+x = 8+5
-            puts("Macro deep let nesting test passed\n")
     }
 
     // Test: Macro with function definition shadowing argument
     fn test_macro_fn_shadow() {
         let
-            macro FN_SHADOW(x) {
+            lazy fn FN_SHADOW(x) {
                 let
                     fn x() { 999 }
                 in
@@ -354,13 +333,12 @@ let
             result = FN_SHADOW(42);
         in
             assert(result == 999);  // Function x shadows argument x
-            puts("Macro function shadowing test passed\n")
     }
 
     // Test: Macro with pattern match shadowing
     fn test_macro_pattern_shadow() {
         let
-            macro PATTERN_SHADOW(x) {
+            lazy fn PATTERN_SHADOW(x) {
                 unsafe switch ([1, 2, 3]) {
                     (x @ rest) { x + <rest }  // x in pattern shadows argument
                 }
@@ -369,23 +347,18 @@ let
             result = PATTERN_SHADOW(100);
         in
             assert(result == 3);  // Pattern x=1, rest has 2 elements
-            puts("Macro pattern shadowing test passed\n")
     }
     
-    // Test: Macro with print statements
+    // Test: Macro with statements
     fn test_macro_with_print() {
         let
-            macro DEBUG_PRINT(x) {
-                puts("Debug: ");
-                putv(x);
-                puts("\n");
+            lazy fn DEBUG_PRINT(x) {
                 x
             }
             
             result = DEBUG_PRINT(42);
         in
             assert(result == 42);
-            puts("Macro with print test passed\n")
     }
     
     // Test: Macro with type constructor
@@ -393,17 +366,17 @@ let
         let
             typedef option(#t) {
                 none |
-                some(#t)
+                just(#t)
             }
             
-            macro MAKE_SOME(x) {
-                some(x)
+            lazy fn MAKE_SOME(x) {
+                just(x)
             }
             
-            macro GET_OR_DEFAULT(opt, def) {
+            lazy fn GET_OR_DEFAULT(opt, def) {
                 switch (opt) {
                     (none) { def }
-                    (some(v)) { v }
+                    (just(v)) { v }
                 }
             }
             
@@ -413,7 +386,6 @@ let
         in
             assert(result2 == 42);
             assert(result3 == 99);
-            puts("Macro with constructor test passed\n")
     }
     
     // Test: Macro with typedef and switch
@@ -424,14 +396,14 @@ let
                 err(#e)
             }
             
-            macro TRY(r, default) {
+            lazy fn TRY(r, default) {
                 switch (r) {
                     (ok(val)) { val }
                     (err(_)) { default }
                 }
             }
             
-            macro UNWRAP_OR_ZERO(r) {
+            lazy fn UNWRAP_OR_ZERO(r) {
                 TRY(r, 0)
             }
             
@@ -440,7 +412,6 @@ let
         in
             assert(val1 == 123);
             assert(val2 == 0);
-            puts("Macro with typedef test passed\n")
     }
     
     // Test: Macro with switch on multiple types
@@ -451,7 +422,7 @@ let
                 node{ left: tree(#a), value: #a, right: tree(#a) }
             }
             
-            macro COUNT_LEAVES(t) {
+            lazy fn COUNT_LEAVES(t) {
                 switch (t) {
                     (leaf(_)) { 1 }
                     (node{ left: l, right: r }) { COUNT_LEAVES(l) + COUNT_LEAVES(r) }
@@ -473,7 +444,6 @@ let
             assert(count1 == 1);
             assert(count2 == 2);
             assert(count3 == 3);
-            puts("Macro switch types test passed\n")
     }
     
     // Test: Macro that constructs and prints custom type
@@ -483,15 +453,13 @@ let
                 red | green | blue
             }
             
-            macro SHOW_COLOR(c) {
-                puts("Color: ");
-                print(c);
+            lazy fn SHOW_COLOR(c) {
+                c
             }
             
             result = SHOW_COLOR(red);
         in
             assert(result == red);
-            puts("Macro construct and print test passed\n")
     }
     
     // Test: Macro with nested switch on constructors
@@ -507,7 +475,7 @@ let
                 right(#r)
             }
             
-            macro UNWRAP_EITHER(e) {
+            lazy fn UNWRAP_EITHER(e) {
                 switch (e) {
                     (left(just(v))) { v }
                     (left(nothing)) { 0 }
@@ -522,24 +490,18 @@ let
             assert(val1 == 42);
             assert(val2 == 0);
             assert(val3 == 99);
-            puts("Macro nested switch test passed\n")
     }
     
-    // Test: Macro with print of complex type
+    // Test: Macro with complex type
     fn test_macro_print_complex() {
         let
             typedef pair(#a, #b) {
                 mk_pair{ fst: #a, snd: #b }
             }
             
-            macro PRINT_PAIR(p) {
+            lazy fn PRINT_PAIR(p) {
                 switch (p) {
                     (mk_pair{ fst: a, snd: b }) {
-                        puts("(");
-                        putv(a);
-                        puts(", ");
-                        putv(b);
-                        puts(")\n");
                         p
                     }
                 }
@@ -549,13 +511,12 @@ let
             result = PRINT_PAIR(pair1);
         in
             assert(result == pair1);
-            puts("Macro print complex test passed\n")
     }
     
     // Test: Macro with typedef in body
     fn test_macro_typedef_in_body() {
         let
-            macro MAKE_WRAPPER(val) {
+            lazy fn MAKE_WRAPPER(val) {
                 let
                     typedef wrapper(#t) {
                         wrap(#t)
@@ -568,14 +529,12 @@ let
             
             wrapped = MAKE_WRAPPER(42);
         in
-            putv(wrapped);
-            puts("\n");
-            puts("Macro typedef in body test passed\n")
+            assert(typeof wrapped == "wrapper(number)");
     }
 
     fn test_macro_string_recognition() {
         let
-            macro IS_HELLO_OR_GOODBYE(s) {
+            lazy fn IS_HELLO_OR_GOODBYE(s) {
                 switch (s) {
                     ("hello") { s }
                     ("goodbye") { s }
@@ -589,12 +548,11 @@ let
             assert(result1 == "hello");
             assert(result2 == "goodbye");
             assert(result3 == "?");
-            puts("Macro string recognition test passed\n")
     }
 
     fn test_macro_number_recognition() {
         let
-            macro IS_ONE_OR_TWO(n) {
+            lazy fn IS_ONE_OR_TWO(n) {
                 switch (n) {
                     (1) { n }
                     (2) { n }
@@ -608,7 +566,6 @@ let
             assert(result1 == 1);
             assert(result2 == 2);
             assert(result3 == 0);
-            puts("Macro number recognition test passed\n")
     }
 
     // Main test runner
@@ -644,7 +601,6 @@ let
         test_macro_nested_switch();
         test_macro_print_complex();
         test_macro_typedef_in_body();
-        puts("All macro tests completed successfully!\n")
     }
 
 in

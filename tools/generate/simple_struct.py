@@ -10,7 +10,7 @@ from .comment_gen import CommentGen
 from .type_helper import TypeHelper
 from .signature_helper import SignatureHelper
 from .accessor_helper import AccessorHelper
-from .compare_helper import CompareHelper
+from .compare_helper import EqHelper
 from .objtype_helper import ObjectTypeHelper
 
 class SimpleStruct(Base):
@@ -118,17 +118,17 @@ class SimpleStruct(Base):
     def getCtype(self, astType, catalog):
         return TypeHelper.pointer_type(astType)
 
-    def getExtraCmpFargs(self, catalog):
-        return CompareHelper.get_extra_formal_args(self.extraCmpArgs, lambda t: self.getCtype(t, catalog))
+    def getExtraEqFargs(self, catalog):
+        return EqHelper.get_extra_formal_args(self.extraEqArgs, lambda t: self.getCtype(t, catalog))
 
-    def getExtraCmpAargs(self, catalog):
-        return CompareHelper.get_extra_actual_args(self.extraCmpArgs)
+    def getExtraEqAargs(self, catalog):
+        return EqHelper.get_extra_actual_args(self.extraEqArgs)
 
-    def getCompareSignature(self, catalog):
+    def getEqSignature(self, catalog):
         myType = self.getTypeDeclaration(catalog)
         myName = self.getName()
-        extraCmpArgs = self.getExtraCmpFargs(catalog)
-        return SignatureHelper.compare_signature(myName, myType, extraCmpArgs)
+        extraEqArgs = self.getExtraEqFargs(catalog)
+        return SignatureHelper.eq_signature(myName, myType, extraEqArgs)
 
     def getNewArgs(self, catalog):
         return [_x for _x in self.fields if _x.default is None and not _x.isSelfInitializing(catalog)]
@@ -179,9 +179,9 @@ class SimpleStruct(Base):
         decl=self.getPrintSignature(catalog)
         print(f"{decl}; {c}")
 
-    def printCompareDeclaration(self, catalog):
-        c = self.comment('printCompareDeclaration')
-        decl=self.getCompareSignature(catalog)
+    def printEqDeclaration(self, catalog):
+        c = self.comment('printEqDeclaration')
+        decl=self.getEqSignature(catalog)
         print(f"{decl}; {c}")
 
     def printNewFunction(self, catalog):
@@ -227,9 +227,15 @@ class SimpleStruct(Base):
         for field in self.fields:
             field.printMarkLine(self.isInline(catalog), catalog, 1)
 
-    def printCompareFunctionBody(self, catalog):
+    def printEqFunctionBody(self, catalog):
+        c = self.comment('printEqFunctionBody')
         for field in self.fields:
-            field.printCompareLine(self.isInline(catalog), catalog, 1)
+            # Check if this field should be ignored in equality comparison
+            if field.getName() in self.eqIgnore:
+                pad(1)
+                print(f"// field '{field.getName()}' deliberately ignored in equality comparison {c}")
+            else:
+                field.printEqLine(self.isInline(catalog), catalog, 1)
 
     def printCopyFunctionBody(self, catalog):
         for field in self.fields:
@@ -261,13 +267,17 @@ class SimpleStruct(Base):
         a = AccessorHelper.accessor(isInline)
         print(f"return PROTECT(_x{a}{prefix}{field}); {c}")
 
-    def printCompareField(self, catalog, isInline, field, depth, prefix=''):
-        c = self.comment('printCompareField')
-        myName=self.getName()
-        extraArgs = self.getExtraCmpAargs({})
+    def printEqField(self, catalog, isInline, field, depth, prefix=''):
+        c = self.comment('printEqField')
+        myName = self.getName()
+        extraArgs = self.getExtraEqAargs({})
         a = AccessorHelper.accessor(isInline)
         pad(depth)
-        print(f"if (!eq{myName}(a{a}{prefix}{field}, b{a}{prefix}{field}{extraArgs})) return false; {c}")
+        if self.isExternal() and extraArgs != "":
+            # We don't have access to those extra args if we're not called natively
+            print(f"if (a{a}{prefix}{field} != b{a}{prefix}{field}) return false; {c}")
+        else:
+            print(f"if (!eq{myName}(a{a}{prefix}{field}, b{a}{prefix}{field}{extraArgs})) return false; {c}")
 
     def printPrintHashField(self, depth):
         c = self.comment('printPrintHashField')
@@ -351,15 +361,15 @@ class SimpleStruct(Base):
         pad(3)
         print(f'return "{name}"; {c}')
 
-    def printCompareFunction(self, catalog):
-        if self.bespokeCmpImplementation:
+    def printEqFunction(self, catalog):
+        if self.bespokeEqImplementation:
             print("// Bespoke implementation required for")
-            print("// {decl}".format(decl=self.getCompareSignature(catalog)))
+            print("// {decl}".format(decl=self.getEqSignature(catalog)))
             print("")
             return
         myName = self.getName()
-        c = self.comment('printCompareFunction')
-        decl=self.getCompareSignature(catalog)
+        c = self.comment('printEqFunction')
+        decl=self.getEqSignature(catalog)
         print(f"/**")
         print(f" * Compares two {myName} objects for equality.")
         print(f" * It will recursively compare all the fields of the object.")
@@ -368,7 +378,7 @@ class SimpleStruct(Base):
         if not self.isInline(catalog):
             print(f"    if (a == b) return true; {c}")
             print(f"    if (a == NULL || b == NULL) return false; {c}")
-        self.printCompareFunctionBody(catalog)
+        self.printEqFunctionBody(catalog)
         print(f"    return true; {c}")
         print(f"}} {c}\n")
 

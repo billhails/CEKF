@@ -351,4 +351,3 @@ in
     test_shadow_tuple();
     test_function_shadow();
     
-    puts("All scoping tests passed!\n")

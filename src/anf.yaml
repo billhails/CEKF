@@ -20,6 +20,8 @@ config:
     name: anf
     description: A-Normal Form (ANF) structures to be converted to bytecode.
     parserInfo: true
+    includes:
+    - utils.h
     limited_includes:
     - bigint.h
     - ast_helper.h
@@ -35,9 +37,10 @@ structs:
         data:
             isLocal: bool
             isNameSpace: bool = false
+            isCapturing: bool = false
             nBindings: int = 0
             nsEnvs: AnfEnvArray = NULL
-            table: AnfIntTable
+            table: IntMap
             next: AnfEnv
 
     AexpLam:
@@ -310,20 +313,6 @@ enums:
         - MOD
         - CMP
 
-hashes:
-    AnfSymbolTable:
-        meta:
-            brief: A set of ANF Symbols
-            description: A hash table set of symbols used in ANF.
-        data: {}
-
-    AnfIntTable:
-        meta:
-            brief: ANF Compile Time Integer Table
-            description: A hash table of integers used in ANF.
-        data:
-            entries: int
-
 arrays:
     AexpNameSpaceArray:
         meta:
@@ -342,12 +331,5 @@ arrays:
 primitives: !include primitives.yaml
 
 external:
-    TcType:
-        meta:
-            brief: external type from the type-checker
-            description: A type-checker type referenced by the ANF code.
-        data:
-            cname: "struct TcType *"
-            printFn: printTcType
-            markFn: markTcType
-            valued: true
+- !include utils.yaml
+- !include tc.yaml

@@ -6,25 +6,21 @@
 
 // === Macros (lazy functions) ===
 let
-macro lazy_and(a, b) {
-    puts("lazy_and evaluated\n");
+lazy fn lazy_and(a, b) {
     a and b
 }
 
-macro lazy_or(a, b) {
-    puts("lazy_or evaluated\n");
+lazy fn lazy_or(a, b) {
     a or b
 }
 
 // === Strict functions ===
 
 fn strict_and(x, y) {
-    puts("strict_and evaluated\n");
     x and y
 }
 
 fn strict_or(x, y) {
-    puts("strict_or evaluated\n");
     x or y
 }
 
@@ -41,41 +37,22 @@ fn adapt_lazy_or(x, y) {
 // === Higher-order function ===
 
 fn apply_binary(f, x, y) {
-    puts("apply_binary calling function\n");
     f(x, y)
 }
 in
 // === Type Display ===
-puts("=== Type Display Tests ===\n");
-puts("lazy_and type:   ");
-print(typeof lazy_and);
-puts("lazy_or type:    ");
-print(typeof lazy_or);
-puts("strict_and type: ");
-print(typeof strict_and);
-puts("strict_or type:  ");
-print(typeof strict_or);
-puts("adapt_lazy_and:  ");
-print(typeof adapt_lazy_and);
-puts("\n");
+assert((typeof lazy_and) == "#() -> bool -> #() -> bool -> bool");
+assert((typeof lazy_or) == "#() -> bool -> #() -> bool -> bool");
+assert((typeof strict_and) == "bool -> bool -> bool");
+assert((typeof strict_or) == "bool -> bool -> bool");
+assert((typeof adapt_lazy_and) == "bool -> bool -> bool");
+assert((typeof adapt_lazy_or) == "bool -> bool -> bool");
 
 // === Main tests ===
-puts("=== Direct Calls (all work) ===\n");
-puts("lazy_and(true, false): ");
-print(lazy_and(true, false));
-puts("strict_and(true, false): ");
-print(strict_and(true, false));
-puts("\n");
+assert(lazy_and(true, false) == false);
+assert(strict_and(true, false) == false);
 
-puts("=== Through HOF ===\n");
-puts("Strict function through HOF: ");
-print(apply_binary(strict_or, true, false));
+assert(apply_binary(strict_or, true, false) == true);
 
-puts("\nAdapter through HOF: ");
-print(apply_binary(adapt_lazy_or, true, false));
-
-puts("\n=== SUCCESS ===\n");
-puts("Phase 1 & 2 complete!\n");
-puts("- Types correctly track laziness\n");
-puts("- Manual adapters work perfectly\n");
+assert(apply_binary(adapt_lazy_or, true, false) == true);
 

@@ -14,7 +14,7 @@ from .comment_gen import CommentGen
 from .type_helper import TypeHelper
 from .signature_helper import SignatureHelper
 from .accessor_helper import AccessorHelper
-from .compare_helper import CompareHelper
+from .compare_helper import EqHelper
 from .objtype_helper import ObjectTypeHelper
 
 
@@ -79,13 +79,23 @@ class SimpleStack(SimpleArray):
         print(f"    _x->frames = NEW_ARRAY(StackFrame, 8); {c}")
         print(f"    _x->frames_capacity = 8; {c}")
 
+    def printAddDeclaration(self, catalog):
+        if self.dimension == 1:
+            name = self.getName()
+            myType = self.getTypeDeclaration(catalog)
+            a = '*' if self.isInline(catalog) else ''
+            c = self.comment('printAddDeclaration')
+            print(f"void add{name}Entries({myType} {a}obj, Index size); {c}")
+            print(f"void add{name}Frames({myType} {a}obj, Index size); {c}")
+
     def printExtendDeclaration(self, catalog):
-        name = self.getName()
-        myType = self.getTypeDeclaration(catalog)
-        a = '*' if self.isInline(catalog) else ''
-        c = self.comment('printExtendDeclaration')
-        print(f"void extend{name}Entries({myType} {a}obj, Index size); {c}")
-        print(f"void extend{name}Frames({myType} {a}obj, Index size); {c}")
+        if self.dimension == 1:
+            name = self.getName()
+            myType = self.getTypeDeclaration(catalog)
+            a = '*' if self.isInline(catalog) else ''
+            c = self.comment('printExtendDeclaration')
+            print(f"void extend{name}Entries({myType} {a}obj, Index size); {c}")
+            print(f"void extend{name}Frames({myType} {a}obj, Index size); {c}")
 
     def printSizeDeclaration(self, catalog):
         name = self.getName()
@@ -143,6 +153,36 @@ class SimpleStack(SimpleArray):
             c = self.comment('printClearDeclaration')
             print(f"static inline void clear{name}Entries({myType} {a}_x) {{ _x->offset = 0; }}; {c}")
             print(f"static inline void clear{name}Frames({myType} {a}_x) {{ _x->frames_index = _x->offset = _x->frame = 0; }}; {c}")
+
+    def printAppendDeclaration(self, catalog):
+        pass
+
+    def printAppendFunction(self, catalog):
+        pass
+
+    def printAddFunction(self, catalog):
+        if self.dimension == 1:
+            name = self.getName()
+            myType = self.getTypeDeclaration(catalog)
+            c = self.comment('printAddFunction')
+            a = '*' if self.isInline(catalog) else ''
+            print(f"/**")
+            print(f" * Adds at leat `size` capacity to the {myType}.")
+            print(f" */")
+            print(f"void add{name}Entries({myType} {a}_x, Index size) {{ {c}")
+            print(f'    DEBUG("add{name}Entries(%p, %u)", _x, size);')
+            print(f"    extend{name}Entries(_x, _x->entries_capacity + size); {c}")
+            print(f"}} {c}")
+            print(f"")
+            print(f"/**")
+            print(f" * Adds at least `size` capacity to the {myType} frames.")
+            print(f" */")
+            print(f"void add{name}Frames({myType} {a}_x, Index size) {{ {c}")
+            print(f'    DEBUG("add{name}Frames(%p, %u)", _x, size);')
+            print(f"    extend{name}Frames(_x, _x->frames_capacity + size); {c}")
+            print(f"}} {c}")
+            print(f"")
+            
 
     def printExtendFunction(self, catalog):
         if self.dimension == 1:
@@ -545,10 +585,10 @@ class SimpleStack(SimpleArray):
         print(f'}} {c}')
         print('')
 
-    def printCompareFunction(self, catalog):
-        c = self.comment('printCompareFunction')
-        decl = self.getCompareSignature(catalog)
-        if self.bespokeCmpImplementation:
+    def printEqFunction(self, catalog):
+        c = self.comment('printEqFunction')
+        decl = self.getEqSignature(catalog)
+        if self.bespokeEqImplementation:
             print(f"// Bespoke implementation required for {decl}")
             print("")
             return
@@ -567,7 +607,7 @@ class SimpleStack(SimpleArray):
         print(f"        if (a->frames[i].offset != b->frames[i].offset) return false; {c}")
         print(f"    }} {c}")
         print(f"    for (Index i = 0; i < a->frame + a->offset; i++) {{ {c}")
-        self.entries.printCompareArrayLine(self.isInline(catalog), catalog, "i", 2)
+        self.entries.printEqArrayLine(self.isInline(catalog), catalog, "i", 2)
         print(f"    }} {c}")
         print(f"    return true; {c}")
         print(f"}} {c}")

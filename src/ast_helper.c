@@ -16,9 +16,9 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include <stdio.h>
 #include "ast_helper.h"
 #include "symbol.h"
+#include <stdio.h>
 
 AstNameSpaceArray *nameSpaces = NULL;
 
@@ -31,9 +31,7 @@ void printAstSymbol(struct HashSymbol *x, int depth) {
     eprintf("AstSymbol[\"%s\"]", x->name);
 }
 
-void markNameSpaces() {
-    markAstNameSpaceArray(nameSpaces);
-}
+void markNameSpaces() { markAstNameSpaceArray(nameSpaces); }
 
 void initNameSpaces() {
     if (nameSpaces == NULL) {
@@ -42,19 +40,17 @@ void initNameSpaces() {
 }
 
 // for tests
-void forceInitNameSpaces() {
-    nameSpaces = newAstNameSpaceArray();
-}
+void forceInitNameSpaces() { nameSpaces = newAstNameSpaceArray(); }
 
-int lookUpNameSpace(AgnosticFileId *id) {
+int lookUpNameSpace(FileId *id) {
 #ifdef SAFETY_CHECKS
     if (nameSpaces == NULL) {
         cant_happen("null nameSpace");
     }
 #endif
     for (Index i = 0; i < nameSpaces->size; i++) {
-        if (cmpAgnosticFileId(id, nameSpaces->entries[i]->id) == CMP_EQ) {
-            return (int) i;
+        if (eqFileId(id, nameSpaces->entries[i]->id)) {
+            return (int)i;
         }
     }
     return -1;
@@ -66,5 +62,6 @@ AstProg *astNestToProg(AstNest *nest) {
         cant_happen("null nameSpace");
     }
 #endif
-    return newAstProg(CPI(nest), nest->definitions, nameSpaces, nest->expressions);
+    return newAstProg(CPI(nest), nest->definitions, nameSpaces,
+                      nest->expressions);
 }
