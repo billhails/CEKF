@@ -75,20 +75,6 @@ static LamExp *convertAnnotatedSymbol(AstAnnotatedSymbol *, LamContext *);
 #include "debugging_off.h"
 #endif
 
-static void conversionError(ParserInfo, char *, ...)
-    __attribute__((format(printf, 2, 3)));
-
-/**
- * @brief Report an error in the lambda conversion.
- */
-static void conversionError(ParserInfo I, char *message, ...) {
-    va_list args;
-    va_start(args, message);
-    vfprintf(errout, message, args);
-    va_end(args);
-    can_happen(I, "");
-}
-
 /**
  * @brief Creates a value that can be returned in the case of an error
  */
@@ -369,11 +355,10 @@ static LamExp *lamConvert(AstDefinitions *definitions,
     // (because bytecode for non-lambda letrec entries skips NS_END)
     if (varDefsList != NULL && isNameSpaceBody) {
         for (LamBindings *b = varDefsList; b != NULL; b = b->next) {
-            conversionError(
-                CPI(b),
-                "namespaces cannot contain non-function bindings: '%s' "
-                "(you can wrap data in functions that return it)",
-                b->var->name);
+            can_happen(CPI(b),
+                       "namespaces cannot contain non-function bindings: '%s' "
+                       "(you can wrap data in functions that return it)",
+                       b->var->name);
         }
     }
 
@@ -1077,9 +1062,8 @@ static void checkDuplicateLazyArg(HashSymbol *arg, SymbolList *args) {
     if (args == NULL)
         return;
     if (arg == args->symbol) {
-        conversionError(CPI(args),
-                        "duplicate argument \"%s\" in macro definition",
-                        arg->name);
+        can_happen(CPI(args), "duplicate argument \"%s\" in macro definition",
+                   arg->name);
         return;
     }
     checkDuplicateLazyArg(arg, args->next);
@@ -1364,16 +1348,16 @@ static LamBindings *prependDefine(AstDefine *define, LamContext *env,
     do {                                                                       \
         int count = countLamArgs(args);                                        \
         if (count != 1)                                                        \
-            conversionError(CPI(args), "expected 1 arg in " #name ", got %d",  \
-                            count);                                            \
+            can_happen(CPI(args), "expected 1 arg in " #name ", got %d",       \
+                       count);                                                 \
     } while (0)
 
 #define CHECK_TWO_ARGS(name, args)                                             \
     do {                                                                       \
         int count = countLamArgs(args);                                        \
         if (count != 2)                                                        \
-            conversionError(CPI(args), "expected 2 args in " #name ", got %d", \
-                            count);                                            \
+            can_happen(CPI(args), "expected 2 args in " #name ", got %d",      \
+                       count);                                                 \
     } while (0)
 
 /**
@@ -1737,7 +1721,7 @@ static void checkTagNotDuplicate(HashSymbol *tag, AstTaggedExpressions *tags) {
     if (tags == NULL)
         return;
     if (tag == tags->tag) {
-        conversionError(CPI(tags), "duplicate tag %s", tag->name);
+        can_happen(CPI(tags), "duplicate tag %s", tag->name);
         return;
     }
     checkTagNotDuplicate(tag, tags->next);
@@ -1851,8 +1835,8 @@ static LamExp *makeStructureApplication(LamExp *constructor,
                                         AstTaggedExpressions *tags,
                                         LamContext *env) {
     if (getLamExp_Constructor(constructor)->tags == NULL) {
-        conversionError(CPI(constructor),
-                        "non-struct constructor applied to struct");
+        can_happen(CPI(constructor),
+                   "non-struct constructor applied to struct");
         return lamExpError(CPI(tags));
     }
     checkAllTagsPresent(getLamExp_Constructor(constructor)->tags, tags);
@@ -1861,8 +1845,8 @@ static LamExp *makeStructureApplication(LamExp *constructor,
     int arity = findUnderlyingArity(constructor);
     int nArgs = (int)countAstTaggedExpressions(tags);
     if (nArgs != arity) {
-        conversionError(CPI(constructor),
-                        "wrong number of args in structure application");
+        can_happen(CPI(constructor),
+                   "wrong number of args in structure application");
         return lamExpError(CPI(tags));
     }
     LamArgs *args =
@@ -1910,7 +1894,7 @@ static LamTypeConstructorInfo *findConstructor(AstLookUpOrSymbol *los,
 static LamExp *convertStructure(AstStruct *structure, LamContext *env) {
     LamTypeConstructorInfo *info = findConstructor(structure->symbol, env);
     if (info == NULL) {
-        conversionError(CPI(structure), "cannot find constructor");
+        can_happen(CPI(structure), "cannot find constructor");
         return lamExpError(CPI(structure));
     }
     LamExp *constructor = newLamExp_Constructor(CPI(info), info);
@@ -2084,7 +2068,7 @@ static AstFarg *rewriteAstUnpackStruct(AstUnpackStruct *structure,
                                        LamContext *env) {
     LamTypeConstructorInfo *info = findConstructor(structure->symbol, env);
     if (info->tags == NULL) {
-        conversionError(CPI(structure), "constructor not a struct");
+        can_happen(CPI(structure), "constructor not a struct");
         return newAstFarg_WildCard(CPI(structure));
     }
     AstFargList *args =
@@ -2218,7 +2202,7 @@ static LamExp *convertCompositeFun(ParserInfo PI, AstCompositeFunction *fun,
                                    LamContext *env) {
     ENTER(convertCompositeFun);
     if (fun == NULL) {
-        conversionError(PI, "composite function with no components");
+        can_happen(PI, "composite function with no components");
         return lamExpError(PI);
     }
     int nArgs = countAstFargList(fun->function->argList);
@@ -2451,8 +2435,8 @@ static LamExp *convertExpression(AstExpression *expression, LamContext *env) {
         result = convertError(getAstExpression_Error(expression), env);
         break;
     case AST_EXPRESSION_TYPE_WILDCARD:
-        conversionError(CPI(expression),
-                        "cannot use wildCard '_' as a variable name");
+        can_happen(CPI(expression),
+                   "cannot use wildCard '_' as a variable name");
         result = convertSymbol(CPI(expression), errorSymbol(), env);
         break;
     default:
