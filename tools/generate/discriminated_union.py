@@ -60,6 +60,10 @@ class DiscriminatedUnion(SimpleStruct):
         for field in self.fields:
             field.printSetterDeclaration(catalog, self, self.isInline(catalog))
 
+    def printIsTesterDeclarations(self, catalog):
+        for field in self.fields:
+            field.printIsTesterDeclaration(catalog, self, self.isInline(catalog))
+
     def getNewArgs(self, catalog):
         return [self.enum, self.union]
 

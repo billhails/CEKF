@@ -81,6 +81,9 @@ class Catalog:
     def printSetterDeclarations(self):
         self._dispatch('printSetterDeclarations', self)
 
+    def printIsTesterDeclarations(self):
+        self._dispatch('printIsTesterDeclarations', self)
+
     def generateVisitor(self, packageName, target):
         """Generate complete visitor boilerplate"""
         output = []

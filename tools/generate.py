@@ -267,6 +267,8 @@ def generate_header(args, catalog, document, packageName, includes, limited_incl
     catalog.printGetterDeclarations()
     printSection("discriminated union setter declarations")
     catalog.printSetterDeclarations()
+    printSection("discriminated union is-tester declarations")
+    catalog.printIsTesterDeclarations()
     printSection("eq declarations")
     catalog.printEqDeclarations()
     print("")
