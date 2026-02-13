@@ -44,6 +44,7 @@
 #include "lambda_pp.h"
 #include "lambda_simplification.h"
 #include "memory.h"
+#include "minlam_beta.h"
 #include "minlam_pp.h"
 #include "pratt.h"
 #include "pratt_parser.h"
@@ -87,6 +88,8 @@ static char *binary_input_file = NULL;
 static char *snippet = NULL;
 
 extern StringArray *include_paths;
+
+static int beta_flag = 0;
 
 /**
  * Report the build mode, i.e. the value of the BUILD_MODE macro when compiled.
@@ -133,7 +136,9 @@ static void usage(char *prog, int status) {
         "    --help                   This help.\n"
         "    --assertions-accumulate  Don't exit on the first assertion "
         "failure.\n"
+        "    -B<file>\n"
         "    --binary-in=<file>       Read byte code from file.\n"
+        "    -O<file>\n"
         "    --binary-out=<file>      Write byte code to file.\n"
         "    -a\n"
         "    --dump-alpha             Display the intermediate code after "
@@ -141,6 +146,12 @@ static void usage(char *prog, int status) {
         "    -a<function>\n"
         "    --dump-alpha=<function>  Display the intermediate code after "
         "alpha-conversion.\n"
+        "    -b\n"
+        "    --dump-beta             Display the intermediate code after "
+        "beta-conversion.\n"
+        "    -b<function>\n"
+        "    --dump-beta=<function>  Display the intermediate code after "
+        "beta-conversion.\n"
         "    --dump-anf               Display the generated ANF.\n"
         "    --dump-ast               Display the parsed AST before lambda "
         "conversion.\n"
@@ -210,13 +221,14 @@ static int processArgs(int argc, char *argv[]) {
             {"dump-lambda", optional_argument, 0, 'l'},
             {"dump-desugared", optional_argument, 0, 'd'},
             {"dump-alpha", optional_argument, 0, 'a'},
+            {"dump-beta", optional_argument, 0, 'b'},
             {"include", required_argument, 0, 'i'},
-            {"binary-out", required_argument, 0, 'o'},
-            {"binary-in", required_argument, 0, 'b'},
+            {"binary-out", required_argument, 0, 'O'},
+            {"binary-in", required_argument, 0, 'B'},
             {0, 0, 0, 0}};
         int option_index = 0;
 
-        c = getopt_long(argc, argv, "l::hm:e:i:o:b:d::a::", long_options,
+        c = getopt_long(argc, argv, "l::hm:e:i:O:B:b::d::a::", long_options,
                         &option_index);
 
         if (c == -1)
@@ -242,6 +254,14 @@ static int processArgs(int argc, char *argv[]) {
             }
         }
 
+        if (c == 'b') {
+            if (optarg) {
+                beta_conversion_function = optarg;
+            } else {
+                beta_flag = 1;
+            }
+        }
+
         if (c == 'd') {
             if (optarg) {
                 desugar_conversion_function = optarg;
@@ -250,11 +270,11 @@ static int processArgs(int argc, char *argv[]) {
             }
         }
 
-        if (c == 'o') {
+        if (c == 'O') {
             binary_output_file = optarg;
         }
 
-        if (c == 'b') {
+        if (c == 'B') {
             binary_input_file = optarg;
         }
 
@@ -560,6 +580,17 @@ int main(int argc, char *argv[]) {
             eprintf("\n");
             exit(0);
         }
+
+        /*
+        minExp = betaMinExp(minExp);
+        REPLACE_PROTECT(save2, minExp);
+
+        if (beta_flag) {
+            ppMinExp(minExp);
+            eprintf("\n");
+            exit(0);
+        }
+        */
 
         AnfExp *anfExp = anfNormalize(minExp);
         REPLACE_PROTECT(save2, anfExp);

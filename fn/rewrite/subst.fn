@@ -2,6 +2,7 @@ namespace
     link "minexpr.fn" as M;
     link "../dictutils.fn" as D;
     link "../listutils.fn" as list;
+    import list operators;
 
     // substitute: D.Dict(string, M.expr) -> M.expr -> M.expr
     fn substitute(c, e) {
@@ -16,12 +17,12 @@ namespace
 
                 // apply_closure(expr, list(expr))
                 (M.apply_closure(f, args)) {
-                    M.apply_closure(substitute(c, f), list.map(substitute(c), args))
+                    M.apply_closure(substitute(c, f), args |> substitute(c))
                 }
 
                 // apply(expr, list(expr))
                 (M.apply(fun, args)) {
-                    M.apply(substitute(c, fun), list.map(substitute(c), args))
+                    M.apply(substitute(c, fun), args |> substitute(c))
                 }
 
                 (x = M.back_expr) |
@@ -41,10 +42,8 @@ namespace
 
                 // cond_expr(expr, list(#(expr, expr)))
                 (M.cond_expr(test, branches)) {
-                    let #(vals, results) = list.unzip(branches);
-                    in  M.cond_expr(substitute(c, test),
-                                    list.zip(list.map(substitute(c), vals),
-                                            list.map(substitute(c), results)))
+                    M.cond_expr(substitute(c, test),
+                                branches |> substitute(c) && substitute(c))
                 }
 
                 // if_expr(expr, expr, expr)
@@ -73,7 +72,7 @@ namespace
 
                 // make_env(list(#(string, expr)))
                 (M.make_env(bindings)) {
-                    M.make_env(list.map(fn (#(v, e)) { #(v, substitute(c, e)) }, bindings))
+                    M.make_env(bindings |> identity && substitute(c))
                 }
 
                 // env_ref(expr, string)
@@ -83,7 +82,7 @@ namespace
 
                 // letrec_expr(list(#(string, expr)), expr)
                 (M.letrec_expr(bindings, expr)) {
-                    let c2 = D.delete_list(list.map(fn (#(var, val)) { var }, bindings), c);
+                    let c2 = D.delete_list(bindings |> fn (#(var, val)) { var }, c);
                     in M.letrec_expr(bindings, substitute(c2, expr)) // new environment
                 }
 
@@ -94,25 +93,25 @@ namespace
 
                 // make_vec(number, list(expr))
                 (M.make_vec(size, args)) {
-                    M.make_vec(size, list.map(substitute(c), args))
+                    M.make_vec(size, args |> substitute(c))
                 }
 
                 // match_cases(expr, list(#(list(number), expr)))
                 (M.match_cases(test, cases)) {
-                    let #(vals, results) = list.unzip(cases);
+                    let #(vals, results) = unzip cases;
                     in
                         M.match_cases(substitute(c, test),
-                                    list.zip(vals, list.map(substitute(c), results)))
+                                      vals zip (results |> substitute(c)))
                 }
 
                 // namespaces(list(expr))
                 (M.namespaces(exprs)) {
-                    M.namespaces(list.map(substitute(c), exprs))
+                    M.namespaces(exprs |> substitute(c))
                 }
 
                 // sequence(list(expr))
                 (M.sequence(exprs)) {
-                    M.sequence(list.map(substitute(c), exprs))
+                    M.sequence(exprs |> substitute(c))
                 }
 
                 // var(string)

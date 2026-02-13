@@ -14,5 +14,4 @@ fn simplify {
     (x) { x }
 }
 in
-    print simplify(mul(var("x"), var("y")));
     assert(simplify(mul(var("x"), var("y"))) == mul(var("x"), var("y")))
