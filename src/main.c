@@ -45,6 +45,7 @@
 #include "lambda_simplification.h"
 #include "memory.h"
 #include "minlam_beta.h"
+#include "minlam_eta.h"
 #include "minlam_pp.h"
 #include "pratt.h"
 #include "pratt_parser.h"
@@ -61,6 +62,7 @@
 
 // #define TEST_CPS
 #define BETA_REDUCTION
+#define ETA_REDUCTION
 
 #ifdef TEST_CPS
 #include "lambda_cps.h"
@@ -590,7 +592,16 @@ int main(int argc, char *argv[]) {
 #ifdef BETA_REDUCTION
         minExp = betaMinExp(minExp);
         REPLACE_PROTECT(save2, minExp);
+#endif
 
+#ifdef ETA_REDUCTION
+        minExp = etaMinExp(minExp);
+        REPLACE_PROTECT(save2, minExp);
+#endif
+
+#ifdef BETA_REDUCTION
+        minExp = betaMinExp(minExp);
+        REPLACE_PROTECT(save2, minExp);
         if (beta_flag) {
             ppMinExp(minExp);
             eprintf("\n");
