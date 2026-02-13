@@ -68,6 +68,11 @@ make docs              # Generates Mermaid diagrams from YAML schemas
 
 ## C Coding Conventions
 
+### Comments
+
+- Only comment when necessary to explain non-obvious code or rationale.
+- Keep comments terse and on point.
+
 ### Generated union constructor functions
 
 - `new<Union>_<Variant>(parserInfo, variant)` - Wraps an existing variant in a union
@@ -96,12 +101,13 @@ make docs              # Generates Mermaid diagrams from YAML schemas
 
 ## Documentation Style
 
-- Use simple periods instead of exclamation points
-- Avoid hyperbole: use "significant", "notable" instead of "HUGE", "Amazing"
-- Avoid emphatic modifiers in headings and verdict-style declarations
-- No emoji
-- Minimize bold emphasis on routine statements
-- Follow markdownlint rules
+- Use simple periods instead of exclamation points.
+- Avoid hyperbole: use "significant", "notable" instead of "HUGE", "Amazing".
+- Avoid emphatic modifiers in headings and verdict-style declarations.
+- No emoji.
+- Minimize bold emphasis on routine statements.
+- Follow markdownlint rules.
+- Prefer Mermaid for diagrams.
 
 ## Debugging
 

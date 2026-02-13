@@ -56,6 +56,7 @@ static MinNameSpaceArray *betaMinNameSpaceArray(MinNameSpaceArray *node);
 static MinAlphaEnvArray *betaMinAlphaEnvArray(MinAlphaEnvArray *node);
 static bool isAexp(MinExp *exp);
 static bool areAexpList(MinExprList *args);
+static bool isIdentityLam(MinLam *lam);
 
 char *beta_conversion_function = NULL;
 
@@ -103,9 +104,24 @@ static bool isAexp(MinExp *exp) {
     }
     case MINEXP_TYPE_MAKEVEC:
         return areAexpList(getMinExp_MakeVec(exp));
+    case MINEXP_TYPE_SEQUENCE:
+        return areAexpList(getMinExp_Sequence(exp));
+    case MINEXP_TYPE_LOOKUP:
+        return isAexp(getMinExp_LookUp(exp)->exp);
     default:
         return false;
     }
+}
+
+static bool isIdentityLam(MinLam *lam) {
+    if (lam == NULL || lam->args == NULL || lam->args->next != NULL ||
+        lam->exp == NULL) {
+        return false;
+    }
+    if (lam->exp->type != MINEXP_TYPE_VAR) {
+        return false;
+    }
+    return getMinExp_Var(lam->exp) == lam->args->symbol;
 }
 
 // Visitor implementations
@@ -273,8 +289,22 @@ static MinExp *betaMinApplyLambda(MinLam *lam, MinExprList *aargs) {
     SymbolList *fargs = lam->args;
     int num_fargs = countSymbolList(fargs);
 
+    // Exact nullary application is safe to collapse directly: there are no
+    // arguments to substitute, so no risk of duplicating/reordering argument
+    // evaluation.
+    if (num_aargs == 0 && num_fargs == 0) {
+        return betaMinExp(lam->exp);
+    }
+
     if (num_aargs <= 0 || num_fargs <= 0) {
         return NULL;
+    }
+
+    // Conservative extension: exact identity application can be reduced even
+    // when the argument is not an A-expression because it does not duplicate
+    // or discard the argument.
+    if (num_fargs == 1 && num_aargs == 1 && isIdentityLam(lam)) {
+        return aargs->exp;
     }
 
     // Safety rule for this pass: only beta-reduce when each substituted
