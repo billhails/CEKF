@@ -23,6 +23,7 @@
 #include "minlam.h"
 
 #include "minlam_beta.h"
+#include "minlam_pp.h"
 #include "minlam_subst.h"
 
 #ifdef DEBUG_MINLAM_BETA
@@ -53,6 +54,8 @@ static SymbolMap *betaSymbolMap(SymbolMap *node);
 static SymbolList *betaSymbolList(SymbolList *node);
 static MinNameSpaceArray *betaMinNameSpaceArray(MinNameSpaceArray *node);
 static MinAlphaEnvArray *betaMinAlphaEnvArray(MinAlphaEnvArray *node);
+static bool isAexp(MinExp *exp);
+static bool areAexpList(MinExprList *args);
 
 char *beta_conversion_function = NULL;
 
@@ -69,6 +72,40 @@ static MinExpTable *makeSubstitutionTable(SymbolList *fargs,
 
     UNPROTECT(save);
     return table;
+}
+
+static bool areAexpList(MinExprList *args) {
+    while (args != NULL) {
+        if (!isAexp(args->exp)) {
+            return false;
+        }
+        args = args->next;
+    }
+    return true;
+}
+
+static bool isAexp(MinExp *exp) {
+    if (exp == NULL) {
+        return false;
+    }
+
+    switch (exp->type) {
+    case MINEXP_TYPE_LAM:
+    case MINEXP_TYPE_VAR:
+    case MINEXP_TYPE_STDINT:
+    case MINEXP_TYPE_BIGINTEGER:
+    case MINEXP_TYPE_CHARACTER:
+    case MINEXP_TYPE_NAMESPACES:
+        return true;
+    case MINEXP_TYPE_PRIM: {
+        MinPrimApp *prim = getMinExp_Prim(exp);
+        return isAexp(prim->exp1) && isAexp(prim->exp2);
+    }
+    case MINEXP_TYPE_MAKEVEC:
+        return areAexpList(getMinExp_MakeVec(exp));
+    default:
+        return false;
+    }
 }
 
 // Visitor implementations
@@ -236,6 +273,30 @@ static MinExp *betaMinApplyLambda(MinLam *lam, MinExprList *aargs) {
     SymbolList *fargs = lam->args;
     int num_fargs = countSymbolList(fargs);
 
+    if (num_aargs <= 0 || num_fargs <= 0) {
+        return NULL;
+    }
+
+    // Safety rule for this pass: only beta-reduce when each substituted
+    // argument is an A-expression.
+    //
+    // This compiler evaluates function arguments before call (call-by-value).
+    // Unrestricted substitution can duplicate or delay non-value arguments,
+    // changing observable behavior for effects and control operators such as
+    // amb/backtracking, call/cc, I/O, and namespace lookups.
+    //
+    // For now we only substitute a prefix of arguments when all substituted
+    // arguments are A-expressions. Otherwise we leave the APPLY shape
+    // intact and only recurse into children.
+    int substitutions = num_fargs < num_aargs ? num_fargs : num_aargs;
+    MinExprList *cur = aargs;
+    for (int i = 0; i < substitutions; i++) {
+        if (cur == NULL || !isAexp(cur->exp)) {
+            return NULL;
+        }
+        cur = cur->next;
+    }
+
     if (num_fargs < num_aargs) {
         return betaMinOverApply(lam->exp, fargs, aargs);
     } else if (num_fargs > num_aargs) {
@@ -245,7 +306,7 @@ static MinExp *betaMinApplyLambda(MinLam *lam, MinExprList *aargs) {
     }
 }
 
-// N.B. MinExp not MinApply
+// N.B. MinExp not MinApply so it can return a different type.
 static MinExp *betaMinApply(MinExp *exp) {
     ENTER(betaMinApply);
     if (exp == NULL) {
@@ -260,28 +321,30 @@ static MinExp *betaMinApply(MinExp *exp) {
     int save = PROTECT(redaargs);
     changed = changed || (redaargs != node->args);
 
-    if (node->function->type == MINEXP_TYPE_LAM) {
-        MinExp *result =
-            betaMinApplyLambda(getMinExp_Lam(node->function), redaargs);
-        LEAVE(betaMinApply);
-        return result;
-    } else {
-        MinExp *new_function = betaMinExp(node->function);
-        PROTECT(new_function);
-        changed = changed || (new_function != node->function);
+    MinExp *new_function = betaMinExp(node->function);
+    PROTECT(new_function);
+    changed = changed || (new_function != node->function);
 
-        if (changed) {
-            MinExp *result =
-                makeMinExp_Apply(CPI(node), new_function, redaargs);
+    if (new_function->type == MINEXP_TYPE_LAM) {
+        MinExp *result =
+            betaMinApplyLambda(getMinExp_Lam(new_function), redaargs);
+        if (result != NULL) {
             UNPROTECT(save);
             LEAVE(betaMinApply);
             return result;
         }
+    }
 
+    if (changed) {
+        MinExp *result = makeMinExp_Apply(CPI(node), new_function, redaargs);
         UNPROTECT(save);
         LEAVE(betaMinApply);
-        return exp;
+        return result;
     }
+
+    UNPROTECT(save);
+    LEAVE(betaMinApply);
+    return exp;
 }
 
 static MinLookUp *betaMinLookUp(MinLookUp *node) {
@@ -562,11 +625,12 @@ static MinBindings *betaMinBindings(MinBindings *node) {
 
     if (changed) {
         // Create new node with modified fields
-        MinBindings *result =
-            newMinBindings(CPI(node), node->var, new_val, new_next);
-        UNPROTECT(save);
-        LEAVE(betaMinBindings);
-        return result;
+        node = newMinBindings(CPI(node), node->var, new_val, new_next);
+    }
+
+    if (beta_conversion_function != NULL &&
+        strcmp(beta_conversion_function, node->var->name) == 0) {
+        ppMinExp(new_val);
     }
 
     UNPROTECT(save);
