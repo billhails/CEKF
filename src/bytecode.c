@@ -103,14 +103,19 @@ static void addByte(ByteCodeArray *b, int code) {
     b->entries[b->size++] = code;
 }
 
-static void writeWordAt(Control loc, ByteCodeArray *b, Word word) {
-    DEBUG("%04x writeWord %04x", loc, word);
-    memcpy(&b->entries[loc], &word, sizeof(Word));
+static void writeWordAt(Control loc, ByteCodeArray *b, Word w) {
+    DEBUG("%04x writeWord %04x", loc, w);
+    memcpy(&b->entries[loc], &w, sizeof(Word));
 }
 
-static void writeIntegerAt(Control loc, ByteCodeArray *b, Integer word) {
-    DEBUG("%04x writeInt %d", loc, word);
-    memcpy(&b->entries[loc], &word, sizeof(Integer));
+static void writeShortAt(Control loc, ByteCodeArray *b, Short s) {
+    DEBUG("%04x writeShort %04x", loc, s);
+    memcpy(&b->entries[loc], &s, sizeof(Short));
+}
+
+static void writeIntegerAt(Control loc, ByteCodeArray *b, Integer i) {
+    DEBUG("%04x writeInt %d", loc, i);
+    memcpy(&b->entries[loc], &i, sizeof(Integer));
 }
 
 static void writeCharacterAt(Control loc, ByteCodeArray *b, Character c) {
@@ -132,6 +137,15 @@ static void addWord(ByteCodeArray *b, Word w) {
     reserve(b, sizeof(Word));
     writeWordAt(b->size, b, w);
     b->size += sizeof(Word);
+}
+
+__attribute__((unused)) static void addShort(ByteCodeArray *b, int w) {
+    if (w > 65535) {
+        cant_happen("maximim byte size exceeded");
+    }
+    reserve(b, sizeof(Short));
+    writeShortAt(b->size, b, w);
+    b->size += sizeof(Short);
 }
 
 static Control reserveWord(ByteCodeArray *b) {
@@ -200,12 +214,21 @@ void writeAexpAnnotatedVar(AexpAnnotatedVar *x, ByteCodeArray *b,
     switch (x->type) {
     case AEXPANNOTATEDVARTYPE_TYPE_ENV:
         addByte(b, BYTECODES_TYPE_VAR);
+#ifdef SIXTEEN_BIT_ENVIRONMENT
+        addShort(b, x->frame);
+        addShort(b, x->offset);
+#else
         addByte(b, x->frame);
         addByte(b, x->offset);
+#endif
         break;
     case AEXPANNOTATEDVARTYPE_TYPE_STACK:
         addByte(b, BYTECODES_TYPE_LVAR);
+#ifdef SIXTEEN_BIT_ENVIRONMENT
+        addShort(b, x->offset);
+#else
         addByte(b, x->offset);
+#endif
         break;
     default:
         cant_happen("unrecognised annotated var type");

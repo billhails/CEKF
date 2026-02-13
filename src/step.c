@@ -246,6 +246,10 @@ void run(ByteCodeArray B, LocationArray *L, BuiltIns *builtIns) {
 
 static inline int readCurrentByte(void) { return readByte(&state.B, &state.C); }
 
+__attribute__((unused)) static inline int readCurrentShort(void) {
+    return readShort(&state.B, &state.C);
+}
+
 static inline Character readCurrentCharacter(void) {
     return readCharacter(&state.B, &state.C);
 }
@@ -430,8 +434,8 @@ static Value vec(Value index, Value vector) {
     int i = index.val.stdint;
     Vec *vec = vector.val.vec;
     if (i < 0 || i >= (int)vec->size)
-        cant_happen("index out of range 0 - %d for vec (%d), location %04lx",
-                    vec->size, i, state.C);
+        cant_happen("index %d out of range 0 - %d for vec, location %04lx", i,
+                    vec->size - 1, state.C);
     return vec->entries[i];
 }
 
@@ -652,8 +656,13 @@ static void step() {
 
         case BYTECODES_TYPE_VAR: {
             // look up an environment variable and push it
+#ifdef SIXTEEN_BIT_ENVIRONMENT
+            int frame = readCurrentShort();
+            int offset = readCurrentShort();
+#else
             int frame = readCurrentByte();
             int offset = readCurrentByte();
+#endif
             Value v = lookUp(frame, offset);
             DEBUG("VAR [%d:%d] == %s", frame, offset, valueTypeName(v.type));
             push(v);
@@ -661,7 +670,11 @@ static void step() {
 
         case BYTECODES_TYPE_LVAR: {
             // look up a stack variable and push it
+#ifdef SIXTEEN_BIT_ENVIRONMENT
+            int offset = readCurrentShort();
+#else
             int offset = readCurrentByte();
+#endif
             Value v = peek(offset);
             DEBUG("LVAR [%d] == %s", offset, valueTypeName(v.type));
             push(v);

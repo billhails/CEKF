@@ -44,6 +44,8 @@
 typedef uint8_t Byte;
 typedef wchar_t Character;
 typedef unsigned int Word;
+typedef short int Short;
+typedef unsigned short int ShortIndex;
 typedef int Integer;
 typedef unsigned int Index;
 typedef double Double;
