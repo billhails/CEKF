@@ -66,7 +66,9 @@ static bool fargsEqAargs(SymbolList *fargs, MinExprList *aargs) {
 
 static bool etaSafeFunction(MinExp *exp) { return exp != NULL; }
 
+//////////////////////////
 // Visitor implementations
+//////////////////////////
 
 // N.B. MinExp not MinLam
 static MinExp *etaMinLam(MinExp *exp) {
@@ -125,7 +127,6 @@ static MinExprList *etaMinExprList(MinExprList *node) {
     changed = changed || (new_next != node->next);
 
     if (changed) {
-        // Create new node with modified fields
         MinExprList *result = newMinExprList(CPI(node), new_exp, new_next);
         UNPROTECT(save);
         LEAVE(etaMinExprList);
@@ -145,7 +146,6 @@ static MinPrimApp *etaMinPrimApp(MinPrimApp *node) {
     }
 
     bool changed = false;
-    // Pass through type (type: MinPrimOp, not memory-managed)
     MinExp *new_exp1 = etaMinExp(node->exp1);
     int save = PROTECT(new_exp1);
     changed = changed || (new_exp1 != node->exp1);
@@ -154,7 +154,6 @@ static MinPrimApp *etaMinPrimApp(MinPrimApp *node) {
     changed = changed || (new_exp2 != node->exp2);
 
     if (changed) {
-        // Create new node with modified fields
         MinPrimApp *result =
             newMinPrimApp(CPI(node), node->type, new_exp1, new_exp2);
         UNPROTECT(save);
@@ -183,7 +182,6 @@ static MinApply *etaMinApply(MinApply *node) {
     changed = changed || (new_args != node->args);
 
     if (changed) {
-        // Create new node with modified fields
         MinApply *result = newMinApply(CPI(node), new_function, new_args);
         UNPROTECT(save);
         LEAVE(etaMinApply);
@@ -433,7 +431,6 @@ static MinBindings *etaMinBindings(MinBindings *node) {
     changed = changed || (new_next != node->next);
 
     if (changed) {
-        // Create new node with modified fields
         MinBindings *result =
             newMinBindings(CPI(node), node->var, new_val, new_next);
         UNPROTECT(save);
@@ -462,7 +459,6 @@ static MinAmb *etaMinAmb(MinAmb *node) {
     changed = changed || (new_right != node->right);
 
     if (changed) {
-        // Create new node with modified fields
         MinAmb *result = newMinAmb(CPI(node), new_left, new_right);
         UNPROTECT(save);
         LEAVE(etaMinAmb);
@@ -486,7 +482,6 @@ MinExp *etaMinExp(MinExp *node) {
 
     switch (node->type) {
     case MINEXP_TYPE_AMB: {
-        // MinAmb
         MinAmb *variant = getMinExp_Amb(node);
         MinAmb *new_variant = etaMinAmb(variant);
         if (new_variant != variant) {
@@ -496,7 +491,6 @@ MinExp *etaMinExp(MinExp *node) {
         break;
     }
     case MINEXP_TYPE_APPLY: {
-        // MinApply
         MinApply *variant = getMinExp_Apply(node);
         MinApply *new_variant = etaMinApply(variant);
         if (new_variant != variant) {
@@ -506,7 +500,6 @@ MinExp *etaMinExp(MinExp *node) {
         break;
     }
     case MINEXP_TYPE_ARGS: {
-        // MinExprList
         MinExprList *variant = getMinExp_Args(node);
         MinExprList *new_variant = etaMinExprList(variant);
         if (new_variant != variant) {
@@ -516,15 +509,12 @@ MinExp *etaMinExp(MinExp *node) {
         break;
     }
     case MINEXP_TYPE_BACK: {
-        // void_ptr
         break;
     }
     case MINEXP_TYPE_BIGINTEGER: {
-        // MaybeBigInt
         break;
     }
     case MINEXP_TYPE_BINDINGS: {
-        // MinBindings
         MinBindings *variant = getMinExp_Bindings(node);
         MinBindings *new_variant = etaMinBindings(variant);
         if (new_variant != variant) {
@@ -534,7 +524,6 @@ MinExp *etaMinExp(MinExp *node) {
         break;
     }
     case MINEXP_TYPE_CALLCC: {
-        // MinExp
         MinExp *variant = getMinExp_CallCC(node);
         MinExp *new_variant = etaMinExp(variant);
         if (new_variant != variant) {
@@ -544,11 +533,9 @@ MinExp *etaMinExp(MinExp *node) {
         break;
     }
     case MINEXP_TYPE_CHARACTER: {
-        // character
         break;
     }
     case MINEXP_TYPE_COND: {
-        // MinCond
         MinCond *variant = getMinExp_Cond(node);
         MinCond *new_variant = etaMinCond(variant);
         if (new_variant != variant) {
@@ -558,15 +545,12 @@ MinExp *etaMinExp(MinExp *node) {
         break;
     }
     case MINEXP_TYPE_ENV: {
-        // void_ptr
         break;
     }
     case MINEXP_TYPE_ERROR: {
-        // void_ptr
         break;
     }
     case MINEXP_TYPE_IFF: {
-        // MinIff
         MinIff *variant = getMinExp_Iff(node);
         MinIff *new_variant = etaMinIff(variant);
         if (new_variant != variant) {
@@ -576,12 +560,10 @@ MinExp *etaMinExp(MinExp *node) {
         break;
     }
     case MINEXP_TYPE_LAM: {
-        // MinLam
         result = etaMinLam(node);
         break;
     }
     case MINEXP_TYPE_LETREC: {
-        // MinLetRec
         MinLetRec *variant = getMinExp_LetRec(node);
         MinLetRec *new_variant = etaMinLetRec(variant);
         if (new_variant != variant) {
@@ -591,7 +573,6 @@ MinExp *etaMinExp(MinExp *node) {
         break;
     }
     case MINEXP_TYPE_LOOKUP: {
-        // MinLookUp
         MinLookUp *variant = getMinExp_LookUp(node);
         MinLookUp *new_variant = etaMinLookUp(variant);
         if (new_variant != variant) {
@@ -601,7 +582,6 @@ MinExp *etaMinExp(MinExp *node) {
         break;
     }
     case MINEXP_TYPE_MAKEVEC: {
-        // MinExprList
         MinExprList *variant = getMinExp_MakeVec(node);
         MinExprList *new_variant = etaMinExprList(variant);
         if (new_variant != variant) {
@@ -611,7 +591,6 @@ MinExp *etaMinExp(MinExp *node) {
         break;
     }
     case MINEXP_TYPE_MATCH: {
-        // MinMatch
         MinMatch *variant = getMinExp_Match(node);
         MinMatch *new_variant = etaMinMatch(variant);
         if (new_variant != variant) {
@@ -621,7 +600,6 @@ MinExp *etaMinExp(MinExp *node) {
         break;
     }
     case MINEXP_TYPE_NAMESPACES: {
-        // MinNameSpaceArray
         MinNameSpaceArray *variant = getMinExp_NameSpaces(node);
         MinNameSpaceArray *new_variant = etaMinNameSpaceArray(variant);
         if (new_variant != variant) {
@@ -631,7 +609,6 @@ MinExp *etaMinExp(MinExp *node) {
         break;
     }
     case MINEXP_TYPE_PRIM: {
-        // MinPrimApp
         MinPrimApp *variant = getMinExp_Prim(node);
         MinPrimApp *new_variant = etaMinPrimApp(variant);
         if (new_variant != variant) {
@@ -641,7 +618,6 @@ MinExp *etaMinExp(MinExp *node) {
         break;
     }
     case MINEXP_TYPE_SEQUENCE: {
-        // MinExprList
         MinExprList *variant = getMinExp_Sequence(node);
         MinExprList *new_variant = etaMinExprList(variant);
         if (new_variant != variant) {
@@ -651,11 +627,9 @@ MinExp *etaMinExp(MinExp *node) {
         break;
     }
     case MINEXP_TYPE_STDINT: {
-        // int
         break;
     }
     case MINEXP_TYPE_VAR: {
-        // HashSymbol
         break;
     }
     default:
@@ -679,7 +653,6 @@ static MinCondCases *etaMinCondCases(MinCondCases *node) {
 
     switch (node->type) {
     case MINCONDCASES_TYPE_INTEGERS: {
-        // MinIntCondCases
         MinIntCondCases *variant = getMinCondCases_Integers(node);
         MinIntCondCases *new_variant = etaMinIntCondCases(variant);
         if (new_variant != variant) {
@@ -689,7 +662,6 @@ static MinCondCases *etaMinCondCases(MinCondCases *node) {
         break;
     }
     case MINCONDCASES_TYPE_CHARACTERS: {
-        // MinCharCondCases
         MinCharCondCases *variant = getMinCondCases_Characters(node);
         MinCharCondCases *new_variant = etaMinCharCondCases(variant);
         if (new_variant != variant) {
