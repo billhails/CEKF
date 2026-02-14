@@ -4,6 +4,8 @@ namespace
 
 link "minexpr.fn" as M;
 link "../listutils.fn" as list;
+import list operator "_|>_"; // map
+import list operator "_&&_"; // (#a -> #b) -> (#c -> #d) -> #(#a, #c) -> #(#b, #d)
 
 fn simplify (e) {
     let
@@ -205,7 +207,7 @@ fn fold {
         // apply(expr, list(expr))
         {
         let f = fold(fun);
-            a = list.map(fold, args);
+            a = args |> fold;
         in
             switch (f) {
                 (M.primop(_)) {
@@ -236,11 +238,7 @@ fn fold {
 
     (M.cond_expr(test, branches)) {
         // cond_expr(expr, list(#(expr, expr)))
-        let #(vals, results) = list.unzip(branches);
-        in
-            M.cond_expr(fold(test),
-                        list.zip(list.map(fold, vals),
-                                list.map(fold, results)))
+        M.cond_expr(fold(test), branches |> fold && fold)
     }
 
     (M.if_expr(exprc, exprt, exprf)) {
@@ -268,11 +266,7 @@ fn fold {
 
     (M.letrec_expr(bindings, expr)) {
         // letrec_expr(list(#(string, expr)), expr)
-        let #(vars, exprs) = list.unzip(bindings);
-            newexprs = list.map(fold, exprs);
-            newbindings = list.zip(vars, newexprs);
-        in
-            M.letrec_expr(newbindings, fold(expr))
+        M.letrec_expr(bindings |> identity && fold, fold(expr))
     }
 
     (M.lookup(name, index, expr)) {
@@ -282,25 +276,22 @@ fn fold {
 
     (M.make_vec(size, args)) {
         // make_vec(number, list(expr))
-        M.make_vec(size, list.map(fold, args))
+        M.make_vec(size, args |> fold)
     }
 
     (M.match_cases(test, cases)) {
         // match_cases(expr, list(#(list(number), expr)))
-        let #(vals, results) = list.unzip(cases);
-        in
-            M.match_cases(fold(test),
-                        list.zip(vals, list.map(fold, results)))
+        M.match_cases(fold(test), cases |> identity && fold)
     }
 
     (M.namespaces(exprs)) {
         // namespaces(list(expr))
-        M.namespaces(list.map(fold, exprs))
+        M.namespaces(exprs |> fold)
     }
 
     (M.sequence(exprs)) {
         // sequence(list(expr))
-        M.sequence(list.map(fold, exprs))
+        M.sequence(exprs |> fold)
     }
 
     (x) {
