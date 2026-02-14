@@ -176,6 +176,12 @@ For detailed information on specific compiler stages, see:
 - [anf.md](../docs/agent/anf.md) - A-Normal Form conversion
 - [language-syntax.md](../docs/agent/language-syntax.md) - F♮ language reference
 
+## Rewrite Prototyping
+
+For guidance on the self-hosting/prototyping pipeline in `fn/rewrite`, including `test_harness.fn`, pass ordering, and `samples.fn` usage, see:
+
+- [rewrite-self-hosting-guide.md](../docs/agents/rewrite-self-hosting-guide.md)
+
 ## When Reading Code
 
 - Start at `src/main.c` for overall flow

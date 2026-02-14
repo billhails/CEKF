@@ -69,10 +69,20 @@ class InlineDiscriminatedUnion(DiscriminatedUnion):
         return []
 
     def printCopyDeclaration(self, catalog):
-        pass
+        c = self.comment('printCopyDeclaration')
+        decl = self.getCopySignature(catalog)
+        print(f"{decl}; {c}")
 
     def printCopyFunction(self, catalog):
-        pass
+        c = self.comment('printCopyFunction')
+        decl = self.getCopySignature(catalog)
+        myName = self.getName()
+        print(f"/**")
+        print(f" * Copies a {myName} union (returns by value).")
+        print(f" */")
+        print(f"{decl} {{ {c}")
+        print(f"    return o; {c}")
+        print(f"}} {c}\n")
 
     def generateVisitorDecl(self):
         """Generate forward declaration for union visitor (dispatcher + variants)"""

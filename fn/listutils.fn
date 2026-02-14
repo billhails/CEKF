@@ -276,6 +276,11 @@ fn pairmap(l, r) {
     fn (#(ls, rs)) { #(l(ls), r(rs)) }
 }
 
+// "&&" takes two functions and returns a function that accepts a 2-tuple, applies
+// the first function to the first element and the second function to the second
+// element, and returns a 2-tuple of the results. It is particularily useful for
+// mapping over a zipped list without having to unzip and re-zip.
+// example: zipped |> identity && add(2)
 export operator "_&&_" left 9 pairmap;
 
 // last: list(#a) -> #a
