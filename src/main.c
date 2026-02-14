@@ -153,7 +153,7 @@ static void usage(char *prog, int status) {
         "alpha-conversion.\n"
 #ifdef BETA_REDUCTION
         "    -b<function>\n"
-        "    --dump-beta=<function>  Display the intermediate code after "
+        "    --dump-beta=<function>   Display the intermediate code after "
         "beta-conversion.\n"
 #endif
         "    --dump-anf               Display the generated ANF.\n"
@@ -597,11 +597,13 @@ int main(int argc, char *argv[]) {
 #ifdef ETA_REDUCTION
         minExp = etaMinExp(minExp);
         REPLACE_PROTECT(save2, minExp);
+#ifdef BETA_REDUCTION
+        minExp = betaMinExp(minExp); // second pass.
+        REPLACE_PROTECT(save2, minExp);
+#endif
 #endif
 
 #ifdef BETA_REDUCTION
-        minExp = betaMinExp(minExp);
-        REPLACE_PROTECT(save2, minExp);
         if (beta_flag) {
             ppMinExp(minExp);
             eprintf("\n");

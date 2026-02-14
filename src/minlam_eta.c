@@ -42,7 +42,6 @@ static MinIntCondCases *etaMinIntCondCases(MinIntCondCases *node);
 static MinCharCondCases *etaMinCharCondCases(MinCharCondCases *node);
 static MinMatch *etaMinMatch(MinMatch *node);
 static MinMatchList *etaMinMatchList(MinMatchList *node);
-static MinIntList *etaMinIntList(MinIntList *node);
 static MinLetRec *etaMinLetRec(MinLetRec *node);
 static MinBindings *etaMinBindings(MinBindings *node);
 static MinAmb *etaMinAmb(MinAmb *node);
@@ -79,7 +78,7 @@ static MinExp *etaMinLam(MinExp *exp) {
         return NULL;
     }
 
-    // (λ.x (f x))) => f, where x is not free in f
+    // η(λ.x (f x))) => ηf, where x is not free in f
     if (lambda->exp != NULL && isMinExp_Apply(lambda->exp)) {
         MinApply *apply = getMinExp_Apply(lambda->exp); // (f x)
         if (etaSafeFunction(apply->function) &&
@@ -87,7 +86,7 @@ static MinExp *etaMinLam(MinExp *exp) {
             SymbolSet *symbols = symbolListToSet(lambda->args);
             int save = PROTECT(symbols);
             if (!occursMinExp(apply->function, symbols)) {
-                MinExp *result = etaMinExp(apply->function); // f
+                MinExp *result = etaMinExp(apply->function); // ηf
                 UNPROTECT(save);
                 LEAVE(etaMinLam);
                 return result;
@@ -96,6 +95,7 @@ static MinExp *etaMinLam(MinExp *exp) {
         }
     }
 
+    // η(λ.x (f x))) => (λ.x (ηf x)) otherwise
     MinExp *body = etaMinExp(lambda->exp);
     if (body != lambda->exp) {
         int save = PROTECT(body);
@@ -238,7 +238,6 @@ static MinIff *etaMinIff(MinIff *node) {
     changed = changed || (new_alternative != node->alternative);
 
     if (changed) {
-        // Create new node with modified fields
         MinIff *result = newMinIff(CPI(node), new_condition, new_consequent,
                                    new_alternative);
         UNPROTECT(save);
@@ -267,7 +266,6 @@ static MinCond *etaMinCond(MinCond *node) {
     changed = changed || (new_cases != node->cases);
 
     if (changed) {
-        // Create new node with modified fields
         MinCond *result = newMinCond(CPI(node), new_value, new_cases);
         UNPROTECT(save);
         LEAVE(etaMinCond);
@@ -287,7 +285,6 @@ static MinIntCondCases *etaMinIntCondCases(MinIntCondCases *node) {
     }
 
     bool changed = false;
-    // Pass through constant (type: MaybeBigInt, not memory-managed)
     MinExp *new_body = etaMinExp(node->body);
     int save = PROTECT(new_body);
     changed = changed || (new_body != node->body);
@@ -296,7 +293,6 @@ static MinIntCondCases *etaMinIntCondCases(MinIntCondCases *node) {
     changed = changed || (new_next != node->next);
 
     if (changed) {
-        // Create new node with modified fields
         MinIntCondCases *result =
             newMinIntCondCases(CPI(node), node->constant, new_body, new_next);
         UNPROTECT(save);
@@ -317,7 +313,6 @@ static MinCharCondCases *etaMinCharCondCases(MinCharCondCases *node) {
     }
 
     bool changed = false;
-    // Pass through constant (type: character, not memory-managed)
     MinExp *new_body = etaMinExp(node->body);
     int save = PROTECT(new_body);
     changed = changed || (new_body != node->body);
@@ -326,7 +321,6 @@ static MinCharCondCases *etaMinCharCondCases(MinCharCondCases *node) {
     changed = changed || (new_next != node->next);
 
     if (changed) {
-        // Create new node with modified fields
         MinCharCondCases *result =
             newMinCharCondCases(CPI(node), node->constant, new_body, new_next);
         UNPROTECT(save);
@@ -355,7 +349,6 @@ static MinMatch *etaMinMatch(MinMatch *node) {
     changed = changed || (new_cases != node->cases);
 
     if (changed) {
-        // Create new node with modified fields
         MinMatch *result = newMinMatch(CPI(node), new_index, new_cases);
         UNPROTECT(save);
         LEAVE(etaMinMatch);
@@ -375,20 +368,16 @@ static MinMatchList *etaMinMatchList(MinMatchList *node) {
     }
 
     bool changed = false;
-    MinIntList *new_matches = etaMinIntList(node->matches);
-    int save = PROTECT(new_matches);
-    changed = changed || (new_matches != node->matches);
     MinExp *new_body = etaMinExp(node->body);
-    PROTECT(new_body);
+    int save = PROTECT(new_body);
     changed = changed || (new_body != node->body);
     MinMatchList *new_next = etaMinMatchList(node->next);
     PROTECT(new_next);
     changed = changed || (new_next != node->next);
 
     if (changed) {
-        // Create new node with modified fields
         MinMatchList *result =
-            newMinMatchList(CPI(node), new_matches, new_body, new_next);
+            newMinMatchList(CPI(node), node->matches, new_body, new_next);
         UNPROTECT(save);
         LEAVE(etaMinMatchList);
         return result;
@@ -396,32 +385,6 @@ static MinMatchList *etaMinMatchList(MinMatchList *node) {
 
     UNPROTECT(save);
     LEAVE(etaMinMatchList);
-    return node;
-}
-
-static MinIntList *etaMinIntList(MinIntList *node) {
-    ENTER(etaMinIntList);
-    if (node == NULL) {
-        LEAVE(etaMinIntList);
-        return NULL;
-    }
-
-    bool changed = false;
-    // Pass through item (type: int, not memory-managed)
-    MinIntList *new_next = etaMinIntList(node->next);
-    int save = PROTECT(new_next);
-    changed = changed || (new_next != node->next);
-
-    if (changed) {
-        // Create new node with modified fields
-        MinIntList *result = newMinIntList(CPI(node), node->item, new_next);
-        UNPROTECT(save);
-        LEAVE(etaMinIntList);
-        return result;
-    }
-
-    UNPROTECT(save);
-    LEAVE(etaMinIntList);
     return node;
 }
 
@@ -441,7 +404,6 @@ static MinLetRec *etaMinLetRec(MinLetRec *node) {
     changed = changed || (new_body != node->body);
 
     if (changed) {
-        // Create new node with modified fields
         MinLetRec *result = newMinLetRec(CPI(node), new_bindings, new_body);
         UNPROTECT(save);
         LEAVE(etaMinLetRec);

@@ -18,6 +18,9 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include "minlam.h"
+#include <stdbool.h>
+
 bool occursMinExp(MinExp *, SymbolSet *);
 
 #endif

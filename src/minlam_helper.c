@@ -1,5 +1,3 @@
-#ifndef cekf_minlam_helper_h
-#define cekf_minlam_helper_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2026  Bill Hails
@@ -18,9 +16,16 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "minlam.h"
-#include "utils.h"
+#include "minlam_helper.h"
 
-SymbolList *minBindingsToSymbolList(MinBindings *bindings);
+SymbolList *minBindingsToSymbolList(MinBindings *bindings) {
+    if (bindings == NULL) {
+        return NULL;
+    }
 
-#endif
+    SymbolList *next = minBindingsToSymbolList(bindings->next);
+    int save = PROTECT(next);
+    SymbolList *this = newSymbolList(CPI(bindings), bindings->var, next);
+    UNPROTECT(save);
+    return this;
+}

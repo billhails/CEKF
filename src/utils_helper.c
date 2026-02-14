@@ -259,6 +259,27 @@ bool allSymbolsInSet(SymbolList *vars, SymbolSet *symbols) {
 }
 
 /**
+ * @brief Return all symbols in the set that are not in the list
+ *
+ * @param vars The list of symbols to check.
+ * @param symbols The set of symbols.
+ * @return A new set of symbols that are in symbols but not in vars.
+ */
+SymbolSet *symbolsNotInList(SymbolList *vars, SymbolSet *symbols) {
+    SymbolSet *new = newSymbolSet();
+    int save = PROTECT(new);
+    Index i = 0;
+    HashSymbol *current;
+    while ((current = iterateSymbolSet(symbols, &i)) != NULL) {
+        if (!symbolInList(current, vars)) {
+            setSymbolSet(new, current);
+        }
+    }
+    UNPROTECT(save);
+    return new;
+}
+
+/**
  * @brief The union of two sets of symbols.
  * @param a The first set of symbols.
  * @param b The second set of symbols.

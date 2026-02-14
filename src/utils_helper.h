@@ -34,6 +34,7 @@ SymbolSet *symbolListToSet(SymbolList *list);
 SymbolList *symbolSetToList(ParserInfo PI, SymbolSet *set);
 SymbolSet *excludeSymbol(HashSymbol *var, SymbolSet *symbols);
 SymbolSet *copySymbolSet(SymbolSet *symbols);
+SymbolSet *symbolsNotInList(SymbolList *vars, SymbolSet *symbols);
 bool symbolInList(HashSymbol *var, SymbolList *vars);
 SymbolSet *excludeSymbols(SymbolList *vars, SymbolSet *symbols);
 bool anySymbolInSet(SymbolList *vars, SymbolSet *symbols);

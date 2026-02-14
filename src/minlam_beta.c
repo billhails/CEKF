@@ -32,7 +32,6 @@
 #include "debugging_off.h"
 #endif
 
-// Forward declarations
 static MinLam *betaMinLam(MinLam *node);
 static MinExprList *betaMinExprList(MinExprList *node);
 static MinPrimApp *betaMinPrimApp(MinPrimApp *node);
@@ -124,7 +123,10 @@ static bool isIdentityLam(MinLam *lam) {
     return getMinExp_Var(lam->exp) == lam->args->symbol;
 }
 
+//////////////////////////
 // Visitor implementations
+//////////////////////////
+
 static MinLam *betaMinLam(MinLam *node) {
     ENTER(betaMinLam);
     if (node == NULL) {
@@ -141,7 +143,6 @@ static MinLam *betaMinLam(MinLam *node) {
     changed = changed || (new_exp != node->exp);
 
     if (changed) {
-        // Create new node with modified fields
         MinLam *result = newMinLam(CPI(node), new_args, new_exp);
         UNPROTECT(save);
         LEAVE(betaMinLam);
@@ -169,7 +170,6 @@ static MinExprList *betaMinExprList(MinExprList *node) {
     changed = changed || (new_next != node->next);
 
     if (changed) {
-        // Create new node with modified fields
         MinExprList *result = newMinExprList(CPI(node), new_exp, new_next);
         UNPROTECT(save);
         LEAVE(betaMinExprList);
@@ -189,7 +189,6 @@ static MinPrimApp *betaMinPrimApp(MinPrimApp *node) {
     }
 
     bool changed = false;
-    // Pass through type (type: MinPrimOp, not memory-managed)
     MinExp *new_exp1 = betaMinExp(node->exp1);
     int save = PROTECT(new_exp1);
     changed = changed || (new_exp1 != node->exp1);
@@ -198,7 +197,6 @@ static MinPrimApp *betaMinPrimApp(MinPrimApp *node) {
     changed = changed || (new_exp2 != node->exp2);
 
     if (changed) {
-        // Create new node with modified fields
         MinPrimApp *result =
             newMinPrimApp(CPI(node), node->type, new_exp1, new_exp2);
         UNPROTECT(save);
@@ -385,13 +383,11 @@ static MinLookUp *betaMinLookUp(MinLookUp *node) {
     }
 
     bool changed = false;
-    // Pass through nsId (type: int, not memory-managed)
     MinExp *new_exp = betaMinExp(node->exp);
     int save = PROTECT(new_exp);
     changed = changed || (new_exp != node->exp);
 
     if (changed) {
-        // Create new node with modified fields
         MinLookUp *result = newMinLookUp(CPI(node), node->nsId, new_exp);
         UNPROTECT(save);
         LEAVE(betaMinLookUp);
@@ -422,7 +418,6 @@ static MinIff *betaMinIff(MinIff *node) {
     changed = changed || (new_alternative != node->alternative);
 
     if (changed) {
-        // Create new node with modified fields
         MinIff *result = newMinIff(CPI(node), new_condition, new_consequent,
                                    new_alternative);
         UNPROTECT(save);
@@ -451,7 +446,6 @@ static MinCond *betaMinCond(MinCond *node) {
     changed = changed || (new_cases != node->cases);
 
     if (changed) {
-        // Create new node with modified fields
         MinCond *result = newMinCond(CPI(node), new_value, new_cases);
         UNPROTECT(save);
         LEAVE(betaMinCond);
@@ -471,7 +465,6 @@ static MinIntCondCases *betaMinIntCondCases(MinIntCondCases *node) {
     }
 
     bool changed = false;
-    // Pass through constant (type: MaybeBigInt, not memory-managed)
     MinExp *new_body = betaMinExp(node->body);
     int save = PROTECT(new_body);
     changed = changed || (new_body != node->body);
@@ -480,7 +473,6 @@ static MinIntCondCases *betaMinIntCondCases(MinIntCondCases *node) {
     changed = changed || (new_next != node->next);
 
     if (changed) {
-        // Create new node with modified fields
         MinIntCondCases *result =
             newMinIntCondCases(CPI(node), node->constant, new_body, new_next);
         UNPROTECT(save);
@@ -501,7 +493,6 @@ static MinCharCondCases *betaMinCharCondCases(MinCharCondCases *node) {
     }
 
     bool changed = false;
-    // Pass through constant (type: character, not memory-managed)
     MinExp *new_body = betaMinExp(node->body);
     int save = PROTECT(new_body);
     changed = changed || (new_body != node->body);
@@ -510,7 +501,6 @@ static MinCharCondCases *betaMinCharCondCases(MinCharCondCases *node) {
     changed = changed || (new_next != node->next);
 
     if (changed) {
-        // Create new node with modified fields
         MinCharCondCases *result =
             newMinCharCondCases(CPI(node), node->constant, new_body, new_next);
         UNPROTECT(save);
@@ -539,7 +529,6 @@ static MinMatch *betaMinMatch(MinMatch *node) {
     changed = changed || (new_cases != node->cases);
 
     if (changed) {
-        // Create new node with modified fields
         MinMatch *result = newMinMatch(CPI(node), new_index, new_cases);
         UNPROTECT(save);
         LEAVE(betaMinMatch);
@@ -570,7 +559,6 @@ static MinMatchList *betaMinMatchList(MinMatchList *node) {
     changed = changed || (new_next != node->next);
 
     if (changed) {
-        // Create new node with modified fields
         MinMatchList *result =
             newMinMatchList(CPI(node), new_matches, new_body, new_next);
         UNPROTECT(save);
@@ -591,13 +579,11 @@ static MinIntList *betaMinIntList(MinIntList *node) {
     }
 
     bool changed = false;
-    // Pass through item (type: int, not memory-managed)
     MinIntList *new_next = betaMinIntList(node->next);
     int save = PROTECT(new_next);
     changed = changed || (new_next != node->next);
 
     if (changed) {
-        // Create new node with modified fields
         MinIntList *result = newMinIntList(CPI(node), node->item, new_next);
         UNPROTECT(save);
         LEAVE(betaMinIntList);
@@ -625,7 +611,6 @@ static MinLetRec *betaMinLetRec(MinLetRec *node) {
     changed = changed || (new_body != node->body);
 
     if (changed) {
-        // Create new node with modified fields
         MinLetRec *result = newMinLetRec(CPI(node), new_bindings, new_body);
         UNPROTECT(save);
         LEAVE(betaMinLetRec);
@@ -645,7 +630,6 @@ static MinBindings *betaMinBindings(MinBindings *node) {
     }
 
     bool changed = false;
-    // Pass through var (type: HashSymbol, not memory-managed)
     MinExp *new_val = betaMinExp(node->val);
     int save = PROTECT(new_val);
     changed = changed || (new_val != node->val);
@@ -654,7 +638,6 @@ static MinBindings *betaMinBindings(MinBindings *node) {
     changed = changed || (new_next != node->next);
 
     if (changed) {
-        // Create new node with modified fields
         node = newMinBindings(CPI(node), node->var, new_val, new_next);
     }
 
@@ -684,7 +667,6 @@ static MinAmb *betaMinAmb(MinAmb *node) {
     changed = changed || (new_right != node->right);
 
     if (changed) {
-        // Create new node with modified fields
         MinAmb *result = newMinAmb(CPI(node), new_left, new_right);
         UNPROTECT(save);
         LEAVE(betaMinAmb);
@@ -715,7 +697,6 @@ static MinAlphaEnv *betaMinAlphaEnv(MinAlphaEnv *node) {
     changed = changed || (new_nameSpaces != node->nameSpaces);
 
     if (changed) {
-        // Create new node with modified fields
         MinAlphaEnv *result = newMinAlphaEnv(new_next);
         result->alphaTable = new_alphaTable;
         result->nameSpaces = new_nameSpaces;
@@ -741,7 +722,6 @@ MinExp *betaMinExp(MinExp *node) {
 
     switch (node->type) {
     case MINEXP_TYPE_AMB: {
-        // MinAmb
         MinAmb *variant = getMinExp_Amb(node);
         MinAmb *new_variant = betaMinAmb(variant);
         if (new_variant != variant) {
@@ -751,20 +731,16 @@ MinExp *betaMinExp(MinExp *node) {
         break;
     }
     case MINEXP_TYPE_APPLY: {
-        // MinApply
         result = betaMinApply(node);
         break;
     }
     case MINEXP_TYPE_BACK: {
-        // void_ptr
         break;
     }
     case MINEXP_TYPE_BIGINTEGER: {
-        // MaybeBigInt
         break;
     }
     case MINEXP_TYPE_CALLCC: {
-        // MinExp
         MinExp *variant = getMinExp_CallCC(node);
         MinExp *new_variant = betaMinExp(variant);
         if (new_variant != variant) {
@@ -774,11 +750,9 @@ MinExp *betaMinExp(MinExp *node) {
         break;
     }
     case MINEXP_TYPE_CHARACTER: {
-        // character
         break;
     }
     case MINEXP_TYPE_COND: {
-        // MinCond
         MinCond *variant = getMinExp_Cond(node);
         MinCond *new_variant = betaMinCond(variant);
         if (new_variant != variant) {
@@ -788,15 +762,12 @@ MinExp *betaMinExp(MinExp *node) {
         break;
     }
     case MINEXP_TYPE_ENV: {
-        // void_ptr
         break;
     }
     case MINEXP_TYPE_ERROR: {
-        // void_ptr
         break;
     }
     case MINEXP_TYPE_IFF: {
-        // MinIff
         MinIff *variant = getMinExp_Iff(node);
         MinIff *new_variant = betaMinIff(variant);
         if (new_variant != variant) {
@@ -806,7 +777,6 @@ MinExp *betaMinExp(MinExp *node) {
         break;
     }
     case MINEXP_TYPE_LAM: {
-        // MinLam
         MinLam *variant = getMinExp_Lam(node);
         MinLam *new_variant = betaMinLam(variant);
         if (new_variant != variant) {
@@ -816,7 +786,6 @@ MinExp *betaMinExp(MinExp *node) {
         break;
     }
     case MINEXP_TYPE_LETREC: {
-        // MinLetRec
         MinLetRec *variant = getMinExp_LetRec(node);
         MinLetRec *new_variant = betaMinLetRec(variant);
         if (new_variant != variant) {
@@ -826,7 +795,6 @@ MinExp *betaMinExp(MinExp *node) {
         break;
     }
     case MINEXP_TYPE_LOOKUP: {
-        // MinLookUp
         MinLookUp *variant = getMinExp_LookUp(node);
         MinLookUp *new_variant = betaMinLookUp(variant);
         if (new_variant != variant) {
@@ -836,7 +804,6 @@ MinExp *betaMinExp(MinExp *node) {
         break;
     }
     case MINEXP_TYPE_MAKEVEC: {
-        // MinExprList
         MinExprList *variant = getMinExp_MakeVec(node);
         MinExprList *new_variant = betaMinExprList(variant);
         if (new_variant != variant) {
@@ -846,7 +813,6 @@ MinExp *betaMinExp(MinExp *node) {
         break;
     }
     case MINEXP_TYPE_MATCH: {
-        // MinMatch
         MinMatch *variant = getMinExp_Match(node);
         MinMatch *new_variant = betaMinMatch(variant);
         if (new_variant != variant) {
@@ -856,7 +822,6 @@ MinExp *betaMinExp(MinExp *node) {
         break;
     }
     case MINEXP_TYPE_NAMESPACES: {
-        // MinNameSpaceArray
         MinNameSpaceArray *variant = getMinExp_NameSpaces(node);
         MinNameSpaceArray *new_variant = betaMinNameSpaceArray(variant);
         if (new_variant != variant) {
@@ -866,7 +831,6 @@ MinExp *betaMinExp(MinExp *node) {
         break;
     }
     case MINEXP_TYPE_PRIM: {
-        // MinPrimApp
         MinPrimApp *variant = getMinExp_Prim(node);
         MinPrimApp *new_variant = betaMinPrimApp(variant);
         if (new_variant != variant) {
@@ -876,7 +840,6 @@ MinExp *betaMinExp(MinExp *node) {
         break;
     }
     case MINEXP_TYPE_SEQUENCE: {
-        // MinExprList
         MinExprList *variant = getMinExp_Sequence(node);
         MinExprList *new_variant = betaMinExprList(variant);
         if (new_variant != variant) {
@@ -886,11 +849,9 @@ MinExp *betaMinExp(MinExp *node) {
         break;
     }
     case MINEXP_TYPE_STDINT: {
-        // int
         break;
     }
     case MINEXP_TYPE_VAR: {
-        // HashSymbol
         break;
     }
     default:
@@ -914,7 +875,6 @@ static MinCondCases *betaMinCondCases(MinCondCases *node) {
 
     switch (node->type) {
     case MINCONDCASES_TYPE_INTEGERS: {
-        // MinIntCondCases
         MinIntCondCases *variant = getMinCondCases_Integers(node);
         MinIntCondCases *new_variant = betaMinIntCondCases(variant);
         if (new_variant != variant) {
@@ -924,7 +884,6 @@ static MinCondCases *betaMinCondCases(MinCondCases *node) {
         break;
     }
     case MINCONDCASES_TYPE_CHARACTERS: {
-        // MinCharCondCases
         MinCharCondCases *variant = getMinCondCases_Characters(node);
         MinCharCondCases *new_variant = betaMinCharCondCases(variant);
         if (new_variant != variant) {
@@ -950,7 +909,6 @@ static SymbolMap *betaSymbolMap(SymbolMap *node) {
     }
 
 #ifdef NOTDEF
-    // Iterate over all entries for inspection/logging
     Index i = 0;
     struct HashSymbol *value;
     HashSymbol *key;
@@ -970,13 +928,11 @@ static SymbolList *betaSymbolList(SymbolList *node) {
     }
 
     bool changed = false;
-    // Pass through symbol (type: HashSymbol, not memory-managed)
     SymbolList *new_next = betaSymbolList(node->next);
     int save = PROTECT(new_next);
     changed = changed || (new_next != node->next);
 
     if (changed) {
-        // Create new node with modified fields
         SymbolList *result = newSymbolList(CPI(node), node->symbol, new_next);
         UNPROTECT(save);
         LEAVE(betaSymbolList);
@@ -999,7 +955,6 @@ static MinNameSpaceArray *betaMinNameSpaceArray(MinNameSpaceArray *node) {
     MinNameSpaceArray *result = newMinNameSpaceArray();
     int save = PROTECT(result);
 
-    // Iterate over all elements
     for (Index i = 0; i < node->size; i++) {
         struct MinExp *element = peeknMinNameSpaceArray(node, i);
         struct MinExp *new_element = betaMinExp(element);
@@ -1030,7 +985,6 @@ static MinAlphaEnvArray *betaMinAlphaEnvArray(MinAlphaEnvArray *node) {
     MinAlphaEnvArray *result = newMinAlphaEnvArray();
     int save = PROTECT(result);
 
-    // Iterate over all elements
     for (Index i = 0; i < node->size; i++) {
         struct MinAlphaEnv *element = peeknMinAlphaEnvArray(node, i);
         struct MinAlphaEnv *new_element = betaMinAlphaEnv(element);

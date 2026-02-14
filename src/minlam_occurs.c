@@ -19,10 +19,11 @@
  * Generated from src/minlam.yaml by tools/generate.py
  */
 
+#include "minlam_occurs.h"
 #include "memory.h"
 #include "minlam.h"
-
-#include "minlam_occurs.h"
+#include "minlam_helper.h"
+#include "utils_helper.h"
 
 #ifdef DEBUG_MINLAM_OCCURS
 #include "debugging_on.h"
@@ -45,11 +46,8 @@ static bool occursMinLetRec(MinLetRec *node, SymbolSet *targets);
 static bool occursMinBindings(MinBindings *node, SymbolSet *targets);
 static bool occursMinAmb(MinAmb *node, SymbolSet *targets);
 static bool occursMinCondCases(MinCondCases *node, SymbolSet *targets);
-static bool occursSymbolList(SymbolList *node, SymbolSet *targets);
 static bool occursMinNameSpaceArray(MinNameSpaceArray *node,
                                     SymbolSet *targets);
-static bool occursMinBindingsVals(MinBindings *node, SymbolSet *targets);
-static bool occursMinBindingsVars(MinBindings *node, SymbolSet *targets);
 
 // Visitor implementations
 
@@ -58,146 +56,62 @@ static bool occursMinLam(MinLam *node, SymbolSet *targets) {
         return false;
     }
 
-    if (occursSymbolList(node->args, targets)) {
-        return false; // bound here, so does not occur
+    SymbolSet *remaining = symbolsNotInList(node->args, targets);
+    int save = PROTECT(remaining);
+    if (countSymbolSet(remaining) == 0) {
+        UNPROTECT(save);
+        return false;
     }
 
-    return occursMinExp(node->exp, targets);
+    bool res = occursMinExp(node->exp, remaining);
+    UNPROTECT(save);
+    return res;
 }
 
 static bool occursMinExprList(MinExprList *node, SymbolSet *targets) {
-    if (node == NULL) {
-        return false;
-    }
-
-    if (occursMinExp(node->exp, targets)) {
-        return true;
-    }
-
-    return occursMinExprList(node->next, targets);
+    return node != NULL && (occursMinExp(node->exp, targets) ||
+                            occursMinExprList(node->next, targets));
 }
 
 static bool occursMinPrimApp(MinPrimApp *node, SymbolSet *targets) {
-    if (node == NULL) {
-        return false;
-    }
-
-    if (occursMinExp(node->exp1, targets)) {
-        return true;
-    }
-
-    return occursMinExp(node->exp2, targets);
+    return node != NULL && (occursMinExp(node->exp1, targets) ||
+                            occursMinExp(node->exp2, targets));
 }
 
 static bool occursMinApply(MinApply *node, SymbolSet *targets) {
-    if (node == NULL) {
-        return false;
-    }
-
-    if (occursMinExp(node->function, targets)) {
-        return true;
-    }
-
-    return occursMinExprList(node->args, targets);
+    return node != NULL && (occursMinExp(node->function, targets) ||
+                            occursMinExprList(node->args, targets));
 }
 
 static bool occursMinIff(MinIff *node, SymbolSet *targets) {
-    if (node == NULL) {
-        return false;
-    }
-
-    if (occursMinExp(node->condition, targets)) {
-        return true;
-    }
-
-    if (occursMinExp(node->consequent, targets)) {
-        return true;
-    }
-
-    if (occursMinExp(node->alternative, targets)) {
-        return true;
-    }
-    return false;
+    return node != NULL && (occursMinExp(node->condition, targets) ||
+                            occursMinExp(node->consequent, targets) ||
+                            occursMinExp(node->alternative, targets));
 }
 
 static bool occursMinCond(MinCond *node, SymbolSet *targets) {
-    if (node == NULL) {
-        return false;
-    }
-
-    if (occursMinExp(node->value, targets)) {
-        return true;
-    }
-
-    if (occursMinCondCases(node->cases, targets)) {
-        return true;
-    }
-
-    return false;
+    return node != NULL && (occursMinExp(node->value, targets) ||
+                            occursMinCondCases(node->cases, targets));
 }
 
 static bool occursMinIntCondCases(MinIntCondCases *node, SymbolSet *targets) {
-    if (node == NULL) {
-        return false;
-    }
-
-    if (occursMinExp(node->body, targets)) {
-        return true;
-    }
-
-    if (occursMinIntCondCases(node->next, targets)) {
-        return true;
-    }
-
-    return false;
+    return node != NULL && (occursMinExp(node->body, targets) ||
+                            occursMinIntCondCases(node->next, targets));
 }
 
 static bool occursMinCharCondCases(MinCharCondCases *node, SymbolSet *targets) {
-    ENTER(occursMinCharCondCases);
-    if (node == NULL) {
-        return false;
-    }
-
-    if (occursMinExp(node->body, targets)) {
-        return true;
-    }
-
-    if (occursMinCharCondCases(node->next, targets)) {
-        return true;
-    }
-
-    return false;
+    return node != NULL && (occursMinExp(node->body, targets) ||
+                            occursMinCharCondCases(node->next, targets));
 }
 
 static bool occursMinMatch(MinMatch *node, SymbolSet *targets) {
-    if (node == NULL) {
-        return false;
-    }
-
-    if (occursMinExp(node->index, targets)) {
-        return true;
-    }
-
-    if (occursMinMatchList(node->cases, targets)) {
-        return true;
-    }
-
-    return false;
+    return node != NULL && (occursMinExp(node->index, targets) ||
+                            occursMinMatchList(node->cases, targets));
 }
 
 static bool occursMinMatchList(MinMatchList *node, SymbolSet *targets) {
-    if (node == NULL) {
-        return false;
-    }
-
-    if (occursMinExp(node->body, targets)) {
-        return true;
-    }
-    if (occursMinMatchList(node->next, targets)) {
-        return true;
-    }
-
-    return false;
+    return node != NULL && (occursMinExp(node->body, targets) ||
+                            occursMinMatchList(node->next, targets));
 }
 
 static bool occursMinLetRec(MinLetRec *node, SymbolSet *targets) {
@@ -205,58 +119,28 @@ static bool occursMinLetRec(MinLetRec *node, SymbolSet *targets) {
         return false;
     }
 
-    if (occursMinBindings(node->bindings, targets)) {
-        return true;
+    SymbolList *vars = minBindingsToSymbolList(node->bindings);
+    int save = PROTECT(vars);
+    SymbolSet *remaining = symbolsNotInList(vars, targets);
+    PROTECT(remaining);
+    if (countSymbolSet(remaining) == 0) {
+        UNPROTECT(save);
+        return false;
     }
-    if (occursMinBindingsVars(node->bindings, targets)) {
-        return false; // bound here, so does not occur
-    }
-    return occursMinExp(node->body, targets);
+    bool res = occursMinBindings(node->bindings, remaining) ||
+               occursMinExp(node->body, remaining);
+    UNPROTECT(save);
+    return res;
 }
 
 static bool occursMinBindings(MinBindings *node, SymbolSet *targets) {
-    if (node == NULL) {
-        return false;
-    }
-
-    if (occursMinBindingsVars(node, targets)) {
-        return false; // bound here, so does not occur
-    }
-
-    return occursMinBindingsVals(node, targets);
-}
-
-static bool occursMinBindingsVars(MinBindings *node, SymbolSet *targets) {
-    if (node == NULL) {
-        return false;
-    }
-
-    if (getSymbolSet(targets, node->var)) {
-        return true;
-    }
-
-    return occursMinBindingsVars(node->next, targets);
-}
-
-static bool occursMinBindingsVals(MinBindings *node, SymbolSet *targets) {
-    if (node == NULL) {
-        return false;
-    }
-
-    if (occursMinExp(node->val, targets)) {
-        return true;
-    }
-
-    return occursMinBindingsVals(node->next, targets);
+    return node != NULL && (occursMinExp(node->val, targets) ||
+                            occursMinBindings(node->next, targets));
 }
 
 static bool occursMinAmb(MinAmb *node, SymbolSet *targets) {
-    if (node == NULL) {
-        return false;
-    }
-
-    return occursMinExp(node->left, targets) ||
-           occursMinExp(node->right, targets);
+    return node != NULL && (occursMinExp(node->left, targets) ||
+                            occursMinExp(node->right, targets));
 }
 
 /**
@@ -277,20 +161,12 @@ bool occursMinExp(MinExp *node, SymbolSet *targets) {
         MinApply *variant = getMinExp_Apply(node);
         return occursMinApply(variant, targets);
     }
-    case MINEXP_TYPE_ARGS: {
-        MinExprList *variant = getMinExp_Args(node);
-        return occursMinExprList(variant, targets);
-    }
     case MINEXP_TYPE_BACK: {
         return false;
     }
     case MINEXP_TYPE_BIGINTEGER: {
         return false;
         break;
-    }
-    case MINEXP_TYPE_BINDINGS: {
-        MinBindings *variant = getMinExp_Bindings(node);
-        return occursMinBindings(variant, targets);
     }
     case MINEXP_TYPE_CALLCC: {
         MinExp *variant = getMinExp_CallCC(node);
@@ -373,18 +249,6 @@ static bool occursMinCondCases(MinCondCases *node, SymbolSet *targets) {
     default:
         cant_happen("unrecognized MinCondCases type %d", node->type);
     }
-}
-
-static bool occursSymbolList(SymbolList *node, SymbolSet *targets) {
-    if (node == NULL) {
-        return false;
-    }
-
-    if (getSymbolSet(targets, node->symbol)) {
-        return true;
-    }
-
-    return occursSymbolList(node->next, targets);
 }
 
 static bool occursMinNameSpaceArray(MinNameSpaceArray *node,
