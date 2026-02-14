@@ -4,7 +4,7 @@ The build depends heavily on Python code generation. **Do not manually edit file
 
 ## Overview
 
-The code generator is modular: the main entry point is `tools/generate.py`, which orchestrates the `generate` Python package (in `tools/generate/`). This package contains all logic for parsing YAML schemas and generating C code for all compiler stages. Contains modules for each type of generated structure (structs, discriminated unions, hashes, arrays etc.)
+The code generator is modular: the main entry point is `tools/generate.py`, which orchestrates the `generate` Python package (in `tools/generate/`). This package contains all logic for parsing YAML schemas and generating C code for all compiler stages. It contains modules for each type of generated structure (structs, discriminated unions, hashes, arrays etc.)
 
 ## YAML Schema Structure
 
@@ -69,6 +69,16 @@ hashes:
 ```
 
 The yaml may also contain an `inline` section which in turn can contain arrays, unions and structs. These inline variants are not separately memory managed (no GC header), are often passed by value, and may be used as components of structs without the extra pointer indirection.
+
+The yaml may also contain an `external` section:
+
+```yaml
+external:
+- !include tc.yaml
+- !include utils.yaml
+```
+
+External includes are loaded into the same `Catalog`, so cross-stage type information is available during generation. These entries are flagged as external and are not emitted as local generated definitions.
 
 ## Primitives (`src/primitives.yaml`)
 
@@ -139,6 +149,23 @@ For each struct/union, the code generator produces:
 4. **Include headers** in your C code: `#include "<stage>.h"`
 5. **Use generated functions** - no manual memory management code needed
 
+## Manual Visitor Boilerplate
+
+Visitor generation is primarily a manual scaffolding workflow for creating an initial C file that is then edited by hand.
+
+Use:
+
+```bash
+python3 tools/generate.py src/<stage>.yaml visitor --target=<suffix> > generated/<stage>_<suffix>_visitor.c
+```
+
+Notes:
+
+- `target` prefixes generated function names (example: `cpsTkLamExp`).
+- The generated file includes `#include "<stage>_<suffix>.h"`; ensure that header exists before compiling.
+- Visitor output includes only non-external entities from the current stage YAML.
+- Regenerate only when re-scaffolding. Once manual edits begin, treat the visitor file as hand-maintained C code.
+
 ## Important Notes
 
 - **ParserInfo**: If `parserInfo: true`, all structs get `ParserInfo I` field for error reporting source file and line number.
@@ -146,6 +173,7 @@ For each struct/union, the code generator produces:
 - **GC Integration**: All generated `new*()` functions automatically register with GC
 - **Type safety**: Generated code includes type checking in mark/free dispatchers
 - **Documentation**: YAML `meta` blocks generate doxygen-style comments
+- **External entries**: Types from `external:` are available for references and type resolution, but code generation only emits non-external entities for the current stage.
 
 ## Adding New Structures
 
