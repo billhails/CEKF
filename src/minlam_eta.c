@@ -48,6 +48,10 @@ static MinAmb *etaMinAmb(MinAmb *node);
 static MinCondCases *etaMinCondCases(MinCondCases *node);
 static MinNameSpaceArray *etaMinNameSpaceArray(MinNameSpaceArray *node);
 static bool etaSafeFunction(MinExp *exp);
+static MinExp *etaMinBindingValue(MinExp *exp);
+static SymbolSet *etaBindingSymbols(MinBindings *node);
+
+static SymbolSet *etaLetRecSymbols = NULL;
 
 // true if aargs are all symbols and the same symbols as fargs.
 static bool fargsEqAargs(SymbolList *fargs, MinExprList *aargs) {
@@ -65,6 +69,46 @@ static bool fargsEqAargs(SymbolList *fargs, MinExprList *aargs) {
 }
 
 static bool etaSafeFunction(MinExp *exp) { return exp != NULL; }
+
+static SymbolSet *etaBindingSymbols(MinBindings *node) {
+    ENTER(etaBindingSymbols);
+    SymbolSet *symbols = newSymbolSet();
+    int save = PROTECT(symbols);
+    while (node != NULL) {
+        setSymbolSet(symbols, node->var);
+        node = node->next;
+    }
+    UNPROTECT(save);
+    LEAVE(etaBindingSymbols);
+    return symbols;
+}
+
+static MinExp *etaMinBindingValue(MinExp *exp) {
+    ENTER(etaMinBindingValue);
+    if (exp == NULL) {
+        LEAVE(etaMinBindingValue);
+        return NULL;
+    }
+
+    if (!isMinExp_Lam(exp)) {
+        LEAVE(etaMinBindingValue);
+        return exp;
+    }
+
+    MinLam *lambda = getMinExp_Lam(exp);
+    MinExp *new_body = etaMinExp(lambda->exp);
+
+    if (new_body != lambda->exp) {
+        int save = PROTECT(new_body);
+        MinExp *result = makeMinExp_Lam(CPI(lambda), lambda->args, new_body);
+        UNPROTECT(save);
+        LEAVE(etaMinBindingValue);
+        return result;
+    }
+
+    LEAVE(etaMinBindingValue);
+    return exp;
+}
 
 //////////////////////////
 // Visitor implementations
@@ -87,7 +131,10 @@ static MinExp *etaMinLam(MinExp *exp) {
             fargsEqAargs(lambda->args, apply->args)) {
             SymbolSet *symbols = symbolListToSet(lambda->args);
             int save = PROTECT(symbols);
-            if (!occursMinExp(apply->function, symbols)) {
+            bool touchesLetRec =
+                etaLetRecSymbols != NULL &&
+                occursMinExp(apply->function, etaLetRecSymbols);
+            if (!touchesLetRec && !occursMinExp(apply->function, symbols)) {
                 MinExp *result = etaMinExp(apply->function); // ηf
                 UNPROTECT(save);
                 LEAVE(etaMinLam);
@@ -393,13 +440,25 @@ static MinLetRec *etaMinLetRec(MinLetRec *node) {
         return NULL;
     }
 
+    int save = PROTECT(NULL);
+    SymbolSet *previousLetRecSymbols = etaLetRecSymbols;
+    SymbolSet *bindingSymbols = etaBindingSymbols(node->bindings);
+    PROTECT(bindingSymbols);
+    if (previousLetRecSymbols != NULL) {
+        bindingSymbols = unionSymbolSet(previousLetRecSymbols, bindingSymbols);
+        PROTECT(bindingSymbols);
+    }
+    etaLetRecSymbols = bindingSymbols;
+
     bool changed = false;
     MinBindings *new_bindings = etaMinBindings(node->bindings);
-    int save = PROTECT(new_bindings);
+    PROTECT(new_bindings);
     changed = changed || (new_bindings != node->bindings);
     MinExp *new_body = etaMinExp(node->body);
     PROTECT(new_body);
     changed = changed || (new_body != node->body);
+
+    etaLetRecSymbols = previousLetRecSymbols;
 
     if (changed) {
         MinLetRec *result = newMinLetRec(CPI(node), new_bindings, new_body);
@@ -422,8 +481,8 @@ static MinBindings *etaMinBindings(MinBindings *node) {
 
     bool changed = false;
     // LetRec bindings are scope-sensitive for later normalization/annotation.
-    // Keep binding values unchanged for now.
-    MinExp *new_val = node->val;
+    // Preserve binding shape, but allow eta reduction inside lambda bodies.
+    MinExp *new_val = etaMinBindingValue(node->val);
     int save = PROTECT(new_val);
     changed = changed || (new_val != node->val);
     MinBindings *new_next = etaMinBindings(node->next);

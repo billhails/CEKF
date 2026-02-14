@@ -3,6 +3,7 @@
 * [ANF](ANF.md) A-Normalization
 * [Arithmetic](Arithmetic.md) Notes on rational and complex arithmetic.
 * [CODEGEN](CODEGEN.md) Notes on the code generator utility.
+* [CPS COMPLETE GUIDE](CPS_COMPLETE_GUIDE.md) CPS transformation notes and optimization staging.
 * [ENV](ENV.md) Abandoned plan to have first-class environments.
 * [LEXICAL ADDRESSING](LEXICAL_ADDRESSING.md) De-Bruijn indexing for fast variable look up.
 * [MACROS](MACROS.md) Initial thoughts on a simple macro system.
