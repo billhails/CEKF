@@ -190,7 +190,7 @@ unions:
         data:
             amb: MinAmb
             apply: MinApply
-            args: MinExprList # so that ANF normalize can be uniformly typed
+            args: MinExprList # only for the alternative ANF normalize_2 path; must not appear in the real MinExp pipeline
             back: void_ptr
             bigInteger: MaybeBigInt
             bindings: MinBindings # so that ANF normalize can be uniformly typed

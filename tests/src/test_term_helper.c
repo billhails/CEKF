@@ -81,6 +81,14 @@ static void assertTermNumMapsToBig(Value value, bool imag, BigInt *expected) {
     UNPROTECT(save);
 }
 
+static void assertSmallBigIntegerLiteral(MinExp *exp, bool imag, int expected) {
+    assert(isMinExp_BigInteger(exp));
+    MaybeBigInt *mbi = getMinExp_BigInteger(exp);
+    assert(mbi->type == BI_SMALL);
+    assert(mbi->imag == imag);
+    assert(mbi->small == expected);
+}
+
 static MinExp *makeSmallBigInteger(int n, bool imag) {
     MaybeBigInt *mbi = fakeBigInt(n, imag);
     int save = PROTECT(mbi);
@@ -168,6 +176,66 @@ static void test_term_num_bigint_imag_maps_to_biginteger_big_imag(void) {
     UNPROTECT(save);
 }
 
+static void test_term_num_rational_maps_to_div_expression(void) {
+    Vec *ratio = newVec(2);
+    int save = PROTECT(ratio);
+    ratio->entries[0] = value_Stdint(3);
+    ratio->entries[1] = value_Stdint(4);
+
+    Term *term = makeTerm_Num(NULLPI, value_Rational(ratio));
+    PROTECT(term);
+    MinExp *exp = termToMinExp(term);
+    PROTECT(exp);
+
+    assert(isMinExp_Prim(exp));
+    MinPrimApp *prim = getMinExp_Prim(exp);
+    assert(prim->type == MINPRIMOP_TYPE_DIV);
+    assertSmallBigIntegerLiteral(prim->exp1, false, 3);
+    assertSmallBigIntegerLiteral(prim->exp2, false, 4);
+
+    UNPROTECT(save);
+}
+
+static void test_term_num_rational_imag_maps_to_div_expression(void) {
+    Vec *ratio = newVec(2);
+    int save = PROTECT(ratio);
+    ratio->entries[0] = value_Stdint(5);
+    ratio->entries[1] = value_Stdint(6);
+
+    Term *term = makeTerm_Num(NULLPI, value_Rational_imag(ratio));
+    PROTECT(term);
+    MinExp *exp = termToMinExp(term);
+    PROTECT(exp);
+
+    assert(isMinExp_Prim(exp));
+    MinPrimApp *prim = getMinExp_Prim(exp);
+    assert(prim->type == MINPRIMOP_TYPE_DIV);
+    assertSmallBigIntegerLiteral(prim->exp1, true, 5);
+    assertSmallBigIntegerLiteral(prim->exp2, false, 6);
+
+    UNPROTECT(save);
+}
+
+static void test_term_num_complex_maps_to_add_expression(void) {
+    Vec *complex = newVec(2);
+    int save = PROTECT(complex);
+    complex->entries[0] = value_Stdint(2);
+    complex->entries[1] = value_Stdint_imag(7);
+
+    Term *term = makeTerm_Num(NULLPI, value_Complex(complex));
+    PROTECT(term);
+    MinExp *exp = termToMinExp(term);
+    PROTECT(exp);
+
+    assert(isMinExp_Prim(exp));
+    MinPrimApp *prim = getMinExp_Prim(exp);
+    assert(prim->type == MINPRIMOP_TYPE_ADD);
+    assertSmallBigIntegerLiteral(prim->exp1, false, 2);
+    assertSmallBigIntegerLiteral(prim->exp2, true, 7);
+
+    UNPROTECT(save);
+}
+
 int main(int argc __attribute__((unused)),
          char *argv[] __attribute__((unused))) {
     initAll();
@@ -194,6 +262,12 @@ int main(int argc __attribute__((unused)),
             test_term_num_bigint_maps_to_biginteger_big);
     runTest("test_term_num_bigint_imag_maps_to_biginteger_big_imag",
             test_term_num_bigint_imag_maps_to_biginteger_big_imag);
+    runTest("test_term_num_rational_maps_to_div_expression",
+            test_term_num_rational_maps_to_div_expression);
+    runTest("test_term_num_rational_imag_maps_to_div_expression",
+            test_term_num_rational_imag_maps_to_div_expression);
+    runTest("test_term_num_complex_maps_to_add_expression",
+            test_term_num_complex_maps_to_add_expression);
 
     return 0;
 }

@@ -215,6 +215,32 @@ static bool matchDivOtherNum(Term *term, Term **other, Value *num) {
     return true;
 }
 
+static bool matchDivTerms(Term *term, Term **numerator, Term **denominator) {
+    if (!isDivTerm(term))
+        return false;
+
+    TermOp *div = getTerm_Div(term);
+    *numerator = div->left;
+    *denominator = div->right;
+    return true;
+}
+
+static bool matchMulWithFactor(Term *term, Term *factor, Term **other) {
+    if (!isMulTerm(term))
+        return false;
+
+    TermOp *mul = getTerm_Mul(term);
+    if (eqTerm(mul->left, factor)) {
+        *other = mul->right;
+        return true;
+    }
+    if (eqTerm(mul->right, factor)) {
+        *other = mul->left;
+        return true;
+    }
+    return false;
+}
+
 typedef Value (*NumericOpFn)(Value, Value);
 typedef Term *(*BuildTermOpFn)(ParserInfo, Term *, Term *);
 typedef TermOp *(*GetTermOpFn)(Term *);
@@ -280,6 +306,10 @@ static bool tryConstantFold(Term *term, TermType op, Term *left, Term *right,
 static bool tryAddIdentity(Term *term, Term *left, Term *right, Term **result) {
     int save = PROTECT(NULL);
     Term *inner = NULL;
+    Term *leftNum = NULL;
+    Term *leftDen = NULL;
+    Term *rightNum = NULL;
+    Term *rightDen = NULL;
     Value a;
     Value b;
     Value c;
@@ -304,6 +334,13 @@ static bool tryAddIdentity(Term *term, Term *left, Term *right, Term **result) {
     if (eqTerm(left, right)) {
         Term *two = NumInt(CPI(left), 2);
         RETURN_MATCH(Mul(CPI(left), two, left));
+    }
+
+    if (matchDivTerms(left, &leftNum, &leftDen) &&
+        matchDivTerms(right, &rightNum, &rightDen) &&
+        eqTerm(leftDen, rightDen)) {
+        Term *numerator = Add(CPI(term), leftNum, rightNum);
+        RETURN_MATCH(Div(CPI(term), numerator, leftDen));
     }
 
     if (isTermNum(left)) {
@@ -405,6 +442,10 @@ static bool tryAddIdentity(Term *term, Term *left, Term *right, Term **result) {
 static bool trySubIdentity(Term *term, Term *left, Term *right, Term **result) {
     int save = PROTECT(NULL);
     Term *inner = NULL;
+    Term *leftNum = NULL;
+    Term *leftDen = NULL;
+    Term *rightNum = NULL;
+    Term *rightDen = NULL;
     Value a;
     Value b;
     Term *x = NULL;
@@ -419,6 +460,13 @@ static bool trySubIdentity(Term *term, Term *left, Term *right, Term **result) {
 
     if (isZeroTerm(left) && matchSubZero(right, &inner)) {
         RETURN_MATCH(inner);
+    }
+
+    if (matchDivTerms(left, &leftNum, &leftDen) &&
+        matchDivTerms(right, &rightNum, &rightDen) &&
+        eqTerm(leftDen, rightDen)) {
+        Term *numerator = Sub(CPI(term), leftNum, rightNum);
+        RETURN_MATCH(Div(CPI(term), numerator, leftDen));
     }
 
     if (isTermNum(left)) {
@@ -678,11 +726,14 @@ static bool tryDivIdentity(Term *term, Term *left, Term *right, Term **result) {
     TermOp *outer = NULL;
     TermOp *lpow = NULL;
     TermOp *rpow = NULL;
+    TermOp *leftMul = NULL;
+    TermOp *rightMul = NULL;
     Value a;
     Value b;
     Term *x = NULL;
     Term *y = NULL;
     Term *divisor = NULL;
+    Term *other = NULL;
 
     if (isZeroTerm(left)) {
         RETURN_MATCH(NumInt(CPI(term), 0));
@@ -692,6 +743,24 @@ static bool tryDivIdentity(Term *term, Term *left, Term *right, Term **result) {
     }
     if (eqTerm(left, right)) {
         RETURN_MATCH(NumInt(CPI(term), 1));
+    }
+
+    if (isMulTerm(left) && isMulTerm(right)) {
+        leftMul = getTerm_Mul(left);
+        rightMul = getTerm_Mul(right);
+
+        if (matchMulWithFactor(right, leftMul->left, &other)) {
+            RETURN_MATCH(Div(CPI(term), leftMul->right, other));
+        }
+        if (matchMulWithFactor(right, leftMul->right, &other)) {
+            RETURN_MATCH(Div(CPI(term), leftMul->left, other));
+        }
+        if (matchMulWithFactor(left, rightMul->left, &other)) {
+            RETURN_MATCH(Div(CPI(term), other, rightMul->right));
+        }
+        if (matchMulWithFactor(left, rightMul->right, &other)) {
+            RETURN_MATCH(Div(CPI(term), other, rightMul->left));
+        }
     }
 
     if (matchDivOtherNum(left, &x, &a) && isTermNum(right)) {

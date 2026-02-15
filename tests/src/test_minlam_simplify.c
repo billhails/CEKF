@@ -522,6 +522,34 @@ static void test_div_diva_x_by_divb_y_to_mul_ab_divyx(void) {
     UNPROTECT(save);
 }
 
+static void test_add_div_same_denominator_combines(void) {
+    int save = PROTECT(NULL);
+    assertSimplifiesToExpr(Add(Div(Vx(), N(2)), Div(Vy(), N(2))),
+                           Div(Add(Vx(), Vy()), N(2)));
+    UNPROTECT(save);
+}
+
+static void test_sub_div_same_denominator_combines(void) {
+    int save = PROTECT(NULL);
+    assertSimplifiesToExpr(Sub(Div(Vx(), N(2)), Div(Vy(), N(2))),
+                           Div(Sub(Vx(), Vy()), N(2)));
+    UNPROTECT(save);
+}
+
+static void test_add_div_same_symbolic_denominator_combines(void) {
+    int save = PROTECT(NULL);
+    assertSimplifiesToExpr(Add(Div(Vx(), V("d")), Div(Vy(), V("d"))),
+                           Div(Add(Vx(), Vy()), V("d")));
+    UNPROTECT(save);
+}
+
+static void test_div_mul_common_factor_cancels(void) {
+    int save = PROTECT(NULL);
+    assertSimplifiesToExpr(Div(Mul(V("k"), Vx()), Mul(V("k"), Vy())),
+                           Div(Vx(), Vy()));
+    UNPROTECT(save);
+}
+
 static void test_mod_by_one(void) {
     int save = PROTECT(NULL);
     assertSimplifiesToInt(Mod(Vx(), N(1)), 0);
@@ -794,6 +822,14 @@ int main(int argc __attribute__((unused)),
             test_div_divx_a_by_divy_b_to_mul_divxy_ba);
     runTest("test_div_diva_x_by_divb_y_to_mul_ab_divyx",
             test_div_diva_x_by_divb_y_to_mul_ab_divyx);
+    runTest("test_add_div_same_denominator_combines",
+            test_add_div_same_denominator_combines);
+    runTest("test_sub_div_same_denominator_combines",
+            test_sub_div_same_denominator_combines);
+    runTest("test_add_div_same_symbolic_denominator_combines",
+            test_add_div_same_symbolic_denominator_combines);
+    runTest("test_div_mul_common_factor_cancels",
+            test_div_mul_common_factor_cancels);
     runTest("test_mod_by_one", test_mod_by_one);
     runTest("test_mod_nested_same_divisor_reduces",
             test_mod_nested_same_divisor_reduces);

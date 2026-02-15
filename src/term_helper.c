@@ -18,6 +18,36 @@
 
 #include "term_helper.h"
 
+static MinExp *makeNumericPrimExp(ParserInfo parserInfo, MinPrimOp op,
+                                  MinExp *left, MinExp *right) {
+    int save = PROTECT(left);
+    PROTECT(right);
+    MinExp *result = makeMinExp_Prim(parserInfo, op, left, right);
+    UNPROTECT(save);
+    return result;
+}
+
+static Value valueToImag(Value value) {
+    switch (value.type) {
+    case VALUE_TYPE_STDINT:
+        return value_Stdint_imag(getValue_Stdint(value));
+    case VALUE_TYPE_BIGINT:
+        return value_Bigint_imag(getValue_Bigint(value));
+    case VALUE_TYPE_IRRATIONAL:
+        return value_Irrational_imag(getValue_Irrational(value));
+    case VALUE_TYPE_RATIONAL:
+        return value_Rational_imag(getValue_Rational(value));
+    case VALUE_TYPE_STDINT_IMAG:
+    case VALUE_TYPE_BIGINT_IMAG:
+    case VALUE_TYPE_IRRATIONAL_IMAG:
+    case VALUE_TYPE_RATIONAL_IMAG:
+        return value;
+    default:
+        cant_happen("unsupported ValueType %s in valueToImag",
+                    valueTypeName(value.type));
+    }
+}
+
 static MinExp *termValueToMinExp(ParserInfo parserInfo, Value value) {
     switch (value.type) {
     case VALUE_TYPE_STDINT: {
@@ -68,9 +98,45 @@ static MinExp *termValueToMinExp(ParserInfo parserInfo, Value value) {
         UNPROTECT(save);
         return result;
     }
+    case VALUE_TYPE_RATIONAL: {
+        Vec *rational = getValue_Rational(value);
+        MinExp *numerator = termValueToMinExp(parserInfo, rational->entries[0]);
+        int save = PROTECT(numerator);
+        MinExp *denominator =
+            termValueToMinExp(parserInfo, rational->entries[1]);
+        PROTECT(denominator);
+        MinExp *result = makeNumericPrimExp(parserInfo, MINPRIMOP_TYPE_DIV,
+                                            numerator, denominator);
+        UNPROTECT(save);
+        return result;
+    }
+    case VALUE_TYPE_RATIONAL_IMAG: {
+        Vec *rationalImag = getValue_Rational_imag(value);
+        Value numeratorImag = valueToImag(rationalImag->entries[0]);
+        MinExp *numerator = termValueToMinExp(parserInfo, numeratorImag);
+        int save = PROTECT(numerator);
+        MinExp *denominator =
+            termValueToMinExp(parserInfo, rationalImag->entries[1]);
+        PROTECT(denominator);
+        MinExp *result = makeNumericPrimExp(parserInfo, MINPRIMOP_TYPE_DIV,
+                                            numerator, denominator);
+        UNPROTECT(save);
+        return result;
+    }
+    case VALUE_TYPE_COMPLEX: {
+        Vec *complex = getValue_Complex(value);
+        MinExp *real = termValueToMinExp(parserInfo, complex->entries[0]);
+        int save = PROTECT(real);
+        MinExp *imag = termValueToMinExp(parserInfo, complex->entries[1]);
+        PROTECT(imag);
+        MinExp *result =
+            makeNumericPrimExp(parserInfo, MINPRIMOP_TYPE_ADD, real, imag);
+        UNPROTECT(save);
+        return result;
+    }
     default:
-        cant_happen("unsupported ValueType %d in termValueToMinExp",
-                    value.type);
+        cant_happen("unsupported ValueType %s in termValueToMinExp",
+                    valueTypeName(value.type));
     }
 }
 
@@ -227,8 +293,16 @@ MinExp *termToMinExp(Term *term) {
                                     getTerm_Pow(term));
     case TERM_TYPE_NUM:
         return termValueToMinExp(CPI(term), getTerm_Num(term)->value);
-    case TERM_TYPE_OTHER:
-        return getTerm_Other(term);
+    case TERM_TYPE_OTHER: {
+        MinExp *other = getTerm_Other(term);
+        if (isMinExp_Args(other)) {
+            // args should never survive into real MinExp expressions; it exists
+            // only to support the alternative normalize_2 path.
+            cant_happen(
+                "MINEXP_TYPE_ARGS should not appear in termToMinExp OTHER");
+        }
+        return other;
+    }
     default:
         cant_happen("unrecognised TermType %d in termToMinExp", term->type);
     }

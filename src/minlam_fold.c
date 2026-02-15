@@ -46,6 +46,20 @@ static MinAmb *foldMinAmb(MinAmb *node);
 static MinCondCases *foldMinCondCases(MinCondCases *node);
 static MinNameSpaceArray *foldMinNameSpaceArray(MinNameSpaceArray *node);
 
+static bool primOpIsArithmetic(MinPrimOp op) {
+    switch (op) {
+    case MINPRIMOP_TYPE_ADD:
+    case MINPRIMOP_TYPE_SUB:
+    case MINPRIMOP_TYPE_MUL:
+    case MINPRIMOP_TYPE_DIV:
+    case MINPRIMOP_TYPE_MOD:
+    case MINPRIMOP_TYPE_POW:
+        return true;
+    default:
+        return false;
+    }
+}
+
 static MinLam *foldMinLam(MinLam *node) {
     if (node == NULL)
         return NULL;
@@ -347,12 +361,9 @@ MinExp *foldMinExp(MinExp *node) {
         break;
     }
     case MINEXP_TYPE_ARGS: {
-        MinExprList *variant = getMinExp_Args(node);
-        MinExprList *new_variant = foldMinExprList(variant);
-        if (new_variant != variant) {
-            PROTECT(new_variant);
-            result = newMinExp_Args(CPI(node), new_variant);
-        }
+        // args is a compatibility node for the alternative normalize_2 path
+        // and is not a valid expression in the main MinExp pipeline.
+        cant_happen("MINEXP_TYPE_ARGS should not appear in foldMinExp");
         break;
     }
     case MINEXP_TYPE_BACK:
@@ -461,7 +472,14 @@ MinExp *foldMinExp(MinExp *node) {
             PROTECT(new_variant);
             candidate = newMinExp_Prim(CPI(node), new_variant);
         }
-        result = simplifyMinExp(candidate);
+        MinPrimApp *candidatePrim = getMinExp_Prim(candidate);
+        bool hasArgsOperand = candidatePrim->exp1->type == MINEXP_TYPE_ARGS ||
+                              candidatePrim->exp2->type == MINEXP_TYPE_ARGS;
+        if (primOpIsArithmetic(candidatePrim->type) && !hasArgsOperand) {
+            result = simplifyMinExp(candidate);
+        } else {
+            result = candidate;
+        }
         break;
     }
     case MINEXP_TYPE_SEQUENCE: {
