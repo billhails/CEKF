@@ -1,5 +1,5 @@
-#ifndef cekf_minlam_helper_h
-#define cekf_minlam_helper_h
+#ifndef cekf_minlam_occurs_h
+#define cekf_minlam_occurs_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2026  Bill Hails
@@ -19,8 +19,8 @@
  */
 
 #include "minlam.h"
-#include "utils.h"
+#include <stdbool.h>
 
-SymbolList *minBindingsToSymbolList(MinBindings *bindings);
+bool occursMinExp(MinExp *, SymbolSet *);
 
 #endif

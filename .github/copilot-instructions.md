@@ -68,6 +68,11 @@ make docs              # Generates Mermaid diagrams from YAML schemas
 
 ## C Coding Conventions
 
+### Comments
+
+- Only comment when necessary to explain non-obvious code or rationale.
+- Keep comments terse and on point.
+
 ### Generated union constructor functions
 
 - `new<Union>_<Variant>(parserInfo, variant)` - Wraps an existing variant in a union
@@ -88,6 +93,13 @@ make docs              # Generates Mermaid diagrams from YAML schemas
 
 - Always use explicit NULL comparisons: `if (ptr != NULL)` or `if (ptr == NULL)`
 
+### Boolean values
+
+- Use `bool` for variables and return values that represent truth values.
+- Do not use `int` as a boolean substitute when the API returns boolean semantics.
+- Prefer direct boolean checks (e.g., `if (flag)`) and assertions (e.g., `assert(flag)`).
+- Example: `bool matches = eqTerm(actual, expected); assert(matches);`
+
 ### Naming Conventions
 
 - Types: `MixedCase` (e.g., `LamExp`, `AstExpression`)
@@ -96,12 +108,13 @@ make docs              # Generates Mermaid diagrams from YAML schemas
 
 ## Documentation Style
 
-- Use simple periods instead of exclamation points
-- Avoid hyperbole: use "significant", "notable" instead of "HUGE", "Amazing"
-- Avoid emphatic modifiers in headings and verdict-style declarations
-- No emoji
-- Minimize bold emphasis on routine statements
-- Follow markdownlint rules
+- Use simple periods instead of exclamation points.
+- Avoid hyperbole: use "significant", "notable" instead of "HUGE", "Amazing".
+- Avoid emphatic modifiers in headings and verdict-style declarations.
+- No emoji.
+- Minimize bold emphasis on routine statements.
+- Follow markdownlint rules.
+- Prefer Mermaid for diagrams.
 
 ## Debugging
 
@@ -169,6 +182,12 @@ For detailed information on specific compiler stages, see:
 - [tpmc.md](../docs/agent/tpmc.md) - Pattern matching compilation
 - [anf.md](../docs/agent/anf.md) - A-Normal Form conversion
 - [language-syntax.md](../docs/agent/language-syntax.md) - F♮ language reference
+
+## Rewrite Prototyping
+
+For guidance on the self-hosting/prototyping pipeline in `fn/rewrite`, including `test_harness.fn`, pass ordering, and `samples.fn` usage, see:
+
+- [rewrite-self-hosting-guide.md](../docs/agents/rewrite-self-hosting-guide.md)
 
 ## When Reading Code
 

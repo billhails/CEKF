@@ -158,6 +158,25 @@ class DiscriminatedUnionField(EnumField):
         print(f'}} {c}')
         print('')
 
+    def printIsTesterDeclaration(self, catalog, owner, isInline):
+        """
+        Generate is<Union>_<Field> inline function that tests if the union
+        is the specified variant type.
+        
+        Example: static inline bool isLamExp_Iff(struct LamExp *_x)
+        """
+        c = self.comment('printIsTesterDeclaration')
+        ucfirst = self.getName()[0].upper() + self.getName()[1:]
+        typeName = self.makeTypeName()
+        ownerType = owner.getTypeDeclaration(catalog)
+        accessor = '.' if isInline else '->'
+        
+        # Generate the inline tester function
+        print(f'static inline bool is{self.owner}_{ucfirst}({ownerType}_x) {{ {c}')
+        print(f'    return _x{accessor}type == {typeName}; {c}')
+        print(f'}} {c}')
+        print('')
+
     def printStructTypedefLine(self, catalog):
         c = self.comment('printStructTypedefLine')
         obj = catalog.get(self.typeName)

@@ -185,6 +185,67 @@ When examining CPS output, verify:
 
 ---
 
+## Optimization Staging Around CPS
+
+The project already has working CPS transforms in [src/lambda_cpsTc.c](src/lambda_cpsTc.c) and [src/lambda_cpsTk.c](src/lambda_cpsTk.c).
+
+A practical optimization schedule is:
+
+1. Light simplification before CPS.
+2. CPS transform.
+3. Aggressive administrative reduction after CPS.
+
+### Why split optimization this way
+
+- Pre-CPS simplification reduces CPS output size and compile-time churn.
+- Post-CPS simplification removes the large volume of administrative redexes introduced by CPS.
+- In a strict language with effects and letrec, aggressive source-level beta/eta is riskier than CPS-level cleanup.
+
+### Pre-CPS: keep it conservative
+
+Before CPS, keep reductions safe and local:
+
+- Beta only when argument shape is known-safe under call-by-value policy.
+- Eta only when no effect or recursion-order hazard is introduced.
+- Letrec-aware eta should not contract wrappers that reference letrec-bound symbols.
+
+This keeps source semantics stable before control flow is made explicit.
+
+### Post-CPS: do the heavy cleanup
+
+After CPS, prioritize administrative reductions:
+
+- Beta: contract immediate continuation wrappers and one-shot binders.
+- Eta: remove continuation forwarding wrappers when they are pure forwarding.
+- Dead continuation bindings: drop continuation lambdas that are never used.
+
+Typical wins come from patterns like:
+
+```fn
+((λ (k) body) c)
+```
+
+and
+
+```fn
+(λ (x k) (f x k))
+```
+
+when no letrec-sensitive recursion or effect ordering is changed.
+
+### Suggested safety checks for CPS-era eta
+
+For a candidate contraction:
+
+- Ensure forwarded arguments are exactly the lambda parameters.
+- Ensure no duplicated evaluation is introduced.
+- Ensure recursive group symbols are not crossed in a way that changes forcing/arity behavior.
+- Ensure effectful primitives are not reordered.
+
+This gives a robust default: small, safe pre-CPS simplification and high-leverage post-CPS normalization.
+
+---
+
 ## Examples with Expected Output
 
 ### Example 1: Simple Application

@@ -1,5 +1,5 @@
-#ifndef cekf_minlam_helper_h
-#define cekf_minlam_helper_h
+#ifndef cekf_minlam_beta_h
+#define cekf_minlam_beta_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2026  Bill Hails
@@ -18,9 +18,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "minlam.h"
-#include "utils.h"
-
-SymbolList *minBindingsToSymbolList(MinBindings *bindings);
+MinExp *betaMinExp(MinExp *node);
+extern char *beta_conversion_function;
 
 #endif

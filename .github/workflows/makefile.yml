@@ -10,6 +10,10 @@ jobs:
   build:
 
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [gcc, clang]
 
     steps:
     - uses: actions/checkout@v3
@@ -17,8 +21,12 @@ jobs:
     - name: Install sqlite
       run: make install-sqlite3
 
-    - name: Build executable
-      run: make CCC=gcc MODE=testing
+    - name: Install clang
+      if: matrix.compiler == 'clang'
+      run: sudo apt-get update && sudo apt-get --yes install clang
 
-    - name: Run tests
-      run: make test CCC=gcc MODE=testing
+    - name: Build executable (${{ matrix.compiler }})
+      run: make CCC=${{ matrix.compiler }} MODE=testing
+
+    - name: Run tests (${{ matrix.compiler }})
+      run: make test CCC=${{ matrix.compiler }} MODE=testing

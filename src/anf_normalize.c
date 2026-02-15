@@ -339,6 +339,7 @@ static AnfExp *normalizeSequence(MinExprList *sequence, AnfExp *tail) {
         cant_happen("empty sequence in normalizeSequence");
     }
     if (sequence->next == NULL) {
+        LEAVE(normalizeSequence);
         return normalize(sequence->exp, tail);
     }
     AnfExp *next = normalizeSequence(sequence->next, tail);

@@ -81,6 +81,9 @@ class Catalog:
     def printSetterDeclarations(self):
         self._dispatch('printSetterDeclarations', self)
 
+    def printIsTesterDeclarations(self):
+        self._dispatch('printIsTesterDeclarations', self)
+
     def generateVisitor(self, packageName, target):
         """Generate complete visitor boilerplate"""
         output = []
@@ -106,6 +109,8 @@ class Catalog:
         # Forward declarations
         output.append("// Forward declarations\n")
         for entity in self.contents.values():
+            if entity.isExternal():
+                continue
             decl = entity.generateVisitorDecl(target)
             if decl:
                 output.append(decl)
@@ -114,6 +119,8 @@ class Catalog:
         # Implementations
         output.append("// Visitor implementations\n")
         for entity in self.contents.values():
+            if entity.isExternal():
+                continue
             impl = entity.generateVisitor(self, target)
             if impl:
                 output.append(impl)

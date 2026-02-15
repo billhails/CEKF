@@ -4,6 +4,8 @@ An exploratory sub-project to investigate re-writing F♯ in F♯. For this to b
 
 Even if it doesn't pan out, this is still useful as it provides concise reference implementations of some of the core algorithms which can inform the C implementation.
 
+For agent-oriented guidance on the rewrite prototyping/self-hosting workflow (`test_harness.fn`, pass ordering, and `samples.fn` usage), see [`docs/agents/rewrite-self-hosting-guide.md`](../../docs/agents/rewrite-self-hosting-guide.md).
+
 * [`alphaconvert.fn`](alphaconvert.fn) - ɑ-conversion algorithm over `expr`.
 * [`expr.fn`](expr.fn) - A set of types intended to replicate the LamExp structures in [`lambda.yaml`](../../src/lambda.yaml). Only used by a subset of the other packages, would be nice to expand its usage.
 * [`ceskf.fn`](ceskf.fn) - The core CESKF machine.

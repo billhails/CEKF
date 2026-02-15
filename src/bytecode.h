@@ -1,5 +1,5 @@
 #ifndef cekf_bytecode_h
-#  define cekf_bytecode_h
+#define cekf_bytecode_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2023  Bill Hails
@@ -18,13 +18,15 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#  include "anf.h"
-#  include "memory.h"
-#  include "types.h"
-#  include "cekfs.h"
+#include "anf.h"
+#include "cekfs.h"
+#include "memory.h"
+#include "types.h"
 
 // MUST remember to increment this if bytecodes change
-#  define CEKF_BYTECODE_VERSION 5
+#define CEKF_BYTECODE_VERSION 5
+
+#define SIXTEEN_BIT_ENVIRONMENT
 
 enum ReadByteCodeStatus {
     BYTECODES_OK,
@@ -38,14 +40,16 @@ char *charRep(Character c);
 void resetByteCodeArray(ByteCodeArray *b);
 
 void writeAexpLam(AexpLam *x, ByteCodeArray *b, LocationArray *L);
-void writeAexpAnnotatedVar(AexpAnnotatedVar *x, ByteCodeArray *b, LocationArray *L);
+void writeAexpAnnotatedVar(AexpAnnotatedVar *x, ByteCodeArray *b,
+                           LocationArray *L);
 void writeAexpPrimApp(AexpPrimApp *x, ByteCodeArray *b, LocationArray *L);
 void writeAexpList(AexpList *x, ByteCodeArray *b, LocationArray *L);
 void writeCexpApply(CexpApply *x, ByteCodeArray *b, LocationArray *L);
 void writeCexpIf(CexpIf *x, ByteCodeArray *b, LocationArray *L);
 void writeCexpMatch(CexpMatch *x, ByteCodeArray *b, LocationArray *L);
 void writeCexpLetRec(CexpLetRec *x, ByteCodeArray *b, LocationArray *L);
-void writeLetRecBindings(AnfLetRecBindings *x, ByteCodeArray *b, LocationArray *L);
+void writeLetRecBindings(AnfLetRecBindings *x, ByteCodeArray *b,
+                         LocationArray *L);
 void writeCexpAmb(CexpAmb *x, ByteCodeArray *b, LocationArray *L);
 void writeCexpCut(CexpCut *x, ByteCodeArray *b, LocationArray *L);
 void writeAnfExpLet(AnfExpLet *x, ByteCodeArray *b, LocationArray *L);
@@ -78,6 +82,17 @@ static inline Word readWord(ByteCodeArray *b, Control *i) {
     Word a;
     _readWord(b, i, &a);
     return a;
+}
+
+static inline void _readShort(ByteCodeArray *b, Control *i, Short *s) {
+    memcpy(s, &b->entries[*i], sizeof(Short));
+    (*i) += sizeof(Short);
+}
+
+static inline Short readShort(ByteCodeArray *b, Control *i) {
+    Short s;
+    _readShort(b, i, &s);
+    return s;
 }
 
 static inline void _readInteger(ByteCodeArray *b, Control *i, Integer *a) {

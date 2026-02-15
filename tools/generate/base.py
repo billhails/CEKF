@@ -159,6 +159,9 @@ class Base:
     def printSetterDeclarations(self, catalog):
         pass
 
+    def printIsTesterDeclarations(self, catalog):
+        pass
+
     def printNameFunctionDeclaration(self):
         pass
 

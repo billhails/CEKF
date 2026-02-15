@@ -1,5 +1,5 @@
-#ifndef cekf_minlam_helper_h
-#define cekf_minlam_helper_h
+#ifndef cekf_term_helper_h
+#define cekf_term_helper_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2026  Bill Hails
@@ -18,9 +18,11 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "minlam.h"
-#include "utils.h"
+#include "cekfs_debug.h"
+#include "minlam_debug.h"
+#include "term.h"
 
-SymbolList *minBindingsToSymbolList(MinBindings *bindings);
+Term *minExpToTerm(struct MinExp *minExp);
+MinExp *termToMinExp(Term *term);
 
 #endif
