@@ -57,9 +57,11 @@ This function is effectively a hand-written type relation matrix embedded in con
 
 Concrete runtime types include:
 
-- real scalar: `STDINT`, `BIGINT`, `RATIONAL`, `IRRATIONAL`
+- real-domain values: `STDINT`, `BIGINT`, `RATIONAL`, `IRRATIONAL`
 - imaginary scalar encodings: `STDINT_IMAG`, `BIGINT_IMAG`, `RATIONAL_IMAG`, `IRRATIONAL_IMAG`
 - pair form: `COMPLEX`
+
+Note: `RATIONAL` and `COMPLEX` both use a two-entry `Vec` representation internally, but they are different semantic domains.
 
 Several paths normalize these to complex before operation, but that normalization is repeated in many places instead of being represented once as data.
 

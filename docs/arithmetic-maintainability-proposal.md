@@ -37,6 +37,8 @@ Suggested scalar domains:
 
 - `DOM_INT_STD`, `DOM_INT_BIG`, `DOM_RAT`, `DOM_IRR`, `DOM_IMAG`, `DOM_COMPLEX`
 
+These are semantic dispatch domains, not storage-layout classes; for example, `RATIONAL` and `COMPLEX` may both be represented as 2-entry vectors internally while remaining distinct domains.
+
 Suggested operator set:
 
 - `OP_ADD`, `OP_SUB`, `OP_MUL`, `OP_DIV`, `OP_MOD`, `OP_POW`, `OP_CMP`
