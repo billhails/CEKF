@@ -289,7 +289,6 @@ static void test_nested_pow_constants_to_one(void) {
 
 static void test_deep_nested_add_chain_with_var(void) {
     int save = PROTECT(NULL);
-
     assertSimplifiesToExpr(Add(N(1), Add(N(2), Add(N(3), Add(N(4), Vx())))),
                            Add(N(10), Vx()));
     UNPROTECT(save);
@@ -297,7 +296,6 @@ static void test_deep_nested_add_chain_with_var(void) {
 
 static void test_deep_nested_alternating_add_sub(void) {
     int save = PROTECT(NULL);
-
     assertSimplifiesToExpr(
         Add(N(1), Sub(N(2), Add(N(3), Sub(N(4), Add(N(5), Vx()))))),
         Add(N(1), Vx()));
@@ -306,7 +304,6 @@ static void test_deep_nested_alternating_add_sub(void) {
 
 static void test_deep_nested_division_chain_over_mul(void) {
     int save = PROTECT(NULL);
-
     assertSimplifiesToExpr(Div(Div(Div(Mul(N(24), Vx()), N(2)), N(3)), N(4)),
                            Vx());
     UNPROTECT(save);
@@ -367,49 +364,42 @@ static void test_mixed_const_fold_without_distribution(void) {
 
 static void test_add_cancel_negation(void) {
     int save = PROTECT(NULL);
-
     assertSimplifiesToInt(Add(Vx(), Sub(N(0), Vx())), 0);
     UNPROTECT(save);
 }
 
 static void test_add_duplicate_to_mul_two(void) {
     int save = PROTECT(NULL);
-
     assertSimplifiesToExpr(Add(Vx(), Vx()), Mul(N(2), Vx()));
     UNPROTECT(save);
 }
 
 static void test_sub_double_negation(void) {
     int save = PROTECT(NULL);
-
     assertSimplifiesToExpr(Sub(N(0), Sub(N(0), Vx())), Vx());
     UNPROTECT(save);
 }
 
 static void test_mul_self_to_pow_two(void) {
     int save = PROTECT(NULL);
-
     assertSimplifiesToExpr(Mul(Vx(), Vx()), Pow(Vx(), N(2)));
     UNPROTECT(save);
 }
 
 static void test_mul_cancel_division(void) {
     int save = PROTECT(NULL);
-
     assertSimplifiesToExpr(Mul(Vx(), Div(Vy(), Vx())), Vy());
     UNPROTECT(save);
 }
 
 static void test_mul_const_into_mul_const_x(void) {
     int save = PROTECT(NULL);
-
     assertSimplifiesToExpr(Mul(N(2), Mul(N(3), Vx())), Mul(N(6), Vx()));
     UNPROTECT(save);
 }
 
 static void test_mul_const_into_add_const_x(void) {
     int save = PROTECT(NULL);
-
     assertSimplifiesToExpr(Mul(N(2), Add(N(3), Vx())),
                            Add(N(6), Mul(N(2), Vx())));
     UNPROTECT(save);
@@ -417,7 +407,6 @@ static void test_mul_const_into_add_const_x(void) {
 
 static void test_mul_const_into_sub_const_x(void) {
     int save = PROTECT(NULL);
-
     assertSimplifiesToExpr(Mul(N(2), Sub(N(3), Vx())),
                            Sub(N(6), Mul(N(2), Vx())));
     UNPROTECT(save);
@@ -425,7 +414,6 @@ static void test_mul_const_into_sub_const_x(void) {
 
 static void test_mul_const_into_sub_x_const(void) {
     int save = PROTECT(NULL);
-
     assertSimplifiesToExpr(Mul(N(2), Sub(Vx(), N(3))),
                            Sub(Mul(N(2), Vx()), N(6)));
     UNPROTECT(save);
@@ -433,49 +421,42 @@ static void test_mul_const_into_sub_x_const(void) {
 
 static void test_mul_const_with_div_const_over_x(void) {
     int save = PROTECT(NULL);
-
     assertSimplifiesToExpr(Mul(N(2), Div(N(3), Vx())), Div(N(6), Vx()));
     UNPROTECT(save);
 }
 
 static void test_mul_const_with_div_x_over_const(void) {
     int save = PROTECT(NULL);
-
     assertSimplifiesToExpr(Mul(N(8), Div(Vx(), N(2))), Mul(N(4), Vx()));
     UNPROTECT(save);
 }
 
 static void test_div_nested_denominator_product(void) {
     int save = PROTECT(NULL);
-
     assertSimplifiesToExpr(Div(Div(Vx(), N(2)), N(3)), Div(Vx(), N(6)));
     UNPROTECT(save);
 }
 
 static void test_div_const_over_div_const_x(void) {
     int save = PROTECT(NULL);
-
     assertSimplifiesToExpr(Div(N(8), Div(N(2), Vx())), Mul(N(4), Vx()));
     UNPROTECT(save);
 }
 
 static void test_div_const_over_div_x_const(void) {
     int save = PROTECT(NULL);
-
     assertSimplifiesToExpr(Div(N(8), Div(Vx(), N(2))), Div(N(16), Vx()));
     UNPROTECT(save);
 }
 
 static void test_div_mul_const_x_by_const(void) {
     int save = PROTECT(NULL);
-
     assertSimplifiesToExpr(Div(Mul(N(8), Vx()), N(2)), Mul(N(4), Vx()));
     UNPROTECT(save);
 }
 
 static void test_div_add_const_x_by_const(void) {
     int save = PROTECT(NULL);
-
     assertSimplifiesToExpr(Div(Add(N(8), Vx()), N(2)),
                            Add(N(4), Div(Vx(), N(2))));
     UNPROTECT(save);
@@ -483,7 +464,6 @@ static void test_div_add_const_x_by_const(void) {
 
 static void test_div_sub_x_const_by_const(void) {
     int save = PROTECT(NULL);
-
     assertSimplifiesToExpr(Div(Sub(Vx(), N(8)), N(2)),
                            Sub(Div(Vx(), N(2)), N(4)));
     UNPROTECT(save);
@@ -491,14 +471,12 @@ static void test_div_sub_x_const_by_const(void) {
 
 static void test_div_pow_by_base_decrements_exponent(void) {
     int save = PROTECT(NULL);
-
     assertSimplifiesToExpr(Div(Pow(Vx(), N(3)), Vx()), Pow(Vx(), N(2)));
     UNPROTECT(save);
 }
 
 static void test_div_pow_by_pow_same_base_subtracts_exponents(void) {
     int save = PROTECT(NULL);
-
     assertSimplifiesToExpr(Div(Pow(Vx(), N(5)), Pow(Vx(), N(2))),
                            Pow(Vx(), N(3)));
     UNPROTECT(save);
@@ -506,7 +484,6 @@ static void test_div_pow_by_pow_same_base_subtracts_exponents(void) {
 
 static void test_mul_divx_a_mul_divy_b_to_div_xy_ab(void) {
     int save = PROTECT(NULL);
-
     assertSimplifiesToExpr(Mul(Div(Vx(), N(2)), Div(Vy(), N(3))),
                            Div(Mul(Vx(), Vy()), N(6)));
     UNPROTECT(save);
@@ -514,7 +491,6 @@ static void test_mul_divx_a_mul_divy_b_to_div_xy_ab(void) {
 
 static void test_mul_diva_x_mul_divb_y_to_div_ab_xy(void) {
     int save = PROTECT(NULL);
-
     assertSimplifiesToExpr(Mul(Div(N(8), Vx()), Div(N(3), Vy())),
                            Div(N(24), Mul(Vx(), Vy())));
     UNPROTECT(save);
@@ -522,21 +498,18 @@ static void test_mul_diva_x_mul_divb_y_to_div_ab_xy(void) {
 
 static void test_div_divx_a_by_b_to_div_x_ab(void) {
     int save = PROTECT(NULL);
-
     assertSimplifiesToExpr(Div(Div(Vx(), N(8)), N(3)), Div(Vx(), N(24)));
     UNPROTECT(save);
 }
 
 static void test_div_diva_x_by_b_to_div_ab_x(void) {
     int save = PROTECT(NULL);
-
     assertSimplifiesToExpr(Div(Div(N(12), Vx()), N(3)), Div(N(4), Vx()));
     UNPROTECT(save);
 }
 
 static void test_div_divx_a_by_divy_b_to_mul_divxy_ba(void) {
     int save = PROTECT(NULL);
-
     assertSimplifiesToExpr(Div(Div(Vx(), N(2)), Div(Vy(), N(6))),
                            Mul(Div(Vx(), Vy()), N(3)));
     UNPROTECT(save);
@@ -544,7 +517,6 @@ static void test_div_divx_a_by_divy_b_to_mul_divxy_ba(void) {
 
 static void test_div_diva_x_by_divb_y_to_mul_ab_divyx(void) {
     int save = PROTECT(NULL);
-
     assertSimplifiesToExpr(Div(Div(N(12), Vx()), Div(N(3), Vy())),
                            Mul(N(4), Div(Vy(), Vx())));
     UNPROTECT(save);
@@ -552,14 +524,12 @@ static void test_div_diva_x_by_divb_y_to_mul_ab_divyx(void) {
 
 static void test_mod_by_one(void) {
     int save = PROTECT(NULL);
-
     assertSimplifiesToInt(Mod(Vx(), N(1)), 0);
     UNPROTECT(save);
 }
 
 static void test_mod_nested_same_divisor_reduces(void) {
     int save = PROTECT(NULL);
-
     assertSimplifiesToExpr(Mod(Mod(N(17), Vx()), Vx()), Mod(N(17), Vx()));
     UNPROTECT(save);
 }
@@ -590,14 +560,12 @@ static void test_mod_nested_different_divisor_no_change(void) {
 
 static void test_pow_nested_exponents_multiply(void) {
     int save = PROTECT(NULL);
-
     assertSimplifiesToExpr(Pow(Pow(Vx(), N(2)), N(3)), Pow(Vx(), N(6)));
     UNPROTECT(save);
 }
 
 static void test_mul_pow_pow_same_base(void) {
     int save = PROTECT(NULL);
-
     assertSimplifiesToExpr(Mul(Pow(Vx(), N(2)), Pow(Vx(), N(3))),
                            Pow(Vx(), N(5)));
     UNPROTECT(save);
@@ -605,56 +573,48 @@ static void test_mul_pow_pow_same_base(void) {
 
 static void test_add_const_into_nested_add(void) {
     int save = PROTECT(NULL);
-
     assertSimplifiesToExpr(Add(N(2), Add(N(3), Vx())), Add(N(5), Vx()));
     UNPROTECT(save);
 }
 
 static void test_add_const_over_sub_const_x(void) {
     int save = PROTECT(NULL);
-
     assertSimplifiesToExpr(Add(N(2), Sub(N(3), Vx())), Sub(N(5), Vx()));
     UNPROTECT(save);
 }
 
 static void test_add_const_over_sub_x_const(void) {
     int save = PROTECT(NULL);
-
     assertSimplifiesToExpr(Add(N(5), Sub(Vx(), N(3))), Add(N(2), Vx()));
     UNPROTECT(save);
 }
 
 static void test_sub_const_over_add_const_x(void) {
     int save = PROTECT(NULL);
-
     assertSimplifiesToExpr(Sub(N(10), Add(N(3), Vx())), Sub(N(7), Vx()));
     UNPROTECT(save);
 }
 
 static void test_sub_add_const_x_minus_const(void) {
     int save = PROTECT(NULL);
-
     assertSimplifiesToExpr(Sub(Add(N(10), Vx()), N(3)), Add(N(7), Vx()));
     UNPROTECT(save);
 }
 
 static void test_sub_sub_x_const_minus_const(void) {
     int save = PROTECT(NULL);
-
     assertSimplifiesToExpr(Sub(Sub(Vx(), N(2)), N(3)), Sub(Vx(), N(5)));
     UNPROTECT(save);
 }
 
 static void test_sub_const_over_sub_x_const(void) {
     int save = PROTECT(NULL);
-
     assertSimplifiesToExpr(Sub(N(10), Sub(Vx(), N(3))), Sub(N(13), Vx()));
     UNPROTECT(save);
 }
 
 static void test_add_addnum_addnum_normalizes(void) {
     int save = PROTECT(NULL);
-
     assertSimplifiesToExpr(Add(Add(N(2), Vx()), Add(N(3), Vy())),
                            Add(N(5), Add(Vx(), Vy())));
     UNPROTECT(save);
@@ -662,7 +622,6 @@ static void test_add_addnum_addnum_normalizes(void) {
 
 static void test_add_addnum_subnum_normalizes(void) {
     int save = PROTECT(NULL);
-
     assertSimplifiesToExpr(Add(Add(N(2), Vx()), Sub(N(3), Vy())),
                            Add(N(5), Sub(Vx(), Vy())));
     UNPROTECT(save);
@@ -670,7 +629,6 @@ static void test_add_addnum_subnum_normalizes(void) {
 
 static void test_add_subother_subother_normalizes(void) {
     int save = PROTECT(NULL);
-
     assertSimplifiesToExpr(Add(Sub(Vx(), N(4)), Sub(Vy(), N(6))),
                            Sub(Add(Vx(), Vy()), N(10)));
     UNPROTECT(save);
@@ -678,7 +636,6 @@ static void test_add_subother_subother_normalizes(void) {
 
 static void test_sub_addnum_addnum_normalizes(void) {
     int save = PROTECT(NULL);
-
     assertSimplifiesToExpr(Sub(Add(N(9), Vx()), Add(N(4), Vy())),
                            Add(N(5), Sub(Vx(), Vy())));
     UNPROTECT(save);
@@ -686,7 +643,6 @@ static void test_sub_addnum_addnum_normalizes(void) {
 
 static void test_sub_subother_subother_normalizes(void) {
     int save = PROTECT(NULL);
-
     assertSimplifiesToExpr(Sub(Sub(Vx(), N(2)), Sub(Vy(), N(7))),
                            Add(N(5), Sub(Vx(), Vy())));
     UNPROTECT(save);
@@ -694,7 +650,6 @@ static void test_sub_subother_subother_normalizes(void) {
 
 static void test_sub_subnum_addnum_normalizes(void) {
     int save = PROTECT(NULL);
-
     assertSimplifiesToExpr(Sub(Sub(N(10), Vx()), Add(N(3), Vy())),
                            Sub(N(7), Add(Vx(), Vy())));
     UNPROTECT(save);
@@ -702,7 +657,6 @@ static void test_sub_subnum_addnum_normalizes(void) {
 
 static void test_sub_subother_addnum_normalizes(void) {
     int save = PROTECT(NULL);
-
     assertSimplifiesToExpr(Sub(Sub(Vx(), N(2)), Add(N(5), Vy())),
                            Sub(Sub(Vx(), N(7)), Vy()));
     UNPROTECT(save);
@@ -710,7 +664,6 @@ static void test_sub_subother_addnum_normalizes(void) {
 
 static void test_sub_addnum_subnum_normalizes(void) {
     int save = PROTECT(NULL);
-
     assertSimplifiesToExpr(Sub(Add(N(9), Vx()), Sub(N(4), Vy())),
                            Add(N(5), Add(Vx(), Vy())));
     UNPROTECT(save);
@@ -718,7 +671,6 @@ static void test_sub_addnum_subnum_normalizes(void) {
 
 static void test_sub_addnum_subothernum_normalizes(void) {
     int save = PROTECT(NULL);
-
     assertSimplifiesToExpr(Sub(Add(N(9), Vx()), Sub(Vy(), N(4))),
                            Add(N(13), Sub(Vx(), Vy())));
     UNPROTECT(save);
@@ -726,7 +678,6 @@ static void test_sub_addnum_subothernum_normalizes(void) {
 
 static void test_sub_subnum_subothernum_normalizes(void) {
     int save = PROTECT(NULL);
-
     assertSimplifiesToExpr(Sub(Sub(N(10), Vx()), Sub(Vy(), N(3))),
                            Sub(N(13), Add(Vx(), Vy())));
     UNPROTECT(save);
@@ -734,7 +685,6 @@ static void test_sub_subnum_subothernum_normalizes(void) {
 
 static void test_sub_subothernum_subnum_normalizes(void) {
     int save = PROTECT(NULL);
-
     assertSimplifiesToExpr(Sub(Sub(Vx(), N(2)), Sub(N(7), Vy())),
                            Add(Sub(Vx(), N(9)), Vy()));
     UNPROTECT(save);
