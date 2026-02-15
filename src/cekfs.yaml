@@ -108,7 +108,6 @@ inline:
                 stdint: int
                 bigint: BigInt
                 rational: Vec
-                rational_imag: Vec
                 irrational: double
                 stdint_imag: int
                 bigint_imag: BigInt
