@@ -93,6 +93,13 @@ make docs              # Generates Mermaid diagrams from YAML schemas
 
 - Always use explicit NULL comparisons: `if (ptr != NULL)` or `if (ptr == NULL)`
 
+### Boolean values
+
+- Use `bool` for variables and return values that represent truth values.
+- Do not use `int` as a boolean substitute when the API returns boolean semantics.
+- Prefer direct boolean checks (e.g., `if (flag)`) and assertions (e.g., `assert(flag)`).
+- Example: `bool matches = eqTerm(actual, expected); assert(matches);`
+
 ### Naming Conventions
 
 - Types: `MixedCase` (e.g., `LamExp`, `AstExpression`)
