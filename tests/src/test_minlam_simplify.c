@@ -287,6 +287,31 @@ static void test_nested_pow_constants_to_one(void) {
     UNPROTECT(save);
 }
 
+static void test_deep_nested_add_chain_with_var(void) {
+    int save = PROTECT(NULL);
+
+    assertSimplifiesToExpr(Add(N(1), Add(N(2), Add(N(3), Add(N(4), Vx())))),
+                           Add(N(10), Vx()));
+    UNPROTECT(save);
+}
+
+static void test_deep_nested_alternating_add_sub(void) {
+    int save = PROTECT(NULL);
+
+    assertSimplifiesToExpr(
+        Add(N(1), Sub(N(2), Add(N(3), Sub(N(4), Add(N(5), Vx()))))),
+        Add(N(1), Vx()));
+    UNPROTECT(save);
+}
+
+static void test_deep_nested_division_chain_over_mul(void) {
+    int save = PROTECT(NULL);
+
+    assertSimplifiesToExpr(Div(Div(Div(Mul(N(24), Vx()), N(2)), N(3)), N(4)),
+                           Vx());
+    UNPROTECT(save);
+}
+
 static void test_no_simplify_add_vars(void) {
     int save = PROTECT(NULL);
     assertSimplifiesToPrimVars(Add(Vx(), Vy()), MINPRIMOP_TYPE_ADD,
@@ -467,8 +492,7 @@ static void test_div_sub_x_const_by_const(void) {
 static void test_div_pow_by_base_decrements_exponent(void) {
     int save = PROTECT(NULL);
 
-    assertSimplifiesToExpr(Div(Pow(Vx(), N(3)), Vx()),
-                           Pow(Vx(), Sub(N(3), N(1))));
+    assertSimplifiesToExpr(Div(Pow(Vx(), N(3)), Vx()), Pow(Vx(), N(2)));
     UNPROTECT(save);
 }
 
@@ -476,7 +500,7 @@ static void test_div_pow_by_pow_same_base_subtracts_exponents(void) {
     int save = PROTECT(NULL);
 
     assertSimplifiesToExpr(Div(Pow(Vx(), N(5)), Pow(Vx(), N(2))),
-                           Pow(Vx(), Sub(N(5), N(2))));
+                           Pow(Vx(), N(3)));
     UNPROTECT(save);
 }
 
@@ -567,8 +591,7 @@ static void test_mod_nested_different_divisor_no_change(void) {
 static void test_pow_nested_exponents_multiply(void) {
     int save = PROTECT(NULL);
 
-    assertSimplifiesToExpr(Pow(Pow(Vx(), N(2)), N(3)),
-                           Pow(Vx(), Mul(N(2), N(3))));
+    assertSimplifiesToExpr(Pow(Pow(Vx(), N(2)), N(3)), Pow(Vx(), N(6)));
     UNPROTECT(save);
 }
 
@@ -576,7 +599,7 @@ static void test_mul_pow_pow_same_base(void) {
     int save = PROTECT(NULL);
 
     assertSimplifiesToExpr(Mul(Pow(Vx(), N(2)), Pow(Vx(), N(3))),
-                           Pow(Vx(), Add(N(2), N(3))));
+                           Pow(Vx(), N(5)));
     UNPROTECT(save);
 }
 
@@ -726,12 +749,17 @@ static void test_dsl_combinatorial_add_sub_matrix(void) {
             int save = PROTECT(NULL);
             int a = constants[i];
             int b = constants[j];
+            int delta = a - b;
 
             assertSimplifiesToExpr(Sub(Sub(N(a), Vx()), Add(N(b), Vy())),
-                                   Sub(N(a - b), Add(Vx(), Vy())));
+                                   Sub(N(delta), Add(Vx(), Vy())));
 
+            MinExp *expected2 = Add(N(delta), Add(Vx(), Vy()));
+            if (delta == 0) {
+                expected2 = Add(Vx(), Vy());
+            }
             assertSimplifiesToExpr(Sub(Add(N(a), Vx()), Sub(N(b), Vy())),
-                                   Add(N(a - b), Add(Vx(), Vy())));
+                                   expected2);
 
             assertSimplifiesToExpr(Add(Sub(Vx(), N(a)), Sub(Vy(), N(b))),
                                    Sub(Add(Vx(), Vy()), N(a + b)));
@@ -768,6 +796,12 @@ int main(int argc __attribute__((unused)),
             test_nested_div_mod_identity_to_zero);
     runTest("test_nested_pow_constants_to_one",
             test_nested_pow_constants_to_one);
+    runTest("test_deep_nested_add_chain_with_var",
+            test_deep_nested_add_chain_with_var);
+    runTest("test_deep_nested_alternating_add_sub",
+            test_deep_nested_alternating_add_sub);
+    runTest("test_deep_nested_division_chain_over_mul",
+            test_deep_nested_division_chain_over_mul);
     runTest("test_no_simplify_add_vars", test_no_simplify_add_vars);
     runTest("test_no_simplify_div_vars", test_no_simplify_div_vars);
     runTest("test_no_simplify_mod_vars", test_no_simplify_mod_vars);

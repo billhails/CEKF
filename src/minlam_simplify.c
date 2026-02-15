@@ -884,6 +884,8 @@ static Term *simplifyBinaryOp(Term *term, const BinaryOpSpec *spec,
     }
 
     if (tryIdentityFold(term, spec->op, left, right, &result)) {
+        PROTECT(result);
+        result = simplifyTerm(result);
         UNPROTECT(save);
         return result;
     }
