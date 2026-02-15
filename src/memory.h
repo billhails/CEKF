@@ -33,6 +33,7 @@ struct Header;
 #include "minlam_objtypes.h"
 #include "pratt_objtypes.h"
 #include "tc_objtypes.h"
+#include "term_objtypes.h"
 #include "tpmc_objtypes.h"
 #include "types.h"
 #include "utils_objtypes.h"
@@ -66,6 +67,7 @@ typedef enum {
     ANF_KONT_OBJTYPES(),
     CPS_KONT_OBJTYPES(),
     UTILS_OBJTYPES(),
+    TERM_OBJTYPES(),
 } ObjType;
 
 typedef struct Header {

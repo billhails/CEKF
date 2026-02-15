@@ -101,9 +101,12 @@ fn simplify (e) {
                 (add(sub(x, num(a)), sub(y, num(b)))) |
                 (add(sub(y, num(b)), sub(x, num(a)))) { S(sub(add(x, y), num(a + b))) }
                 (add(a, a)) { S(mul(num(2), a)) }
+                (add(div(x, d), div(y, d))) |
+                (add(div(y, d), div(x, d))) { S(div(add(x, y), d)) }
                 (sub(num(a), num(b))) { num(a - b) }
                 (sub(a, num(0))) { a }
                 (sub(x, x)) { num(0) }
+                (sub(div(x, d), div(y, d))) { S(div(sub(x, y), d)) }
                 (sub(num(a), add(num(b), x))) |
                 (sub(num(a), add(x, num(b)))) { S(sub(num(a - b), x)) }
                 (sub(add(num(a), x), num(b))) |
@@ -179,6 +182,10 @@ fn simplify (e) {
                 (mul(div(num(a), x), div(num(b), y))) { S(div(num(a * b), mul(x, y))) }
                 (div(div(x, num(a)), div(y, num(b)))) { S(mul(div(x, y), num(b / a))) }
                 (div(div(num(a), x), div(num(b), y))) { S(mul(num(a / b), div(y, x))) }
+                (div(mul(k, x), mul(k, y))) |
+                (div(mul(x, k), mul(k, y))) |
+                (div(mul(k, x), mul(y, k))) |
+                (div(mul(x, k), mul(y, k))) { S(div(x, y)) }
                 (mod(num(a), num(b))) { num(a % b) }
                 (mod(num(0), _)) { num(0) }
                 (mod(_, num(1))) { num(0) }

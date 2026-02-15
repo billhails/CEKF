@@ -46,6 +46,7 @@
 #include "memory.h"
 #include "minlam_beta.h"
 #include "minlam_eta.h"
+#include "minlam_fold.h"
 #include "minlam_pp.h"
 #include "pratt.h"
 #include "pratt_parser.h"
@@ -61,8 +62,6 @@
 #endif
 
 // #define TEST_CPS
-#define BETA_REDUCTION
-#define ETA_REDUCTION
 
 #ifdef TEST_CPS
 #include "lambda_cps.h"
@@ -92,9 +91,7 @@ static char *snippet = NULL;
 
 extern StringArray *include_paths;
 
-#ifdef BETA_REDUCTION
 static int beta_flag = 0;
-#endif
 
 /**
  * Report the build mode, i.e. the value of the BUILD_MODE macro when compiled.
@@ -151,11 +148,9 @@ static void usage(char *prog, int status) {
         "    -a<function>\n"
         "    --dump-alpha=<function>  Display the intermediate code after "
         "alpha-conversion.\n"
-#ifdef BETA_REDUCTION
         "    -b<function>\n"
         "    --dump-beta=<function>   Display the intermediate code after "
         "beta-conversion.\n"
-#endif
         "    --dump-anf               Display the generated ANF.\n"
         "    --dump-ast               Display the parsed AST before lambda "
         "conversion.\n"
@@ -225,9 +220,7 @@ static int processArgs(int argc, char *argv[]) {
             {"dump-lambda", optional_argument, 0, 'l'},
             {"dump-desugared", optional_argument, 0, 'd'},
             {"dump-alpha", optional_argument, 0, 'a'},
-#ifdef BETA_REDUCTION
             {"dump-beta", optional_argument, 0, 'b'},
-#endif
             {"include", required_argument, 0, 'i'},
             {"binary-out", required_argument, 0, 'O'},
             {"binary-in", required_argument, 0, 'B'},
@@ -260,7 +253,6 @@ static int processArgs(int argc, char *argv[]) {
             }
         }
 
-#ifdef BETA_REDUCTION
         if (c == 'b') {
             if (optarg) {
                 beta_conversion_function = optarg;
@@ -268,7 +260,6 @@ static int processArgs(int argc, char *argv[]) {
                 beta_flag = 1;
             }
         }
-#endif
 
         if (c == 'd') {
             if (optarg) {
@@ -589,27 +580,22 @@ int main(int argc, char *argv[]) {
             exit(0);
         }
 
-#ifdef BETA_REDUCTION
         minExp = betaMinExp(minExp);
         REPLACE_PROTECT(save2, minExp);
-#endif
 
-#ifdef ETA_REDUCTION
         minExp = etaMinExp(minExp);
         REPLACE_PROTECT(save2, minExp);
-#ifdef BETA_REDUCTION
         minExp = betaMinExp(minExp); // second pass.
         REPLACE_PROTECT(save2, minExp);
-#endif
-#endif
 
-#ifdef BETA_REDUCTION
+        minExp = foldMinExp(minExp);
+        REPLACE_PROTECT(save2, minExp);
+
         if (beta_flag) {
             ppMinExp(minExp);
             eprintf("\n");
             exit(0);
         }
-#endif
 
         AnfExp *anfExp = anfNormalize(minExp);
         REPLACE_PROTECT(save2, anfExp);

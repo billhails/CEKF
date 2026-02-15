@@ -1,0 +1,11 @@
+let
+    fn probe() {
+        let
+            ratio = 1 / 2;
+            complex = 5 + 7i;
+            mixed = 1 / (5 + 7i);
+        in
+            [ratio, complex, mixed]
+    }
+in
+    probe()

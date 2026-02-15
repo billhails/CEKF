@@ -398,4 +398,9 @@ namespace
         "(λ (x) ((h p) x))",
         "(λ (y) ((λ (x) (g x)) y))",
         "(λ (y) ((λ (x) ((h p) x)) y))",
+
+        ";--- NEW simplification targets ---",
+        "(+ (/ x 2) (/ y 2))",
+        "(- (/ x 2) (/ y 2))",
+        "(/ (* k x) (* k y))",
     ]};

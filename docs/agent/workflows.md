@@ -26,6 +26,23 @@ The compiler uses two distinct mechanisms for reporting errors depending on thei
 
 Check `utils_helper.[ch]` before implementing functions over common types defined in `utils.yaml`, if you do need to implement something, consider adding it to `utils_helper.[ch]` if it could be useful elsewhere.
 
+## Root Shell Helpers (`utils.sh`)
+
+There is a project-level shell helper file at `./utils.sh`. Agents working from the command line should be aware of it, and may source it when useful:
+
+```bash
+source ./utils.sh
+```
+
+Notable quality-of-life helpers include:
+
+* `new_h <name>`: creates `src/<name>.h` with include guards and GPL header text.
+* `new_c <name>`: creates `src/<name>.c` with GPL header text.
+* `new_ch <name>`: creates matching `.c/.h` pair and adds `#include "<name>.h"` to the `.c` file.
+* `new_visitor <stage> <suffix>`: creates `src/<stage>_<suffix>.h` and generates visitor boilerplate C from `src/<stage>.yaml`.
+
+If an agent does not use these helpers directly, it should still follow the same creation patterns (especially GPL header insertion and header guard style) when creating new source files manually.
+
 ## Adding a Built-in Function
 
 To add a new native function callable from F♮ code:

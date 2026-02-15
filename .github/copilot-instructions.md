@@ -93,6 +93,13 @@ make docs              # Generates Mermaid diagrams from YAML schemas
 
 - Always use explicit NULL comparisons: `if (ptr != NULL)` or `if (ptr == NULL)`
 
+### Boolean values
+
+- Use `bool` for variables and return values that represent truth values.
+- Do not use `int` as a boolean substitute when the API returns boolean semantics.
+- Prefer direct boolean checks (e.g., `if (flag)`) and assertions (e.g., `assert(flag)`).
+- Example: `bool matches = eqTerm(actual, expected); assert(matches);`
+
 ### Naming Conventions
 
 - Types: `MixedCase` (e.g., `LamExp`, `AstExpression`)
@@ -175,6 +182,12 @@ For detailed information on specific compiler stages, see:
 - [tpmc.md](../docs/agent/tpmc.md) - Pattern matching compilation
 - [anf.md](../docs/agent/anf.md) - A-Normal Form conversion
 - [language-syntax.md](../docs/agent/language-syntax.md) - F♮ language reference
+
+## Rewrite Prototyping
+
+For guidance on the self-hosting/prototyping pipeline in `fn/rewrite`, including `test_harness.fn`, pass ordering, and `samples.fn` usage, see:
+
+- [rewrite-self-hosting-guide.md](../docs/agents/rewrite-self-hosting-guide.md)
 
 ## When Reading Code
 
