@@ -37,7 +37,6 @@ The build depends heavily on code generation. Do not manually edit files in `gen
 
 ```bash
 make                    # default MODE=debug: -g, enables `--stress-gc` flag which will force GC on every malloc
-make MODE=testing       # -g without aggressive GC option
 make MODE=production    # -O2, all safety checks disabled
 ```
 

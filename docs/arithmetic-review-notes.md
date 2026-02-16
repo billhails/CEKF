@@ -153,6 +153,7 @@ There are many `cant_happen("unrecognised ...")` cases.
 - GC lifetime bugs introduced by moving logic without clear ownership/protection conventions.
 - Behavior changes due to altered coercion precedence.
 - Performance regressions from eager promotion to complex or irrational forms.
+- Current hard-abort paths (for example divide/mod by zero) may later be reopened if soft-NaN semantics are introduced; tests and dispatch contracts should keep this future transition explicit.
 
 ## Bottom line
 

@@ -356,7 +356,7 @@ Benchmark suite comparing bytecode VM vs LLVM:
 ### Debug Build
 
 ```bash
-make MODE=testing
+make
 ./bin/fn --use-llvm --dump-llvm-ir program.fn
 ```
 

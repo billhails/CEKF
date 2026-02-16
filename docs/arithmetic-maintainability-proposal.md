@@ -17,6 +17,10 @@ Out of scope for this proposal:
 
 Future domains are considered only as design constraints.
 
+Future note: a soft-NaN style numeric value has been identified as a likely addition to replace hard abort behavior on undefined arithmetic (for example divide/mod by zero). That is out of scope here but should shape error-path design.
+
+Integration of new dispatch into existing public entry points is explicitly deferred; this proposal targets parallel implementation and validation first.
+
 ## Core decisions
 
 1. Use data-driven dispatch, not large nested switches.
@@ -67,6 +71,8 @@ Represent coercion as:
 
 Normalization actions are operator-specific and can be asymmetric (`normalize base`, `normalize exponent`, or both).
 
+Current hard-fail arithmetic paths should be treated as temporary implementation behavior, not permanent API contracts, to allow later soft-NaN semantics.
+
 ## Domain-family boundary (future-aware, scalar-only now)
 
 Define families for routing clarity:
@@ -92,6 +98,8 @@ This creates an internal seam for future growth without expanding current scope.
 3. avoid a separate giant cross-product switch.
 
 In other words, `pow` should be table-driven for routing, but not forced into the same symmetric coercion behavior as `+`, `-`, `*`, `/`, `%`.
+
+Detailed staged scope for `n_pow` is tracked in [arithmetic-next-pow-scope](arithmetic-next-pow-scope.md).
 
 ## Replacing higher-order rational helpers
 
@@ -126,7 +134,7 @@ It keeps the new dispatch architecture coherent and removes the least maintainab
 Proposed mapping from current internals to semantically named handlers:
 
 | Current helper | Current role | Proposed wrapper name |
-|---|---|---|
+| --- | --- | --- |
 | `ratAddSubOrMod(..., intAdd, ...)` | cross-add numerators over common denominator | `ratAddCross` |
 | `ratAddSubOrMod(..., intSub, ...)` | cross-sub numerators over common denominator | `ratSubCross` |
 | `ratAddSubOrMod(..., intMod, ...)` | cross-mod numerators over common denominator | `ratModCross` |
@@ -148,24 +156,26 @@ This sequence improves readability first, then reduces abstraction complexity wi
 
 1. Extract normalization/classification into `src/arithmetic_dispatch.c` (+ header).
 2. Keep current leaf math functions (`intAdd`, `ratMul`, `comPowCom`, etc.).
-3. Route `nadd`, `nsub`, `nmul`, `ndiv`, `nmod`, `ncmp` through scalar table dispatch.
+3. Add parallel entry points (`n_add`, `n_sub`, `n_mul`, `n_div`, `n_mod`, `n_pow`, `n_cmp`) outside current call paths.
+4. Add unit tests for the parallel layer and normalization plans.
 
 ### Phase 2
 
-1. Move `npow` onto the same table-driven routing.
-2. Keep existing formulas; only rewire dispatch.
+1. Implement table-driven behavior behind the parallel entry points.
+2. Keep existing formulas where possible; replace only dispatch plumbing.
 
 ### Phase 3
 
-1. Remove duplicated legacy switch routing.
-2. Consolidate invariant/error handling.
-3. Add operator×domain matrix tests.
+1. Expand parity/regression coverage across legacy and parallel entry points.
+2. Keep legacy entry points as production path until confidence threshold is met.
+3. Defer final name swap/integration to a separate proposal/change.
 
 ## Validation
 
 - Run baseline `make test`.
 - Add focused regressions for mixed-type coercion, rational simplification, complex/imag behavior, and `pow` combinations.
 - Require no behavior drift in existing scalar arithmetic.
+- Keep a dedicated test list of currently aborting arithmetic paths (for example divide/mod by zero cases) so they can be re-opened and converted to soft-NaN behavior in a later phase.
 
 ## Why this approach
 
