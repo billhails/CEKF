@@ -1,7 +1,9 @@
 # Proposal: Make Arithmetic More Maintainable (Without API Changes)
 
 Date: 2026-02-15.  
-Status: design proposal.
+Status: completed (rewrite phase).
+
+Completion note (2026-02-16): parallel staged arithmetic (`n_*` in `arithmetic_next`) and parity-focused validation are complete; integration into runtime call sites remains intentionally deferred to a separate integration step.
 
 See [arithmetic review notes](arithmetic-review-notes.md) for details of the existing implementation.
 

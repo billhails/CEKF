@@ -24,9 +24,13 @@
 #include "init.h"
 
 #include <limits.h>
+#include <math.h>
 
 static Value stdint(Integer i) { return value_Stdint(i); }
 static Value asBigint(Integer i) { return value_Bigint(bigIntFromInt(i)); }
+static Value asBigintPow(Integer base, Integer exponent) {
+    return value_Bigint(bigIntFromPower(base, exponent));
+}
 static Value stdintImag(Integer i) { return value_Stdint_imag(i); }
 static Value stdComplex(Integer real, Integer imag) {
     Vec *complex = newVec(2);
@@ -156,6 +160,17 @@ static void assertNCmpParity(Value left, Value right) {
     Cmp next = n_cmp(nextLeft, nextRight);
     Cmp legacy = ncmp(legacyLeft, legacyRight);
     assert(next == legacy);
+    UNPROTECT(save);
+}
+
+static void assertNPowParity(Value left, Value right) {
+    int save = protectValue(left);
+    protectValue(right);
+    Value next = n_pow(left, right);
+    protectValue(next);
+    Value legacy = npow(left, right);
+    protectValue(legacy);
+    assert(ncmp(next, legacy) == CMP_EQ);
     UNPROTECT(save);
 }
 
@@ -815,6 +830,253 @@ static void testNCmpComplexEndToEnd() {
     UNPROTECT(save);
 }
 
+static void testNPowIntEndToEnd() {
+    Value a = stdint(2);
+    Value b = stdint(3);
+    Value res = n_pow(a, b);
+    assert(ncmp(res, stdint(8)) == CMP_EQ);
+    assertNPowParity(a, b);
+
+    a = stdint(2);
+    b = stdint(-3);
+    int save = protectValue(a);
+    protectValue(b);
+    res = n_pow(a, b);
+    protectValue(res);
+    Value expected = stdRational(1, 8);
+    protectValue(expected);
+    assert(ncmp(res, expected) == CMP_EQ);
+    assertNPowParity(a, b);
+    UNPROTECT(save);
+
+    a = asBigint(2);
+    save = protectValue(a);
+    b = asBigint(10);
+    protectValue(b);
+    res = n_pow(a, b);
+    protectValue(res);
+    expected = stdint(1024);
+    protectValue(expected);
+    assert(ncmp(res, expected) == CMP_EQ);
+    assertNPowParity(a, b);
+    UNPROTECT(save);
+
+    a = stdint(-2);
+    b = stdint(5);
+    res = n_pow(a, b);
+    assert(ncmp(res, stdint(-32)) == CMP_EQ);
+    assertNPowParity(a, b);
+
+    a = stdint(7);
+    b = stdint(0);
+    res = n_pow(a, b);
+    assert(ncmp(res, stdint(1)) == CMP_EQ);
+    assertNPowParity(a, b);
+
+    a = asBigint(2);
+    save = protectValue(a);
+    b = asBigint(31);
+    protectValue(b);
+    res = n_pow(a, b);
+    protectValue(res);
+    expected = asBigintPow(2, 31);
+    protectValue(expected);
+    assert(ncmp(res, expected) == CMP_EQ);
+    assertNPowParity(a, b);
+    UNPROTECT(save);
+}
+
+static void testNPowIrrationalEndToEnd() {
+    Value a = irrational(9.0);
+    Value b = irrational(0.5);
+    Value res = n_pow(a, b);
+    assert(res.type == VALUE_TYPE_IRRATIONAL);
+    assert(fabs(res.val.irrational - 3.0) < 1e-12);
+    assertNPowParity(a, b);
+
+    a = irrational(2.0);
+    b = irrational(10.0);
+    res = n_pow(a, b);
+    assert(res.type == VALUE_TYPE_IRRATIONAL);
+    assert(fabs(res.val.irrational - 1024.0) < 1e-9);
+    assertNPowParity(a, b);
+
+    a = irrational(4.0);
+    b = irrational(-1.0);
+    res = n_pow(a, b);
+    assert(res.type == VALUE_TYPE_IRRATIONAL);
+    assert(fabs(res.val.irrational - 0.25) < 1e-12);
+    assertNPowParity(a, b);
+}
+
+static void testNPowRationalIntEndToEnd() {
+    Value a = stdRational(2, 3);
+    Value b = stdint(3);
+    int save = protectValue(a);
+    protectValue(b);
+    Value res = n_pow(a, b);
+    protectValue(res);
+    Value expected = stdRational(8, 27);
+    protectValue(expected);
+    assert(ncmp(res, expected) == CMP_EQ);
+    assertNPowParity(a, b);
+    UNPROTECT(save);
+
+    a = stdRational(2, 3);
+    b = stdint(-2);
+    save = protectValue(a);
+    protectValue(b);
+    res = n_pow(a, b);
+    protectValue(res);
+    expected = stdRational(9, 4);
+    protectValue(expected);
+    assert(ncmp(res, expected) == CMP_EQ);
+    UNPROTECT(save);
+
+    a = stdRational(5, 7);
+    b = stdint(0);
+    save = protectValue(a);
+    protectValue(b);
+    res = n_pow(a, b);
+    protectValue(res);
+    expected = stdint(1);
+    protectValue(expected);
+    assert(ncmp(res, expected) == CMP_EQ);
+    assertNPowParity(a, b);
+    UNPROTECT(save);
+
+    a = stdRational(2, 3);
+    b = asBigint(4);
+    save = protectValue(a);
+    protectValue(b);
+    res = n_pow(a, b);
+    protectValue(res);
+    expected = stdRational(16, 81);
+    protectValue(expected);
+    assert(ncmp(res, expected) == CMP_EQ);
+    assertNPowParity(a, b);
+    UNPROTECT(save);
+}
+
+static void testNPowComplexIntEndToEnd() {
+    Value a = stdComplex(1, 1);
+    Value b = stdint(2);
+    int save = protectValue(a);
+    protectValue(b);
+    Value res = n_pow(a, b);
+    protectValue(res);
+    Value expected = stdintImag(2);
+    protectValue(expected);
+    assert(ncmp(res, expected) == CMP_EQ);
+    assertNPowParity(a, b);
+    UNPROTECT(save);
+
+    a = stdintImag(2);
+    b = stdint(3);
+    save = protectValue(a);
+    protectValue(b);
+    res = n_pow(a, b);
+    protectValue(res);
+    expected = stdintImag(-8);
+    protectValue(expected);
+    assert(ncmp(res, expected) == CMP_EQ);
+    assertNPowParity(a, b);
+    UNPROTECT(save);
+
+    a = stdComplex(1, 1);
+    b = stdint(0);
+    save = protectValue(a);
+    protectValue(b);
+    res = n_pow(a, b);
+    protectValue(res);
+    expected = stdint(1);
+    protectValue(expected);
+    assert(ncmp(res, expected) == CMP_EQ);
+    assertNPowParity(a, b);
+    UNPROTECT(save);
+
+    a = stdComplex(1, 1);
+    b = stdint(16);
+    save = protectValue(a);
+    protectValue(b);
+    res = n_pow(a, b);
+    protectValue(res);
+    expected = stdint(256);
+    protectValue(expected);
+    assert(ncmp(res, expected) == CMP_EQ);
+    assertNPowParity(a, b);
+    UNPROTECT(save);
+
+    a = stdintImag(2);
+    b = stdint(10);
+    save = protectValue(a);
+    protectValue(b);
+    res = n_pow(a, b);
+    protectValue(res);
+    expected = stdint(-1024);
+    protectValue(expected);
+    assert(ncmp(res, expected) == CMP_EQ);
+    assertNPowParity(a, b);
+    UNPROTECT(save);
+
+    a = stdComplex(1, 1);
+    b = stdint(-3);
+    save = protectValue(a);
+    protectValue(b);
+    res = n_pow(a, b);
+    protectValue(res);
+    assertNPowParity(a, b);
+    UNPROTECT(save);
+}
+
+static void testNPowCrossDomainParity() {
+    int save = PROTECT(NULL);
+
+    Value rat = stdRational(9, 4);
+    protectValue(rat);
+    Value ratExp = stdRational(1, 2);
+    protectValue(ratExp);
+    assertNPowParity(rat, ratExp);
+
+    Value intBase = stdint(5);
+    protectValue(intBase);
+    Value irrExp = irrational(1.5);
+    protectValue(irrExp);
+    assertNPowParity(intBase, irrExp);
+
+    Value irrBase = irrational(2.25);
+    protectValue(irrBase);
+    Value ratTwoThirds = stdRational(2, 3);
+    protectValue(ratTwoThirds);
+    assertNPowParity(irrBase, ratTwoThirds);
+
+    Value imagBase = stdintImag(2);
+    protectValue(imagBase);
+    Value irrHalf = irrational(0.5);
+    protectValue(irrHalf);
+    assertNPowParity(imagBase, irrHalf);
+
+    Value complexBase = stdComplex(2, 3);
+    protectValue(complexBase);
+    Value complexExp = stdComplex(1, 1);
+    protectValue(complexExp);
+    assertNPowParity(complexBase, complexExp);
+
+    Value complexRatExp = stdRational(3, 2);
+    protectValue(complexRatExp);
+    assertNPowParity(complexBase, complexRatExp);
+
+    Value irrComplexExp = irrational(0.75);
+    protectValue(irrComplexExp);
+    assertNPowParity(complexBase, irrComplexExp);
+
+    Value intComplexExp = stdComplex(1, -1);
+    protectValue(intComplexExp);
+    assertNPowParity(stdint(3), intComplexExp);
+
+    UNPROTECT(save);
+}
+
 int main(int argc __attribute__((unused)),
          char *argv[] __attribute__((unused))) {
     initAll();
@@ -854,5 +1116,10 @@ int main(int argc __attribute__((unused)),
     testNCmpRationalEndToEnd();
     testNCmpImagEndToEnd();
     testNCmpComplexEndToEnd();
+    testNPowIntEndToEnd();
+    testNPowIrrationalEndToEnd();
+    testNPowRationalIntEndToEnd();
+    testNPowComplexIntEndToEnd();
+    testNPowCrossDomainParity();
     return 0;
 }

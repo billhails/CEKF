@@ -29,6 +29,8 @@ typedef Cmp (*NextCmpHandler)(Value left, Value right);
 
 static Value nextImagToReal(Value value);
 static Value nextRealToImag(Value value);
+static Value nextPowComplexInt(Value left, Value right);
+static Value nextPowComplexComplex(Value base, Value exponent);
 
 /////////////////////////////
 // normalization utilities
@@ -1080,6 +1082,585 @@ static const NextCmpHandler nextCmpHandlers[] = {
 };
 
 /////////////////////////////
+// pow operator
+/////////////////////////////
+
+static bool nextIntIsZero(Value value) {
+    ASSERT_INT(value);
+    if (IS_BIGINT(value)) {
+        return cmpBigIntInt(getValue_Bigint(value), 0) == CMP_EQ;
+    }
+    return getValue_Stdint(value) == 0;
+}
+
+static bool nextIntIsNegative(Value value) {
+    ASSERT_INT(value);
+    if (IS_BIGINT(value)) {
+        return cmpBigIntInt(getValue_Bigint(value), 0) == CMP_LT;
+    }
+    return getValue_Stdint(value) < 0;
+}
+
+static bool nextIntIsOdd(Value value) {
+    ASSERT_INT(value);
+    if (IS_BIGINT(value)) {
+        return !isEvenBigInt(getValue_Bigint(value));
+    }
+    return (getValue_Stdint(value) & 1) != 0;
+}
+
+static bool nextIntIsEven(Value value) { return !nextIntIsOdd(value); }
+
+static bool nextRatIsNegative(Value value) {
+    ASSERT_RATIONAL(value);
+    Vec *ratio = getValue_Rational(value);
+    Value numerator = ratio->entries[0];
+    return nextIntIsNegative(numerator);
+}
+
+static Value nextRatNumerator(Value value) {
+    ASSERT_RATIONAL(value);
+    return getValue_Rational(value)->entries[0];
+}
+
+static Value nextRatDenominator(Value value) {
+    ASSERT_RATIONAL(value);
+    return getValue_Rational(value)->entries[1];
+}
+
+static bool nextRealIsNegative(Value value) {
+    ASSERT_REAL(value);
+    switch (value.type) {
+    case VALUE_TYPE_STDINT:
+    case VALUE_TYPE_BIGINT:
+        return nextIntIsNegative(value);
+    case VALUE_TYPE_RATIONAL:
+        return nextRatIsNegative(value);
+    case VALUE_TYPE_IRRATIONAL:
+        return getValue_Irrational(value) < 0.0;
+    default:
+        cant_happen("invalid real type %s", valueTypeName(value.type));
+    }
+}
+
+static Value nextIntAbs(Value value) {
+    ASSERT_INT(value);
+    if (!nextIntIsNegative(value)) {
+        return value;
+    }
+
+    if (IS_BIGINT(value)) {
+        BigInt *copy = copyBigInt(getValue_Bigint(value));
+        int save = PROTECT(copy);
+        negateBigInt(copy);
+        Value res = value_Bigint(copy);
+        UNPROTECT(save);
+        return res;
+    }
+
+    Integer std = getValue_Stdint(value);
+    Integer abs;
+    if (__builtin_sub_overflow(0, std, &abs)) {
+        BigInt *copy = bigIntFromInt(std);
+        int save = PROTECT(copy);
+        negateBigInt(copy);
+        Value res = value_Bigint(copy);
+        UNPROTECT(save);
+        return res;
+    }
+
+    return value_Stdint(abs);
+}
+
+static BigInt *nextPowAbsExponent(Value exponent, bool *isNegative) {
+    ASSERT_INT(exponent);
+    if (IS_BIGINT(exponent)) {
+        BigInt *copy = copyBigInt(getValue_Bigint(exponent));
+        *isNegative = isNegBigInt(copy);
+        if (*isNegative) {
+            negateBigInt(copy);
+        }
+        return copy;
+    }
+
+    Integer e = getValue_Stdint(exponent);
+    BigInt *copy = bigIntFromInt(e);
+    *isNegative = e < 0;
+    if (*isNegative) {
+        negateBigInt(copy);
+    }
+    return copy;
+}
+
+static Value nextPowIntInt(Value left, Value right) {
+    ASSERT_INT(left);
+    ASSERT_INT(right);
+
+    if (nextIntIsZero(right)) {
+        return value_Stdint(1);
+    }
+
+    int save = PROTECT(NULL);
+    bool isNegative = false;
+    BigInt *absExponent = nextPowAbsExponent(right, &isNegative);
+    PROTECT(absExponent);
+
+    BigInt *powBig;
+    if (IS_BIGINT(left)) {
+        powBig = powBigInt(getValue_Bigint(left), absExponent);
+    } else {
+        powBig = powIntBigInt(getValue_Stdint(left), absExponent);
+    }
+    PROTECT(powBig);
+
+    Value powValue = value_Bigint(powBig);
+    protectValue(powValue);
+    if (!isNegative) {
+        UNPROTECT(save);
+        return powValue;
+    }
+
+    Value res = nextRatValue(value_Stdint(1), powValue);
+    protectValue(res);
+    UNPROTECT(save);
+    return res;
+}
+
+static Value nextPowIrrIrr(Value left, Value right) {
+    ASSERT_IRRATIONAL(left);
+    ASSERT_IRRATIONAL(right);
+    return value_Irrational(
+        pow(getValue_Irrational(left), getValue_Irrational(right)));
+}
+
+static Value nextPowRealRat(Value base, Value exponent) {
+    ASSERT_REAL(base);
+    ASSERT_RATIONAL(exponent);
+
+    int save = PROTECT(NULL);
+    if (nextRealIsNegative(base)) {
+        Value posBase = n_mul(base, value_Stdint(-1));
+        protectValue(posBase);
+        Value negPow = nextPowRealRat(posBase, exponent);
+        protectValue(negPow);
+        Value denominator = nextRatDenominator(exponent);
+
+        Value res;
+        if (nextIntIsEven(denominator)) {
+            res = n_mul(negPow, value_Stdint_imag(1));
+        } else {
+            res = n_mul(negPow, value_Stdint(-1));
+        }
+        protectValue(res);
+        UNPROTECT(save);
+        return res;
+    }
+
+    if (nextRatIsNegative(exponent)) {
+        Value posExponent = n_mul(exponent, value_Stdint(-1));
+        protectValue(posExponent);
+        Value inv = nextPowRealRat(base, posExponent);
+        protectValue(inv);
+        Value res = n_div(value_Stdint(1), inv);
+        protectValue(res);
+        UNPROTECT(save);
+        return res;
+    }
+
+    if (IS_RATIONAL(base)) {
+        Value num = nextPowRealRat(nextRatNumerator(base), exponent);
+        protectValue(num);
+        Value den = nextPowRealRat(nextRatDenominator(base), exponent);
+        protectValue(den);
+
+        Value res;
+        if (IS_INT(num) && IS_INT(den)) {
+            res = n_div(num, den);
+        } else {
+            Value irrNum = nextToIrr(num);
+            protectValue(irrNum);
+            Value irrDen = nextToIrr(den);
+            protectValue(irrDen);
+            res = value_Irrational(getValue_Irrational(irrNum) /
+                                   getValue_Irrational(irrDen));
+        }
+        protectValue(res);
+        UNPROTECT(save);
+        return res;
+    }
+
+    Value fbase = nextToIrr(base);
+    protectValue(fbase);
+    Value fexponent = nextToIrr(exponent);
+    protectValue(fexponent);
+    Value res = value_Irrational(
+        pow(getValue_Irrational(fbase), getValue_Irrational(fexponent)));
+    protectValue(res);
+    UNPROTECT(save);
+    return res;
+}
+
+static Value nextPowRatInt(Value left, Value right) {
+    ASSERT_RATIONAL(left);
+    ASSERT_INT(right);
+
+    Vec *leftRat = getValue_Rational(left);
+    Value numerator = leftRat->entries[0];
+    Value denominator = leftRat->entries[1];
+
+    Value absExponent = nextIntAbs(right);
+    int save = protectValue(absExponent);
+
+    Value numPow = nextPowIntInt(numerator, absExponent);
+    protectValue(numPow);
+    Value denPow = nextPowIntInt(denominator, absExponent);
+    protectValue(denPow);
+    Value res = n_div(numPow, denPow);
+    protectValue(res);
+
+    if (nextIntIsNegative(right)) {
+        Value inv = n_div(value_Stdint(1), res);
+        protectValue(inv);
+        UNPROTECT(save);
+        return inv;
+    }
+
+    UNPROTECT(save);
+    return res;
+}
+
+static Value nextPowIrrComplex(Value c, Value right) {
+    ASSERT_IRRATIONAL(c);
+    ASSERT(IS_COMPLEX_LIKE_TYPE(right.type));
+
+    Value rightComplex = nextToComplex(right);
+    int save = protectValue(rightComplex);
+
+    Value a = nextToIrr(nextComplexRealPart(rightComplex));
+    protectValue(a);
+    Value b = nextToIrr(nextComplexImagAsReal(rightComplex));
+    protectValue(b);
+
+    Value cPowA = n_pow(c, a);
+    protectValue(cPowA);
+    Double lnC = log(getValue_Irrational(c));
+    Double bLnC = getValue_Irrational(b) * lnC;
+
+    Value cosTerm = value_Irrational(cos(bLnC));
+    protectValue(cosTerm);
+    Value iSinTerm = value_Irrational_imag(sin(bLnC));
+    protectValue(iSinTerm);
+    Value com = nextComValue(cosTerm, iSinTerm);
+    protectValue(com);
+    Value res = n_mul(cPowA, com);
+    protectValue(res);
+
+    UNPROTECT(save);
+    return res;
+}
+
+static Value nextComMag(Value value) {
+    Value complex = nextToComplex(value);
+    int save = protectValue(complex);
+
+    Value a = nextComplexRealPart(complex);
+    Value b = nextComplexImagAsReal(complex);
+    Value aa = n_pow(a, value_Stdint(2));
+    protectValue(aa);
+    Value bb = n_pow(b, value_Stdint(2));
+    protectValue(bb);
+    Value sum = n_add(aa, bb);
+    protectValue(sum);
+    Value res = n_pow(sum, value_Irrational(0.5));
+    protectValue(res);
+
+    UNPROTECT(save);
+    return res;
+}
+
+static Value nextComTheta(Value value) {
+    Value complex = nextToComplex(value);
+    Value a = nextToIrr(nextComplexRealPart(complex));
+    Value b = nextToIrr(nextComplexImagAsReal(complex));
+    return value_Irrational(
+        atan2(getValue_Irrational(b), getValue_Irrational(a)));
+}
+
+static Value nextComRoot(Value value, Value n) {
+    ASSERT_INT(n);
+
+    Value complex = nextToComplex(value);
+    int save = protectValue(complex);
+    Value r = nextComMag(complex);
+    protectValue(r);
+    Value theta = nextComTheta(complex);
+    protectValue(theta);
+    Value invN = nextRatValue(value_Stdint(1), n);
+    protectValue(invN);
+    Value rN = n_pow(r, invN);
+    protectValue(rN);
+    Value thetaN = n_div(theta, n);
+    protectValue(thetaN);
+    Value irrThetaN = nextToIrr(thetaN);
+    protectValue(irrThetaN);
+    Value cosTerm = value_Irrational(cos(getValue_Irrational(irrThetaN)));
+    protectValue(cosTerm);
+    Value iSinTerm = value_Irrational_imag(sin(getValue_Irrational(irrThetaN)));
+    protectValue(iSinTerm);
+    Value base = nextComValue(cosTerm, iSinTerm);
+    protectValue(base);
+    Value res = n_mul(rN, base);
+    protectValue(res);
+
+    UNPROTECT(save);
+    return res;
+}
+
+static Value nextPowComplexRat(Value left, Value right) {
+    ASSERT(IS_COMPLEX_LIKE_TYPE(left.type));
+    ASSERT_RATIONAL(right);
+
+    Value root = nextComRoot(left, nextRatDenominator(right));
+    int save = protectValue(root);
+    Value res = nextPowComplexInt(root, nextRatNumerator(right));
+    protectValue(res);
+    UNPROTECT(save);
+    return res;
+}
+
+static Value nextPowIrrFromReal(Value left, Value right) {
+    ASSERT_REAL(left);
+    ASSERT_IRRATIONAL(right);
+    return nextPowIrrIrr(nextToIrr(left), right);
+}
+
+static Value nextPowIrrComplexFromReal(Value left, Value right) {
+    ASSERT_REAL(left);
+    ASSERT(IS_COMPLEX_LIKE_TYPE(right.type));
+    return nextPowIrrComplex(nextToIrr(left), right);
+}
+
+static Value nextPowRatIrr(Value left, Value right) {
+    ASSERT_RATIONAL(left);
+    ASSERT_IRRATIONAL(right);
+    return nextPowIrrFromReal(left, right);
+}
+
+static Value nextPowRatComplex(Value left, Value right) {
+    ASSERT_RATIONAL(left);
+    ASSERT(IS_COMPLEX_LIKE_TYPE(right.type));
+    return nextPowIrrComplexFromReal(left, right);
+}
+
+static Value nextPowIrrInt(Value left, Value right) {
+    ASSERT_IRRATIONAL(left);
+    ASSERT_INT(right);
+    return nextPowIrrIrr(left, nextToIrr(right));
+}
+
+static Value nextPowIntRat(Value left, Value right) {
+    ASSERT_INT(left);
+    ASSERT_RATIONAL(right);
+    return nextPowRealRat(left, right);
+}
+
+static Value nextPowIntIrr(Value left, Value right) {
+    ASSERT_INT(left);
+    ASSERT_IRRATIONAL(right);
+    return nextPowIrrFromReal(left, right);
+}
+
+static Value nextPowIntComplex(Value left, Value right) {
+    ASSERT_INT(left);
+    ASSERT(IS_COMPLEX_LIKE_TYPE(right.type));
+    return nextPowIrrComplexFromReal(left, right);
+}
+
+static Value nextPowImagReal(Value left, Value right) {
+    ASSERT(IS_IMAG_TYPE(left.type));
+    ASSERT(IS_RATIONAL(right) || IS_IRRATIONAL(right));
+
+    Value real = nextImagToReal(left);
+    int save = protectValue(real);
+    Value res = n_pow(real, right);
+    protectValue(res);
+    res = nextRealToImag(res);
+    protectValue(res);
+    UNPROTECT(save);
+    return res;
+}
+
+static Value nextPowComplexIrr(Value left, Value right) {
+    ASSERT(left.type == VALUE_TYPE_COMPLEX);
+    ASSERT_IRRATIONAL(right);
+
+    Value rightComplex = nextToComplex(right);
+    int save = protectValue(rightComplex);
+    Value res = nextPowComplexComplex(left, rightComplex);
+    protectValue(res);
+    UNPROTECT(save);
+    return res;
+}
+
+static Value nextPowComplexComplex(Value base, Value exponent) {
+    ASSERT(IS_COMPLEX_LIKE_TYPE(base.type));
+    ASSERT(IS_COMPLEX_LIKE_TYPE(exponent.type));
+
+    Value baseComplex = nextToComplex(base);
+    int save = protectValue(baseComplex);
+    Value exponentComplex = nextToComplex(exponent);
+    protectValue(exponentComplex);
+
+    Value r = nextComMag(baseComplex);
+    protectValue(r);
+    Value theta = nextComTheta(baseComplex);
+    protectValue(theta);
+    Value irrR = nextToIrr(r);
+    protectValue(irrR);
+    Value lnR = value_Irrational(log(getValue_Irrational(irrR)));
+    protectValue(lnR);
+    Value lnRPlusITheta = nextComValue(lnR, nextRealToImag(theta));
+    protectValue(lnRPlusITheta);
+    Value prod = n_mul(lnRPlusITheta, exponentComplex);
+    protectValue(prod);
+    Value res = n_pow(value_Irrational(exp(1.0)), prod);
+    protectValue(res);
+
+    UNPROTECT(save);
+    return res;
+}
+
+static Value nextPowComplexInt(Value left, Value right) {
+    ASSERT(IS_COMPLEX_LIKE_TYPE(left.type));
+    ASSERT_INT(right);
+
+    if (nextIntIsZero(right)) {
+        return value_Stdint(1);
+    }
+
+    Value leftComplex = nextToComplex(left);
+    int save = protectValue(leftComplex);
+
+    Value exponent = nextIntAbs(right);
+    protectValue(exponent);
+
+    Value res = value_Stdint(1);
+    protectValue(res);
+
+    Value factor = leftComplex;
+    protectValue(factor);
+
+    while (n_cmp(exponent, value_Stdint(0)) == CMP_GT) {
+        if (nextIntIsOdd(exponent)) {
+            Value nextRes = n_mul(res, factor);
+            protectValue(nextRes);
+            res = nextRes;
+
+            Value evenExponent = n_sub(exponent, value_Stdint(1));
+            protectValue(evenExponent);
+            exponent = evenExponent;
+        }
+
+        Value halfExponent = n_div(exponent, value_Stdint(2));
+        protectValue(halfExponent);
+        ASSERT_INT(halfExponent);
+        exponent = halfExponent;
+
+        if (n_cmp(exponent, value_Stdint(0)) == CMP_GT) {
+            Value nextFactor = n_mul(factor, factor);
+            protectValue(nextFactor);
+            factor = nextFactor;
+        }
+    }
+
+    if (nextIntIsNegative(right)) {
+        Value inv = n_div(value_Stdint(1), res);
+        protectValue(inv);
+        UNPROTECT(save);
+        return inv;
+    }
+
+    UNPROTECT(save);
+    return res;
+}
+
+#define NEXT_POW_DOMAIN_COUNT (ARITH_DOMAIN_COMPLEX + 1)
+
+static const NextBinaryHandler nextPowHandlers[][NEXT_POW_DOMAIN_COUNT] = {
+    [ARITH_DOMAIN_INT_STD] =
+        {
+            [ARITH_DOMAIN_INT_STD] = nextPowIntInt,
+            [ARITH_DOMAIN_INT_BIG] = nextPowIntInt,
+            [ARITH_DOMAIN_RAT] = nextPowIntRat,
+            [ARITH_DOMAIN_IRR] = nextPowIntIrr,
+            [ARITH_DOMAIN_IMAG] = nextPowIntComplex,
+            [ARITH_DOMAIN_COMPLEX] = nextPowIntComplex,
+        },
+    [ARITH_DOMAIN_INT_BIG] =
+        {
+            [ARITH_DOMAIN_INT_STD] = nextPowIntInt,
+            [ARITH_DOMAIN_INT_BIG] = nextPowIntInt,
+            [ARITH_DOMAIN_RAT] = nextPowIntRat,
+            [ARITH_DOMAIN_IRR] = nextPowIntIrr,
+            [ARITH_DOMAIN_IMAG] = nextPowIntComplex,
+            [ARITH_DOMAIN_COMPLEX] = nextPowIntComplex,
+        },
+    [ARITH_DOMAIN_RAT] =
+        {
+            [ARITH_DOMAIN_INT_STD] = nextPowRatInt,
+            [ARITH_DOMAIN_INT_BIG] = nextPowRatInt,
+            [ARITH_DOMAIN_RAT] = nextPowRealRat,
+            [ARITH_DOMAIN_IRR] = nextPowRatIrr,
+            [ARITH_DOMAIN_IMAG] = nextPowRatComplex,
+            [ARITH_DOMAIN_COMPLEX] = nextPowRatComplex,
+        },
+    [ARITH_DOMAIN_IRR] =
+        {
+            [ARITH_DOMAIN_INT_STD] = nextPowIrrInt,
+            [ARITH_DOMAIN_INT_BIG] = nextPowIrrInt,
+            [ARITH_DOMAIN_RAT] = nextPowRealRat,
+            [ARITH_DOMAIN_IRR] = nextPowIrrIrr,
+            [ARITH_DOMAIN_IMAG] = nextPowIrrComplex,
+            [ARITH_DOMAIN_COMPLEX] = nextPowIrrComplex,
+        },
+    [ARITH_DOMAIN_IMAG] =
+        {
+            [ARITH_DOMAIN_INT_STD] = nextPowComplexInt,
+            [ARITH_DOMAIN_INT_BIG] = nextPowComplexInt,
+            [ARITH_DOMAIN_RAT] = nextPowImagReal,
+            [ARITH_DOMAIN_IRR] = nextPowImagReal,
+            [ARITH_DOMAIN_IMAG] = nextPowComplexComplex,
+            [ARITH_DOMAIN_COMPLEX] = nextPowComplexComplex,
+        },
+    [ARITH_DOMAIN_COMPLEX] =
+        {
+            [ARITH_DOMAIN_INT_STD] = nextPowComplexInt,
+            [ARITH_DOMAIN_INT_BIG] = nextPowComplexInt,
+            [ARITH_DOMAIN_RAT] = nextPowComplexRat,
+            [ARITH_DOMAIN_IRR] = nextPowComplexIrr,
+            [ARITH_DOMAIN_IMAG] = nextPowComplexComplex,
+            [ARITH_DOMAIN_COMPLEX] = nextPowComplexComplex,
+        },
+};
+
+static NextBinaryHandler getPowDomainHandler(ArithmeticDomain leftDomain,
+                                             ArithmeticDomain rightDomain) {
+    if (leftDomain <= ARITH_DOMAIN_NONE || leftDomain > ARITH_DOMAIN_COMPLEX ||
+        rightDomain <= ARITH_DOMAIN_NONE ||
+        rightDomain > ARITH_DOMAIN_COMPLEX) {
+        cant_happen("invalid pow domain pair (%d, %d)", leftDomain,
+                    rightDomain);
+    }
+
+    NextBinaryHandler handler = nextPowHandlers[leftDomain][rightDomain];
+    if (handler == NULL) {
+        cant_happen("missing pow handler for domain pair (%d, %d)", leftDomain,
+                    rightDomain);
+    }
+    return handler;
+}
+
+/////////////////////////////
 // public staged API
 /////////////////////////////
 
@@ -1114,8 +1695,14 @@ Value n_mod(Value left, Value right) {
 }
 
 Value n_pow(Value left, Value right) {
-    requirePlan(ARITH_OP_POW, left, right);
-    return npow(left, right);
+    ArithmeticNormalizationPlan plan = requirePlan(ARITH_OP_POW, left, right);
+    if (plan.kind != ARITH_NORM_ASYMMETRIC) {
+        cant_happen("unexpected pow normalization kind %d", plan.kind);
+    }
+
+    NextBinaryHandler handler =
+        getPowDomainHandler(plan.leftDomain, plan.rightDomain);
+    return handler(left, right);
 }
 
 Cmp n_cmp(Value left, Value right) {
