@@ -1115,7 +1115,13 @@ static bool nextRatIsNegative(Value value) {
     ASSERT_RATIONAL(value);
     Vec *ratio = getValue_Rational(value);
     Value numerator = ratio->entries[0];
-    return nextIntIsNegative(numerator);
+    Value denominator = ratio->entries[1];
+
+    if (nextIntIsZero(numerator)) {
+        return false;
+    }
+
+    return nextIntIsNegative(numerator) != nextIntIsNegative(denominator);
 }
 
 static Value nextRatNumerator(Value value) {
@@ -1268,9 +1274,19 @@ static Value nextPowRealRat(Value base, Value exponent) {
     }
 
     if (IS_RATIONAL(base)) {
-        Value num = nextPowRealRat(nextRatNumerator(base), exponent);
+        Value partNumerator = nextRatNumerator(base);
+        Value partDenominator = nextRatDenominator(base);
+
+        if (nextIntIsNegative(partDenominator)) {
+            partNumerator = n_mul(partNumerator, value_Stdint(-1));
+            protectValue(partNumerator);
+            partDenominator = n_mul(partDenominator, value_Stdint(-1));
+            protectValue(partDenominator);
+        }
+
+        Value num = nextPowRealRat(partNumerator, exponent);
         protectValue(num);
-        Value den = nextPowRealRat(nextRatDenominator(base), exponent);
+        Value den = nextPowRealRat(partDenominator, exponent);
         protectValue(den);
 
         Value res;
@@ -1482,9 +1498,9 @@ static Value nextPowImagReal(Value left, Value right) {
 
     Value real = nextImagToReal(left);
     int save = protectValue(real);
-    Value res = n_pow(real, right);
-    protectValue(res);
-    res = nextRealToImag(res);
+    Value powRes = n_pow(real, right);
+    protectValue(powRes);
+    Value res = n_mul(powRes, value_Stdint_imag(1));
     protectValue(res);
     UNPROTECT(save);
     return res;

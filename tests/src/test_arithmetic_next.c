@@ -1074,6 +1074,32 @@ static void testNPowCrossDomainParity() {
     protectValue(intComplexExp);
     assertNPowParity(stdint(3), intComplexExp);
 
+    Value posRatNegDen = stdRational(-4, -9);
+    protectValue(posRatNegDen);
+    Value half = stdRational(1, 2);
+    protectValue(half);
+    Value posRatRes = n_pow(posRatNegDen, half);
+    protectValue(posRatRes);
+    Value twoThirds = stdRational(2, 3);
+    protectValue(twoThirds);
+    assert(ncmp(posRatRes, twoThirds) == CMP_EQ);
+
+    Value zeroRatNegDen = stdRational(0, -7);
+    protectValue(zeroRatNegDen);
+    Value third = stdRational(1, 3);
+    protectValue(third);
+    Value zeroRatRes = n_pow(zeroRatNegDen, third);
+    protectValue(zeroRatRes);
+    assert(ncmp(zeroRatRes, stdint(0)) == CMP_EQ);
+
+    Value imagBaseNeg = stdintImag(-4);
+    protectValue(imagBaseNeg);
+    Value halfImagExp = stdRational(1, 2);
+    protectValue(halfImagExp);
+    Value imagRatRes = n_pow(imagBaseNeg, halfImagExp);
+    protectValue(imagRatRes);
+    assert(ncmp(imagRatRes, stdint(-2)) == CMP_EQ);
+
     UNPROTECT(save);
 }
 

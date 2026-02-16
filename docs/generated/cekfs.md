@@ -37,10 +37,10 @@ Value --none--> void_ptr
 Value --stdint--> int
 Value --bigint--> BigInt
 Value --rational--> Vec
-Value --rational_imag--> Vec
 Value --irrational--> double
 Value --stdint_imag--> int
 Value --bigint_imag--> BigInt
+Value --rational_imag--> Vec
 Value --irrational_imag--> double
 Value --complex--> Vec
 Value --character--> character

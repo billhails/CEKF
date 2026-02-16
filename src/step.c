@@ -26,6 +26,9 @@
 #include <unistd.h>
 
 #include "arithmetic.h"
+#if USE_STAGED_ARITHMETIC
+#include "arithmetic_next.h"
+#endif
 #include "builtin_io.h"
 #include "builtins_debug.h"
 #include "builtins_impl.h"
@@ -38,6 +41,24 @@
 
 #ifdef UNIT_TESTS
 #include "tests/step.h"
+#endif
+
+#if USE_STAGED_ARITHMETIC
+#define runtimeAdd n_add
+#define runtimeSub n_sub
+#define runtimeMul n_mul
+#define runtimeDiv n_div
+#define runtimePow n_pow
+#define runtimeMod n_mod
+#define runtimeCmp n_cmp
+#else
+#define runtimeAdd nadd
+#define runtimeSub nsub
+#define runtimeMul nmul
+#define runtimeDiv ndiv
+#define runtimePow npow
+#define runtimeMod nmod
+#define runtimeCmp ncmp
 #endif
 
 int dump_bytecode_flag = 0;
@@ -358,7 +379,7 @@ static Cmp _cmp(Value left, Value right) {
     case VALUE_TYPE_RATIONAL_IMAG:
     case VALUE_TYPE_IRRATIONAL_IMAG:
     case VALUE_TYPE_COMPLEX:
-        return ncmp(left, right);
+        return runtimeCmp(left, right);
     case VALUE_TYPE_CHARACTER:
         return _CMP_(left.val.character, right.val.character);
     case VALUE_TYPE_CLO:
@@ -705,7 +726,7 @@ static void step() {
             int save = protectValue(right);
             Value left = pop();
             protectValue(left);
-            Value res = nadd(left, right);
+            Value res = runtimeAdd(left, right);
             protectValue(res);
             push(res);
             UNPROTECT(save);
@@ -718,7 +739,7 @@ static void step() {
             int save = protectValue(right);
             Value left = pop();
             protectValue(left);
-            Value res = nsub(left, right);
+            Value res = runtimeSub(left, right);
             protectValue(res);
             push(res);
             UNPROTECT(save);
@@ -731,7 +752,7 @@ static void step() {
             int save = protectValue(right);
             Value left = pop();
             protectValue(left);
-            Value res = nmul(left, right);
+            Value res = runtimeMul(left, right);
             protectValue(res);
             push(res);
             UNPROTECT(save);
@@ -744,7 +765,7 @@ static void step() {
             int save = protectValue(right);
             Value left = pop();
             protectValue(left);
-            Value res = ndiv(left, right);
+            Value res = runtimeDiv(left, right);
             protectValue(res);
             push(res);
             UNPROTECT(save);
@@ -757,7 +778,7 @@ static void step() {
             int save = protectValue(right);
             Value left = pop();
             protectValue(left);
-            Value res = npow(left, right);
+            Value res = runtimePow(left, right);
             protectValue(res);
             push(res);
             UNPROTECT(save);
@@ -770,7 +791,7 @@ static void step() {
             int save = protectValue(right);
             Value left = pop();
             protectValue(left);
-            Value res = nmod(left, right);
+            Value res = runtimeMod(left, right);
             protectValue(res);
             push(res);
             UNPROTECT(save);
@@ -952,7 +973,7 @@ static void step() {
                     Value u = value_Bigint(bigInt);
                     protectValue(u);
                     int offset = readCurrentOffset();
-                    if (ncmp(u, v) == CMP_EQ) {
+                    if (runtimeCmp(u, v) == CMP_EQ) {
                         state.C = offset;
                         goto FINISHED_INTCOND;
                     }
@@ -961,7 +982,7 @@ static void step() {
                     Integer option = readCurrentInt();
                     Value u = value_Stdint(option);
                     int offset = readCurrentOffset();
-                    if (ncmp(u, v) == CMP_EQ) {
+                    if (runtimeCmp(u, v) == CMP_EQ) {
                         state.C = offset;
                         goto FINISHED_INTCOND;
                     }
@@ -970,7 +991,7 @@ static void step() {
                     Double option = readCurrentIrrational();
                     Value u = value_Irrational(option);
                     int offset = readCurrentOffset();
-                    if (ncmp(u, v) == CMP_EQ) {
+                    if (runtimeCmp(u, v) == CMP_EQ) {
                         state.C = offset;
                         goto FINISHED_INTCOND;
                     }

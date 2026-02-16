@@ -26,6 +26,10 @@
 
 #define NS_GLOBAL -1
 
+#ifndef USE_STAGED_ARITHMETIC
+#define USE_STAGED_ARITHMETIC 1
+#endif
+
 // Null ParserInfo for use when location info is not available
 #define NULLPI ((ParserInfo){.lineNo = 0, .fileName = NULL})
 
