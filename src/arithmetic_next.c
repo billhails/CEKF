@@ -22,6 +22,7 @@
 #include "bigint.h"
 #include "cekf.h"
 #include "common.h"
+#include <limits.h>
 #include <math.h>
 
 typedef Value (*NextBinaryHandler)(Value left, Value right);
@@ -31,6 +32,21 @@ static Value nextImagToReal(Value value);
 static Value nextRealToImag(Value value);
 static Value nextPowComplexInt(Value left, Value right);
 static Value nextPowComplexComplex(Value base, Value exponent);
+static Value n_add(Value left, Value right);
+static Value n_sub(Value left, Value right);
+static Value n_mul(Value left, Value right);
+static Value n_div(Value left, Value right);
+static Value n_mod(Value left, Value right);
+static Value n_pow(Value left, Value right);
+static Cmp n_cmp(Value left, Value right);
+static Value n_neg(Value value);
+static Value n_rand(Value prev);
+static Value n_real_part(Value value);
+static Value n_imag_part(Value value);
+static Value n_mag_part(Value value);
+static Value n_theta_part(Value value);
+
+static inline Value nextSoftNaN(void) { return value_Irrational(NAN); }
 
 /////////////////////////////
 // normalization utilities
@@ -692,7 +708,7 @@ static Value n_div_std(Value left, Value right) {
     ASSERT_STDINT(left);
     ASSERT_STDINT(right);
     if (getValue_Stdint(right) == 0) {
-        cant_happen("attempted div zero");
+        return nextSoftNaN();
     }
     if ((getValue_Stdint(left) % getValue_Stdint(right)) == 0) {
         return value_Stdint(getValue_Stdint(left) / getValue_Stdint(right));
@@ -711,7 +727,10 @@ static Value n_div_big(Value left, Value right) {
     if (IS_BIGINT(left)) {
         if (IS_BIGINT(right)) {
             if (cmpBigIntInt(getValue_Bigint(right), 0) == CMP_EQ) {
-                cant_happen("attempted div zero");
+                Value res = nextSoftNaN();
+                protectValue(res);
+                UNPROTECT(save);
+                return res;
             }
             remainder =
                 modBigInt(getValue_Bigint(left), getValue_Bigint(right));
@@ -725,7 +744,10 @@ static Value n_div_big(Value left, Value right) {
             quotient = divBigInt(getValue_Bigint(left), getValue_Bigint(right));
         } else {
             if (getValue_Stdint(right) == 0) {
-                cant_happen("attempted div zero");
+                Value res = nextSoftNaN();
+                protectValue(res);
+                UNPROTECT(save);
+                return res;
             }
             remainder =
                 modBigIntInt(getValue_Bigint(left), getValue_Stdint(right));
@@ -741,7 +763,10 @@ static Value n_div_big(Value left, Value right) {
         }
     } else {
         if (cmpBigIntInt(getValue_Bigint(right), 0) == CMP_EQ) {
-            cant_happen("attempted div zero");
+            Value res = nextSoftNaN();
+            protectValue(res);
+            UNPROTECT(save);
+            return res;
         }
         remainder = modIntBigInt(getValue_Stdint(left), getValue_Bigint(right));
         PROTECT(remainder);
@@ -788,6 +813,9 @@ static Value n_div_rat(Value left, Value right) {
 static Value n_div_irr(Value left, Value right) {
     Value leftIrr = nextToIrr(left);
     Value rightIrr = nextToIrr(right);
+    if (getValue_Irrational(rightIrr) == 0.0) {
+        return nextSoftNaN();
+    }
     return value_Irrational(getValue_Irrational(leftIrr) /
                             getValue_Irrational(rightIrr));
 }
@@ -855,7 +883,7 @@ static Value n_mod_std(Value left, Value right) {
     ASSERT_STDINT(left);
     ASSERT_STDINT(right);
     if (getValue_Stdint(right) == 0) {
-        cant_happen("attempted mod zero");
+        return nextSoftNaN();
     }
     return value_Stdint(getValue_Stdint(left) % getValue_Stdint(right));
 }
@@ -870,18 +898,27 @@ static Value n_mod_big(Value left, Value right) {
     if (IS_BIGINT(left)) {
         if (IS_BIGINT(right)) {
             if (cmpBigIntInt(getValue_Bigint(right), 0) == CMP_EQ) {
-                cant_happen("attempted mod zero");
+                Value res = nextSoftNaN();
+                protectValue(res);
+                UNPROTECT(save);
+                return res;
             }
             mod = modBigInt(getValue_Bigint(left), getValue_Bigint(right));
         } else {
             if (getValue_Stdint(right) == 0) {
-                cant_happen("attempted mod zero");
+                Value res = nextSoftNaN();
+                protectValue(res);
+                UNPROTECT(save);
+                return res;
             }
             mod = modBigIntInt(getValue_Bigint(left), getValue_Stdint(right));
         }
     } else {
         if (cmpBigIntInt(getValue_Bigint(right), 0) == CMP_EQ) {
-            cant_happen("attempted mod zero");
+            Value res = nextSoftNaN();
+            protectValue(res);
+            UNPROTECT(save);
+            return res;
         }
         mod = modIntBigInt(getValue_Stdint(left), getValue_Bigint(right));
     }
@@ -924,6 +961,9 @@ static Value n_mod_rat(Value left, Value right) {
 static Value n_mod_irr(Value left, Value right) {
     Value leftIrr = nextToIrr(left);
     Value rightIrr = nextToIrr(right);
+    if (getValue_Irrational(rightIrr) == 0.0) {
+        return nextSoftNaN();
+    }
     return value_Irrational(
         fmod(getValue_Irrational(leftIrr), getValue_Irrational(rightIrr)));
 }
@@ -1680,37 +1720,63 @@ static NextBinaryHandler getPowDomainHandler(ArithmeticDomain leftDomain,
 // public staged API
 /////////////////////////////
 
-Value n_add(Value left, Value right) {
+Value nadd(Value left, Value right) { return n_add(left, right); }
+
+Value nsub(Value left, Value right) { return n_sub(left, right); }
+
+Value nmul(Value left, Value right) { return n_mul(left, right); }
+
+Value ndiv(Value left, Value right) { return n_div(left, right); }
+
+Value npow(Value left, Value right) { return n_pow(left, right); }
+
+Value nmod(Value left, Value right) { return n_mod(left, right); }
+
+Cmp ncmp(Value left, Value right) { return n_cmp(left, right); }
+
+Value nneg(Value value) { return n_neg(value); }
+
+Value nrand(Value prev) { return n_rand(prev); }
+
+Value real_part(Value value) { return n_real_part(value); }
+
+Value imag_part(Value value) { return n_imag_part(value); }
+
+Value mag_part(Value value) { return n_mag_part(value); }
+
+Value theta_part(Value value) { return n_theta_part(value); }
+
+static Value n_add(Value left, Value right) {
     return applyCommonDomainBinary(
         ARITH_OP_ADD, "add", nextAddHandlers,
         sizeof(nextAddHandlers) / sizeof(nextAddHandlers[0]), left, right);
 }
 
-Value n_sub(Value left, Value right) {
+static Value n_sub(Value left, Value right) {
     return applyCommonDomainBinary(
         ARITH_OP_SUB, "sub", nextSubHandlers,
         sizeof(nextSubHandlers) / sizeof(nextSubHandlers[0]), left, right);
 }
 
-Value n_mul(Value left, Value right) {
+static Value n_mul(Value left, Value right) {
     return applyCommonDomainBinary(
         ARITH_OP_MUL, "mul", nextMulHandlers,
         sizeof(nextMulHandlers) / sizeof(nextMulHandlers[0]), left, right);
 }
 
-Value n_div(Value left, Value right) {
+static Value n_div(Value left, Value right) {
     return applyCommonDomainBinary(
         ARITH_OP_DIV, "div", nextDivHandlers,
         sizeof(nextDivHandlers) / sizeof(nextDivHandlers[0]), left, right);
 }
 
-Value n_mod(Value left, Value right) {
+static Value n_mod(Value left, Value right) {
     return applyCommonDomainBinary(
         ARITH_OP_MOD, "mod", nextModHandlers,
         sizeof(nextModHandlers) / sizeof(nextModHandlers[0]), left, right);
 }
 
-Value n_pow(Value left, Value right) {
+static Value n_pow(Value left, Value right) {
     ArithmeticNormalizationPlan plan = requirePlan(ARITH_OP_POW, left, right);
     if (plan.kind != ARITH_NORM_ASYMMETRIC) {
         cant_happen("unexpected pow normalization kind %d", plan.kind);
@@ -1721,8 +1787,66 @@ Value n_pow(Value left, Value right) {
     return handler(left, right);
 }
 
-Cmp n_cmp(Value left, Value right) {
+static Cmp n_cmp(Value left, Value right) {
     return applyCommonDomainCompare(
         ARITH_OP_CMP, "cmp", nextCmpHandlers,
         sizeof(nextCmpHandlers) / sizeof(nextCmpHandlers[0]), left, right);
 }
+
+static Value n_neg(Value value) {
+    return n_sub(value_Stdint(0), value);
+}
+
+static Value n_rand(Value prev) {
+    ASSERT_IRRATIONAL(prev);
+    Double seed = fmod(prev.val.irrational, 1.0);
+    if (seed < 0) {
+        seed = -seed;
+    }
+    seed *= UINT_MAX;
+    seed = fmod(seed * 1103515245.0 + 12345.0, (Double)UINT_MAX);
+    seed /= UINT_MAX;
+    return value_Irrational(seed);
+}
+
+static Value n_real_part(Value value) {
+    switch (value.type) {
+    case VALUE_TYPE_RATIONAL:
+    case VALUE_TYPE_IRRATIONAL:
+    case VALUE_TYPE_BIGINT:
+    case VALUE_TYPE_STDINT:
+        return value;
+    case VALUE_TYPE_STDINT_IMAG:
+    case VALUE_TYPE_BIGINT_IMAG:
+    case VALUE_TYPE_RATIONAL_IMAG:
+    case VALUE_TYPE_IRRATIONAL_IMAG:
+        return value_Stdint(0);
+    case VALUE_TYPE_COMPLEX:
+        return nextComplexRealPart(value);
+    default:
+        cant_happen("unrecognised number type %s", valueTypeName(value.type));
+    }
+}
+
+static Value n_imag_part(Value value) {
+    switch (value.type) {
+    case VALUE_TYPE_RATIONAL:
+    case VALUE_TYPE_IRRATIONAL:
+    case VALUE_TYPE_BIGINT:
+    case VALUE_TYPE_STDINT:
+        return value_Stdint_imag(0);
+    case VALUE_TYPE_STDINT_IMAG:
+    case VALUE_TYPE_BIGINT_IMAG:
+    case VALUE_TYPE_RATIONAL_IMAG:
+    case VALUE_TYPE_IRRATIONAL_IMAG:
+        return value;
+    case VALUE_TYPE_COMPLEX:
+        return nextComplexImagPart(value);
+    default:
+        cant_happen("unrecognised number type %s", valueTypeName(value.type));
+    }
+}
+
+static Value n_theta_part(Value value) { return nextComTheta(value); }
+
+static Value n_mag_part(Value value) { return nextComMag(value); }

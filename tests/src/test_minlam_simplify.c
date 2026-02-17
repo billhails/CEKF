@@ -19,7 +19,7 @@
 #include <assert.h>
 #include <stdio.h>
 
-#include "arithmetic.h"
+#include "arithmetic_next.h"
 #include "bigint.h"
 #include "common.h"
 #include "init.h"

@@ -17,7 +17,7 @@
  */
 
 #include "builtins_impl.h"
-#include "arithmetic.h"
+#include "arithmetic_next.h"
 #include "builtins_helper.h"
 #include "unicode.h"
 #include <stdlib.h>

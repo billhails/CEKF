@@ -26,6 +26,14 @@
 #include <limits.h>
 #include <math.h>
 
+#define n_add nadd
+#define n_sub nsub
+#define n_mul nmul
+#define n_div ndiv
+#define n_mod nmod
+#define n_pow npow
+#define n_cmp ncmp
+
 static Value stdint(Integer i) { return value_Stdint(i); }
 static Value asBigint(Integer i) { return value_Bigint(bigIntFromInt(i)); }
 static Value asBigintPow(Integer base, Integer exponent) {

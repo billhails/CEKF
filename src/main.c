@@ -26,7 +26,7 @@
 #include "anf_normalize.h"
 #include "anf_pp.h"
 #include "annotate.h"
-#include "arithmetic.h"
+#include "arithmetic_next.h"
 #include "ast.h"
 #include "ast_debug.h"
 #include "bigint.h"

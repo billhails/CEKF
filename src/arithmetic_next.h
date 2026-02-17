@@ -19,14 +19,21 @@
 #ifndef cekf_arithmetic_next_h
 #define cekf_arithmetic_next_h
 
-#include "arithmetic.h"
+#include "cmp.h"
+#include "value.h"
 
-Value n_add(Value left, Value right);
-Value n_sub(Value left, Value right);
-Value n_mul(Value left, Value right);
-Value n_div(Value left, Value right);
-Value n_mod(Value left, Value right);
-Value n_pow(Value left, Value right);
-Cmp n_cmp(Value left, Value right);
+Value nadd(Value left, Value right);
+Value nsub(Value left, Value right);
+Value nmul(Value left, Value right);
+Value ndiv(Value left, Value right);
+Value npow(Value left, Value right);
+Value nmod(Value left, Value right);
+Value nneg(Value value);
+Value nrand(Value prev);
+Value real_part(Value value);
+Value imag_part(Value value);
+Value mag_part(Value value);
+Value theta_part(Value value);
+Cmp ncmp(Value left, Value right);
 
 #endif

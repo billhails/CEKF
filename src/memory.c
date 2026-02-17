@@ -25,7 +25,7 @@
 
 #include "anf.h"
 #include "annotate.h"
-#include "arithmetic.h"
+#include "arithmetic_next.h"
 #include "builtin_io.h"
 #include "cekf.h"
 #include "common.h"
@@ -503,7 +503,6 @@ static void markProtected() {
 static void mark() {
     markState();
     markProtected();
-    markArithmetic();
     markNameSpaces();
     markMemBufs();
 #ifdef DEBUG_LOG_GC

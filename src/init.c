@@ -17,14 +17,13 @@
  */
 
 #include "init.h"
-#include "arithmetic.h"
+#include "arithmetic_next.h"
 #include "ast_helper.h"
 #include "pratt_parser.h"
 #include "memory.h"
 
 void initAll(void) {
     initProtection();
-    init_arithmetic();
     initNameSpaces();
     initFileIdStack();
     initParserStack();

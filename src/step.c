@@ -25,10 +25,7 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "arithmetic.h"
-#if USE_STAGED_ARITHMETIC
 #include "arithmetic_next.h"
-#endif
 #include "builtin_io.h"
 #include "builtins_debug.h"
 #include "builtins_impl.h"
@@ -43,15 +40,6 @@
 #include "tests/step.h"
 #endif
 
-#if USE_STAGED_ARITHMETIC
-#define runtimeAdd n_add
-#define runtimeSub n_sub
-#define runtimeMul n_mul
-#define runtimeDiv n_div
-#define runtimePow n_pow
-#define runtimeMod n_mod
-#define runtimeCmp n_cmp
-#else
 #define runtimeAdd nadd
 #define runtimeSub nsub
 #define runtimeMul nmul
@@ -59,7 +47,6 @@
 #define runtimePow npow
 #define runtimeMod nmod
 #define runtimeCmp ncmp
-#endif
 
 int dump_bytecode_flag = 0;
 
