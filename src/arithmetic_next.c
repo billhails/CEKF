@@ -48,6 +48,42 @@ static Value n_theta_part(Value value);
 
 static inline Value nextSoftNaN(void) { return value_Irrational(NAN); }
 
+static bool nextContainsNaN(Value value) {
+    switch (value.type) {
+    case VALUE_TYPE_IRRATIONAL:
+        return isnan(getValue_Irrational(value));
+    case VALUE_TYPE_IRRATIONAL_IMAG:
+        return isnan(getValue_Irrational_imag(value));
+    default:
+        return false;
+    }
+}
+
+static bool nextContainsCompositeNaN(Value value) {
+    switch (value.type) {
+    case VALUE_TYPE_RATIONAL: {
+        Vec *ratio = getValue_Rational(value);
+        return nextContainsNaN(ratio->entries[0]) ||
+               nextContainsNaN(ratio->entries[1]) ||
+               nextContainsCompositeNaN(ratio->entries[0]) ||
+               nextContainsCompositeNaN(ratio->entries[1]);
+    }
+    case VALUE_TYPE_COMPLEX: {
+        Vec *complex = getValue_Complex(value);
+        return nextContainsNaN(complex->entries[0]) ||
+               nextContainsNaN(complex->entries[1]) ||
+               nextContainsCompositeNaN(complex->entries[0]) ||
+               nextContainsCompositeNaN(complex->entries[1]);
+    }
+    default:
+        return false;
+    }
+}
+
+static void nextAssertCanonicalNaN(Value value) {
+    ASSERT(!nextContainsCompositeNaN(value));
+}
+
 /////////////////////////////
 // normalization utilities
 /////////////////////////////
@@ -118,6 +154,9 @@ static Cmp applyCommonDomainCompare(ArithmeticOperator op, const char *opName,
 }
 
 static Value nextRatValue(Value numerator, Value denominator) {
+    if (nextContainsNaN(numerator) || nextContainsNaN(denominator)) {
+        return nextSoftNaN();
+    }
     Vec *vec = newVec(2);
     vec->entries[0] = numerator;
     vec->entries[1] = denominator;
@@ -195,6 +234,9 @@ static Value nextToIrr(Value value) {
 }
 
 static Value nextComValue(Value real, Value imag) {
+    if (nextContainsNaN(real) || nextContainsNaN(imag)) {
+        return nextSoftNaN();
+    }
     Vec *vec = newVec(2);
     vec->entries[0] = real;
     vec->entries[1] = imag;
@@ -311,6 +353,9 @@ static Value nextImagToReal(Value value) {
 }
 
 static Value nextRealToImag(Value value) {
+    if (nextContainsNaN(value)) {
+        return nextSoftNaN();
+    }
     switch (value.type) {
     case VALUE_TYPE_STDINT:
         value.type = VALUE_TYPE_STDINT_IMAG;
@@ -1747,36 +1792,66 @@ Value mag_part(Value value) { return n_mag_part(value); }
 Value theta_part(Value value) { return n_theta_part(value); }
 
 static Value n_add(Value left, Value right) {
+    nextAssertCanonicalNaN(left);
+    nextAssertCanonicalNaN(right);
+    if (nextContainsNaN(left) || nextContainsNaN(right)) {
+        return nextSoftNaN();
+    }
     return applyCommonDomainBinary(
         ARITH_OP_ADD, "add", nextAddHandlers,
         sizeof(nextAddHandlers) / sizeof(nextAddHandlers[0]), left, right);
 }
 
 static Value n_sub(Value left, Value right) {
+    nextAssertCanonicalNaN(left);
+    nextAssertCanonicalNaN(right);
+    if (nextContainsNaN(left) || nextContainsNaN(right)) {
+        return nextSoftNaN();
+    }
     return applyCommonDomainBinary(
         ARITH_OP_SUB, "sub", nextSubHandlers,
         sizeof(nextSubHandlers) / sizeof(nextSubHandlers[0]), left, right);
 }
 
 static Value n_mul(Value left, Value right) {
+    nextAssertCanonicalNaN(left);
+    nextAssertCanonicalNaN(right);
+    if (nextContainsNaN(left) || nextContainsNaN(right)) {
+        return nextSoftNaN();
+    }
     return applyCommonDomainBinary(
         ARITH_OP_MUL, "mul", nextMulHandlers,
         sizeof(nextMulHandlers) / sizeof(nextMulHandlers[0]), left, right);
 }
 
 static Value n_div(Value left, Value right) {
+    nextAssertCanonicalNaN(left);
+    nextAssertCanonicalNaN(right);
+    if (nextContainsNaN(left) || nextContainsNaN(right)) {
+        return nextSoftNaN();
+    }
     return applyCommonDomainBinary(
         ARITH_OP_DIV, "div", nextDivHandlers,
         sizeof(nextDivHandlers) / sizeof(nextDivHandlers[0]), left, right);
 }
 
 static Value n_mod(Value left, Value right) {
+    nextAssertCanonicalNaN(left);
+    nextAssertCanonicalNaN(right);
+    if (nextContainsNaN(left) || nextContainsNaN(right)) {
+        return nextSoftNaN();
+    }
     return applyCommonDomainBinary(
         ARITH_OP_MOD, "mod", nextModHandlers,
         sizeof(nextModHandlers) / sizeof(nextModHandlers[0]), left, right);
 }
 
 static Value n_pow(Value left, Value right) {
+    nextAssertCanonicalNaN(left);
+    nextAssertCanonicalNaN(right);
+    if (nextContainsNaN(left) || nextContainsNaN(right)) {
+        return nextSoftNaN();
+    }
     ArithmeticNormalizationPlan plan = requirePlan(ARITH_OP_POW, left, right);
     if (plan.kind != ARITH_NORM_ASYMMETRIC) {
         cant_happen("unexpected pow normalization kind %d", plan.kind);
@@ -1788,12 +1863,26 @@ static Value n_pow(Value left, Value right) {
 }
 
 static Cmp n_cmp(Value left, Value right) {
+    nextAssertCanonicalNaN(left);
+    nextAssertCanonicalNaN(right);
+    bool leftNaN = nextContainsNaN(left);
+    bool rightNaN = nextContainsNaN(right);
+    if (leftNaN || rightNaN) {
+        if (leftNaN && rightNaN) {
+            return CMP_EQ;
+        }
+        return leftNaN ? CMP_GT : CMP_LT;
+    }
     return applyCommonDomainCompare(
         ARITH_OP_CMP, "cmp", nextCmpHandlers,
         sizeof(nextCmpHandlers) / sizeof(nextCmpHandlers[0]), left, right);
 }
 
 static Value n_neg(Value value) {
+    nextAssertCanonicalNaN(value);
+    if (nextContainsNaN(value)) {
+        return nextSoftNaN();
+    }
     return n_sub(value_Stdint(0), value);
 }
 
@@ -1810,6 +1899,10 @@ static Value n_rand(Value prev) {
 }
 
 static Value n_real_part(Value value) {
+    nextAssertCanonicalNaN(value);
+    if (nextContainsNaN(value)) {
+        return nextSoftNaN();
+    }
     switch (value.type) {
     case VALUE_TYPE_RATIONAL:
     case VALUE_TYPE_IRRATIONAL:
@@ -1829,6 +1922,10 @@ static Value n_real_part(Value value) {
 }
 
 static Value n_imag_part(Value value) {
+    nextAssertCanonicalNaN(value);
+    if (nextContainsNaN(value)) {
+        return nextSoftNaN();
+    }
     switch (value.type) {
     case VALUE_TYPE_RATIONAL:
     case VALUE_TYPE_IRRATIONAL:
@@ -1847,6 +1944,18 @@ static Value n_imag_part(Value value) {
     }
 }
 
-static Value n_theta_part(Value value) { return nextComTheta(value); }
+static Value n_theta_part(Value value) {
+    nextAssertCanonicalNaN(value);
+    if (nextContainsNaN(value)) {
+        return nextSoftNaN();
+    }
+    return nextComTheta(value);
+}
 
-static Value n_mag_part(Value value) { return nextComMag(value); }
+static Value n_mag_part(Value value) {
+    nextAssertCanonicalNaN(value);
+    if (nextContainsNaN(value)) {
+        return nextSoftNaN();
+    }
+    return nextComMag(value);
+}

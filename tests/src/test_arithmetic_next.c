@@ -1111,6 +1111,28 @@ static void testNPowCrossDomainParity() {
     UNPROTECT(save);
 }
 
+static void testNaNComparePolicy() {
+    Value one = stdint(1);
+    int save = protectValue(one);
+
+    Value zero = stdint(0);
+    protectValue(zero);
+    Value nanFromDiv = ndiv(one, zero);
+    protectValue(nanFromDiv);
+    assert(isValue_Irrational(nanFromDiv));
+    assert(isnan(getValue_Irrational(nanFromDiv)));
+
+    Value directNaN = irrational(NAN);
+    protectValue(directNaN);
+
+    assert(ncmp(directNaN, directNaN) == CMP_EQ);
+    assert(ncmp(nanFromDiv, directNaN) == CMP_EQ);
+    assert(ncmp(directNaN, one) == CMP_GT);
+    assert(ncmp(one, directNaN) == CMP_LT);
+
+    UNPROTECT(save);
+}
+
 int main(int argc __attribute__((unused)),
          char *argv[] __attribute__((unused))) {
     initAll();
@@ -1155,5 +1177,6 @@ int main(int argc __attribute__((unused)),
     testNPowRationalIntEndToEnd();
     testNPowComplexIntEndToEnd();
     testNPowCrossDomainParity();
+    testNaNComparePolicy();
     return 0;
 }
