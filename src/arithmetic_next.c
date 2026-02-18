@@ -1262,15 +1262,54 @@ static Value gaussianScaleComponentToInteger(Value component,
     return res;
 }
 
-static Value gaussianRoundToInteger(Double value) {
-    if (isnan(value) || isinf(value)) {
-        cant_happen("invalid gaussian quotient component");
+static Value absInteger(Value value) {
+    ASSERT_INT(value);
+    Value zero = value_Stdint(0);
+    if (n_cmp(value, zero) == CMP_LT) {
+        return n_neg(value);
     }
-    Double rounded = round(value);
-    if (rounded > INT_MAX || rounded < INT_MIN) {
-        cant_happen("gaussian quotient component overflow");
+    return value;
+}
+
+static Value gaussianRoundQuotientComponent(Value numerator,
+                                            Value denominator) {
+    ASSERT_INT(numerator);
+    ASSERT_INT(denominator);
+
+    Value zero = value_Stdint(0);
+    if (n_cmp(denominator, zero) != CMP_GT) {
+        cant_happen("invalid gaussian quotient denominator");
     }
-    return value_Stdint((Integer)rounded);
+
+    int save = protectValue(numerator);
+    protectValue(denominator);
+
+    bool negative = n_cmp(numerator, zero) == CMP_LT;
+    Value absNum = absInteger(numerator);
+    protectValue(absNum);
+
+    Value rem = n_mod(absNum, denominator);
+    protectValue(rem);
+    Value truncNum = n_sub(absNum, rem);
+    protectValue(truncNum);
+    Value q = n_div(truncNum, denominator);
+    protectValue(q);
+    ASSERT(IS_INT(q));
+
+    Value twoRem = n_mul(rem, value_Stdint(2));
+    protectValue(twoRem);
+    if (n_cmp(twoRem, denominator) != CMP_LT) {
+        q = n_add(q, value_Stdint(1));
+        protectValue(q);
+    }
+
+    if (negative && n_cmp(q, zero) != CMP_EQ) {
+        q = n_neg(q);
+        protectValue(q);
+    }
+
+    UNPROTECT(save);
+    return q;
 }
 
 static bool gaussianIsZero(Value real, Value imag) {
@@ -1414,23 +1453,32 @@ static Value n_gcd_gaussian(Value left, Value right) {
     protectValue(bImag);
 
     while (!gaussianIsZero(bReal, bImag)) {
-        Value arIrr = toIrr(aReal);
-        Value aiIrr = toIrr(aImag);
-        Value brIrr = toIrr(bReal);
-        Value biIrr = toIrr(bImag);
-
-        Double ar = getValue_Irrational(arIrr);
-        Double ai = getValue_Irrational(aiIrr);
-        Double br = getValue_Irrational(brIrr);
-        Double bi = getValue_Irrational(biIrr);
-        Double den = br * br + bi * bi;
-        if (den == 0.0) {
+        Value brSq = n_mul(bReal, bReal);
+        protectValue(brSq);
+        Value biSq = n_mul(bImag, bImag);
+        protectValue(biSq);
+        Value den = n_add(brSq, biSq);
+        protectValue(den);
+        if (n_cmp(den, value_Stdint(0)) == CMP_EQ) {
             cant_happen("division by zero in gaussian gcd");
         }
 
-        Value qReal = gaussianRoundToInteger((ar * br + ai * bi) / den);
+        Value arBr = n_mul(aReal, bReal);
+        protectValue(arBr);
+        Value aiBi = n_mul(aImag, bImag);
+        protectValue(aiBi);
+        Value qRealNumerator = n_add(arBr, aiBi);
+        protectValue(qRealNumerator);
+        Value qReal = gaussianRoundQuotientComponent(qRealNumerator, den);
         protectValue(qReal);
-        Value qImag = gaussianRoundToInteger((ai * br - ar * bi) / den);
+
+        Value aiBr = n_mul(aImag, bReal);
+        protectValue(aiBr);
+        Value arBi = n_mul(aReal, bImag);
+        protectValue(arBi);
+        Value qImagNumerator = n_sub(aiBr, arBi);
+        protectValue(qImagNumerator);
+        Value qImag = gaussianRoundQuotientComponent(qImagNumerator, den);
         protectValue(qImag);
 
         Value brQr = n_mul(bReal, qReal);
@@ -1473,8 +1521,14 @@ static Value n_gcd_gaussian(Value left, Value right) {
 }
 
 static Value n_gcd_not_supported(Value left, Value right) {
+#if ARITH_UNSUPPORTED_ABORT
     cant_happen("gcd not yet supported for numeric domain pair (%s, %s)",
                 valueTypeName(left.type), valueTypeName(right.type));
+#else
+    (void)left;
+    (void)right;
+    return softNaN();
+#endif
 }
 
 static const NextBinaryHandler gcdHandlers[] = {
@@ -1592,8 +1646,14 @@ static Value n_lcm_gaussian(Value left, Value right) {
 }
 
 static Value n_lcm_not_supported(Value left, Value right) {
+#if ARITH_UNSUPPORTED_ABORT
     cant_happen("lcm not yet supported for numeric domain pair (%s, %s)",
                 valueTypeName(left.type), valueTypeName(right.type));
+#else
+    (void)left;
+    (void)right;
+    return softNaN();
+#endif
 }
 
 static const NextBinaryHandler lcmHandlers[] = {

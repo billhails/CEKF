@@ -131,6 +131,8 @@ TcEnv *tc_init(BuiltIns *builtIns) {
     addIfToEnv(env);
     addIntBinOpToEnv(env, addSymbol());
     addIntBinOpToEnv(env, divSymbol());
+    addIntBinOpToEnv(env, gcdSymbol());
+    addIntBinOpToEnv(env, lcmSymbol());
     addIntBinOpToEnv(env, mulSymbol());
     addIntBinOpToEnv(env, powSymbol());
     addIntBinOpToEnv(env, subSymbol());
@@ -481,6 +483,8 @@ static TcType *analyzePrim(LamPrimApp *app, TcEnv *env, TcNg *ng) {
     case LAMPRIMOP_TYPE_MUL:
     case LAMPRIMOP_TYPE_DIV:
     case LAMPRIMOP_TYPE_MOD:
+    case LAMPRIMOP_TYPE_GCD:
+    case LAMPRIMOP_TYPE_LCM:
     case LAMPRIMOP_TYPE_POW:
         res = analyzeBinaryArith(app->exp1, app->exp2, env, ng);
         break;

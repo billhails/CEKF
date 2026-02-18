@@ -1535,6 +1535,10 @@ static LamExp *makePrimApp(ParserInfo PI, HashSymbol *symbol, LamArgs *args,
         return makeBinOp(LAMPRIMOP_TYPE_DIV, args);
     if (symbol == modSymbol())
         return makeBinOp(LAMPRIMOP_TYPE_MOD, args);
+    if (symbol == gcdSymbol())
+        return makeBinOp(LAMPRIMOP_TYPE_GCD, args);
+    if (symbol == lcmSymbol())
+        return makeBinOp(LAMPRIMOP_TYPE_LCM, args);
     if (symbol == powSymbol())
         return makeBinOp(LAMPRIMOP_TYPE_POW, args);
     if (symbol == cmpSymbol())

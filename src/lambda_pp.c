@@ -240,6 +240,12 @@ void ppLamPrimOp(LamPrimOp type) {
     case LAMPRIMOP_TYPE_DIV:
         eprintf("div");
         break;
+    case LAMPRIMOP_TYPE_GCD:
+        eprintf("gcd");
+        break;
+    case LAMPRIMOP_TYPE_LCM:
+        eprintf("lcm");
+        break;
     case LAMPRIMOP_TYPE_EQ:
         eprintf("eq");
         break;

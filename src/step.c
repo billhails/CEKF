@@ -44,6 +44,8 @@
 #define runtimeSub nsub
 #define runtimeMul nmul
 #define runtimeDiv ndiv
+#define runtimeGcd ngcd
+#define runtimeLcm nlcm
 #define runtimePow npow
 #define runtimeMod nmod
 #define runtimeCmp ncmp
@@ -753,6 +755,32 @@ static void step() {
             Value left = pop();
             protectValue(left);
             Value res = runtimeDiv(left, right);
+            protectValue(res);
+            push(res);
+            UNPROTECT(save);
+        } break;
+
+        case BYTECODES_TYPE_PRIM_GCD: {
+            // pop two values, perform the binop and push the result
+            DEBUG("GCD");
+            Value right = pop();
+            int save = protectValue(right);
+            Value left = pop();
+            protectValue(left);
+            Value res = runtimeGcd(left, right);
+            protectValue(res);
+            push(res);
+            UNPROTECT(save);
+        } break;
+
+        case BYTECODES_TYPE_PRIM_LCM: {
+            // pop two values, perform the binop and push the result
+            DEBUG("LCM");
+            Value right = pop();
+            int save = protectValue(right);
+            Value left = pop();
+            protectValue(left);
+            Value res = runtimeLcm(left, right);
             protectValue(res);
             push(res);
             UNPROTECT(save);

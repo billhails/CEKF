@@ -375,6 +375,8 @@ enums:
             - MUL
             - DIV
             - MOD
+            - GCD
+            - LCM
             - POW
             - EQ
             - NE

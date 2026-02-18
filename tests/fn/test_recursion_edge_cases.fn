@@ -119,15 +119,10 @@ let
     // Test: Recursion with multiple arguments
     fn test_multi_arg_recursion() {
         let
-            fn gcd {
-                (a, 0) { a }
-                (a, b) { gcd(b, a % b) }
-            };
-            
-            result1 = gcd(48, 18);
-            result2 = gcd(100, 25);
-            result3 = gcd(17, 13);
-            result4 = gcd(0, 5);
+            result1 = GCD(48, 18);
+            result2 = GCD(100, 25);
+            result3 = GCD(17, 13);
+            result4 = GCD(0, 5);
         in
             assert(result1 == 6);
             assert(result2 == 25);

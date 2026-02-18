@@ -98,15 +98,25 @@ let
             (gt) { 1 }
         }
     }
+    fn opGcd(n1, n2) {
+        n1 gcd n2
+    }
+    fn opLcm(n1, n2) {
+        n1 lcm n2
+    }
 
     fn genOps() {
-        [#(opAdd, "+"),
-         #(opSub, "-"),
-         #(opMul, "*"),
-         #(opDiv, "/"),
-         #(opMod, "%"),
-         #(opPow, "**"),
-         #(opCmp, "<=>")]
+        [
+            // #(opAdd, "+"),
+            // #(opSub, "-"),
+            // #(opMul, "*"),
+            // #(opDiv, "/"),
+            // #(opMod, "%"),
+            // #(opPow, "**"),
+            // #(opCmp, "<=>"),
+            // #(opGcd, "gcd"),
+            #(opLcm, "lcm")
+        ]
     }
 in
     genNumbers() |> fn (n1) {

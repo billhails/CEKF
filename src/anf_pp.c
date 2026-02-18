@@ -103,6 +103,12 @@ void ppAexpPrimApp(AexpPrimApp *x) {
     case AEXPPRIMOP_TYPE_DIV:
         eprintf("div ");
         break;
+    case AEXPPRIMOP_TYPE_GCD:
+        eprintf("gcd ");
+        break;
+    case AEXPPRIMOP_TYPE_LCM:
+        eprintf("lcm ");
+        break;
     case AEXPPRIMOP_TYPE_EQ:
         eprintf("eq ");
         break;
