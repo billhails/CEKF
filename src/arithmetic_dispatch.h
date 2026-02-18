@@ -46,6 +46,8 @@ typedef enum ArithmeticOperator {
     ARITH_OP_MUL,
     ARITH_OP_DIV,
     ARITH_OP_MOD,
+    ARITH_OP_GCD,
+    ARITH_OP_LCM,
     ARITH_OP_POW,
     ARITH_OP_CMP,
 } ArithmeticOperator;

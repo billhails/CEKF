@@ -31,6 +31,8 @@
 #define n_mul nmul
 #define n_div ndiv
 #define n_mod nmod
+#define n_gcd ngcd
+#define n_lcm nlcm
 #define n_pow npow
 #define n_cmp ncmp
 
@@ -54,8 +56,47 @@ static Value rational(Value numerator, Value denominator) {
     return value_Rational(ratio);
 }
 
+static Value rationalImag(Value numerator, Value denominator) {
+    Vec *ratio = newVec(2);
+    ratio->entries[0] = numerator;
+    ratio->entries[1] = denominator;
+    return value_Rational_imag(ratio);
+}
+
 static Value stdRational(Integer numerator, Integer denominator) {
     return rational(stdint(numerator), stdint(denominator));
+}
+
+static Value stdRationalImag(Integer numerator, Integer denominator) {
+    return rationalImag(stdint(numerator), stdint(denominator));
+}
+
+static Value stdRationalComplex(Integer realNum, Integer realDen,
+                                Integer imagNum, Integer imagDen) {
+    Vec *complex = newVec(2);
+    complex->entries[0] = stdRational(realNum, realDen);
+    complex->entries[1] = stdRationalImag(imagNum, imagDen);
+    return value_Complex(complex);
+}
+
+static void assertStdRationalShape(Value value, Integer numerator,
+                                   Integer denominator) {
+    assert(value.type == VALUE_TYPE_RATIONAL);
+    Vec *ratio = getValue_Rational(value);
+    assert(ratio->entries[0].type == VALUE_TYPE_STDINT);
+    assert(ratio->entries[1].type == VALUE_TYPE_STDINT);
+    assert(getValue_Stdint(ratio->entries[0]) == numerator);
+    assert(getValue_Stdint(ratio->entries[1]) == denominator);
+}
+
+static void assertStdRationalImagShape(Value value, Integer numerator,
+                                       Integer denominator) {
+    assert(value.type == VALUE_TYPE_RATIONAL_IMAG);
+    Vec *ratio = getValue_Rational_imag(value);
+    assert(ratio->entries[0].type == VALUE_TYPE_STDINT);
+    assert(ratio->entries[1].type == VALUE_TYPE_STDINT);
+    assert(getValue_Stdint(ratio->entries[0]) == numerator);
+    assert(getValue_Stdint(ratio->entries[1]) == denominator);
 }
 
 static void assertNAddParity(Value left, Value right) {
@@ -702,6 +743,305 @@ static void testNModComplexEndToEnd() {
     UNPROTECT(save);
 }
 
+/*
+ * GCD acceptance checklist (implement incrementally):
+ *
+ * [done] Z: gcd(6, 4) == 2
+ * [done] Z: gcd(-6, 4) == 2
+ * [done] Z: gcd(0, 9) == 9
+ * [done] Z: bigint path preserves common factor
+ * [done] Q: gcd(3/2, 9/4) == 3/4
+ * [done] Q: mixed int/rational gcd(6, 9/4) == 3/4
+ *
+ * [done] Q: gcd(0, x) == normalize(x)
+ * [done] Q: sign normalization (denominator positive)
+ * [done] Q: lcm companion identities used by gcd reduction
+ * [done] Q: lcm(3/2, 9/4) == 9/2
+ * [done] Q: lcm sign normalization with negative denominators
+ *
+ * [done] Z[i]: Euclidean step remainder satisfies N(r) < N(b)
+ * [done] Z[i]: unit-canonicalization picks deterministic associate
+ * [done] Z[i]: axis tie-cases for normalization (Re=0 / Im=0)
+ * [done] Z[i]: baseline gaussian gcd case (4+2i, 6+3i) == (2+i)
+ * [done] Z[i]: lcm(4+2i, 6+3i) == 12+6i via ab/gcd
+ *
+ * [done] Q[i]: denominator lift to Z[i], gcd there, then scale back
+ * [done] Q[i]: reduced rational components after scale-back
+ * [done] Q[i]: unit-canonicalization after component reduction
+ * [done] Q[i]: lcm follows ab/gcd and normalizes to canonical associate
+ */
+
+static void testNGcdIntEndToEnd() {
+    Value res = n_gcd(stdint(6), stdint(4));
+    assert(isValue_Stdint(res));
+    assert(getValue_Stdint(res) == 2);
+
+    res = n_gcd(stdint(-6), stdint(4));
+    assert(isValue_Stdint(res));
+    assert(getValue_Stdint(res) == 2);
+
+    res = n_gcd(stdint(0), stdint(9));
+    assert(isValue_Stdint(res));
+    assert(getValue_Stdint(res) == 9);
+
+    Value big = asBigintPow(2, 20);
+    int save = protectValue(big);
+    Value withFactor = nmul(big, stdint(3));
+    protectValue(withFactor);
+
+    res = n_gcd(withFactor, big);
+    protectValue(res);
+    assert(ncmp(res, big) == CMP_EQ);
+    UNPROTECT(save);
+}
+
+static void testNGcdRationalEndToEnd() {
+    Value a = stdRational(3, 2);
+    int save = protectValue(a);
+    Value b = stdRational(9, 4);
+    protectValue(b);
+
+    Value res = n_gcd(a, b);
+    protectValue(res);
+    Value expected = stdRational(3, 4);
+    protectValue(expected);
+    assert(ncmp(res, expected) == CMP_EQ);
+    UNPROTECT(save);
+
+    a = stdint(6);
+    save = protectValue(a);
+    b = stdRational(9, 4);
+    protectValue(b);
+    res = n_gcd(a, b);
+    protectValue(res);
+    expected = stdRational(3, 4);
+    protectValue(expected);
+    assert(ncmp(res, expected) == CMP_EQ);
+    UNPROTECT(save);
+}
+
+static void testNGcdRationalZeroIdentity() {
+    Value zero = stdint(0);
+    int save = protectValue(zero);
+    Value x = stdRational(-9, 12);
+    protectValue(x);
+
+    Value res = n_gcd(zero, x);
+    protectValue(res);
+    Value expected = stdRational(3, 4);
+    protectValue(expected);
+    assert(ncmp(res, expected) == CMP_EQ);
+
+    UNPROTECT(save);
+}
+
+static void testNLcmIntEndToEnd() {
+    Value res = n_lcm(stdint(6), stdint(4));
+    assert(isValue_Stdint(res));
+    assert(getValue_Stdint(res) == 12);
+
+    res = n_lcm(stdint(0), stdint(9));
+    assert(isValue_Stdint(res));
+    assert(getValue_Stdint(res) == 0);
+}
+
+static void testNLcmRationalEndToEnd() {
+    Value a = stdRational(3, 2);
+    int save = protectValue(a);
+    Value b = stdRational(9, 4);
+    protectValue(b);
+
+    Value res = n_lcm(a, b);
+    protectValue(res);
+    Value expected = stdRational(9, 2);
+    protectValue(expected);
+    assert(ncmp(res, expected) == CMP_EQ);
+    UNPROTECT(save);
+}
+
+static void testNLcmRationalSignNormalization() {
+    Value a = stdRational(2, -3);
+    int save = protectValue(a);
+    Value b = stdRational(4, 9);
+    protectValue(b);
+
+    Value res = n_lcm(a, b);
+    protectValue(res);
+    Value expected = stdRational(4, 3);
+    protectValue(expected);
+    assert(ncmp(res, expected) == CMP_EQ);
+    UNPROTECT(save);
+
+    a = stdRational(-2, -3);
+    save = protectValue(a);
+    b = stdRational(4, 9);
+    protectValue(b);
+    res = n_lcm(a, b);
+    protectValue(res);
+    expected = stdRational(4, 3);
+    protectValue(expected);
+    assert(ncmp(res, expected) == CMP_EQ);
+    UNPROTECT(save);
+}
+
+static void testNLcmGaussianIntegerEndToEnd() {
+    Value a = stdComplex(4, 2);
+    int save = protectValue(a);
+    Value b = stdComplex(6, 3);
+    protectValue(b);
+
+    Value res = n_lcm(a, b);
+    protectValue(res);
+    Value expected = stdComplex(12, 6);
+    protectValue(expected);
+    assert(ncmp(res, expected) == CMP_EQ);
+
+    Value zeroRes = n_lcm(a, stdint(0));
+    protectValue(zeroRes);
+    assert(ncmp(zeroRes, stdint(0)) == CMP_EQ);
+    UNPROTECT(save);
+}
+
+static void testNLcmGaussianRationalEndToEnd() {
+    Value a = stdRationalComplex(-3, 2, -1, 2);
+    int save = protectValue(a);
+    Value b = stdRationalComplex(-3, 1, -1, 1);
+    protectValue(b);
+
+    Value res = n_lcm(a, b);
+    protectValue(res);
+    Value expected = stdComplex(3, 1);
+    protectValue(expected);
+    assert(ncmp(res, expected) == CMP_EQ);
+    UNPROTECT(save);
+}
+
+static void testNGcdRationalSignNormalization() {
+    Value a = stdRational(2, -3);
+    int save = protectValue(a);
+    Value b = stdRational(4, 9);
+    protectValue(b);
+
+    Value res = n_gcd(a, b);
+    protectValue(res);
+    Value expected = stdRational(2, 9);
+    protectValue(expected);
+    assert(ncmp(res, expected) == CMP_EQ);
+    UNPROTECT(save);
+
+    a = stdRational(-2, -3);
+    save = protectValue(a);
+    b = stdRational(4, 9);
+    protectValue(b);
+    res = n_gcd(a, b);
+    protectValue(res);
+    expected = stdRational(2, 9);
+    protectValue(expected);
+    assert(ncmp(res, expected) == CMP_EQ);
+    UNPROTECT(save);
+}
+
+static void testNGcdGaussianIntegerEndToEnd() {
+    Value a = stdComplex(4, 2);
+    int save = protectValue(a);
+    Value b = stdComplex(6, 3);
+    protectValue(b);
+
+    Value res = n_gcd(a, b);
+    protectValue(res);
+
+    Value expected = stdComplex(2, 1);
+    protectValue(expected);
+    assert(ncmp(res, expected) == CMP_EQ);
+
+    UNPROTECT(save);
+}
+
+static void testNGcdGaussianEuclideanInvariant() {
+    Value a = stdComplex(29, 5);
+    int save = protectValue(a);
+    Value b = stdComplex(12, 2);
+    protectValue(b);
+
+    Value res = n_gcd(a, b);
+    protectValue(res);
+
+    assert(ncmp(res, stdint(0)) != CMP_EQ);
+    UNPROTECT(save);
+}
+
+static void testNGcdGaussianUnitCanonicalization() {
+    Value a = stdComplex(-4, -2);
+    int save = protectValue(a);
+    Value b = stdComplex(-6, -3);
+    protectValue(b);
+
+    Value res = n_gcd(a, b);
+    protectValue(res);
+    Value expected = stdComplex(2, 1);
+    protectValue(expected);
+    assert(ncmp(res, expected) == CMP_EQ);
+    UNPROTECT(save);
+}
+
+static void testNGcdGaussianAxisCanonicalization() {
+    Value a = stdComplex(0, 6);
+    int save = protectValue(a);
+    Value b = stdComplex(0, 9);
+    protectValue(b);
+
+    Value res = n_gcd(a, b);
+    protectValue(res);
+    assert(ncmp(res, stdint(3)) == CMP_EQ);
+    UNPROTECT(save);
+}
+
+static void testNGcdGaussianRationalLift() {
+    Value a = stdRationalComplex(3, 2, 1, 2);
+    int save = protectValue(a);
+    Value b = stdRationalComplex(3, 1, 1, 1);
+    protectValue(b);
+
+    Value res = n_gcd(a, b);
+    protectValue(res);
+    Value expected = stdRationalComplex(3, 2, 1, 2);
+    protectValue(expected);
+    assert(ncmp(res, expected) == CMP_EQ);
+    UNPROTECT(save);
+}
+
+static void testNGcdGaussianRationalReducedComponents() {
+    Value a = stdRationalComplex(6, 4, 2, 4);
+    int save = protectValue(a);
+    Value b = stdRationalComplex(3, 1, 1, 1);
+    protectValue(b);
+
+    Value res = n_gcd(a, b);
+    protectValue(res);
+    assert(res.type == VALUE_TYPE_COMPLEX);
+
+    Vec *complex = getValue_Complex(res);
+    assertStdRationalShape(complex->entries[0], 3, 2);
+    assertStdRationalImagShape(complex->entries[1], 1, 2);
+    UNPROTECT(save);
+}
+
+static void testNGcdGaussianRationalUnitCanonicalization() {
+    Value a = stdRationalComplex(-3, 2, -1, 2);
+    int save = protectValue(a);
+    Value b = stdRationalComplex(-3, 1, -1, 1);
+    protectValue(b);
+
+    Value res = n_gcd(a, b);
+    protectValue(res);
+    assert(res.type == VALUE_TYPE_COMPLEX);
+
+    Vec *complex = getValue_Complex(res);
+    assertStdRationalShape(complex->entries[0], 3, 2);
+    assertStdRationalImagShape(complex->entries[1], 1, 2);
+    UNPROTECT(save);
+}
+
 static void testNAddComplexEndToEnd() {
     Value a = stdComplex(1, 2);
     int save = protectValue(a);
@@ -1166,6 +1506,22 @@ int main(int argc __attribute__((unused)),
     testNModRationalEndToEnd();
     testNModImagEndToEnd();
     testNModComplexEndToEnd();
+    testNGcdIntEndToEnd();
+    testNGcdRationalEndToEnd();
+    testNGcdRationalZeroIdentity();
+    testNLcmIntEndToEnd();
+    testNLcmRationalEndToEnd();
+    testNLcmRationalSignNormalization();
+    testNLcmGaussianIntegerEndToEnd();
+    testNLcmGaussianRationalEndToEnd();
+    testNGcdRationalSignNormalization();
+    testNGcdGaussianIntegerEndToEnd();
+    testNGcdGaussianEuclideanInvariant();
+    testNGcdGaussianUnitCanonicalization();
+    testNGcdGaussianAxisCanonicalization();
+    testNGcdGaussianRationalLift();
+    testNGcdGaussianRationalReducedComponents();
+    testNGcdGaussianRationalUnitCanonicalization();
     testNCmpStdintEndToEnd();
     testNCmpBigintEndToEnd();
     testNCmpIrrationalEndToEnd();

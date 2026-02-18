@@ -28,6 +28,8 @@ Value nmul(Value left, Value right);
 Value ndiv(Value left, Value right);
 Value npow(Value left, Value right);
 Value nmod(Value left, Value right);
+Value ngcd(Value left, Value right);
+Value nlcm(Value left, Value right);
 Value nneg(Value value);
 Value nrand(Value prev);
 Value real_part(Value value);

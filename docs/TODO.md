@@ -20,6 +20,7 @@ More of a wish-list than a hard and fast plan.
   * Quaternions.
   * Vectors.
 * Improve arithmetic.
+  * gcd and lcm for all numer types.
   * ceil, floor and round operations.
   * move to [libgmp](https://gmplib.org/)?
   * trig and log functions.

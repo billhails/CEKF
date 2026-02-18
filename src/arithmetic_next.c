@@ -37,6 +37,10 @@ static Value n_sub(Value left, Value right);
 static Value n_mul(Value left, Value right);
 static Value n_div(Value left, Value right);
 static Value n_mod(Value left, Value right);
+static Value n_gcd(Value left, Value right);
+static Value n_gcd_not_supported(Value left, Value right);
+static Value n_lcm(Value left, Value right);
+static Value n_lcm_int(Value left, Value right);
 static Value n_pow(Value left, Value right);
 static Cmp n_cmp(Value left, Value right);
 static Value n_neg(Value value);
@@ -82,6 +86,30 @@ static bool containsCompositeNaN(Value value) {
 
 static void assertCanonicalNaN(Value value) {
     ASSERT(!containsCompositeNaN(value));
+}
+
+static bool isZeroInteger(Value value) {
+    ASSERT_INT(value);
+    switch (value.type) {
+    case VALUE_TYPE_STDINT:
+        return getValue_Stdint(value) == 0;
+    case VALUE_TYPE_BIGINT:
+        return cmpBigIntInt(getValue_Bigint(value), 0) == CMP_EQ;
+    default:
+        cant_happen("invalid integer type %s", valueTypeName(value.type));
+    }
+}
+
+static bool isNegativeInteger(Value value) {
+    ASSERT_INT(value);
+    switch (value.type) {
+    case VALUE_TYPE_STDINT:
+        return getValue_Stdint(value) < 0;
+    case VALUE_TYPE_BIGINT:
+        return isNegBigInt(getValue_Bigint(value));
+    default:
+        cant_happen("invalid integer type %s", valueTypeName(value.type));
+    }
 }
 
 /////////////////////////////
@@ -157,6 +185,42 @@ static Value ratValue(Value numerator, Value denominator) {
     if (containsNaN(numerator) || containsNaN(denominator)) {
         return softNaN();
     }
+
+    if (IS_INT(numerator) && IS_INT(denominator)) {
+        if (isZeroInteger(denominator)) {
+            return softNaN();
+        }
+
+        int save = protectValue(numerator);
+        protectValue(denominator);
+
+        if (isNegativeInteger(denominator)) {
+            numerator = n_neg(numerator);
+            protectValue(numerator);
+            denominator = n_neg(denominator);
+            protectValue(denominator);
+        }
+
+        Value one = value_Stdint(1);
+        Value gcd = n_gcd(numerator, denominator);
+        protectValue(gcd);
+
+        if (n_cmp(gcd, one) != CMP_EQ) {
+            numerator = n_div(numerator, gcd);
+            protectValue(numerator);
+            denominator = n_div(denominator, gcd);
+            protectValue(denominator);
+        }
+
+        Vec *vec = newVec(2);
+        vec->entries[0] = numerator;
+        vec->entries[1] = denominator;
+        Value res = value_Rational(vec);
+        protectValue(res);
+        UNPROTECT(save);
+        return res;
+    }
+
     Vec *vec = newVec(2);
     vec->entries[0] = numerator;
     vec->entries[1] = denominator;
@@ -1053,6 +1117,495 @@ static const NextBinaryHandler modHandlers[] = {
 };
 
 /////////////////////////////
+// gcd operator
+/////////////////////////////
+
+static Value n_gcd_std(Value left, Value right) {
+    ASSERT_STDINT(left);
+    ASSERT_STDINT(right);
+    return value_Stdint(
+        bigint_int_gcd(getValue_Stdint(left), getValue_Stdint(right)));
+}
+
+static Value n_gcd_big(Value left, Value right) {
+    ASSERT_INT(left);
+    ASSERT_INT(right);
+    ASSERT(IS_BIGINT(left) || IS_BIGINT(right));
+
+    BigInt *gcd;
+    int save = PROTECT(NULL);
+    if (IS_BIGINT(left)) {
+        if (IS_BIGINT(right)) {
+            gcd = gcdBigInt(getValue_Bigint(left), getValue_Bigint(right));
+        } else {
+            gcd = gcdBigIntInt(getValue_Bigint(left), getValue_Stdint(right));
+        }
+    } else {
+        gcd = gcdIntBigInt(getValue_Stdint(left), getValue_Bigint(right));
+    }
+
+    PROTECT(gcd);
+    Value res = value_Bigint(gcd);
+    protectValue(res);
+    UNPROTECT(save);
+    return res;
+}
+
+static Value n_gcd_rat(Value left, Value right) {
+    if (!IS_RATIONAL(left) || !IS_RATIONAL(right)) {
+        Value leftRat = toRat(left);
+        int save = protectValue(leftRat);
+        Value rightRat = toRat(right);
+        protectValue(rightRat);
+        Value res = n_gcd_rat(leftRat, rightRat);
+        protectValue(res);
+        UNPROTECT(save);
+        return res;
+    }
+
+    ASSERT_RATIONAL(left);
+    ASSERT_RATIONAL(right);
+    int save = protectValue(left);
+    protectValue(right);
+
+    Value a, b, c, d;
+    unpackRationalPair(left, right, &a, &b, &c, &d);
+
+    Value gcdNum = n_gcd(a, c);
+    protectValue(gcdNum);
+    Value lcmDen = n_lcm_int(b, d);
+    protectValue(lcmDen);
+    Value res = n_div(gcdNum, lcmDen);
+    protectValue(res);
+
+    UNPROTECT(save);
+    return res;
+}
+
+static bool gaussianExtractIntegerParts(Value value, Value *real, Value *imag) {
+    switch (value.type) {
+    case VALUE_TYPE_STDINT:
+    case VALUE_TYPE_BIGINT:
+        *real = value;
+        *imag = value_Stdint(0);
+        return true;
+    case VALUE_TYPE_STDINT_IMAG:
+    case VALUE_TYPE_BIGINT_IMAG: {
+        *real = value_Stdint(0);
+        *imag = imagToReal(value);
+        return true;
+    }
+    case VALUE_TYPE_COMPLEX:
+        *real = complexRealPart(value);
+        *imag = complexImagAsReal(value);
+        return IS_INT(*real) && IS_INT(*imag);
+    default:
+        return false;
+    }
+}
+
+static bool gaussianIsRationalComponent(Value value) {
+    return IS_INT(value) || IS_RATIONAL(value);
+}
+
+static bool gaussianExtractRationalParts(Value value, Value *real,
+                                         Value *imag) {
+    switch (value.type) {
+    case VALUE_TYPE_STDINT:
+    case VALUE_TYPE_BIGINT:
+    case VALUE_TYPE_RATIONAL:
+        *real = value;
+        *imag = value_Stdint(0);
+        return true;
+    case VALUE_TYPE_STDINT_IMAG:
+    case VALUE_TYPE_BIGINT_IMAG:
+    case VALUE_TYPE_RATIONAL_IMAG:
+        *real = value_Stdint(0);
+        *imag = imagToReal(value);
+        return true;
+    case VALUE_TYPE_COMPLEX:
+        *real = complexRealPart(value);
+        *imag = complexImagAsReal(value);
+        return gaussianIsRationalComponent(*real) &&
+               gaussianIsRationalComponent(*imag);
+    default:
+        return false;
+    }
+}
+
+static Value gaussianComponentDenominator(Value component) {
+    if (IS_INT(component)) {
+        return value_Stdint(1);
+    }
+    ASSERT_RATIONAL(component);
+    return getValue_Rational(component)->entries[1];
+}
+
+static Value gaussianScaleComponentToInteger(Value component,
+                                             Value commonDenominator) {
+    if (IS_INT(component)) {
+        return n_mul(component, commonDenominator);
+    }
+
+    ASSERT_RATIONAL(component);
+    Vec *ratio = getValue_Rational(component);
+    Value numerator = ratio->entries[0];
+    Value denominator = ratio->entries[1];
+
+    int save = protectValue(numerator);
+    protectValue(denominator);
+    Value scaledNumerator = n_mul(numerator, commonDenominator);
+    protectValue(scaledNumerator);
+    Value res = n_div(scaledNumerator, denominator);
+    protectValue(res);
+    UNPROTECT(save);
+    return res;
+}
+
+static Value gaussianRoundToInteger(Double value) {
+    if (isnan(value) || isinf(value)) {
+        cant_happen("invalid gaussian quotient component");
+    }
+    Double rounded = round(value);
+    if (rounded > INT_MAX || rounded < INT_MIN) {
+        cant_happen("gaussian quotient component overflow");
+    }
+    return value_Stdint((Integer)rounded);
+}
+
+static bool gaussianIsZero(Value real, Value imag) {
+    Value zero = value_Stdint(0);
+    return n_cmp(real, zero) == CMP_EQ && n_cmp(imag, zero) == CMP_EQ;
+}
+
+static Cmp gaussianNormCmp(Value leftReal, Value leftImag, Value rightReal,
+                           Value rightImag) {
+    int save = protectValue(leftReal);
+    protectValue(leftImag);
+    protectValue(rightReal);
+    protectValue(rightImag);
+
+    Value leftRealSq = n_mul(leftReal, leftReal);
+    protectValue(leftRealSq);
+    Value leftImagSq = n_mul(leftImag, leftImag);
+    protectValue(leftImagSq);
+    Value leftNorm = n_add(leftRealSq, leftImagSq);
+    protectValue(leftNorm);
+
+    Value rightRealSq = n_mul(rightReal, rightReal);
+    protectValue(rightRealSq);
+    Value rightImagSq = n_mul(rightImag, rightImag);
+    protectValue(rightImagSq);
+    Value rightNorm = n_add(rightRealSq, rightImagSq);
+    protectValue(rightNorm);
+
+    Cmp res = n_cmp(leftNorm, rightNorm);
+    UNPROTECT(save);
+    return res;
+}
+
+static void gaussianPrincipalAssociate(Value real, Value imag, Value *outReal,
+                                       Value *outImag) {
+    Value negReal = n_neg(real);
+    int save = protectValue(negReal);
+    Value negImag = n_neg(imag);
+    protectValue(negImag);
+
+    Value candsReal[4] = {real, negReal, negImag, imag};
+    Value candsImag[4] = {imag, negImag, real, negReal};
+
+    Value zero = value_Stdint(0);
+    int best = 0;
+    int bestRank = -1;
+    for (int i = 0; i < 4; ++i) {
+        Cmp realCmp = n_cmp(candsReal[i], zero);
+        Cmp imagCmp = n_cmp(candsImag[i], zero);
+
+        int rank = 0;
+        if (realCmp == CMP_GT) {
+            rank = 2;
+        } else if (realCmp == CMP_EQ && imagCmp == CMP_GT) {
+            rank = 1;
+        }
+
+        if (bestRank < rank) {
+            best = i;
+            bestRank = rank;
+            continue;
+        }
+
+        if (bestRank == rank) {
+            Cmp cmpReal = n_cmp(candsReal[i], candsReal[best]);
+            if (cmpReal == CMP_GT ||
+                (cmpReal == CMP_EQ &&
+                 n_cmp(candsImag[i], candsImag[best]) == CMP_GT)) {
+                best = i;
+            }
+        }
+    }
+
+    *outReal = candsReal[best];
+    *outImag = candsImag[best];
+    UNPROTECT(save);
+}
+
+static Value n_gcd_gaussian(Value left, Value right) {
+    Value aReal, aImag;
+    Value bReal, bImag;
+    if (!gaussianExtractIntegerParts(left, &aReal, &aImag) ||
+        !gaussianExtractIntegerParts(right, &bReal, &bImag) || !IS_INT(aReal) ||
+        !IS_INT(aImag) || !IS_INT(bReal) || !IS_INT(bImag)) {
+        Value arRat, aiRat;
+        Value brRat, biRat;
+        if (!gaussianExtractRationalParts(left, &arRat, &aiRat) ||
+            !gaussianExtractRationalParts(right, &brRat, &biRat)) {
+            return n_gcd_not_supported(left, right);
+        }
+
+        int save = PROTECT(NULL);
+        protectValue(arRat);
+        protectValue(aiRat);
+        protectValue(brRat);
+        protectValue(biRat);
+
+        Value arDen = gaussianComponentDenominator(arRat);
+        protectValue(arDen);
+        Value aiDen = gaussianComponentDenominator(aiRat);
+        protectValue(aiDen);
+        Value brDen = gaussianComponentDenominator(brRat);
+        protectValue(brDen);
+        Value biDen = gaussianComponentDenominator(biRat);
+        protectValue(biDen);
+
+        Value commonDen = n_lcm_int(arDen, aiDen);
+        protectValue(commonDen);
+        commonDen = n_lcm_int(commonDen, brDen);
+        protectValue(commonDen);
+        commonDen = n_lcm_int(commonDen, biDen);
+        protectValue(commonDen);
+
+        Value arInt = gaussianScaleComponentToInteger(arRat, commonDen);
+        protectValue(arInt);
+        Value aiInt = gaussianScaleComponentToInteger(aiRat, commonDen);
+        protectValue(aiInt);
+        Value brInt = gaussianScaleComponentToInteger(brRat, commonDen);
+        protectValue(brInt);
+        Value biInt = gaussianScaleComponentToInteger(biRat, commonDen);
+        protectValue(biInt);
+
+        Value leftLifted = comSimplify(arInt, aiInt);
+        protectValue(leftLifted);
+        Value rightLifted = comSimplify(brInt, biInt);
+        protectValue(rightLifted);
+
+        Value liftedGcd = n_gcd_gaussian(leftLifted, rightLifted);
+        protectValue(liftedGcd);
+        Value res = n_div(liftedGcd, commonDen);
+        protectValue(res);
+
+        UNPROTECT(save);
+        return res;
+    }
+
+    int save = PROTECT(NULL);
+    protectValue(aReal);
+    protectValue(aImag);
+    protectValue(bReal);
+    protectValue(bImag);
+
+    while (!gaussianIsZero(bReal, bImag)) {
+        Value arIrr = toIrr(aReal);
+        Value aiIrr = toIrr(aImag);
+        Value brIrr = toIrr(bReal);
+        Value biIrr = toIrr(bImag);
+
+        Double ar = getValue_Irrational(arIrr);
+        Double ai = getValue_Irrational(aiIrr);
+        Double br = getValue_Irrational(brIrr);
+        Double bi = getValue_Irrational(biIrr);
+        Double den = br * br + bi * bi;
+        if (den == 0.0) {
+            cant_happen("division by zero in gaussian gcd");
+        }
+
+        Value qReal = gaussianRoundToInteger((ar * br + ai * bi) / den);
+        protectValue(qReal);
+        Value qImag = gaussianRoundToInteger((ai * br - ar * bi) / den);
+        protectValue(qImag);
+
+        Value brQr = n_mul(bReal, qReal);
+        protectValue(brQr);
+        Value biQi = n_mul(bImag, qImag);
+        protectValue(biQi);
+        Value prodReal = n_sub(brQr, biQi);
+        protectValue(prodReal);
+
+        Value brQi = n_mul(bReal, qImag);
+        protectValue(brQi);
+        Value biQr = n_mul(bImag, qReal);
+        protectValue(biQr);
+        Value prodImag = n_add(brQi, biQr);
+        protectValue(prodImag);
+
+        Value rReal = n_sub(aReal, prodReal);
+        protectValue(rReal);
+        Value rImag = n_sub(aImag, prodImag);
+        protectValue(rImag);
+
+        if (gaussianNormCmp(rReal, rImag, bReal, bImag) != CMP_LT) {
+            cant_happen("gaussian gcd invariant violated: N(r) >= N(b)");
+        }
+
+        aReal = bReal;
+        aImag = bImag;
+        bReal = rReal;
+        bImag = rImag;
+    }
+
+    Value outReal;
+    Value outImag;
+    gaussianPrincipalAssociate(aReal, aImag, &outReal, &outImag);
+    Value res = comSimplify(outReal, outImag);
+    protectValue(res);
+
+    UNPROTECT(save);
+    return res;
+}
+
+static Value n_gcd_not_supported(Value left, Value right) {
+    cant_happen("gcd not yet supported for numeric domain pair (%s, %s)",
+                valueTypeName(left.type), valueTypeName(right.type));
+}
+
+static const NextBinaryHandler gcdHandlers[] = {
+    [ARITH_DOMAIN_INT_STD] = n_gcd_std,
+    [ARITH_DOMAIN_INT_BIG] = n_gcd_big,
+    [ARITH_DOMAIN_RAT] = n_gcd_rat,
+    [ARITH_DOMAIN_IRR] = n_gcd_not_supported,
+    [ARITH_DOMAIN_IMAG] = n_gcd_gaussian,
+    [ARITH_DOMAIN_COMPLEX] = n_gcd_gaussian,
+};
+
+/////////////////////////////
+// lcm operator
+/////////////////////////////
+
+static Value n_lcm_int(Value left, Value right) {
+    ASSERT_INT(left);
+    ASSERT_INT(right);
+
+    int save = protectValue(left);
+    protectValue(right);
+    Value zero = value_Stdint(0);
+
+    if (n_cmp(left, zero) == CMP_EQ || n_cmp(right, zero) == CMP_EQ) {
+        protectValue(zero);
+        UNPROTECT(save);
+        return zero;
+    }
+
+    Value product = n_mul(left, right);
+    protectValue(product);
+    if (isNegativeInteger(product)) {
+        product = n_neg(product);
+        protectValue(product);
+    }
+
+    Value gcd = n_gcd(left, right);
+    protectValue(gcd);
+    Value res = n_div(product, gcd);
+    protectValue(res);
+
+    UNPROTECT(save);
+    return res;
+}
+
+static Value n_lcm_std(Value left, Value right) {
+    ASSERT_STDINT(left);
+    ASSERT_STDINT(right);
+    return n_lcm_int(left, right);
+}
+
+static Value n_lcm_big(Value left, Value right) {
+    ASSERT_INT(left);
+    ASSERT_INT(right);
+    ASSERT(IS_BIGINT(left) || IS_BIGINT(right));
+    return n_lcm_int(left, right);
+}
+
+static Value n_lcm_rat(Value left, Value right) {
+    if (!IS_RATIONAL(left) || !IS_RATIONAL(right)) {
+        Value leftRat = toRat(left);
+        int save = protectValue(leftRat);
+        Value rightRat = toRat(right);
+        protectValue(rightRat);
+        Value res = n_lcm_rat(leftRat, rightRat);
+        protectValue(res);
+        UNPROTECT(save);
+        return res;
+    }
+
+    ASSERT_RATIONAL(left);
+    ASSERT_RATIONAL(right);
+    int save = protectValue(left);
+    protectValue(right);
+
+    Value a, b, c, d;
+    unpackRationalPair(left, right, &a, &b, &c, &d);
+
+    Value lcmNum = n_lcm_int(a, c);
+    protectValue(lcmNum);
+    Value gcdDen = n_gcd(b, d);
+    protectValue(gcdDen);
+    Value res = n_div(lcmNum, gcdDen);
+    protectValue(res);
+
+    UNPROTECT(save);
+    return res;
+}
+
+static Value n_lcm_gaussian(Value left, Value right) {
+    int save = protectValue(left);
+    protectValue(right);
+
+    Value zero = value_Stdint(0);
+    protectValue(zero);
+    if (n_cmp(left, zero) == CMP_EQ || n_cmp(right, zero) == CMP_EQ) {
+        UNPROTECT(save);
+        return zero;
+    }
+
+    Value gcd = n_gcd(left, right);
+    protectValue(gcd);
+    if (n_cmp(gcd, zero) == CMP_EQ) {
+        UNPROTECT(save);
+        return zero;
+    }
+
+    Value product = n_mul(left, right);
+    protectValue(product);
+    Value res = n_div(product, gcd);
+    protectValue(res);
+
+    UNPROTECT(save);
+    return res;
+}
+
+static Value n_lcm_not_supported(Value left, Value right) {
+    cant_happen("lcm not yet supported for numeric domain pair (%s, %s)",
+                valueTypeName(left.type), valueTypeName(right.type));
+}
+
+static const NextBinaryHandler lcmHandlers[] = {
+    [ARITH_DOMAIN_INT_STD] = n_lcm_std,
+    [ARITH_DOMAIN_INT_BIG] = n_lcm_big,
+    [ARITH_DOMAIN_RAT] = n_lcm_rat,
+    [ARITH_DOMAIN_IRR] = n_lcm_not_supported,
+    [ARITH_DOMAIN_IMAG] = n_lcm_gaussian,
+    [ARITH_DOMAIN_COMPLEX] = n_lcm_gaussian,
+};
+
+/////////////////////////////
 // cmp operator
 /////////////////////////////
 
@@ -1776,6 +2329,10 @@ Value npow(Value left, Value right) { return n_pow(left, right); }
 
 Value nmod(Value left, Value right) { return n_mod(left, right); }
 
+Value ngcd(Value left, Value right) { return n_gcd(left, right); }
+
+Value nlcm(Value left, Value right) { return n_lcm(left, right); }
+
 Cmp ncmp(Value left, Value right) { return n_cmp(left, right); }
 
 Value nneg(Value value) { return n_neg(value); }
@@ -1842,6 +2399,28 @@ static Value n_mod(Value left, Value right) {
     }
     return applyCommonDomainBinary(ARITH_OP_MOD, "mod", modHandlers,
                                    sizeof(modHandlers) / sizeof(modHandlers[0]),
+                                   left, right);
+}
+
+static Value n_gcd(Value left, Value right) {
+    assertCanonicalNaN(left);
+    assertCanonicalNaN(right);
+    if (containsNaN(left) || containsNaN(right)) {
+        return softNaN();
+    }
+    return applyCommonDomainBinary(ARITH_OP_GCD, "gcd", gcdHandlers,
+                                   sizeof(gcdHandlers) / sizeof(gcdHandlers[0]),
+                                   left, right);
+}
+
+static Value n_lcm(Value left, Value right) {
+    assertCanonicalNaN(left);
+    assertCanonicalNaN(right);
+    if (containsNaN(left) || containsNaN(right)) {
+        return softNaN();
+    }
+    return applyCommonDomainBinary(ARITH_OP_LCM, "lcm", lcmHandlers,
+                                   sizeof(lcmHandlers) / sizeof(lcmHandlers[0]),
                                    left, right);
 }
 
