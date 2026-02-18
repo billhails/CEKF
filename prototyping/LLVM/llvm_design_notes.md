@@ -8,9 +8,9 @@ This document outlines the design for adding LLVM code generation to CEKF, targe
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│                    CEKF Compiler Pipeline                     │
+│                    CEKF Compiler Pipeline                    │
 └──────────────────────────────────────────────────────────────┘
-    Parser → AST → Lambda → ANF → Type Check → Annotate
+    Parser → AST → Lambda → Type Check → ANF → Annotate
                                         │
                             ┌───────────┴────────────┐
                             ▼                        ▼
@@ -64,6 +64,7 @@ All operations on Values call external C functions from the runtime.
 These functions from `step.c`, `arithmetic.c`, etc. must be callable from LLVM:
 
 #### Value Construction
+
 - `Value value_Stdint(int i)`
 - `Value value_Bigint(BigInt *b)`
 - `Value value_Character(character c)`
@@ -72,6 +73,7 @@ These functions from `step.c`, `arithmetic.c`, etc. must be callable from LLVM:
 - `Value value_Vec(Vec *vec)`
 
 #### Arithmetic Operations
+
 - `Value nadd(Value left, Value right)`
 - `Value nsub(Value left, Value right)`
 - `Value nmul(Value left, Value right)`
@@ -80,6 +82,7 @@ These functions from `step.c`, `arithmetic.c`, etc. must be callable from LLVM:
 - `Value nmod(Value left, Value right)`
 
 #### Comparison Operations
+
 - `Value eq(Value left, Value right)`
 - `Value ne(Value left, Value right)`
 - `Value gt(Value left, Value right)`
@@ -89,9 +92,11 @@ These functions from `step.c`, `arithmetic.c`, etc. must be callable from LLVM:
 - `Value vcmp(Value left, Value right)`
 
 #### Control Flow
+
 - `bool truthy(Value v)`
 
 #### Stack Operations
+
 - `void push(Value v)`
 - `Value pop(void)`
 - `Value peek(int index)`
@@ -99,9 +104,11 @@ These functions from `step.c`, `arithmetic.c`, etc. must be callable from LLVM:
 - `void popn(int n)`
 
 #### Environment Operations
+
 - `Value lookup(int frame, int offset)`
 
 #### Closure Operations
+
 - `Clo *newClo(int pending, control C, Env *E)`
 - `void exactCallFromClo(Clo *clo)`
 - `void exactCallFromPclo(Clo *clo, int naargs)`
@@ -109,11 +116,13 @@ These functions from `step.c`, `arithmetic.c`, etc. must be callable from LLVM:
 - `void applyProc(int naargs)` - Main application dispatch
 
 #### GC Operations
+
 - `int PROTECT(void *ptr)` - Returns save point
 - `void UNPROTECT(int save)` - Restore to save point
 - `int protectValue(Value v)` - Protect a Value
 
 #### Vector Operations
+
 - `Vec *newVec(int size)`
 - `Value vec(Value index, Value vector)` - Index into vector
 
@@ -175,6 +184,7 @@ This requires flow-sensitive type analysis.
 ### Closures (LAM)
 
 ANF closure:
+
 ```
 let f = lambda(x, y) { x + y } in ...
 ```
@@ -208,6 +218,7 @@ define %struct.Value @compute() {
 ### Function Application (APPLY)
 
 ANF application:
+
 ```
 let result = f(a, b) in ...
 ```
@@ -228,6 +239,7 @@ call void @applyProc(i32 2)
 ```
 
 The `applyProc` function handles all the complexity:
+
 - Type dispatch on callable
 - Partial application
 - Over-application
@@ -241,6 +253,7 @@ The `applyProc` function handles all the complexity:
 **Solution options**:
 
 1. **Keep as runtime calls** (initial approach):
+
    ```llvm
    ; let x = e1 in e2
    call void @let_begin(ptr @continuation_addr)
@@ -294,6 +307,7 @@ The Fail register (`state.F`) is managed entirely in C runtime.
 **Minimal changes to existing code:**
 
 1. **src/main.c**: Add `--use-llvm` flag
+
    ```c
    if (use_llvm) {
        LLVMModuleRef module = compileAnfToLLVM(anf);
@@ -305,6 +319,7 @@ The Fail register (`state.F`) is managed entirely in C runtime.
    ```
 
 2. **Makefile**: Add LLVM flags
+
    ```makefile
    LLVM_CONFIG = llvm-config
    LLVM_CFLAGS = $(shell $(LLVM_CONFIG) --cflags)
@@ -331,6 +346,7 @@ Run existing `tests/fn/test_*.fn` with both backends, compare results.
 ### Performance Tests
 
 Benchmark suite comparing bytecode VM vs LLVM:
+
 - Arithmetic-heavy: factorial, fibonacci
 - Closure-heavy: higher-order functions
 - Backtracking: amb searches
@@ -338,18 +354,21 @@ Benchmark suite comparing bytecode VM vs LLVM:
 ## Build Options
 
 ### Debug Build
+
 ```bash
-make MODE=testing
+make
 ./bin/fn --use-llvm --dump-llvm-ir program.fn
 ```
 
 ### Release Build
+
 ```bash
 make MODE=production
 ./bin/fn --use-llvm program.fn
 ```
 
 ### Both Backends
+
 ```bash
 # Run bytecode version
 ./bin/fn program.fn
@@ -364,12 +383,14 @@ diff <(./bin/fn program.fn) <(./bin/fn --use-llvm program.fn)
 ## Migration Path
 
 ### Milestone 1: Proof of Concept (2-3 weeks)
+
 - [ ] Compile simple ANF expressions (literals, arithmetic)
 - [ ] Integrate LLVM into build system
 - [ ] Execute via LLVM JIT
 - [ ] Verify output matches bytecode VM
 
 ### Milestone 2: Core Features (4-6 weeks)
+
 - [ ] Closures (LAM)
 - [ ] Function application (APPLY)
 - [ ] Let bindings
@@ -377,6 +398,7 @@ diff <(./bin/fn program.fn) <(./bin/fn --use-llvm program.fn)
 - [ ] Variables (VAR, LVAR)
 
 ### Milestone 3: Advanced Features (6-8 weeks)
+
 - [ ] Continuations (LET, RETURN, CALLCC)
 - [ ] Backtracking (AMB, BACK, CUT)
 - [ ] Pattern matching (MATCH, INTCOND, CHARCOND)
@@ -384,12 +406,14 @@ diff <(./bin/fn program.fn) <(./bin/fn --use-llvm program.fn)
 - [ ] LETREC
 
 ### Milestone 4: Optimization (ongoing)
+
 - [ ] Profile-guided optimization
 - [ ] Type specialization
 - [ ] Inlining runtime functions
 - [ ] Custom calling conventions
 
 ### Milestone 5: Production Ready (2-3 months)
+
 - [ ] All tests passing
 - [ ] Performance benchmarks
 - [ ] Documentation

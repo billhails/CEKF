@@ -22,7 +22,7 @@ let
     }
 
     fn genFloats() {
-        [0.0, 1.5, -2.5]
+        [0.0, 1.5, -2.5, 1/0]
     }
 
     fn nonzero(n) {
@@ -67,7 +67,11 @@ let
         n1 * n2
     }
     fn opDiv(n1, n2) {
-        n1 / n2
+        if (nonzero(n2)) {
+            n1 / n2
+        } else {
+            0
+        }
     }
     fn opMod(n1, n2) {
         if (nonzero(n2)) {

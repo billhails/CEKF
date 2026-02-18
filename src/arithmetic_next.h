@@ -1,5 +1,3 @@
-#ifndef cekf_arithmetic_h
-#define cekf_arithmetic_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2023  Bill Hails
@@ -18,25 +16,24 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "value.h"
+#ifndef cekf_arithmetic_next_h
+#define cekf_arithmetic_next_h
+
 #include "cmp.h"
+#include "value.h"
 
-Value nadd(Value, Value);
-Value nsub(Value, Value);
-Value nmul(Value, Value);
-Value ndiv(Value, Value);
-Value npow(Value, Value);
-Value nmod(Value, Value);
-Value nneg(Value);
-Value nrand(Value);
-Value real_part(Value);
-Value imag_part(Value);
-Value mag_part(Value);
-Value theta_part(Value);
-
-Cmp ncmp(Value, Value);
-
-void init_arithmetic(void);
-void markArithmetic(void);
+Value nadd(Value left, Value right);
+Value nsub(Value left, Value right);
+Value nmul(Value left, Value right);
+Value ndiv(Value left, Value right);
+Value npow(Value left, Value right);
+Value nmod(Value left, Value right);
+Value nneg(Value value);
+Value nrand(Value prev);
+Value real_part(Value value);
+Value imag_part(Value value);
+Value mag_part(Value value);
+Value theta_part(Value value);
+Cmp ncmp(Value left, Value right);
 
 #endif

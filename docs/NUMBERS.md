@@ -1,5 +1,9 @@
 # Number Hierarchy
 
+Note: this document includes exploratory hierarchy ideas. Any future domains such as vectors, matrices, or quaternions are proposals, not committed features.
+
+Also note that future composite domains (for example vectors) likely should not follow scalar promotion rules. In particular, scalar-to-vector behavior is better modeled as operator-specific broadcasting, or by treating vectors as a separate language-level type family.
+
 A sketch of the numerical types.
 
 ```mermaid

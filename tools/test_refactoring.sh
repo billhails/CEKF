@@ -38,7 +38,7 @@ echo "Cleaning..."
 make clean > /dev/null 2>&1
 
 echo "Regenerating code..."
-if ! make .generated MODE=testing > /dev/null 2>&1; then
+if ! make .generated > /dev/null 2>&1; then
     echo -e "${RED}ERROR: Code generation failed${NC}"
     exit 1
 fi

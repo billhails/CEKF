@@ -436,7 +436,7 @@ Since the refactoring changes **how** code is generated but not **what** is gene
 # 1. Generate all current code
 cd /home/bill/src/CEKF
 make clean
-make MODE=testing
+make
 
 # 2. Create golden master snapshot
 mkdir -p test_baseline/generated
@@ -469,7 +469,7 @@ echo "Cleaning..."
 make clean
 
 echo "Regenerating code..."
-make MODE=testing
+make
 
 # Compare generated files
 echo "Comparing generated code..."
@@ -555,7 +555,7 @@ md5sum generated/ast.h >> test_baseline/checksums.txt
 ```bash
 # Ensure generated code still compiles cleanly
 make clean
-make MODE=testing
+make
 make MODE=production
 make MODE=unit
 
@@ -601,7 +601,7 @@ diff -u test_baseline/generated/ast.h /tmp/ast.h
 diff -u test_baseline/generated/ast.c /tmp/ast.c
 
 # 4. If identical, regenerate all and test
-make clean && make MODE=testing
+make clean && make
 ./test_refactoring.sh
 
 # 5. Run functional tests
@@ -730,7 +730,7 @@ class TestCodeGeneration:
         result = subprocess.run(['make', 'clean'], capture_output=True)
         assert result.returncode == 0
         
-        result = subprocess.run(['make', 'MODE=testing'], capture_output=True)
+        result = subprocess.run(['make'], capture_output=True)
         assert result.returncode == 0
         assert b'warning' not in result.stderr.lower()
     
@@ -758,7 +758,7 @@ jobs:
       - name: Setup baseline
         run: |
           make clean
-          make MODE=testing
+          make
           mkdir -p test_baseline/generated
           cp -r generated/* test_baseline/generated/
       
@@ -766,7 +766,7 @@ jobs:
         run: |
           # This would be on a branch with refactored code
           make clean
-          make MODE=testing
+          make
           
       - name: Compare output
         run: |
@@ -795,7 +795,7 @@ cp -r generated/ generated_broken/
 git checkout HEAD -- tools/generate/
 
 # 5. Verify rollback worked
-make clean && make MODE=testing
+make clean && make
 ./test_refactoring.sh  # Should pass
 
 # 6. Debug in isolation

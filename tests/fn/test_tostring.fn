@@ -1,4 +1,17 @@
 let
     link "ioutils.fn" as io;
+
+    operator "$_" 14 io.to_string;
 in
-    assert(io.to_string(1234 + 5i) == "(1234+5i)")
+    assert(io.to_string(1234 + 5i) == "(1234+5i)");
+    assert($(1/0) == "nan");
+    assert($(1/0 + 1i) == "nan");
+    assert($(1 + ((1/0) * 1i)) == "nan");
+
+    assert($((1/0) / 2) == "nan");
+    assert($(1 / (1/0)) == "nan");
+    assert($((1/0) / (2/3)) == "nan");
+
+    assert($(((1/0) / 2) + 1i) == "nan");
+    assert($(1 + ((((1/0) / 2)) * 1i)) == "nan");
+    assert($(((1/0) / (2/3)) + (((3/4) / (1/0)) * 1i)) == "nan")

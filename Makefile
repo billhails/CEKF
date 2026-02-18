@@ -4,7 +4,7 @@ install-sqlite3 coverage extracov view-coverage \
 establish-baseline test-refactoring update-baseline clean-baseline \
 scratch
 
-# pass on the command line, i.e. `make test MODE=testing`
+# pass on the command line, i.e. `make test MODE=production`
 #
 # debugging:  -g, and turns on DEBUG_STRESS_GC which forces a garbage collection on every malloc
 # testing:    -g, but no DEBUG_STRESS_GC
@@ -348,7 +348,7 @@ establish-baseline:
 	@echo "Press Ctrl-C to cancel, or Enter to continue..."
 	@read dummy
 	$(MAKE) clean
-	$(MAKE) MODE=testing
+	$(MAKE)
 	mkdir -p $(BASELINE_DIR)/generated
 	mkdir -p $(BASELINE_DIR)/src
 	cp -r $(GENDIR)/* $(BASELINE_DIR)/generated/

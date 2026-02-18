@@ -18,7 +18,7 @@
 
 #include "minlam_simplify.h"
 
-#include "arithmetic.h"
+#include "arithmetic_next.h"
 #include "term_helper.h"
 
 static inline bool isTermNum(Term *term) {
