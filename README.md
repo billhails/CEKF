@@ -101,19 +101,22 @@ subgraph anf-rewrite-2
    desugaring --> lambda_ds(desugared lambda)
    lambda_ds --> alpha(["ɑ-Conversion"]):::process
    alpha --> lambda_a(alphatized lambda)
-   lambda_a --> anfr([ANF Rewrite]):::process
+   lambda_eta --> anfr([ANF Rewrite]):::process
    anfr --> lambda_b(New ANF)
 
-   lambda_a --> cps([CPS Transform]):::process
+   lambda_a --> beta(["β-conversion"]):::process
+   beta --> lambda_beta("β-lambda")
+   lambda_beta --> eta(["η-conversion"]):::process
+   eta --> lambda_eta("η-lambda")
+   lambda_eta --> cps([CPS Transform]):::process
    cps --> lambda_e("CPS λ")
    lambda_e --> cloc([Closure Conversion WiP]):::process
    cloc --> lambda_c(Explicit Closure)
-   lambda_c --> betar(["β-Reduction WiP"]):::process
-   betar --> lambda_d(simplified)
+   
 end
 lambda3 --> desugaring
 lambda3 --> anfc
-lambda_a --> anfc([A-Normal Form Conversion]):::process
+lambda_eta --> anfc([A-Normal Form Conversion]):::process
 anfc --> anf(ANF)
 anf --> lexa([Lexical Analysis]):::process
 lexa --> ann(Annotated ANF)
