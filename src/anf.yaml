@@ -304,6 +304,7 @@ enums:
         - DIV
         - GCD
         - LCM
+        - CANON
         - POW
         - EQ
         - NE

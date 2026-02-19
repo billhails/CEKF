@@ -109,6 +109,9 @@ void ppAexpPrimApp(AexpPrimApp *x) {
     case AEXPPRIMOP_TYPE_LCM:
         eprintf("lcm ");
         break;
+    case AEXPPRIMOP_TYPE_CANON:
+        eprintf("canon ");
+        break;
     case AEXPPRIMOP_TYPE_EQ:
         eprintf("eq ");
         break;

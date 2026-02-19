@@ -33,6 +33,7 @@
 #define n_mod nmod
 #define n_gcd ngcd
 #define n_lcm nlcm
+#define n_canon ncanon
 #define n_pow npow
 #define n_cmp ncmp
 
@@ -1042,6 +1043,43 @@ static void testNGcdGaussianRationalUnitCanonicalization() {
     UNPROTECT(save);
 }
 
+static void testNCanonIntEndToEnd() {
+    Value res = n_canon(stdint(-6));
+    assert(isValue_Stdint(res));
+    assert(getValue_Stdint(res) == 6);
+
+    res = n_canon(asBigint(-42));
+    assert(isValue_Bigint(res));
+    assert(ncmp(res, stdint(42)) == CMP_EQ);
+}
+
+static void testNCanonRationalEndToEnd() {
+    Value res = n_canon(stdRational(-9, 12));
+    int save = protectValue(res);
+    Value expected = stdRational(3, 4);
+    protectValue(expected);
+    assert(ncmp(res, expected) == CMP_EQ);
+    UNPROTECT(save);
+}
+
+static void testNCanonGaussianIntegerEndToEnd() {
+    Value res = n_canon(stdComplex(-4, -2));
+    int save = protectValue(res);
+    Value expected = stdComplex(4, 2);
+    protectValue(expected);
+    assert(ncmp(res, expected) == CMP_EQ);
+    UNPROTECT(save);
+}
+
+static void testNCanonGaussianRationalEndToEnd() {
+    Value res = n_canon(stdRationalComplex(-3, 2, -1, 2));
+    int save = protectValue(res);
+    Value expected = stdRationalComplex(3, 2, 1, 2);
+    protectValue(expected);
+    assert(ncmp(res, expected) == CMP_EQ);
+    UNPROTECT(save);
+}
+
 static void testNAddComplexEndToEnd() {
     Value a = stdComplex(1, 2);
     int save = protectValue(a);
@@ -1522,6 +1560,10 @@ int main(int argc __attribute__((unused)),
     testNGcdGaussianRationalLift();
     testNGcdGaussianRationalReducedComponents();
     testNGcdGaussianRationalUnitCanonicalization();
+    testNCanonIntEndToEnd();
+    testNCanonRationalEndToEnd();
+    testNCanonGaussianIntegerEndToEnd();
+    testNCanonGaussianRationalEndToEnd();
     testNCmpStdintEndToEnd();
     testNCmpBigintEndToEnd();
     testNCmpIrrationalEndToEnd();

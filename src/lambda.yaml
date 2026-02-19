@@ -377,6 +377,7 @@ enums:
             - MOD
             - GCD
             - LCM
+            - CANON
             - POW
             - EQ
             - NE

@@ -203,6 +203,9 @@ void ppMinPrimOp(MinPrimOp type) {
     case MINPRIMOP_TYPE_LCM:
         eprintf("lcm");
         break;
+    case MINPRIMOP_TYPE_CANON:
+        eprintf("canon");
+        break;
     case MINPRIMOP_TYPE_EQ:
         eprintf("==");
         break;

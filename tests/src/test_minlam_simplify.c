@@ -129,6 +129,14 @@ static MinExp *Lcm(MinExp *left, MinExp *right) {
     return result;
 }
 
+static MinExp *Canon(MinExp *value) {
+    MinExp *zero = N(0);
+    int save = PROTECT(zero);
+    MinExp *result = prim2(MINPRIMOP_TYPE_CANON, value, zero);
+    REPLACE_PROTECT(save, result);
+    return result;
+}
+
 static void assertSimplifiesToInt(MinExp *expr, int expected) {
     int save = PROTECT(expr);
     MinExp *simplified = simplifyMinExp(expr);
@@ -298,6 +306,52 @@ static void test_lcm_non_numeric_keeps_prim_after_arg_simplification(void) {
     MinExp *expr = Lcm(Add(Vx(), N(0)), Add(Vy(), N(0)));
     assertSimplifiesToPrimVars(expr, MINPRIMOP_TYPE_LCM, newSymbol("x"),
                                newSymbol("y"));
+    UNPROTECT(save);
+}
+
+static void test_gcd_self_wraps_in_canon(void) {
+    int save = PROTECT(NULL);
+    assertSimplifiesToExpr(Gcd(Vx(), Vx()), Canon(Vx()));
+    UNPROTECT(save);
+}
+
+static void test_gcd_zero_operand_wraps_in_canon(void) {
+    int save = PROTECT(NULL);
+    assertSimplifiesToExpr(Gcd(Vx(), N(0)), Canon(Vx()));
+    assertSimplifiesToExpr(Gcd(N(0), Vy()), Canon(Vy()));
+    UNPROTECT(save);
+}
+
+static void test_gcd_one_operand_folds_to_one(void) {
+    int save = PROTECT(NULL);
+    assertSimplifiesToInt(Gcd(Vx(), N(1)), 1);
+    assertSimplifiesToInt(Gcd(N(1), Vy()), 1);
+    UNPROTECT(save);
+}
+
+static void test_lcm_zero_operand_folds_to_zero(void) {
+    int save = PROTECT(NULL);
+    assertSimplifiesToInt(Lcm(Vx(), N(0)), 0);
+    assertSimplifiesToInt(Lcm(N(0), Vy()), 0);
+    UNPROTECT(save);
+}
+
+static void test_lcm_self_wraps_in_canon(void) {
+    int save = PROTECT(NULL);
+    assertSimplifiesToExpr(Lcm(Vx(), Vx()), Canon(Vx()));
+    UNPROTECT(save);
+}
+
+static void test_lcm_one_operand_wraps_in_canon(void) {
+    int save = PROTECT(NULL);
+    assertSimplifiesToExpr(Lcm(Vx(), N(1)), Canon(Vx()));
+    assertSimplifiesToExpr(Lcm(N(1), Vy()), Canon(Vy()));
+    UNPROTECT(save);
+}
+
+static void test_canon_of_canon_collapses(void) {
+    int save = PROTECT(NULL);
+    assertSimplifiesToExpr(Canon(Canon(Vx())), Canon(Vx()));
     UNPROTECT(save);
 }
 
@@ -819,6 +873,17 @@ int main(int argc __attribute__((unused)),
             test_gcd_non_numeric_keeps_prim_after_arg_simplification);
     runTest("test_lcm_non_numeric_keeps_prim_after_arg_simplification",
             test_lcm_non_numeric_keeps_prim_after_arg_simplification);
+    runTest("test_gcd_self_wraps_in_canon", test_gcd_self_wraps_in_canon);
+    runTest("test_gcd_zero_operand_wraps_in_canon",
+            test_gcd_zero_operand_wraps_in_canon);
+    runTest("test_gcd_one_operand_folds_to_one",
+            test_gcd_one_operand_folds_to_one);
+    runTest("test_lcm_zero_operand_folds_to_zero",
+            test_lcm_zero_operand_folds_to_zero);
+    runTest("test_lcm_self_wraps_in_canon", test_lcm_self_wraps_in_canon);
+    runTest("test_lcm_one_operand_wraps_in_canon",
+            test_lcm_one_operand_wraps_in_canon);
+    runTest("test_canon_of_canon_collapses", test_canon_of_canon_collapses);
     runTest("test_nested_recursive_simplification",
             test_nested_recursive_simplification);
     runTest("test_chained_sub_add_zero_to_zero",

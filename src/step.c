@@ -46,6 +46,7 @@
 #define runtimeDiv ndiv
 #define runtimeGcd ngcd
 #define runtimeLcm nlcm
+#define runtimeCanon ncanon
 #define runtimePow npow
 #define runtimeMod nmod
 #define runtimeCmp ncmp
@@ -781,6 +782,19 @@ static void step() {
             Value left = pop();
             protectValue(left);
             Value res = runtimeLcm(left, right);
+            protectValue(res);
+            push(res);
+            UNPROTECT(save);
+        } break;
+
+        case BYTECODES_TYPE_PRIM_CANON: {
+            // pop two values, perform the binop and push the result
+            DEBUG("CANON");
+            Value right = pop();
+            int save = protectValue(right);
+            Value left = pop();
+            protectValue(left);
+            Value res = runtimeCanon(left);
             protectValue(res);
             push(res);
             UNPROTECT(save);

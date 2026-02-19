@@ -1,0 +1,10 @@
+let
+    fn canonize {
+        (x) { CANON(x) }
+    };
+in
+    assert(canonize(-9) == 9);
+    assert(canonize(-12) == 12);
+    assert(canonize(-15) == 15);
+    assert(canonize((3/2)) == (3/2));
+    assert(canonize(6 gcd 4) == 2);

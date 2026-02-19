@@ -41,6 +41,9 @@ static Value n_gcd(Value left, Value right);
 static Value n_gcd_not_supported(Value left, Value right);
 static Value n_lcm(Value left, Value right);
 static Value n_lcm_int(Value left, Value right);
+static Value n_canon(Value value);
+static Value n_canon_rat(Value value);
+static Value gaussianCanonicalize(Value real, Value imag);
 static Value n_pow(Value left, Value right);
 static Cmp n_cmp(Value left, Value right);
 static Value n_neg(Value value);
@@ -238,6 +241,19 @@ static Value toRat(Value value) {
         cant_happen("invalid rational-compatible type %s",
                     valueTypeName(value.type));
     }
+}
+
+static Value n_canon_rat(Value value) {
+    Value rat = toRat(value);
+    int save = protectValue(rat);
+    Value zero = value_Stdint(0);
+    Value res = rat;
+    if (n_cmp(rat, zero) == CMP_LT) {
+        res = n_neg(rat);
+        protectValue(res);
+    }
+    UNPROTECT(save);
+    return res;
 }
 
 static void unpackRationalPair(Value left, Value right, Value *a, Value *b,
@@ -1168,6 +1184,20 @@ static Value n_gcd_rat(Value left, Value right) {
     int save = protectValue(left);
     protectValue(right);
 
+    Value zero = value_Stdint(0);
+    if (n_cmp(left, zero) == CMP_EQ) {
+        Value res = n_canon_rat(right);
+        protectValue(res);
+        UNPROTECT(save);
+        return res;
+    }
+    if (n_cmp(right, zero) == CMP_EQ) {
+        Value res = n_canon_rat(left);
+        protectValue(res);
+        UNPROTECT(save);
+        return res;
+    }
+
     Value a, b, c, d;
     unpackRationalPair(left, right, &a, &b, &c, &d);
 
@@ -1388,6 +1418,13 @@ static void gaussianPrincipalAssociate(Value real, Value imag, Value *outReal,
     UNPROTECT(save);
 }
 
+static Value gaussianCanonicalize(Value real, Value imag) {
+    Value outReal;
+    Value outImag;
+    gaussianPrincipalAssociate(real, imag, &outReal, &outImag);
+    return comSimplify(outReal, outImag);
+}
+
 static Value n_gcd_gaussian(Value left, Value right) {
     Value aReal, aImag;
     Value bReal, bImag;
@@ -1510,10 +1547,7 @@ static Value n_gcd_gaussian(Value left, Value right) {
         bImag = rImag;
     }
 
-    Value outReal;
-    Value outImag;
-    gaussianPrincipalAssociate(aReal, aImag, &outReal, &outImag);
-    Value res = comSimplify(outReal, outImag);
+    Value res = gaussianCanonicalize(aReal, aImag);
     protectValue(res);
 
     UNPROTECT(save);
@@ -2393,6 +2427,8 @@ Value ngcd(Value left, Value right) { return n_gcd(left, right); }
 
 Value nlcm(Value left, Value right) { return n_lcm(left, right); }
 
+Value ncanon(Value value) { return n_canon(value); }
+
 Cmp ncmp(Value left, Value right) { return n_cmp(left, right); }
 
 Value nneg(Value value) { return n_neg(value); }
@@ -2482,6 +2518,41 @@ static Value n_lcm(Value left, Value right) {
     return applyCommonDomainBinary(ARITH_OP_LCM, "lcm", lcmHandlers,
                                    sizeof(lcmHandlers) / sizeof(lcmHandlers[0]),
                                    left, right);
+}
+
+static Value n_canon(Value value) {
+    assertCanonicalNaN(value);
+    if (containsNaN(value)) {
+        return softNaN();
+    }
+
+    switch (value.type) {
+    case VALUE_TYPE_STDINT:
+    case VALUE_TYPE_BIGINT:
+        return absInteger(value);
+
+    case VALUE_TYPE_RATIONAL:
+        return n_canon_rat(value);
+
+    case VALUE_TYPE_STDINT_IMAG:
+    case VALUE_TYPE_BIGINT_IMAG:
+    case VALUE_TYPE_RATIONAL_IMAG:
+    case VALUE_TYPE_COMPLEX: {
+        Value real;
+        Value imag;
+        if (gaussianExtractRationalParts(value, &real, &imag)) {
+            return n_gcd_gaussian(value, value_Stdint(0));
+        }
+        return softNaN();
+    }
+
+    case VALUE_TYPE_IRRATIONAL:
+    case VALUE_TYPE_IRRATIONAL_IMAG:
+        return softNaN();
+
+    default:
+        cant_happen("invalid numeric type %s", valueTypeName(value.type));
+    }
 }
 
 static Value n_pow(Value left, Value right) {

@@ -2,6 +2,18 @@
 
 Notes to self on the equations of rational and complex arithmetic.
 
+## Domains
+
+For future reference:
+
+* Natural numbers $\mathbb{N}$, $\{1,2,\cdots\}$
+* Integers $\mathbb{Z}$, $\{\cdots-1,0,1\cdots\}$
+* Rationals $\mathbb{Q}$
+* Gaussian (complex) integers $\mathbb{Z}[i]$
+* Gaussian rationals $\mathbb{Q}[i]$
+* Real numbers $\mathbb{R}$
+* Gaussian numbers $\mathbb{C}$
+
 ## Rational Arithmetic
 
 ### addition
@@ -149,10 +161,10 @@ coherent and implementation-friendly.
 
 ### scope
 
-- Supported domains for `cgcd`: $\mathbb{Z}$, $\mathbb{Q}$, $\mathbb{Z}[i]$,
+* Supported domains for `cgcd`: $\mathbb{Z}$, $\mathbb{Q}$, $\mathbb{Z}[i]$,
   $\mathbb{Q}[i]$.
-- Inputs outside those domains are invalid for `cgcd`.
-- `lcm` is defined only where needed by these formulas.
+* Inputs outside those domains are invalid for `cgcd` (and generate `NaN`).
+* `lcm` is defined only where needed by these formulas.
 
 ### core identities
 
@@ -176,8 +188,8 @@ unit-normalized Gaussian integers).
 
 Let $\operatorname{canon}(x)$ mean canonical normalization for the domain:
 
-- in $\mathbb{Z}$: sign-normalize ($\operatorname{canon}(x)=|x|$ when used as a gcd result)
-- in $\mathbb{Z}[i]$: unit-normalize to the chosen principal associate
+* in $\mathbb{Z}$: sign-normalize ($\operatorname{canon}(x)=|x|$ when used as a gcd result)
+* in $\mathbb{Z}[i]$: unit-normalize to the chosen principal associate
 
 Then the following identities are safe fold targets:
 
@@ -241,26 +253,26 @@ normalization.
 
 #### integers ($\mathbb{Z}$)
 
-- Canonical integer gcd is non-negative.
+* Canonical integer gcd is non-negative.
 
 #### rationals ($\mathbb{Q}$)
 
-- Store each rational as $a/b$ with:
-  - $b>0$.
-  - $\gcd(|a|,b)=1$.
-- Canonical sign is carried by the numerator only.
+* Store each rational as $a/b$ with:
+  * $b>0$.
+  * $\gcd(|a|,b)=1$.
+* Canonical sign is carried by the numerator only.
 
 #### Gaussian integers ($\mathbb{Z}[i]$)
 
-- Units are $\{\pm1,\pm i\}$.
-- Any gcd is defined up to multiplication by a unit.
-- Canonical associate is chosen by the unit-normalization rule below.
+* Units are $\{\pm1,\pm i\}$.
+* Any gcd is defined up to multiplication by a unit.
+* Canonical associate is chosen by the unit-normalization rule below.
 
 #### Gaussian rationals ($\mathbb{Q}[i]$)
 
-- Real and imaginary components are reduced rationals with positive
+* Real and imaginary components are reduced rationals with positive
     denominators.
-- After arithmetic operations, normalize both components to reduced
+* After arithmetic operations, normalize both components to reduced
     rational form.
 
 ### unit-normalization rule (deterministic)
@@ -318,8 +330,8 @@ $$
 
 Rounding rule must be deterministic:
 
-- Round to nearest integer in each component.
-- On exact half ties, round away from zero.
+* Round to nearest integer in each component.
+* On exact half ties, round away from zero.
 
 $$
 r = \alpha - \beta q
@@ -332,9 +344,9 @@ Algorithm:
 
 1. $(u,v)\leftarrow(\alpha,\beta)$.
 2. While $v\neq0$:
-    - $q\leftarrow\operatorname{round}(u/v)$ component-wise.
-    - $r\leftarrow u-vq$.
-    - $(u,v)\leftarrow(v,r)$.
+    * $q\leftarrow\operatorname{round}(u/v)$ component-wise.
+    * $r\leftarrow u-vq$.
+    * $(u,v)\leftarrow(v,r)$.
 3. Return `normalize_unit(u)`.
 
 ### Gaussian rational gcd over $\mathbb{Q}[i]$
@@ -349,15 +361,15 @@ Lift to $\mathbb{Z}[i]$, compute gcd there, then scale back.
 
 `D` must be deterministic:
 
-- Let each rational component be in reduced form.
-- `D` is the lcm of all positive denominators appearing in both inputs.
+* Let each rational component be in reduced form.
+* `D` is the lcm of all positive denominators appearing in both inputs.
 
 ### determinism requirements
 
-- No branch may depend on platform-specific floating tie behavior.
-- Unit normalization is always applied at the end of $\mathbb{Z}[i]$ and
+* No branch may depend on platform-specific floating tie behavior.
+* Unit normalization is always applied at the end of $\mathbb{Z}[i]$ and
     $\mathbb{Q}[i]$ gcd computations.
-- Rational denominators are always normalized to positive values.
+* Rational denominators are always normalized to positive values.
 
 ## GCD/LCM Test Checklist
 

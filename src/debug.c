@@ -108,6 +108,10 @@ void dumpByteCode(ByteCodeArray *b, LocationArray *l) {
             eprintf("LCM");
             loc(ii, &li, l);
         } break;
+        case BYTECODES_TYPE_PRIM_CANON: {
+            eprintf("CANON");
+            loc(ii, &li, l);
+        } break;
         case BYTECODES_TYPE_PRIM_POW: {
             eprintf("POW");
             loc(ii, &li, l);

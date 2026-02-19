@@ -131,6 +131,7 @@ TcEnv *tc_init(BuiltIns *builtIns) {
     addIfToEnv(env);
     addIntBinOpToEnv(env, addSymbol());
     addIntBinOpToEnv(env, divSymbol());
+    addIntBinOpToEnv(env, canonSymbol());
     addIntBinOpToEnv(env, gcdSymbol());
     addIntBinOpToEnv(env, lcmSymbol());
     addIntBinOpToEnv(env, mulSymbol());
@@ -483,6 +484,7 @@ static TcType *analyzePrim(LamPrimApp *app, TcEnv *env, TcNg *ng) {
     case LAMPRIMOP_TYPE_MUL:
     case LAMPRIMOP_TYPE_DIV:
     case LAMPRIMOP_TYPE_MOD:
+    case LAMPRIMOP_TYPE_CANON:
     case LAMPRIMOP_TYPE_GCD:
     case LAMPRIMOP_TYPE_LCM:
     case LAMPRIMOP_TYPE_POW:

@@ -26,6 +26,7 @@ HashSymbol *arrowSymbol(void);
 HashSymbol *assertSymbol(void);
 HashSymbol *backSymbol(void);
 HashSymbol *boolSymbol(void);
+HashSymbol *canonSymbol(void);
 HashSymbol *carSymbol(void);
 HashSymbol *cdrSymbol(void);
 HashSymbol *charSymbol(void);

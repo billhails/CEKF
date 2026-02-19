@@ -22,7 +22,7 @@
 #include "term_helper.h"
 
 static inline bool isTermNum(Term *term) {
-    return term != NULL && term->type == TERM_TYPE_NUM;
+    return term != NULL && isTerm_Num(term);
 }
 
 static inline Value termNumValue(Term *term) {
@@ -103,28 +103,49 @@ static inline Term *Lcm(ParserInfo parserInfo, Term *left, Term *right) {
     return result;
 }
 
+static inline Term *Canon(ParserInfo parserInfo, Term *inner) {
+    Term *result = newTerm_Canon(parserInfo, inner);
+    PROTECT(result);
+    return result;
+}
+
+static inline Term *wrapCanon(ParserInfo parserInfo, Term *term) {
+    if (term != NULL && isTerm_Canon(term)) {
+        return term;
+    }
+    return Canon(parserInfo, term);
+}
+
 static inline bool isSubTerm(Term *term) {
-    return term != NULL && term->type == TERM_TYPE_SUB;
+    return term != NULL && isTerm_Sub(term);
 }
 
 static inline bool isAddTerm(Term *term) {
-    return term != NULL && term->type == TERM_TYPE_ADD;
+    return term != NULL && isTerm_Add(term);
 }
 
 static inline bool isDivTerm(Term *term) {
-    return term != NULL && term->type == TERM_TYPE_DIV;
+    return term != NULL && isTerm_Div(term);
 }
 
 static inline bool isMulTerm(Term *term) {
-    return term != NULL && term->type == TERM_TYPE_MUL;
+    return term != NULL && isTerm_Mul(term);
 }
 
 static inline bool isPowTerm(Term *term) {
-    return term != NULL && term->type == TERM_TYPE_POW;
+    return term != NULL && isTerm_Pow(term);
 }
 
 static inline bool isModTerm(Term *term) {
-    return term != NULL && term->type == TERM_TYPE_MOD;
+    return term != NULL && isTerm_Mod(term);
+}
+
+static inline bool isGcdTerm(Term *term) {
+    return term != NULL && isTerm_Gcd(term);
+}
+
+static inline bool isLcmTerm(Term *term) {
+    return term != NULL && isTerm_Lcm(term);
 }
 
 static bool matchSubZero(Term *term, Term **inner) {
@@ -921,6 +942,84 @@ static bool tryPowIdentity(Term *term, Term *left, Term *right, Term **result) {
     RETURN_NO_MATCH();
 }
 
+static bool tryGcdIdentity(Term *term, Term *left, Term *right, Term **result) {
+    int save = PROTECT(NULL);
+    TermOp *inner = NULL;
+
+    if (isZeroTerm(left) && isZeroTerm(right)) {
+        RETURN_MATCH(NumInt(CPI(term), 0));
+    }
+
+    if (isZeroTerm(left)) {
+        RETURN_MATCH(wrapCanon(CPI(term), right));
+    }
+
+    if (isZeroTerm(right)) {
+        RETURN_MATCH(wrapCanon(CPI(term), left));
+    }
+
+    if (isOneTerm(left) || isOneTerm(right)) {
+        RETURN_MATCH(NumInt(CPI(term), 1));
+    }
+
+    if (eqTerm(left, right)) {
+        RETURN_MATCH(wrapCanon(CPI(term), left));
+    }
+
+    if (isLcmTerm(right)) {
+        inner = getTerm_Lcm(right);
+        if (eqTerm(left, inner->left) || eqTerm(left, inner->right)) {
+            RETURN_MATCH(wrapCanon(CPI(term), left));
+        }
+    }
+
+    if (isLcmTerm(left)) {
+        inner = getTerm_Lcm(left);
+        if (eqTerm(right, inner->left) || eqTerm(right, inner->right)) {
+            RETURN_MATCH(wrapCanon(CPI(term), right));
+        }
+    }
+
+    RETURN_NO_MATCH();
+}
+
+static bool tryLcmIdentity(Term *term, Term *left, Term *right, Term **result) {
+    int save = PROTECT(NULL);
+    TermOp *inner = NULL;
+
+    if (isZeroTerm(left) || isZeroTerm(right)) {
+        RETURN_MATCH(NumInt(CPI(term), 0));
+    }
+
+    if (isOneTerm(left)) {
+        RETURN_MATCH(wrapCanon(CPI(term), right));
+    }
+
+    if (isOneTerm(right)) {
+        RETURN_MATCH(wrapCanon(CPI(term), left));
+    }
+
+    if (eqTerm(left, right)) {
+        RETURN_MATCH(wrapCanon(CPI(term), left));
+    }
+
+    if (isGcdTerm(right)) {
+        inner = getTerm_Gcd(right);
+        if (eqTerm(left, inner->left) || eqTerm(left, inner->right)) {
+            RETURN_MATCH(wrapCanon(CPI(term), left));
+        }
+    }
+
+    if (isGcdTerm(left)) {
+        inner = getTerm_Gcd(left);
+        if (eqTerm(right, inner->left) || eqTerm(right, inner->right)) {
+            RETURN_MATCH(wrapCanon(CPI(term), right));
+        }
+    }
+
+    RETURN_NO_MATCH();
+}
+
 #undef RETURN_MATCH
 #undef RETURN_NO_MATCH
 
@@ -939,6 +1038,10 @@ static bool tryIdentityFold(Term *term, TermType op, Term *left, Term *right,
         return tryModIdentity(term, left, right, result);
     case TERM_TYPE_POW:
         return tryPowIdentity(term, left, right, result);
+    case TERM_TYPE_GCD:
+        return tryGcdIdentity(term, left, right, result);
+    case TERM_TYPE_LCM:
+        return tryLcmIdentity(term, left, right, result);
     default:
         return false;
     }
@@ -987,6 +1090,17 @@ static Term *simplifyTerm(Term *term) {
         return simplifyBinaryOp(term, spec, spec->get(term));
 
     switch (term->type) {
+    case TERM_TYPE_CANON: {
+        Term *s = simplifyTerm(getTerm_Canon(term));
+        int save = PROTECT(s);
+        if (isTerm_Canon(s)) {
+            UNPROTECT(save);
+            return s;
+        }
+        Term *result = newTerm_Canon(CPI(term), s);
+        UNPROTECT(save);
+        return result;
+    }
     case TERM_TYPE_NUM:
     case TERM_TYPE_OTHER:
         return term;
