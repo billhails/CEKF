@@ -13,6 +13,8 @@ Term --mul--> TermOp
 Term --div--> TermOp
 Term --mod--> TermOp
 Term --pow--> TermOp
+Term --gcd--> TermOp
+Term --lcm--> TermOp
 Term --num--> TermValue
 Term --other--> MinExp
 ```

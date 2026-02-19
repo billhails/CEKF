@@ -91,6 +91,18 @@ static inline Term *Mod(ParserInfo parserInfo, Term *left, Term *right) {
     return result;
 }
 
+static inline Term *Gcd(ParserInfo parserInfo, Term *left, Term *right) {
+    Term *result = makeTerm_Gcd(parserInfo, left, right);
+    PROTECT(result);
+    return result;
+}
+
+static inline Term *Lcm(ParserInfo parserInfo, Term *left, Term *right) {
+    Term *result = makeTerm_Lcm(parserInfo, left, right);
+    PROTECT(result);
+    return result;
+}
+
 static inline bool isSubTerm(Term *term) {
     return term != NULL && term->type == TERM_TYPE_SUB;
 }
@@ -260,6 +272,8 @@ static const BinaryOpSpec *lookupBinaryOpSpec(TermType op) {
         {TERM_TYPE_DIV, ndiv, Div, getTerm_Div},
         {TERM_TYPE_MOD, nmod, Mod, getTerm_Mod},
         {TERM_TYPE_POW, npow, Pow, getTerm_Pow},
+        {TERM_TYPE_GCD, ngcd, Gcd, getTerm_Gcd},
+        {TERM_TYPE_LCM, nlcm, Lcm, getTerm_Lcm},
     };
 
     for (size_t i = 0; i < sizeof(specs) / sizeof(specs[0]); i++) {

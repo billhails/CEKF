@@ -236,6 +236,106 @@ static void test_term_num_complex_maps_to_add_expression(void) {
     UNPROTECT(save);
 }
 
+static void test_minexp_prim_gcd_maps_to_term_gcd(void) {
+    MinExp *left = makeSmallBigInteger(12, false);
+    int save = PROTECT(left);
+    MinExp *right = makeSmallBigInteger(18, false);
+    PROTECT(right);
+    MinExp *prim = makeMinExp_Prim(NULLPI, MINPRIMOP_TYPE_GCD, left, right);
+    PROTECT(prim);
+
+    Term *term = minExpToTerm(prim);
+    PROTECT(term);
+    assert(term->type == TERM_TYPE_GCD);
+    TermOp *gcd = getTerm_Gcd(term);
+    assert(gcd->left->type == TERM_TYPE_NUM);
+    assert(gcd->right->type == TERM_TYPE_NUM);
+
+    UNPROTECT(save);
+}
+
+static void test_minexp_prim_lcm_maps_to_term_lcm(void) {
+    MinExp *left = makeSmallBigInteger(12, false);
+    int save = PROTECT(left);
+    MinExp *right = makeSmallBigInteger(18, false);
+    PROTECT(right);
+    MinExp *prim = makeMinExp_Prim(NULLPI, MINPRIMOP_TYPE_LCM, left, right);
+    PROTECT(prim);
+
+    Term *term = minExpToTerm(prim);
+    PROTECT(term);
+    assert(term->type == TERM_TYPE_LCM);
+    TermOp *lcm = getTerm_Lcm(term);
+    assert(lcm->left->type == TERM_TYPE_NUM);
+    assert(lcm->right->type == TERM_TYPE_NUM);
+
+    UNPROTECT(save);
+}
+
+static void test_term_gcd_maps_to_minexp_prim_gcd(void) {
+    Term *left = makeTerm_Num(NULLPI, value_Stdint(12));
+    int save = PROTECT(left);
+    Term *right = makeTerm_Num(NULLPI, value_Stdint(18));
+    PROTECT(right);
+    Term *term = makeTerm_Gcd(NULLPI, left, right);
+    PROTECT(term);
+
+    MinExp *exp = termToMinExp(term);
+    PROTECT(exp);
+    assert(isMinExp_Prim(exp));
+    MinPrimApp *prim = getMinExp_Prim(exp);
+    assert(prim->type == MINPRIMOP_TYPE_GCD);
+
+    UNPROTECT(save);
+}
+
+static void test_term_lcm_maps_to_minexp_prim_lcm(void) {
+    Term *left = makeTerm_Num(NULLPI, value_Stdint(12));
+    int save = PROTECT(left);
+    Term *right = makeTerm_Num(NULLPI, value_Stdint(18));
+    PROTECT(right);
+    Term *term = makeTerm_Lcm(NULLPI, left, right);
+    PROTECT(term);
+
+    MinExp *exp = termToMinExp(term);
+    PROTECT(exp);
+    assert(isMinExp_Prim(exp));
+    MinPrimApp *prim = getMinExp_Prim(exp);
+    assert(prim->type == MINPRIMOP_TYPE_LCM);
+
+    UNPROTECT(save);
+}
+
+static void test_eqterm_gcd_is_commutative(void) {
+    Term *one = makeTerm_Num(NULLPI, value_Stdint(1));
+    int save = PROTECT(one);
+    Term *two = makeTerm_Num(NULLPI, value_Stdint(2));
+    PROTECT(two);
+
+    Term *lhs = makeTerm_Gcd(NULLPI, one, two);
+    PROTECT(lhs);
+    Term *rhs = makeTerm_Gcd(NULLPI, two, one);
+    PROTECT(rhs);
+
+    assert(eqTerm(lhs, rhs));
+    UNPROTECT(save);
+}
+
+static void test_eqterm_lcm_is_commutative(void) {
+    Term *one = makeTerm_Num(NULLPI, value_Stdint(1));
+    int save = PROTECT(one);
+    Term *two = makeTerm_Num(NULLPI, value_Stdint(2));
+    PROTECT(two);
+
+    Term *lhs = makeTerm_Lcm(NULLPI, one, two);
+    PROTECT(lhs);
+    Term *rhs = makeTerm_Lcm(NULLPI, two, one);
+    PROTECT(rhs);
+
+    assert(eqTerm(lhs, rhs));
+    UNPROTECT(save);
+}
+
 int main(int argc __attribute__((unused)),
          char *argv[] __attribute__((unused))) {
     initAll();
@@ -268,6 +368,16 @@ int main(int argc __attribute__((unused)),
             test_term_num_rational_imag_maps_to_div_expression);
     runTest("test_term_num_complex_maps_to_add_expression",
             test_term_num_complex_maps_to_add_expression);
+    runTest("test_minexp_prim_gcd_maps_to_term_gcd",
+            test_minexp_prim_gcd_maps_to_term_gcd);
+    runTest("test_minexp_prim_lcm_maps_to_term_lcm",
+            test_minexp_prim_lcm_maps_to_term_lcm);
+    runTest("test_term_gcd_maps_to_minexp_prim_gcd",
+            test_term_gcd_maps_to_minexp_prim_gcd);
+    runTest("test_term_lcm_maps_to_minexp_prim_lcm",
+            test_term_lcm_maps_to_minexp_prim_lcm);
+    runTest("test_eqterm_gcd_is_commutative", test_eqterm_gcd_is_commutative);
+    runTest("test_eqterm_lcm_is_commutative", test_eqterm_lcm_is_commutative);
 
     return 0;
 }

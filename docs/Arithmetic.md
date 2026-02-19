@@ -168,6 +168,75 @@ $$
 \operatorname{cgcd}(x,y)=\operatorname{cgcd}(y,x)
 $$
 
+### constant-folding invariants (integer domains)
+
+These are the simplest invariants that are stable across integer-backed
+domains used by the runtime (machine integers, big integers, and
+unit-normalized Gaussian integers).
+
+Let $\operatorname{canon}(x)$ mean canonical normalization for the domain:
+
+- in $\mathbb{Z}$: sign-normalize ($\operatorname{canon}(x)=|x|$ when used as a gcd result)
+- in $\mathbb{Z}[i]$: unit-normalize to the chosen principal associate
+
+Then the following identities are safe fold targets:
+
+#### symmetry and idempotence
+
+$$
+\operatorname{gcd}(a,b)=\operatorname{gcd}(b,a),\quad
+\operatorname{lcm}(a,b)=\operatorname{lcm}(b,a)
+$$
+
+$$
+\operatorname{gcd}(a,a)=\operatorname{canon}(a),\quad
+\operatorname{lcm}(a,a)=\operatorname{canon}(a)
+$$
+
+#### zero identities
+
+$$
+\operatorname{gcd}(a,0)=\operatorname{canon}(a),\quad
+\operatorname{gcd}(0,a)=\operatorname{canon}(a)
+$$
+
+$$
+\operatorname{lcm}(a,0)=0,\quad
+\operatorname{lcm}(0,a)=0
+$$
+
+#### one and unit behavior
+
+In $\mathbb{Z}$:
+
+$$
+\operatorname{gcd}(a,1)=1,\quad
+\operatorname{lcm}(a,1)=\operatorname{canon}(a)
+$$
+
+In $\mathbb{Z}[i]$, replace $1$ with any unit; after normalization, gcd is the
+canonical unit and lcm is the normalized input associate.
+
+#### absorption and product relation
+
+For integer domains where divisibility is defined, and with canonical
+normalization applied to outputs:
+
+$$
+\operatorname{gcd}(a,\operatorname{lcm}(a,b))=\operatorname{canon}(a)
+$$
+
+$$
+\operatorname{lcm}(a,\operatorname{gcd}(a,b))=\operatorname{canon}(a)
+$$
+
+$$
+\operatorname{canon}\big(\operatorname{gcd}(a,b)\cdot\operatorname{lcm}(a,b)\big)=\operatorname{canon}(a\cdot b)
+$$
+
+For $\mathbb{Z}[i]$, this is equality up to multiplication by a unit before
+normalization.
+
 ### canonical normal forms
 
 #### integers ($\mathbb{Z}$)

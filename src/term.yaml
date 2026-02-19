@@ -49,6 +49,8 @@ unions:
             div: TermOp
             mod: TermOp
             pow: TermOp
+            gcd: TermOp
+            lcm: TermOp
             num: TermValue
             other: MinExp
 
