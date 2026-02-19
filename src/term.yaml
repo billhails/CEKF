@@ -51,6 +51,7 @@ unions:
             pow: TermOp
             gcd: TermOp
             lcm: TermOp
+            canon: Term # run-time deferred canonnization
             num: TermValue
             other: MinExp
 

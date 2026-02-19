@@ -1412,6 +1412,26 @@ static LamExp *makeUnaryNeg(LamArgs *args) {
 }
 
 /**
+ * @brief Creates a unary canonicalization expression.
+ * @param args The argument to canonicalize.
+ * @return The resulting lambda expression.
+ */
+static LamExp *makeUnaryCanon(LamArgs *args) {
+    CHECK_ONE_ARG(makeUnaryCanon, args);
+    MaybeBigInt *num = fakeBigInt(0, false);
+    int save = PROTECT(num);
+    LamExp *zero = newLamExp_BigInteger(CPI(args), num);
+    PROTECT(zero);
+    LamArgs *next = newLamArgs(CPI(args), zero, NULL);
+    PROTECT(next);
+    LamArgs *canonArgs = newLamArgs(CPI(args), args->exp, next);
+    PROTECT(canonArgs);
+    LamExp *result = makeBinOp(LAMPRIMOP_TYPE_CANON, canonArgs);
+    UNPROTECT(save);
+    return result;
+}
+
+/**
  * @brief Checks if a symbol is a macro in the given environment.
  * @param symbol The symbol to check.
  * @param env The environment to search in.
@@ -1539,6 +1559,8 @@ static LamExp *makePrimApp(ParserInfo PI, HashSymbol *symbol, LamArgs *args,
         return makeBinOp(LAMPRIMOP_TYPE_GCD, args);
     if (symbol == lcmSymbol())
         return makeBinOp(LAMPRIMOP_TYPE_LCM, args);
+    if (symbol == canonSymbol())
+        return makeUnaryCanon(args);
     if (symbol == powSymbol())
         return makeBinOp(LAMPRIMOP_TYPE_POW, args);
     if (symbol == cmpSymbol())

@@ -185,6 +185,15 @@ static MinExp *termBinaryOpToMinExp(ParserInfo parserInfo, MinPrimOp op,
     return result;
 }
 
+static MinExp *termUnaryOpToMinExp(ParserInfo parserInfo, MinPrimOp op,
+                                   Term *termOp) {
+    MinExp *left = termToMinExp(termOp);
+    int save = PROTECT(left);
+    MinExp *result = makeMinExp_Prim(parserInfo, op, left, left);
+    UNPROTECT(save);
+    return result;
+}
+
 bool eqTerm(Term *t1, Term *t2) {
     if (t1 == t2)
         return true;
@@ -227,6 +236,8 @@ bool eqTerm(Term *t1, Term *t2) {
                 eqTerm(getTerm_Lcm(t1)->right, getTerm_Lcm(t2)->left));
     case TERM_TYPE_NUM:
         return eqTermValue(getTerm_Num(t1), getTerm_Num(t2));
+    case TERM_TYPE_CANON:
+        return eqTerm(getTerm_Canon(t1), getTerm_Canon(t2));
     case TERM_TYPE_OTHER:
         return eqMinExp(getTerm_Other(t1), getTerm_Other(t2));
     default:
@@ -276,6 +287,10 @@ Term *minExpToTerm(struct MinExp *minExp) {
         case MINPRIMOP_TYPE_LCM:
             result = makeTerm_Lcm(CPI(minExp), left, right);
             break;
+        case MINPRIMOP_TYPE_CANON:
+            // shouldn't expect to see these except in tests
+            result = newTerm_Canon(CPI(minExp), left);
+            break;
         default:
             result = newTerm_Other(CPI(minExp), minExp);
         }
@@ -314,6 +329,9 @@ MinExp *termToMinExp(Term *term) {
     case TERM_TYPE_LCM:
         return termBinaryOpToMinExp(CPI(term), MINPRIMOP_TYPE_LCM,
                                     getTerm_Lcm(term));
+    case TERM_TYPE_CANON:
+        return termUnaryOpToMinExp(CPI(term), MINPRIMOP_TYPE_CANON,
+                                   getTerm_Canon(term));
     case TERM_TYPE_NUM:
         return termValueToMinExp(CPI(term), getTerm_Num(term)->value);
     case TERM_TYPE_OTHER: {

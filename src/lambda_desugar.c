@@ -103,6 +103,8 @@ static MinPrimOp desugarLamPrimOp(LamPrimOp primOp) {
         return MINPRIMOP_TYPE_GCD;
     case LAMPRIMOP_TYPE_LCM:
         return MINPRIMOP_TYPE_LCM;
+    case LAMPRIMOP_TYPE_CANON:
+        return MINPRIMOP_TYPE_CANON;
     case LAMPRIMOP_TYPE_POW:
         return MINPRIMOP_TYPE_POW;
     case LAMPRIMOP_TYPE_EQ:

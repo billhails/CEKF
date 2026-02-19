@@ -856,6 +856,8 @@ static AexpPrimOp mapPrimOp(MinPrimOp op) {
         return AEXPPRIMOP_TYPE_GCD;
     case MINPRIMOP_TYPE_LCM:
         return AEXPPRIMOP_TYPE_LCM;
+    case MINPRIMOP_TYPE_CANON:
+        return AEXPPRIMOP_TYPE_CANON;
     case MINPRIMOP_TYPE_POW:
         return AEXPPRIMOP_TYPE_POW;
     case MINPRIMOP_TYPE_EQ:

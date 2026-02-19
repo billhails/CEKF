@@ -264,6 +264,9 @@ void writeAexpPrimApp(AexpPrimApp *x, ByteCodeArray *b, LocationArray *L) {
     case AEXPPRIMOP_TYPE_LCM:
         prim = BYTECODES_TYPE_PRIM_LCM;
         break;
+    case AEXPPRIMOP_TYPE_CANON:
+        prim = BYTECODES_TYPE_PRIM_CANON;
+        break;
     case AEXPPRIMOP_TYPE_POW:
         prim = BYTECODES_TYPE_PRIM_POW;
         break;
