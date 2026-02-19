@@ -150,13 +150,8 @@ let
     // Test: GCD with big integers
     fn test_gcd_bigint() {
         let
-            fn gcd {
-                (a, 0) { a }
-                (a, b) { gcd(b, a % b) }
-            }
-            
-            result1 = gcd(1000000, 50000);
-            result2 = gcd(123456789, 987654321);
+            result1 = GCD(1000000, 50000);
+            result2 = GCD(123456789, 987654321);
         in
             assert(result1 == 50000);
             assert(result2 == 9);

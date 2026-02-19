@@ -53,6 +53,8 @@ static bool primOpIsArithmetic(MinPrimOp op) {
     case MINPRIMOP_TYPE_MUL:
     case MINPRIMOP_TYPE_DIV:
     case MINPRIMOP_TYPE_MOD:
+    case MINPRIMOP_TYPE_GCD:
+    case MINPRIMOP_TYPE_LCM:
     case MINPRIMOP_TYPE_POW:
         return true;
     default:

@@ -30,6 +30,10 @@
 #define USE_STAGED_ARITHMETIC 1
 #endif
 
+#ifndef ARITH_UNSUPPORTED_ABORT
+#define ARITH_UNSUPPORTED_ABORT 0
+#endif
+
 // Null ParserInfo for use when location info is not available
 #define NULLPI ((ParserInfo){.lineNo = 0, .fileName = NULL})
 

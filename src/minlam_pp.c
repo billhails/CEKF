@@ -197,6 +197,12 @@ void ppMinPrimOp(MinPrimOp type) {
     case MINPRIMOP_TYPE_DIV:
         eprintf("/");
         break;
+    case MINPRIMOP_TYPE_GCD:
+        eprintf("gcd");
+        break;
+    case MINPRIMOP_TYPE_LCM:
+        eprintf("lcm");
+        break;
     case MINPRIMOP_TYPE_EQ:
         eprintf("==");
         break;

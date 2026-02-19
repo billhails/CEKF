@@ -215,12 +215,23 @@ bool eqTerm(Term *t1, Term *t2) {
     case TERM_TYPE_POW:
         return eqTerm(getTerm_Pow(t1)->left, getTerm_Pow(t2)->left) &&
                eqTerm(getTerm_Pow(t1)->right, getTerm_Pow(t2)->right);
+    case TERM_TYPE_GCD:
+        return (eqTerm(getTerm_Gcd(t1)->left, getTerm_Gcd(t2)->left) &&
+                eqTerm(getTerm_Gcd(t1)->right, getTerm_Gcd(t2)->right)) ||
+               (eqTerm(getTerm_Gcd(t1)->left, getTerm_Gcd(t2)->right) &&
+                eqTerm(getTerm_Gcd(t1)->right, getTerm_Gcd(t2)->left));
+    case TERM_TYPE_LCM:
+        return (eqTerm(getTerm_Lcm(t1)->left, getTerm_Lcm(t2)->left) &&
+                eqTerm(getTerm_Lcm(t1)->right, getTerm_Lcm(t2)->right)) ||
+               (eqTerm(getTerm_Lcm(t1)->left, getTerm_Lcm(t2)->right) &&
+                eqTerm(getTerm_Lcm(t1)->right, getTerm_Lcm(t2)->left));
     case TERM_TYPE_NUM:
         return eqTermValue(getTerm_Num(t1), getTerm_Num(t2));
     case TERM_TYPE_OTHER:
         return eqMinExp(getTerm_Other(t1), getTerm_Other(t2));
     default:
-        cant_happen("unrecognised TermType %d in eqTerm", t1->type);
+        cant_happen("unrecognised TermType %s in eqTerm",
+                    termTypeName(t1->type));
     }
 }
 
@@ -259,6 +270,12 @@ Term *minExpToTerm(struct MinExp *minExp) {
         case MINPRIMOP_TYPE_POW:
             result = makeTerm_Pow(CPI(minExp), left, right);
             break;
+        case MINPRIMOP_TYPE_GCD:
+            result = makeTerm_Gcd(CPI(minExp), left, right);
+            break;
+        case MINPRIMOP_TYPE_LCM:
+            result = makeTerm_Lcm(CPI(minExp), left, right);
+            break;
         default:
             result = newTerm_Other(CPI(minExp), minExp);
         }
@@ -291,6 +308,12 @@ MinExp *termToMinExp(Term *term) {
     case TERM_TYPE_POW:
         return termBinaryOpToMinExp(CPI(term), MINPRIMOP_TYPE_POW,
                                     getTerm_Pow(term));
+    case TERM_TYPE_GCD:
+        return termBinaryOpToMinExp(CPI(term), MINPRIMOP_TYPE_GCD,
+                                    getTerm_Gcd(term));
+    case TERM_TYPE_LCM:
+        return termBinaryOpToMinExp(CPI(term), MINPRIMOP_TYPE_LCM,
+                                    getTerm_Lcm(term));
     case TERM_TYPE_NUM:
         return termValueToMinExp(CPI(term), getTerm_Num(term)->value);
     case TERM_TYPE_OTHER: {
@@ -304,6 +327,7 @@ MinExp *termToMinExp(Term *term) {
         return other;
     }
     default:
-        cant_happen("unrecognised TermType %d in termToMinExp", term->type);
+        cant_happen("unrecognised TermType %s in termToMinExp",
+                    termTypeName(term->type));
     }
 }

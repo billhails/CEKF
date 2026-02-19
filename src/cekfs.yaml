@@ -197,6 +197,8 @@ enums:
             - PRIM_SUB
             - PRIM_MUL
             - PRIM_DIV
+            - PRIM_GCD
+            - PRIM_LCM
             - PRIM_POW
             - PRIM_MOD
             - PRIM_EQ

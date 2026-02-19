@@ -1,0 +1,11 @@
+assert(6 gcd 4 == 2);
+assert(6 lcm 4 == 12);
+
+assert(GCD(6, 4) == 2);
+assert(LCM(6, 4) == 12);
+
+assert((3/2) gcd (9/4) == 3/4);
+assert((3/2) lcm (9/4) == 9/2);
+
+assert((4 + 2*1i) gcd (6 + 3*1i) == (2 + 1*1i));
+assert((4 + 2*1i) lcm (6 + 3*1i) == (12 + 6*1i));

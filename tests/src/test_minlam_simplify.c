@@ -117,6 +117,18 @@ static MinExp *Pow(MinExp *left, MinExp *right) {
     return result;
 }
 
+static MinExp *Gcd(MinExp *left, MinExp *right) {
+    MinExp *result = prim2(MINPRIMOP_TYPE_GCD, left, right);
+    PROTECT(result);
+    return result;
+}
+
+static MinExp *Lcm(MinExp *left, MinExp *right) {
+    MinExp *result = prim2(MINPRIMOP_TYPE_LCM, left, right);
+    PROTECT(result);
+    return result;
+}
+
 static void assertSimplifiesToInt(MinExp *expr, int expected) {
     int save = PROTECT(expr);
     MinExp *simplified = simplifyMinExp(expr);
@@ -256,6 +268,36 @@ static void test_pow_zero_base(void) {
 static void test_pow_one_base(void) {
     int save = PROTECT(NULL);
     assertSimplifiesToInt(Pow(N(1), Vx()), 1);
+    UNPROTECT(save);
+}
+
+static void test_gcd_folds_after_argument_simplification(void) {
+    int save = PROTECT(NULL);
+    MinExp *expr = Gcd(Add(N(2), N(4)), Mul(N(3), N(2)));
+    assertSimplifiesToInt(expr, 6);
+    UNPROTECT(save);
+}
+
+static void test_lcm_folds_after_argument_simplification(void) {
+    int save = PROTECT(NULL);
+    MinExp *expr = Lcm(Add(N(8), N(4)), Sub(N(30), N(24)));
+    assertSimplifiesToInt(expr, 12);
+    UNPROTECT(save);
+}
+
+static void test_gcd_non_numeric_keeps_prim_after_arg_simplification(void) {
+    int save = PROTECT(NULL);
+    MinExp *expr = Gcd(Add(Vx(), N(0)), Add(Vy(), N(0)));
+    assertSimplifiesToPrimVars(expr, MINPRIMOP_TYPE_GCD, newSymbol("x"),
+                               newSymbol("y"));
+    UNPROTECT(save);
+}
+
+static void test_lcm_non_numeric_keeps_prim_after_arg_simplification(void) {
+    int save = PROTECT(NULL);
+    MinExp *expr = Lcm(Add(Vx(), N(0)), Add(Vy(), N(0)));
+    assertSimplifiesToPrimVars(expr, MINPRIMOP_TYPE_LCM, newSymbol("x"),
+                               newSymbol("y"));
     UNPROTECT(save);
 }
 
@@ -769,6 +811,14 @@ int main(int argc __attribute__((unused)),
     runTest("test_pow_zero_exponent", test_pow_zero_exponent);
     runTest("test_pow_zero_base", test_pow_zero_base);
     runTest("test_pow_one_base", test_pow_one_base);
+    runTest("test_gcd_folds_after_argument_simplification",
+            test_gcd_folds_after_argument_simplification);
+    runTest("test_lcm_folds_after_argument_simplification",
+            test_lcm_folds_after_argument_simplification);
+    runTest("test_gcd_non_numeric_keeps_prim_after_arg_simplification",
+            test_gcd_non_numeric_keeps_prim_after_arg_simplification);
+    runTest("test_lcm_non_numeric_keeps_prim_after_arg_simplification",
+            test_lcm_non_numeric_keeps_prim_after_arg_simplification);
     runTest("test_nested_recursive_simplification",
             test_nested_recursive_simplification);
     runTest("test_chained_sub_add_zero_to_zero",

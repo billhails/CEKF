@@ -42,6 +42,8 @@ operator "+_" left 11 NUMERICIDENTITY;
 operator "_*_" left 11 MULTIPLICATION;
 operator "_/_" left 11 DIVISION;
 operator "_%_" left 11 MODULUS;
+operator "_gcd_" left 11 GCD;
+operator "_lcm_" left 11 LCM;
 operator "_**_" left 12 EXPONENTIAL;
 lazy operator "here_" 13 callcc;
 
@@ -135,18 +137,6 @@ fn factorial (n) {
 }
 
 operator "_!" 13 factorial;
-
-fn gcd {
-    (0, b) { b }
-    (a, 0) { a }
-    (a, b) {
-        if (a > b) {
-            gcd(a - b, b)
-        } else {
-            gcd(a, b - a)
-        }
-    }
-}
 
 fn __error__(line, file, message) {
     puts("error: ");

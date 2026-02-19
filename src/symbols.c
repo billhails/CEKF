@@ -18,12 +18,13 @@
 
 #include "symbols.h"
 
-#define MAKE_SYMBOL(NAME, STR)             \
-HashSymbol * NAME ## Symbol() {            \
-    static HashSymbol *res = NULL;         \
-    if (res == NULL) res = newSymbol(STR); \
-    return res;                            \
-}
+#define MAKE_SYMBOL(NAME, STR)                                                 \
+    HashSymbol *NAME##Symbol() {                                               \
+        static HashSymbol *res = NULL;                                         \
+        if (res == NULL)                                                       \
+            res = newSymbol(STR);                                              \
+        return res;                                                            \
+    }
 
 // symbols with a '$' suffix are internal, other symbols
 // are accessible from the language.
@@ -49,6 +50,7 @@ MAKE_SYMBOL(error, "error")
 MAKE_SYMBOL(false, "false")
 MAKE_SYMBOL(fnError, "__error__")
 MAKE_SYMBOL(ge, "GREATERTHANOREQUALTO")
+MAKE_SYMBOL(gcd, "GCD")
 MAKE_SYMBOL(gt, "GREATERTHAN")
 MAKE_SYMBOL(here, "callcc")
 MAKE_SYMBOL(if, "if")
@@ -58,6 +60,7 @@ MAKE_SYMBOL(leftRound, "(")
 MAKE_SYMBOL(le, "LESSTHANOREQUALTO")
 MAKE_SYMBOL(list, "list")
 MAKE_SYMBOL(lt, "LESSTHAN")
+MAKE_SYMBOL(lcm, "LCM")
 MAKE_SYMBOL(mod, "MODULUS")
 MAKE_SYMBOL(mul, "MULTIPLICATION")
 MAKE_SYMBOL(nameSpace, "$nameSpace")

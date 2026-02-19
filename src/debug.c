@@ -100,6 +100,14 @@ void dumpByteCode(ByteCodeArray *b, LocationArray *l) {
             eprintf("DIV");
             loc(ii, &li, l);
         } break;
+        case BYTECODES_TYPE_PRIM_GCD: {
+            eprintf("GCD");
+            loc(ii, &li, l);
+        } break;
+        case BYTECODES_TYPE_PRIM_LCM: {
+            eprintf("LCM");
+            loc(ii, &li, l);
+        } break;
         case BYTECODES_TYPE_PRIM_POW: {
             eprintf("POW");
             loc(ii, &li, l);

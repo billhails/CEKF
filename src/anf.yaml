@@ -302,6 +302,8 @@ enums:
         - SUB
         - MUL
         - DIV
+        - GCD
+        - LCM
         - POW
         - EQ
         - NE

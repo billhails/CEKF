@@ -68,6 +68,12 @@ static void testCommonDomainNormalization() {
     assert(plan.supported);
     assert(plan.kind == ARITH_NORM_COMMON_DOMAIN);
     assert(plan.commonDomain == ARITH_DOMAIN_COMPLEX);
+
+    plan = arithmeticMakeNormalizationPlan(ARITH_OP_GCD, VALUE_TYPE_STDINT,
+                                           VALUE_TYPE_RATIONAL);
+    assert(plan.supported);
+    assert(plan.kind == ARITH_NORM_COMMON_DOMAIN);
+    assert(plan.commonDomain == ARITH_DOMAIN_RAT);
 }
 
 static void testPowAsymmetricNormalization() {
