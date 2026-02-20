@@ -21,7 +21,6 @@
 #include "minlam.h"
 #include "utils.h"
 
-// may return NULL
-SymbolSet *freeVarsMinExp(MinExp *node, SymbolEnv *context);
+void freeVarsMinExp(MinExp *node, SymbolSet *result, SymbolEnv *context);
 
 #endif

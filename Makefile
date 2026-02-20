@@ -1,6 +1,8 @@
 .PHONY: all clean realclean deps profile leak-check check-grammar \
 list-cores test indent indent-src indent-generated docs \
 install-sqlite3 coverage extracov view-coverage \
+coverage-target \
+help \
 establish-baseline test-refactoring update-baseline clean-baseline \
 scratch
 
@@ -330,8 +332,80 @@ indent-generated: .typedefs .indent.pro
 list-cores:
 	@ls -rt1 /var/lib/apport/coredump/* | tail -1
 
+help:
+	@echo "CEKF Make targets"
+	@echo ""
+	@echo "Coverage"
+	@echo "  make coverage"
+	@echo "      Run full coverage workflow (build + test suite + report generation)."
+	@echo ""
+	@echo "  make coverage-target COVERAGE_TARGET=tests/test_minlam_freeVars [COVERAGE_FILE=src/minlam_freeVars.c]"
+	@echo "      Run focused coverage on one executable target."
+	@echo "      Uses gcov when compiler is GCC, llvm-cov gcov when compiler is Clang."
+	@echo ""
+	@echo "  make view-coverage"
+	@echo "      Open HTML coverage report when generated."
+	@echo ""
+	@echo "Coverage variables"
+	@echo "  CCC=<compiler>        e.g. clang (default) or gcc"
+	@echo "  COVERAGE_TARGET=<bin> e.g. tests/test_minlam_freeVars"
+	@echo "  COVERAGE_FILE=<src>   e.g. src/minlam_freeVars.c"
+	@echo "  LLVM_COV=<path>       Override llvm-cov binary"
+	@echo "  GCOV=<path>           Override gcov binary"
+
 coverage:
 	./tools/coverage.sh
+
+coverage-target:
+	@if [ -z "$(COVERAGE_TARGET)" ]; then \
+		echo "Usage: make coverage-target COVERAGE_TARGET=tests/test_minlam_freeVars [COVERAGE_FILE=src/minlam_freeVars.c]"; \
+		exit 1; \
+	fi
+	find obj -name '*.gcda' -delete
+	find obj -name '*.gcno' -delete
+	$(MAKE) -B MODE=coverage $(COVERAGE_TARGET)
+	./$(COVERAGE_TARGET)
+	mkdir -p gcov_output
+	@COV_GCOV_CMD=""; \
+	COMPILER_BASENAME="$$(basename "$(CCC)")"; \
+	case "$$COMPILER_BASENAME" in \
+		gcc*|*-gcc|g++*|*-g++) \
+		if [ -n "$$GCOV" ]; then \
+			COV_GCOV_CMD="$$GCOV"; \
+		elif command -v gcov >/dev/null 2>&1; then \
+			COV_GCOV_CMD="gcov"; \
+		else \
+			echo "ERROR: gcov not found. Set GCOV=<path-to-gcov>."; \
+			exit 1; \
+		fi; \
+		;; \
+		*) \
+		if [ -n "$$LLVM_COV" ]; then \
+			COV_GCOV_CMD="$$LLVM_COV gcov"; \
+		elif command -v llvm-cov-18 >/dev/null 2>&1; then \
+			COV_GCOV_CMD="llvm-cov-18 gcov"; \
+		elif command -v llvm-cov >/dev/null 2>&1; then \
+			COV_GCOV_CMD="llvm-cov gcov"; \
+		else \
+			echo "ERROR: llvm-cov not found. Set LLVM_COV=<path-to-llvm-cov>."; \
+			exit 1; \
+		fi; \
+		;; \
+	esac; \
+	if [ -n "$(COVERAGE_FILE)" ]; then \
+		gcda="obj/$$(basename $(COVERAGE_FILE) .c).gcda"; \
+		if [ ! -f "$$gcda" ]; then \
+			echo "ERROR: $$gcda not found. Run target may not have touched $(COVERAGE_FILE)."; \
+			exit 1; \
+		fi; \
+		echo "Generating focused coverage for $(COVERAGE_FILE)"; \
+		eval "$$COV_GCOV_CMD -b \"$$gcda\""; \
+	else \
+		echo "Generating coverage for all touched gcda files"; \
+		for f in obj/*.gcda; do eval "$$COV_GCOV_CMD -b \"$$f\" >/dev/null"; done; \
+		echo "Done. Set COVERAGE_FILE=src/<file>.c for focused output."; \
+	fi; \
+	mv ./*.gcov gcov_output/ 2>/dev/null || true
 
 extracov: $(TEST_TARGETS) $(TARGET) $(UNIDIR)/unicode.db
 	./$(TARGET) --include=fn --dump-anf --dump-ast --dump-bytecode --dump-inline --dump-lambda --dump-tpmc=NOT tests/fn/test_macros.fn 2>&1 > /dev/null

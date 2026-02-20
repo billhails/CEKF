@@ -3,6 +3,33 @@
 # Generates both HTML reports and AI-readable text summaries
 
 set -e
+set -o pipefail
+
+COMPILER_BIN=$(basename "${CCC:-${CC:-clang}}")
+if [[ "$COMPILER_BIN" == gcc* ]] || [[ "$COMPILER_BIN" == *-gcc ]] ||
+   [[ "$COMPILER_BIN" == g++* ]] || [[ "$COMPILER_BIN" == *-g++ ]]; then
+    GCOV_MODE="gcc"
+    if [ -n "${GCOV:-}" ]; then
+        GCOV_BIN="$GCOV"
+    elif command -v gcov >/dev/null 2>&1; then
+        GCOV_BIN="gcov"
+    else
+        echo "ERROR: gcov not found for GCC coverage. Set GCOV to an explicit binary path." >&2
+        exit 1
+    fi
+else
+    GCOV_MODE="llvm"
+    if [ -n "${LLVM_COV:-}" ]; then
+        LLVM_COV_BIN="$LLVM_COV"
+    elif command -v llvm-cov-18 >/dev/null 2>&1; then
+        LLVM_COV_BIN="llvm-cov-18"
+    elif command -v llvm-cov >/dev/null 2>&1; then
+        LLVM_COV_BIN="llvm-cov"
+    else
+        echo "ERROR: llvm-cov not found. Set LLVM_COV to an explicit binary path." >&2
+        exit 1
+    fi
+fi
 
 echo "=== CEKF Test Coverage Analysis ==="
 echo ""
@@ -26,9 +53,14 @@ make extracov MODE=coverage 2>&1 | tee -a test_output.log || true
 # Create output directories
 mkdir -p gcov_output coverage_html
 
-# Generate coverage data with llvm-cov (clang-compatible)
-echo "Generating coverage data with llvm-cov..."
-echo "=== LLVM-COV COVERAGE SUMMARY ===" > coverage_report.txt
+# Generate coverage data
+if [ "$GCOV_MODE" = "gcc" ]; then
+    echo "Generating coverage data with gcov..."
+    echo "=== GCOV COVERAGE SUMMARY ===" > coverage_report.txt
+else
+    echo "Generating coverage data with llvm-cov..."
+    echo "=== LLVM-COV COVERAGE SUMMARY ===" > coverage_report.txt
+fi
 echo "" >> coverage_report.txt
 
 # Process each .gcda file and capture summary output
@@ -43,13 +75,15 @@ for objfile in ../obj/*.gcda; do
         basename_obj=$(basename "$objfile")
         echo "Processing $basename_obj..." >&2
         
-        # Run llvm-cov and capture output
-        output=$(llvm-cov-18 gcov -b "$objfile" 2>&1)
+        # Run coverage tool and capture output
+        if [ "$GCOV_MODE" = "gcc" ]; then
+            output=$($GCOV_BIN -b "$objfile" 2>&1)
+        else
+            output=$($LLVM_COV_BIN gcov -b "$objfile" 2>&1)
+        fi
         
         # Extract file summaries and append to report
-        echo "$output" | grep -A4 "^File " | while IFS= read -r line; do
-            echo "$line" >> ../coverage_report.txt
-        done
+        echo "$output" | grep -A4 "^File " >> ../coverage_report.txt || true
     fi
 done
 
@@ -121,11 +155,19 @@ fi
 echo ""
 echo "Generating HTML report with gcovr..."
 
-# Create wrapper script for llvm-cov
-cat > /tmp/llvm-gcov.sh << 'EOF'
+# Create wrapper script for gcovr
+cat > /tmp/llvm-gcov.sh << EOF
 #!/bin/bash
-exec llvm-cov-18 gcov "$@"
 EOF
+if [ "$GCOV_MODE" = "gcc" ]; then
+cat >> /tmp/llvm-gcov.sh << EOF
+exec $GCOV_BIN "\$@"
+EOF
+else
+cat >> /tmp/llvm-gcov.sh << EOF
+exec $LLVM_COV_BIN gcov "\$@"
+EOF
+fi
 chmod +x /tmp/llvm-gcov.sh
 
 if gcovr --gcov-executable /tmp/llvm-gcov.sh \
