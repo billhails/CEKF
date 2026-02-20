@@ -46,12 +46,11 @@ in
                 // M.print_expr(f);
                 // puts("\n==> operator folding");
                 // puts(nltab);
-                puts("\n    ");
-                M.print_expr(g);
+                // M.print_expr(g);
                 // puts("\n==> shared closure convert");
                 // puts(nltab);
-                // M.print_expr(h);
-                // puts("\n\n\n")
+                puts("\n    ");
+                M.print_expr(h);
                 puts("\n\n")
         }
     }, Samples.data());

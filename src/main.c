@@ -37,13 +37,13 @@
 #include "hash.h"
 #include "init.h"
 #include "inline.h"
-#include "lambda_alphaconvert.h"
 #include "lambda_conversion.h"
 #include "lambda_debug.h"
 #include "lambda_desugar.h"
 #include "lambda_pp.h"
 #include "lambda_simplification.h"
 #include "memory.h"
+#include "minlam_alphaconvert.h"
 #include "minlam_beta.h"
 #include "minlam_eta.h"
 #include "minlam_fold.h"
@@ -64,7 +64,7 @@
 // #define TEST_CPS
 
 #ifdef TEST_CPS
-#include "lambda_cps.h"
+#include "minlam_cps.h"
 #endif
 
 // temporary test

@@ -7,6 +7,8 @@ link "freevars.fn" as FV;
 link "gensym.fn" as GS;
 link "subst.fn" as SUBST;
 
+// https://matt.might.net/articles/closure-conversion/
+
 fn closure_convert {
     (exp=M.lambda(params, body)) {
         let

@@ -19,7 +19,12 @@
  */
 
 struct MinExp;
+struct AnfKontEnv;
+struct CpsKontEnv;
 
-#include "lambda_functions.h"
+typedef struct MinExp *(*AnfKontProcWrapper)(struct MinExp *,
+                                             struct AnfKontEnv *);
+typedef struct MinExp *(*CpsKontProcWrapper)(struct MinExp *,
+                                             struct CpsKontEnv *);
 
 #endif
