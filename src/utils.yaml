@@ -43,6 +43,13 @@ structs:
             symbol: HashSymbol
             next: SymbolList
 
+    SymbolEnv:
+        meta:
+            brief: Tracks bound symbols
+        data:
+            parent: SymbolEnv
+            bindings: SymbolSet
+
 hashes:
     SymbolSet:
         meta:
