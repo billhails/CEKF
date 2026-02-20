@@ -26,7 +26,7 @@
 #include "symbol.h"
 #include "utils.h"
 
-#include "lambda_alphaconvert.h"
+#include "minlam_alphaconvert.h"
 
 // Forward declarations
 static MinLam *visitMinLam(MinLam *node, MinAlphaEnv *context);

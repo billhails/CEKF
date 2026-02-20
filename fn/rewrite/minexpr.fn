@@ -77,11 +77,11 @@ namespace
             x;
         }
         (x=make_closure(func, env)) {
-            puts("(CLO ");
+            puts("[CLO ");
             print_expr(func);
             puts(" ");
             print_expr(env);
-            puts(")");
+            puts("]");
             x;
         }
         (x=make_env(bindings)) {

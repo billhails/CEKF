@@ -26,8 +26,8 @@
 
 #include "cps_kont.h"
 #include "cps_kont_impl.h"
-#include "lambda_cps.h"
-#include "lambda_functions.h"
+#include "minlam_cps.h"
+#include "minlam_functions.h"
 
 #ifdef DEBUG_LAMBDA_CPSTC
 #include "debugging_on.h"
