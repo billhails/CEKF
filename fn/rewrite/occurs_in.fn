@@ -1,0 +1,102 @@
+namespace
+
+link "minexpr.fn" as M;
+link "../listutils.fn" as list;
+import list operator "_|>_";
+import list operator "_&&_";
+import list operator "_any_";
+
+fn makeVar (s) {
+    M.var(s)
+}
+
+fn occurs_in (var, expr) {
+    switch (expr) {
+        (M.amb_expr(expr1, expr2)) {
+            occurs_in(var, expr1) or occurs_in(var, expr2)
+        }
+
+        (M.apply(fun, args)) {
+            occurs_in(var, fun) or args any occurs_in(var)
+        }
+
+        (M.var(_)) {
+            var == expr
+        }
+
+        (x = M.back_expr) |
+        (x = M.primop(_)) |
+        (x = M.env_expr) |
+        (x = M.error_expr) |
+        (x = M.bigint(_)) |
+        (x = M.character(_)) |
+        (x = M.stdint(_)) {
+            false
+        }
+
+        (M.callcc_expr(e)) {
+            occurs_in(var, e)
+        }
+
+        (M.cond_expr(test, branches)) {
+            let #(vals, results) = list.unzip(branches);
+            in
+                occurs_in(var, test) or
+                (vals any occurs_in(var)) or
+                (results any occurs_in(var))
+        }
+
+        (M.if_expr(exprc, exprt, exprf)) {
+            occurs_in(var, exprc) or occurs_in(var, exprt) or occurs_in(var, exprf)
+        }
+
+        (M.lambda(params, body)) {
+            let vars = params |> makeVar;
+            in
+                if (list.member(var, vars)) {
+                    false
+                } else {
+                    occurs_in(var, body)
+                }
+        }
+
+        (M.letrec_expr(bindings, expr)) {
+            let #(strs, exprs) = list.unzip(bindings);
+                vars = strs |> makeVar;
+            in
+                if (list.member(var, vars)) {
+                    false
+                } else {
+                    (exprs any occurs_in(var)) or occurs_in(var, expr)
+                }
+        }
+
+        (M.lookup(name, index, expr)) {
+            occurs_in(var, expr)
+        }
+
+        (M.make_vec(size, args)) {
+            args any occurs_in(var)
+        }
+
+        (M.match_cases(test, cases)) {
+            let #(vals, results) = list.unzip(cases);
+            in
+                results any occurs_in(var)
+        }
+
+        (M.namespaces(exprs)) {
+            exprs any occurs_in(var)
+        }
+
+        (M.sequence(exprs)) {
+            exprs any occurs_in(var)
+        }
+
+        (x) {
+            M.print_expr(x);
+            puts("\n");
+            error("occurs_in: unsupported expression")
+        }
+    }
+}

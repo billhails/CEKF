@@ -4,6 +4,8 @@ namespace
     link "minexpr.fn" as M;
 
     import io operator "$_";
+    import list operator "_|>_";
+    import list operator "_&&_";
 
     // Normalization algorithm
 
@@ -143,15 +145,11 @@ namespace
     }
 
     fn normalize_terms(exprs) {
-        list.map (fn (e) { normalize_term(e) }, exprs)
+        exprs |> normalize_term
     }
 
     fn normalize_cases(cases) {
-        list.map (fn {
-            (#(key, caseExpr)) {
-                #(key, normalize_term(caseExpr))
-            }
-        }, cases)
+        cases |> identity && normalize_term
     }
 
     fn normalize_names {

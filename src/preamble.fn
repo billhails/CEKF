@@ -151,6 +151,8 @@ fn __error__(line, file, message) {
 
 operator "_of_" right 13 fn (f, g, x) { f(g(x)) };
 
+operator "_flip_" right 13 fn (f, a, b) { f(b, a) };
+
 lazy operator "&_" 14 THUNK;
 lazy fn THUNK(x) { fn () {x} }
 

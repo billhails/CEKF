@@ -11,7 +11,7 @@ import list operator "_|>_";
 import list operator "_&&_";
 import list operator "_take_";
 import list operator "_drop_";
-import list operator "length_";
+import list operator "len_";
 
 fn reduce {
     (M.amb_expr(expr1, expr2)) {
@@ -24,19 +24,19 @@ fn reduce {
         switch (fun) {
             (M.lambda(fargs, body)) {
                 // handle currying
-                switch (length fargs <=> length redaargs) {
+                switch (len fargs <=> len redaargs) {
                     (lt) {
                         // ((λ (f1) body) a1 a2) => reduce(body[f1/a1] a2)
-                        let newaargs = redaargs take length fargs;
-                            restaargs = redaargs drop length fargs;
+                        let newaargs = redaargs take len fargs;
+                            restaargs = redaargs drop len fargs;
                             newbody = S.substitute(D.make(fargs, newaargs), body);
                         in  reduce(M.apply(reduce(newbody), restaargs))
                     }
                     (gt) {
                         // ((λ (f1 f2) body) a1) => (λ (f2) body[f1/a1])
-                        let newfargs = fargs take length redaargs;
+                        let newfargs = fargs take len redaargs;
                             newbody = S.substitute(D.make(newfargs, redaargs), body);
-                            restfargs = fargs drop length redaargs;
+                            restfargs = fargs drop len redaargs;
                         in  M.lambda(restfargs, newbody);
                     }
                     (eq) {

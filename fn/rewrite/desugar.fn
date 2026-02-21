@@ -5,6 +5,18 @@ namespace
     link "../dictutils.fn" as DICT;
     link "../ioutils.fn" as IO;
     import IO operator "$_";
+    import list operator "_|>_";
+    import list operator "_&&_";
+    import list operator "_::_";
+    import list operator "len_";
+    import list operator "_take_";
+    import list operator "_drop_";
+    import list operator "unzip_";
+
+
+    fn makeVar (s) {
+        M.var(s)
+    }
 
     // desugar: E.expr -> E.expr
     // rewrites let* to nested lets
@@ -16,27 +28,25 @@ namespace
             let
             fn ds {
                 (E.amb_expr(expr1, expr2)) {
-                    // amb_expr(expr, expr)
                     M.amb_expr(ds(expr1), ds(expr2))
                 }
 
                 (E.apply(E.var(v), args)) {
                     switch (DICT.lookup(v, c)) {
                         (nothing) {
-                            M.apply(M.var(v), list.map(ds, args))
+                            M.apply(M.var(v), args |> ds)
                         }
                         (just(arity)) {
-                            switch (list.length(args) <=> arity) {
+                            switch (len args <=> arity) {
                                 (eq) {
-                                    M.apply(M.var(v), list.map(ds, args))
+                                    M.apply(M.var(v), args |> ds)
                                 }
                                 (lt) {
                                     // (add 2) -> (lambda (arg0) (add 2 arg0))
                                     let
-                                        missing = arity - list.length(args);
-                                        new_params = list.map(fn (i) { "arg$" @@ $i },
-                                                              list.range(0, missing));
-                                        new_args = list.map(fn (v) { M.var(v) }, new_params) @@ list.map(ds, args);
+                                        missing = arity - len args;
+                                        new_params = (0::missing) |> fn (i) { "arg$" @@ $i };
+                                        new_args = (new_params |> makeVar) @@ (args |> ds);
                                     in
                                         M.lambda(new_params,
                                                  M.apply(M.var(v), new_args))
@@ -44,12 +54,12 @@ namespace
                                 }
                                 (gt) {
                                     // (make-adder 2 3) -> ((make-adder 2) 3)
-                                    let first_args = list.take(arity, args);
-                                        remaining_args = list.drop(arity, args);
+                                    let first_args = args take arity;
+                                        remaining_args = args drop arity;
                                     in
                                         M.apply(
-                                            M.apply(M.var(v), list.map(ds, first_args)),
-                                            list.map(ds, remaining_args)
+                                            M.apply(M.var(v), first_args |> ds),
+                                            remaining_args |> ds
                                         )
                                 }
                             }
@@ -58,8 +68,7 @@ namespace
                 }
 
                 (E.apply(fun, args)) {
-                    // apply(expr, list(expr))
-                    M.apply(ds(fun), list.map(ds, args))
+                    M.apply(ds(fun), args |> ds)
                 }
 
                 (E.back_expr) { M.back_expr }
@@ -73,72 +82,59 @@ namespace
                 (E.constant(name, n)) { M.stdint(n) }
 
                 (E.callcc_expr(e)) {
-                    // callcc_expr(expr)
                     M.callcc_expr(ds(e))
                 }
 
                 (E.cond_expr(test, branches)) {
-                    // cond_expr(expr, list(#(expr, expr)))
-                    let #(vals, results) = list.unzip(branches);
-                    in  M.cond_expr(ds(test),
-                                    list.zip(list.map(ds, vals),
-                                            list.map(ds, results)))
+                    M.cond_expr(ds(test), branches |> ds && ds);
                 }
 
                 (E.construct(name, tag, args)) {
-                    // construct(string, list(expr))
                     let aargs = E.stdint(tag) @ args
                     in
-                        ds(E.make_vec(list.length(aargs), aargs))
+                        ds(E.make_vec(len aargs, aargs))
                 }
 
                 (E.deconstruct(name, index, expr)) {
-                    // deconstruct(string, number, expr)
                     M.apply(M.primop("vec-ref"), [M.stdint(index), ds(expr)])
                 }
 
                 (E.if_expr(exprc, exprt, exprf)) {
-                    // if_expr(expr, expr, expr)
                     M.if_expr(ds(exprc),
                             ds(exprt),
                             ds(exprf))
                 }
 
                 (E.lambda(params, body)) {
-                    // lambda(list(string), expr)
                     M.lambda(params, ds(body))
                 }
 
                 (E.letrec_expr(bindings, expr)) {
-                    // letrec_expr(list(#(string, expr)), expr)
                     let
                         c2 = list.foldl(fn (#(v, e), dict) {
                             switch (e) {
-                                (E.lambda(params, _)) { DICT.insert(v, list.length(params), dict) }
+                                (E.lambda(params, _)) { DICT.insert(v, len params, dict) }
                                 (_) { dict }
                             }
                         }, c, bindings);
-                        bindings2 = list.map(fn (#(v, e)) { #(v, desug(e, c2)) }, bindings);
+                        bindings2 = bindings |> identity && desug flip c2;
                     in M.letrec_expr(bindings2, desug(expr, c2)) // new environment
                 }
 
                 (E.let_expr(bindings, expr)) {
-                    // let_expr(list(#(string, expr)), expr)
                     let
                         c2 = list.foldl(fn (#(v, e), dict) {
                             switch (e) {
-                                (E.lambda(params, _)) { DICT.insert(v, list.length(params), dict) }
+                                (E.lambda(params, _)) { DICT.insert(v, len params, dict) }
                                 (_) { dict }
                             }
                         }, c, bindings);
                         // let expressions are evaluated in the containing environment c
-                        bindings2 = list.map(fn (#(v, e)) { #(v, desug(e, c)) }, bindings);
-                        #(vars, vals) = list.unzip(bindings2);
+                        #(vars, vals) = unzip (bindings |> identity && desug flip c);
                     in M.apply(M.lambda(vars, desug(expr, c2)), vals)
                 }
 
                 (E.letstar_expr(bindings, expr)) {
-                    // letstar_expr(list(#(string, expr)), expr)
                     let
                         fn nest_lets {
                             ([], body) { body }
@@ -150,65 +146,50 @@ namespace
                 }
 
                 (E.lookup(name, index, expr)) {
-                    // lookup(string, number, expr)
                     M.lookup(name, index, ds(expr))
                 }
 
                 (E.make_tuple(args)) {
-                    // make_tuple(list(expr))
-                    M.make_vec(list.length(args), list.map(ds, args))
+                    M.make_vec(len args, args |> ds)
                 }
 
                 (E.make_vec(size, args)) {
-                    // make_vec(number, list(expr))
-                    M.make_vec(size, list.map(ds, args))
+                    M.make_vec(size, args |> ds)
                 }
 
                 (E.match_cases(test, cases)) {
-                    // match_cases(expr, list(#(list(number), expr)))
-                    let #(vals, results) = list.unzip(cases);
-                    in
-                        M.match_cases(ds(test),
-                                    list.zip(vals, list.map(ds, results)))
+                    M.match_cases(ds(test), cases |> identity && ds)
                 }
 
                 (E.namespaces(exprs)) {
-                    // namespaces(list(expr))
-                    M.namespaces(list.map(ds, exprs))
+                    M.namespaces(exprs |> ds)
                 }
 
                 (E.primapp(p, e1, e2)) {
-                    // primapp(string, expr, expr)
                     M.apply(M.primop(p), [ds(e1), ds(e2)])
                 }
 
                 (E.print_exp(expr)) {
-                    // print_exp(expr)
                     M.apply(M.lambda(["x"], M.var("x")), [ds(expr)])
                 }
 
                 (E.sequence(exprs)) {
-                    // sequence(list(expr))
-                    M.sequence(list.map(ds, exprs))
+                    M.sequence(exprs |> ds)
                 }
 
                 (E.tag(expr)) {
-                    // tag(expr)
                     ds(E.primapp("vec", E.stdint(0), expr))
                 }
 
                 (E.tuple_index(size, index, expr)) {
-                    // tuple_index(number, number, expr)
                     ds(E.primapp("vec", E.stdint(index), expr))
                 }
 
                 (E.typedefs(defs, expr)) {
-                    // typedefs(list(def), expr)
                     ds(expr)
                 }
 
                 (E.typeof_expr(expr)) {
-                    // typeof_expr(expr) -> string
                     M.make_vec(2, [M.character('t'), M.make_vec(0, [])])
                 }
 

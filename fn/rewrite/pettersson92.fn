@@ -12,6 +12,7 @@ let
     operator "_??_" left 8 fn (l, ns) { lst.nths(ns, l) };
     operator "_.._" left 8 lst.range;
     import io operator "$_";
+    import lst operator "len_";
 
     // input data structures
     typedef pattern {
@@ -39,7 +40,7 @@ let
                 (const(n)) { puts($n) }
                 (ctor(tag, pats)) {
                     puts(tag);
-                    if (lst.length(pats) > 0) {
+                    if (len pats > 0) {
                         puts("("); i(pats); puts(")")
                     } else { "" }
                 }
@@ -490,7 +491,7 @@ let
     // arity: pattern -> number
     fn arity {
         (tagged(_, ctor(_, l))) |
-        (tagged(_, tuple(l))) { lst.length(l) }
+        (tagged(_, tuple(l))) { len l }
         (tagged(_, const(_))) { 0 }
         (tagged(_, comparison(_))) { 0 }
         (x) { error("arity failed on " @@ $x) }
@@ -502,7 +503,7 @@ let
             fn ctorMatches {
                 (tagged(_, const(n)), tagged(_, const(n))) { true }
                 (tagged(_, ctor(s, _)), tagged(_, ctor(s, _))) { true }
-                (tagged(_, tuple(a)), tagged(_, tuple(b))) { lst.length(a) == lst.length(b) }
+                (tagged(_, tuple(a)), tagged(_, tuple(b))) { len a == len b }
                 (_, tagged(_, comparison(_))) { true }
                 (_, tagged(_, wildcard)) { true }
                 (_, _) { false }

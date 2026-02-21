@@ -2,6 +2,8 @@ namespace
     link "minexpr.fn" as M;
     link "../listutils.fn" as list;
     link "gensym.fn" as GS;
+    import list operator "_|>_";
+    import list operator "_&&_";
 
     fn isAexpr {
         (M.var(_)) |
@@ -60,9 +62,7 @@ namespace
                         c = kToC(k);
                     in
                         T_k(test, fn (atest) {
-                            M.cond_expr(atest, list.map(fn {(#(val, result)) {
-                                #(val, T_c(result, c))
-                            }}, branches))
+                            M.cond_expr(atest, branches |> identity && T_c flip c)
                         })
                 }
 
@@ -76,10 +76,7 @@ namespace
                 }
 
                 (M.letrec_expr(bindings, expr)) {
-                    let
-                        #(vars, aexps) = list.unzip(bindings);
-                    in
-                        M.letrec_expr(list.zip(vars, list.map(M, aexps)), T_k(expr, k))
+                    M.letrec_expr(bindings |> identity && M, T_k(expr, k))
                 }
 
                 (M.lookup(name, index, expr)) {
@@ -97,9 +94,7 @@ namespace
                         c = kToC(k);
                     in
                         T_k(test, fn (atest) {
-                            M.match_cases(atest, list.map(fn {(#(indices, result)) {
-                                #(indices, T_c(result, c))
-                            }}, cases))
+                            M.match_cases(atest, cases |> identity && T_c flip c)
                         })
                 }
 
@@ -135,7 +130,10 @@ namespace
                         sk = GS.genstring("$k");
                         vsk = M.var(sk);
                     in
-                        M.apply(M.lambda([sk], M.amb_expr(T_c(expr1, vsk), T_c(expr2, vsk))), [c])
+                        M.apply(M.lambda([sk],
+                                M.amb_expr(T_c(expr1, vsk),
+                                           T_c(expr2, vsk))),
+                                [c])
                 }
 
                 (M.apply(p=M.primop(_), [e1, e2])) {
@@ -167,9 +165,7 @@ namespace
                         vsk = M.var(sk);
                     in
                         M.apply(M.lambda([sk], T_k(test, fn (atest) {
-                            M.cond_expr(atest, list.map(fn {(#(val, result)) {
-                                #(val, T_c(result, vsk))
-                            }}, branches))
+                            M.cond_expr(atest, branches |> identity && T_c flip vsk)
                         })), [c])
                 }
 
@@ -179,15 +175,12 @@ namespace
                         vsk = M.var(sk);
                     in
                         M.apply(M.lambda([sk], T_k(exprc, fn (aexp) {
-                            M.if_expr(aexp, T_c(exprt,vsk), T_c(exprf,vsk))
+                            M.if_expr(aexp, T_c(exprt, vsk), T_c(exprf, vsk))
                         })), [c])
                 }
 
                 (M.letrec_expr(bindings, expr)) {
-                    let
-                        #(vars, aexps) = list.unzip(bindings);
-                    in
-                        M.letrec_expr(list.zip(vars, list.map(M, aexps)), T_c(expr, c))
+                    M.letrec_expr(bindings |> identity && M, T_c(expr, c))
                 }
 
                 (M.lookup(name, index, expr)) {
@@ -206,9 +199,7 @@ namespace
                         vsk = M.var(sk);
                     in
                         M.apply(M.lambda([sk], T_k(test, fn (atest) {
-                            M.match_cases(atest, list.map(fn {(#(indices, result)) {
-                                #(indices, T_c(result, vsk))
-                            }}, cases))
+                            M.match_cases(atest, cases |> identity && T_c flip vsk)
                         })), [c])
                 }
 

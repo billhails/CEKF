@@ -82,7 +82,7 @@ fn length(lst) {
     }
     in helper(lst, 0)
 }
-export operator "length_" left 9 length;
+export operator "len_" left 9 length;
 
 // foldl (#a -> #b -> #b) -> #b -> list(#a) -> #b
 fn foldl {
@@ -197,9 +197,11 @@ fn any {
     (f, h @ t) { f(h) or any(f, t) }
 }
 
+export operator "_any_" left 8 fn (lst, f) { any(f, lst) };
+
 // none: (#a -> bool) -> list(#a) -> bool
 fn none(f, l) {
-    not any(f, l)
+    not l any f;
 }
 
 // all: (#a -> bool) -> list(#a) -> bool

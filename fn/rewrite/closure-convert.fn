@@ -6,6 +6,7 @@ link "transform.fn" as TR;
 link "freevars.fn" as FV;
 link "gensym.fn" as GS;
 link "subst.fn" as SUBST;
+import list operator "_|>_";
 
 // https://matt.might.net/articles/closure-conversion/
 
@@ -15,8 +16,8 @@ fn closure_convert {
             senv = GS.genstring("$env");
             sparams = senv @ params;
             fv = FV.free(exp);
-            venv = list.map(fn (v) { #(v, M.var(v)) }, fv);
-            sub = DICT.make(fv, list.map(fn (v) { M.env_ref(M.var(senv), v) }, fv));
+            venv = fv |> fn (v) { #(v, M.var(v)) };
+            sub = DICT.make(fv, fv |> fn (v) { M.env_ref(M.var(senv), v) });
             vbody = SUBST.substitute(sub, body);
         in
             M.make_closure(M.lambdac(sparams, vbody), M.make_env(venv))
