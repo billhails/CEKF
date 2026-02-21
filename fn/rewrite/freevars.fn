@@ -3,6 +3,7 @@ namespace
 link "minexpr.fn" as M;
 link "../listutils.fn" as list;
 import list operator "_|>_";
+import list operator "_except_";
 
 // free: expr -> list(string)
 fn free {
@@ -21,13 +22,10 @@ fn free {
     (M.character(_)) |
     (M.env_expr) |
     (M.error_expr) |
+    (M.env_ref(_, _)) |
     (M.stdint(_)) { [] }
 
     (M.callcc_expr(e)) {
-        free(e)
-    }
-
-    (M.env_ref(e, s)) {
         free(e)
     }
 
@@ -46,14 +44,14 @@ fn free {
     }
 
     (M.lambda(params, body)) | (M.lambdac(params, body)) {
-        list.exclude(params, free(body))
+        free(body) except params
     }
 
     (M.letrec_expr(bindings, body)) {
         let
             #(names, exprs) = list.unzip(bindings);
         in
-            list.exclude(names, list.unique(list.concat(exprs |> free) @@ free(body)))
+            list.unique(list.concat(exprs |> free) @@ free(body)) except names
     }
 
     (M.lookup(s, n, e)) {
@@ -65,8 +63,8 @@ fn free {
     }
 
     (M.make_env(bindings)) {
-        let #(_, es) = list.unzip(bindings);
-        in list.unique(list.concat(es |> free))
+        let #(names, es) = list.unzip(bindings);
+        in list.unique(list.concat(es |> free)) except names
     }
 
     (M.make_vec(n, elements)) {
