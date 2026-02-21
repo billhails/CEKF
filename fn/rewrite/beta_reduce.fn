@@ -4,41 +4,44 @@ namespace
 
 link "minexpr.fn" as M;
 link "env.fn" as Env;
-link "subst.fn" as SUBST;
+link "subst.fn" as S;
 link "../listutils.fn" as list;
-link "../dictutils.fn" as DICT;
+link "../dictutils.fn" as D;
+import list operator "_|>_";
+import list operator "_&&_";
+import list operator "_take_";
+import list operator "_drop_";
+import list operator "length_";
 
 fn reduce {
     (M.amb_expr(expr1, expr2)) {
-        // amb_expr(expr, expr)
         M.amb_expr(reduce(expr1), reduce(expr2))
     }
 
     (M.apply(fun, aargs)) {
-        // apply(expr, list(expr))
-        let redaargs = list.map(reduce, aargs);
+        let redaargs = aargs |> reduce;
         in
         switch (fun) {
             (M.lambda(fargs, body)) {
                 // handle currying
-                switch (list.length(fargs) <=> list.length(redaargs)) {
+                switch (length fargs <=> length redaargs) {
                     (lt) {
                         // ((λ (f1) body) a1 a2) => reduce(body[f1/a1] a2)
-                        let newaargs = list.take(list.length(fargs), redaargs);
-                            restaargs = list.drop(list.length(fargs), redaargs);
-                            newbody = SUBST.substitute(DICT.make(fargs, newaargs), body);
+                        let newaargs = redaargs take length fargs;
+                            restaargs = redaargs drop length fargs;
+                            newbody = S.substitute(D.make(fargs, newaargs), body);
                         in  reduce(M.apply(reduce(newbody), restaargs))
                     }
                     (gt) {
                         // ((λ (f1 f2) body) a1) => (λ (f2) body[f1/a1])
-                        let newfargs = list.take(list.length(redaargs), fargs);
-                            newbody = SUBST.substitute(DICT.make(newfargs, redaargs), body);
-                            restfargs = list.drop(list.length(redaargs), fargs);
+                        let newfargs = fargs take length redaargs;
+                            newbody = S.substitute(D.make(newfargs, redaargs), body);
+                            restfargs = fargs drop length redaargs;
                         in  M.lambda(restfargs, newbody);
                     }
                     (eq) {
                         // ((λ (f1 f2) body) a1 a2) => reduce(body[f1/a1, f2/a2])
-                        let newbody = SUBST.substitute(DICT.make(fargs, redaargs), body);
+                        let newbody = S.substitute(D.make(fargs, redaargs), body);
                         in  reduce(newbody)
                     }
                 }
@@ -62,66 +65,43 @@ fn reduce {
     }
 
     (M.callcc_expr(e)) {
-        // callcc_expr(expr)
         M.callcc_expr(reduce(e))
     }
 
     (M.cond_expr(test, branches)) {
-        // cond_expr(expr, list(#(expr, expr)))
-        let #(vals, results) = list.unzip(branches);
-        in
-            M.cond_expr(reduce(test),
-                        list.zip(list.map(reduce, vals),
-                                list.map(reduce, results)))
+        M.cond_expr(reduce(test), branches |> reduce && reduce)
     }
 
     (M.if_expr(exprc, exprt, exprf)) {
-        // if_expr(expr, expr, expr)
-        M.if_expr(reduce(exprc),
-                reduce(exprt),
-                reduce(exprf))
+        M.if_expr(reduce(exprc), reduce(exprt), reduce(exprf))
     }
 
     (M.lambda(params, body)) {
-        // lambda(list(string), expr)
         M.lambda(params, reduce(body))
     }
 
     (M.letrec_expr(bindings, expr)) {
-        // letrec_expr(list(#(string, expr)), expr)
-        let #(vars, exprs) = list.unzip(bindings);
-            newexprs = list.map(reduce, exprs);
-            newbindings = list.zip(vars, newexprs);
-        in
-            M.letrec_expr(newbindings, reduce(expr))
+        M.letrec_expr(bindings |> identity && reduce, reduce(expr))
     }
 
     (M.lookup(name, index, expr)) {
-        // lookup(string, number, expr)
         M.lookup(name, index, reduce(expr))
     }
 
     (M.make_vec(size, args)) {
-        // make_vec(number, list(expr))
-        M.make_vec(size, list.map(reduce, args))
+        M.make_vec(size, args |> reduce)
     }
 
     (M.match_cases(test, cases)) {
-        // match_cases(expr, list(#(list(number), expr)))
-        let #(vals, results) = list.unzip(cases);
-        in
-            M.match_cases(reduce(test),
-                        list.zip(vals, list.map(reduce, results)))
+        M.match_cases(reduce(test), cases |> identity && reduce)
     }
 
     (M.namespaces(exprs)) {
-        // namespaces(list(expr))
-        M.namespaces(list.map(reduce, exprs))
+        M.namespaces(exprs |> reduce)
     }
 
     (M.sequence(exprs)) {
-        // sequence(list(expr))
-        M.sequence(list.map(reduce, exprs))
+        M.sequence(exprs |> reduce)
     }
 
     (x) {

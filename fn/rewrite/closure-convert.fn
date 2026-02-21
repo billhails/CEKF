@@ -12,7 +12,7 @@ link "subst.fn" as SUBST;
 fn closure_convert {
     (exp=M.lambda(params, body)) {
         let
-            senv = GS.genstring("env");
+            senv = GS.genstring("$env");
             sparams = senv @ params;
             fv = FV.free(exp);
             venv = list.map(fn (v) { #(v, M.var(v)) }, fv);

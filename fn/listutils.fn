@@ -82,6 +82,7 @@ fn length(lst) {
     }
     in helper(lst, 0)
 }
+export operator "length_" left 9 length;
 
 // foldl (#a -> #b -> #b) -> #b -> list(#a) -> #b
 fn foldl {
@@ -304,6 +305,7 @@ fn take(n, lst) {
     }
     in helper(n, lst, [])
 }
+export operator "_take_" left 8 fn (l, n) { take(n, l) };
 
 // drop: number -> list(#a) -> list(#a)
 fn drop {
@@ -311,6 +313,7 @@ fn drop {
     (n, []) { [] }
     (n, _ @ t) { drop(n - 1, t) }
 }
+export operator "_drop_" left 8 fn (l, n) { drop(n, l) };
 
 // minimum: list(#a) -> #a
 fn minimum(lst) {

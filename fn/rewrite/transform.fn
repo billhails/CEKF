@@ -2,6 +2,7 @@ namespace
 
 link "minexpr.fn" as M;
 link "../listutils.fn" as list;
+import list operators;
 
 // (M.expr -> M.expr) -> M.expr -> M.expr
 fn bottom_up(f, exp) {
@@ -17,7 +18,6 @@ fn top_down(f, exp) {
 fn _transform(t, exp) {
     switch (exp) {
 
-        // amb_expr(expr, expr)
         (M.amb_expr(e1, e2)) {
             M.amb_expr(t(e1), t(e2))
         }
@@ -32,84 +32,68 @@ fn _transform(t, exp) {
         (M.bigint(_)) { exp }
 
 
-        // apply_closure(expr, list(expr))
         (M.apply_closure(fun, args)) {
-            M.apply_closure(t(fun), list.map(t, args))
+            M.apply_closure(t(fun), args |> t)
         }
 
-        // apply(expr, list(expr))
         (M.apply(fun, args)) {
-            M.apply(t(fun), list.map(t, args))
+            M.apply(t(fun), args |> t)
         }
 
-        // callcc_expr(expr)
         (M.callcc_expr(e)) {
             M.callcc_expr(t(e))
         }
 
-        // cond_expr(expr, list(#(expr, expr)))
         (M.cond_expr(test, branches)) {
-            M.cond_expr(t(test), list.map(fn (#(cond, res)) { #(t(cond), t(res)) }, branches))
+            M.cond_expr(t(test), branches |> t && t)
         }
 
-        // env_ref(expr, string)
         (M.env_ref(e, s)) {
             M.env_ref(t(e), s)
         }
 
-        // if_expr(expr, expr, expr)
-        (M.if_expr(cond, then_branch, else_branch)) {
-            M.if_expr(t(cond), t(then_branch), t(else_branch))
+        (M.if_expr(test, consequent, alternative)) {
+            M.if_expr(t(test), t(consequent), t(alternative))
         }
 
-        // lambda(list(string), expr)
         (M.lambda(params, body)) {
             M.lambda(params, t(body))
         }
 
-        // lambdac(list(string), expr)
         (M.lambdac(params, body)) {
             M.lambdac(params, t(body))
         }
 
-        // letrec_expr(list(#(string, expr)), expr)
         (M.letrec_expr(bindings, body)) {
-            M.letrec_expr(list.map(fn (#(v, e)) { #(v, t(e)) }, bindings), t(body))
+            M.letrec_expr(bindings |> identity && t, t(body))
         }
 
-        // lookup(string, number, expr)
         (M.lookup(s, n, e)) {
             M.lookup(s, n, t(e))
         }
 
-        // make_closure(expr, expr)
         (M.make_closure(lam, env)) {
             M.make_closure(t(lam), t(env))
         }
 
-        // make_env(list(#(string, expr)))
         (M.make_env(bindings)) {
-            M.make_env(list.map(fn (#(v, e)) { #(v, t(e)) }, bindings))
+            M.make_env(bindings |> identity && t)
         }
 
-        // make_vec(number, list(expr))
         (M.make_vec(size, elements)) {
-            M.make_vec(size, list.map(t, elements))
+            M.make_vec(size, elements |> t)
         }
 
-        // match_cases(expr, list(#(list(number), expr)))
         (M.match_cases(e, cases)) {
-            M.match_cases(t(e), list.map(fn (#(indices, res)) { #(indices, t(res)) }, cases))
+            M.match_cases(t(e), cases |> identity && t)
         }
 
-        // namespaces(list(expr))
         (M.namespaces(exprs)) {
-            M.namespaces(list.map(t, exprs))
+            M.namespaces(exprs |> t)
         }
 
-        // sequence(list(expr))
         (M.sequence(exps)) {
-            M.sequence(list.map(t, exps))
+            M.sequence(exps |> t)
         }
 
         (_) {

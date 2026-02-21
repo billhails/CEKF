@@ -26,7 +26,8 @@ in
                 c = C.curry(b);
                 d = η.reduce(c);
                 e = CPS.T_c(d, M.var("□"));
-                f = β.reduce(e);
+                ee = C.curry(e);
+                f = β.reduce(ee);
                 g = OF.fold(f);
                 h = CC.shared_closure_convert(g);
                 nltab = "\n    ";
@@ -46,7 +47,8 @@ in
                 // M.print_expr(f);
                 // puts("\n==> operator folding");
                 // puts(nltab);
-                // M.print_expr(g);
+                puts("\n    ");
+                M.print_expr(g);
                 // puts("\n==> shared closure convert");
                 // puts(nltab);
                 puts("\n    ");
