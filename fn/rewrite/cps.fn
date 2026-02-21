@@ -76,7 +76,7 @@ namespace
                 }
 
                 (M.letrec_expr(bindings, expr)) {
-                    M.letrec_expr(bindings |> identity && M, T_k(expr, k))
+                    M.letrec_expr(bindings |> identity && (M && identity), T_k(expr, k))
                 }
 
                 (M.lookup(name, index, expr)) {
@@ -180,7 +180,7 @@ namespace
                 }
 
                 (M.letrec_expr(bindings, expr)) {
-                    M.letrec_expr(bindings |> identity && M, T_c(expr, c))
+                    M.letrec_expr(bindings |> identity && (M && identity), T_c(expr, c))
                 }
 
                 (M.lookup(name, index, expr)) {

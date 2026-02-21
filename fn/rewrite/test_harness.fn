@@ -26,8 +26,7 @@ in
                 c = C.curry(b);
                 d = η.reduce(c);
                 e = CPS.T_c(d, M.var("□"));
-                ee = C.curry(e);
-                f = β.reduce(ee);
+                f = β.reduce(e);
                 g = OF.fold(f);
                 h = CC.shared_closure_convert(g);
                 nltab = "\n    ";
@@ -36,6 +35,9 @@ in
                 // puts("\n==> desugar");
                 // puts(nltab);
                 // M.print_expr(b);
+                // puts("\n==> curry");
+                // puts(nltab);
+                // M.print_expr(c);
                 // puts("\n==> eta reduce");
                 // puts(nltab);
                 // M.print_expr(d);
@@ -47,11 +49,9 @@ in
                 // M.print_expr(f);
                 // puts("\n==> operator folding");
                 // puts(nltab);
-                puts("\n    ");
-                M.print_expr(g);
-                // puts("\n==> shared closure convert");
-                // puts(nltab);
-                puts("\n    ");
+                // M.print_expr(g);
+                puts("\n==> shared closure convert");
+                puts(nltab);
                 M.print_expr(h);
                 puts("\n\n")
         }

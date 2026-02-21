@@ -65,7 +65,7 @@ fn _transform(t, exp) {
         }
 
         (M.letrec_expr(bindings, body)) {
-            M.letrec_expr(bindings |> identity && t, t(body))
+            M.letrec_expr(bindings |> identity && (t && identity), t(body))
         }
 
         (M.lookup(s, n, e)) {

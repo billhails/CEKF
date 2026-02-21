@@ -18,7 +18,7 @@ namespace
         if_expr(expr, expr, expr) |
         lambdac(list(string), expr) |
         lambda(list(string), expr) |
-        letrec_expr(list(#(string, expr)), expr) |
+        letrec_expr(list(#(string, #(expr, number))), expr) |
         lookup(string, number, expr) |
         make_closure(expr, expr) |
         make_env(list(#(string, expr))) |
@@ -44,11 +44,15 @@ namespace
     }
 
     fn print_bindings(bindings) {
-        print_list(bindings, fn(#(name, expr)) {
+        print_list(bindings, fn(#(name, #(expr, arity))) {
             putc('(');
             puts(name);
             putc(' ');
             print_expr(expr);
+            putc(' ');
+            putc('[');
+            putn(arity);
+            putc(']');
             putc(')');
         }, " ");
     }
@@ -327,7 +331,7 @@ namespace
                 (sexp(atom("begin") @ exprs)) { sequence(exprs |> to_expr) }
                 (sexp([atom("letrec"), sexp(bindings), body])) {
                     let bindingsList = bindings |> fn {
-                        (sexp([atom(name), expr])) { #(name, to_expr(expr)) }
+                        (sexp([atom(name), expr])) { #(name, #(to_expr(expr), 0)) }
                         (_) { error("Invalid letrec binding") }
                     };
                     in

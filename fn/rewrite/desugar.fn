@@ -117,7 +117,7 @@ namespace
                                 (_) { dict }
                             }
                         }, c, bindings);
-                        bindings2 = bindings |> identity && desug flip c2;
+                        bindings2 = bindings |> identity && desug flip c2 |> identity && fn (e) { #(e, 0) };
                     in M.letrec_expr(bindings2, desug(expr, c2)) // new environment
                 }
 

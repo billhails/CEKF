@@ -227,6 +227,8 @@ namespace
 
         ";more complex curried function application",
         "(letrec ((applyf (λ (f) (f 1))) (mul (λ (x y) (* x y)))) (applyf (mul 2)))",
+    ]}
+    fn data2() {[
         ";============================================",
         ";CONSTANT FOLDING TEST CASES",
         ";============================================",

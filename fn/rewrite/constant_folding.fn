@@ -273,7 +273,7 @@ fn fold {
 
     (M.letrec_expr(bindings, expr)) {
         // letrec_expr(list(#(string, expr)), expr)
-        M.letrec_expr(bindings |> identity && fold, fold(expr))
+        M.letrec_expr(bindings |> identity && (fold && identity), fold(expr))
     }
 
     (M.lookup(name, index, expr)) {

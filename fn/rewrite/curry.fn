@@ -4,6 +4,16 @@ link "../listutils.fn" as list;
 link "minexpr.fn" as M;
 import list operator "_|>_";
 import list operator "_&&_";
+import list operator "_zip_";
+import list operator "unzip_";
+import list operator "len_";
+
+
+fn arity {
+    (M.lambda(params, _)) |
+    (M.lambdac(params, _)) { len params }
+    (_) { 0 }
+}
 
 fn curry {
     (M.amb_expr(e1, e2)) {
@@ -51,7 +61,15 @@ fn curry {
     }
 
     (M.letrec_expr(bindings, body)) {
-        M.letrec_expr(bindings |> identity && curry, curry(body))
+        let
+            #(vars, pairs) = unzip bindings;
+            #(exprs, _) = unzip pairs;
+            arities = exprs |> arity;
+            exprs = exprs |> curry;
+            pairs = exprs zip arities;
+            bindings = vars zip pairs;
+        in
+            M.letrec_expr(bindings, curry(body))
     }
 
     (M.lookup(name, id, e)) {
