@@ -61,15 +61,12 @@ fn curry {
     }
 
     (M.letrec_expr(bindings, body)) {
-        let
-            #(vars, pairs) = unzip bindings;
-            #(exprs, _) = unzip pairs;
-            arities = exprs |> arity;
-            exprs = exprs |> curry;
-            pairs = exprs zip arities;
-            bindings = vars zip pairs;
-        in
-            M.letrec_expr(bindings, curry(body))
+        M.letrec_expr(
+            bindings |> identity &&
+                        fn (#(expr, _)) {
+                            #(curry(expr), arity(expr))
+                        },
+            curry(body))
     }
 
     (M.lookup(name, id, e)) {

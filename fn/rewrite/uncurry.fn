@@ -6,8 +6,6 @@ namespace
     link "../ioutils.fn" as IO;
     import list operator "_|>_";
     import list operator "_&&_";
-    import list operator "_zip_";
-    import list operator "unzip_";
     import list operator "len_";
     import list operator "_take_";
     import list operator "_drop_";
@@ -27,38 +25,39 @@ namespace
 
 fn uncurry(expr) {
     let
+        fn make_arity_name(name, arity) {
+            name @@ "$arity_" @@ $arity;
+        }
+
+        fn make_curried_application {
+            (expr, [arg]) {
+                M.apply(expr, [arg])
+            }
+            (expr, arg @ args) {
+                make_curried_application(M.apply(expr, [arg]), args)
+            }
+            (expr, []) {
+                expr
+            }
+        }
+
+        fn make_saturated_application(name, args) {
+            M.apply(M.var(make_arity_name(name, len args)), args)
+        }
+
         fn unc(expr, env) {
             let
-                fn make_arity_n(base, arity) {
-                    base @@ "$arity_" @@ $arity;
+                fn flatten_apply {
+                    (M.apply(op, [arg]), args_rev) {
+                        flatten_apply(op, u(arg) @ args_rev)
+                    }
+                    (head, args) {
+                        #(head, args)
+                    }
                 }
+
                 fn apply_helper(apply) {
                     let
-                        fn make_curried_application {
-                            (expr, [arg]) {
-                                M.apply(expr, [arg])
-                            }
-                            (expr, arg @ args) {
-                                make_curried_application(M.apply(expr, [arg]), args)
-                            }
-                            (expr, []) {
-                                expr
-                            }
-                        }
-
-                        fn flatten_apply {
-                            (M.apply(op, [arg]), args_rev) {
-                                flatten_apply(op, u(arg) @ args_rev)
-                            }
-                            (head, args) {
-                                #(head, args)
-                            }
-                        }
-
-                        fn make_saturated_application(s, args) {
-                            M.apply(M.var(make_arity_n(s, len args)), args)
-                        }
-
                         fn process_apply(head, args) {
                             switch (head) {
                                 (M.var(s)) {
@@ -125,6 +124,7 @@ fn uncurry(expr) {
                                 }
                                 ([], env) { env }
                             }
+
                             fn flatten_lambda {
                                 (M.lambda([arg], body)) {
                                     switch (flatten_lambda(body)) {
@@ -138,6 +138,7 @@ fn uncurry(expr) {
                                 }
                                 (body) { body }
                             }
+
                             fn extend_bindings {
                                 (#(name, #(expr, arity)) @ bindings, env) {
                                     let
@@ -145,7 +146,7 @@ fn uncurry(expr) {
                                         newExpr = unc(expr, env);
                                     in
                                         if (arity > 1) {
-                                            #(make_arity_n(name, arity),
+                                            #(make_arity_name(name, arity),
                                                 #(flatten_lambda(newExpr), arity)) @
                                             #(name, #(newExpr, arity)) @ rest_bindings
                                         } else {
@@ -154,6 +155,7 @@ fn uncurry(expr) {
                                 }
                                 ([], _) { [] }
                             }
+
                             newEnv = collect_arities(bindings, env);
                             newBindings = extend_bindings(bindings, newEnv)
                         in
@@ -211,7 +213,8 @@ fn uncurry(expr) {
                     }
 
                     (M.namespaces(exprs)) {
-                        M.namespaces(exprs |> u)
+                        // namespaces don't see variables from outside
+                        M.namespaces(exprs |> unc flip D.empty())
                     }
 
                     (M.sequence(exprs)) {
