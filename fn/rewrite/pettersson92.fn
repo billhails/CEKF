@@ -30,7 +30,7 @@ let
         let
             fn i {
                 ([]) { "" }
-                (p @ []) { h(p) }
+                ([p]) { h(p) }
                 (p @ t) { h(p); puts(", "); i(t) }
             }
             fn h {
@@ -723,6 +723,7 @@ let
 ///////////////////////////////////////////////////////////////////////////
 
     input = [
+        // (base, 1, c=#(d, 3), pat @ pats) { c(pat, pats) }
         #(
             [
                 variable("base"),
@@ -732,6 +733,7 @@ let
             ],
             apply(symbol("c"), [symbol("pat"), symbol("pats")])
         ),
+        // (_, d, #(d, _), []) { d }
         #(
             [
                 wildcard,

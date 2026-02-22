@@ -32,7 +32,7 @@ in
                 f = β.reduce(e);
                 g = OF.fold(f);
                 h = CC.shared_closure_convert(g);
-                nltab = "\n    ";
+                nltab = "\n";
             in
                 E.print_expr(a);
                 puts("\n==> desugar");

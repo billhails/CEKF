@@ -31,239 +31,324 @@ namespace
         var(string)
     }
 
-    // Helper printers
-    fn print_list(indices, putter, space) {
-        switch (indices) {
-            ([]) { "" }
-            (h @ t) {
-                putter(h);
-                list.for_each (fn(i) { puts(space); putter(i) }, t);
-                ""
-            }
-        };
-    }
-
-    fn print_bindings(bindings) {
-        print_list(bindings, fn(#(name, #(expr, arity))) {
-            putc('(');
-            puts(name);
-            putc(' ');
-            print_expr(expr);
-            putc(' ');
-            putc('[');
-            putn(arity);
-            putc(']');
-            putc(')');
-        }, " ");
-    }
-
-    fn print_let(name, bindings, body) {
-        puts("(");
-        puts(name);
-        puts(" [");
-        print_bindings(bindings);
-        puts("] ");
-        print_expr(body);
-        puts(")");
-    }
-
-    fn print_sequence(exprs) {
-        list.for_each(fn(e) { puts(" "); print_expr(e) }, exprs);
-    }
-
-    // Printer for expressions
-    fn print_expr {
-        (x=lambdac(args, expr)) {
-            puts("(λ* (");
-            print_list(args, puts, " ");
-            puts(") ");
-            print_expr(expr);
-            puts(")");
-            x;
-        }
-        (x=make_closure(func, env)) {
-            puts("[CLO ");
-            print_expr(func);
-            puts(" ");
-            print_expr(env);
-            puts("]");
-            x;
-        }
-        (x=make_env(bindings)) {
-            puts("{ ");
-            print_list(bindings, fn(#(name, expr)) {
-                puts(name);
-                switch (expr) {
-                    (var(name2)) {
-                        if (name == name2) {
-                            ""
-                        } else {
-                            puts(": ");
-                            print_expr(expr);
-                            ""
-                        }
+    // Pretty-printer for expressions.
+    // indent_width: number of spaces per depth level (e.g. 2 or 4).
+    fn print_expr_depth(indent_width, x) {
+        let
+            fn put_indent(depth) {
+                let
+                    fn spaces(i) {
+                        if (i > 0) { putc(' '); spaces(i - 1) } else { "" }
                     }
-                    (_) {
-                        puts(": ");
-                        print_expr(expr);
+                in {
+                    putc('\n');
+                    spaces(depth * indent_width)
+                }
+            }
+
+            // Returns true when an expression can be printed on a single line.
+            fn all_simple {
+                ([])     { true }
+                (h @ t)  { if (is_simple(h)) { all_simple(t) } else { false } }
+            }
+
+            fn all_simple_bindings {
+                ([])                { true }
+                (#(_, e) @ t)       { if (is_simple(e)) { all_simple_bindings(t) } else { false } }
+            }
+
+            fn is_simple {
+                (var(_))         { true }
+                (stdint(_))      { true }
+                (bigint(_))      { true }
+                (primop(_))      { true }
+                (character(_))   { true }
+                (back_expr)      { true }
+                (env_expr)       { true }
+                (error_expr)     { true }
+                (env_ref(_, _))  { true }
+                (apply(f, args)) { if (is_simple(f)) { all_simple(args) } else { false } }
+                (_)              { false }
+            }
+
+            // Like the old print_list, but putter is always a plain 1-arg fn.
+            // Callers capture depth via closure when needed.
+            fn go_list(items, putter, space) {
+                switch (items) {
+                    ([]) { "" }
+                    (h @ t) {
+                        putter(h);
+                        list.for_each(fn(i) { puts(space); putter(i) }, t);
                         ""
                     }
-                }
-            }, ", ");
-            puts(" }");
-            x;
-        }
-        (x=env_ref(env, name)) {
-            print_expr(env);
-            puts("->");
-            puts(name);
-            x;
-        }
-        (x=apply_closure(closure, args)) {
-            puts("(A/C ");
-            print_expr(closure);
-            print_sequence(args);
-            puts(")");
-            x;
-        }
-        (x=callcc_expr(e)) {
-            puts("(call/cc ");
-            print_expr(e);
-            puts(")");
-            x;
-        }
-        (x=stdint(i)) {
-            putn(i);
-            x;
-        }
-        (x=sequence(exprs)) {
-            puts("(begin");
-            print_sequence(exprs);
-            puts(")");
-            x;
-        }
-        (x=namespaces(exprs)) {
-            puts("(namespaces");
-            print_sequence(exprs);
-            puts(")");
-            x;
-        }
-        (x=match_cases(exp, cases)) {
-            puts("(match-cases ");
-            print_expr(exp);
-            list.for_each (fn {
-                (#(indices, caseExpr)) {
-                    puts(" ((");
-                    print_list(indices, fn(i) { putn(i) }, " ");
-                    puts(") ");
-                    print_expr(caseExpr);
-                    puts(")");
-                }
-            }, cases);
-            puts(")");
-            x;
-        }
-        (x=make_vec(size, elements)) {
-            puts("(make-vec ");
-            putn(size);
-            print_sequence(elements);
-            puts(")");
-            x;
-        }
-        (x=lookup(name, index, expr)) {
-            puts("(lookup ");
-            puts(name);
-            puts(" ");
-            putn(index);
-            puts(" ");
-            print_expr(expr);
-            puts(")");
-            x;
-        }
-        (x=env_expr) {
-            puts("(env)");
-            x;
-        }
-        (x=error_expr) {
-            puts("(error)");
-            x;
-        }
-        (x=cond_expr(test, branches)) {
-            puts("(cond ");
-            print_expr(test);
-            list.for_each (fn {
-                (#(e1, e2)) {
-                    puts(" ");
+                };
+            }
+
+            fn go_bindings(depth, bindings) {
+                list.for_each(fn(#(name, #(e, arity))) {
+                    put_indent(depth + 1);
                     putc('(');
-                    print_expr(e1);
-                    puts(" ");
-                    print_expr(e2);
-                    putc(')');
+                    puts(name);
+                    put_indent(depth + 2);
+                    go(depth + 2, e);
+                    puts(" [");
+                    putn(arity);
+                    puts("])");
+                }, bindings);
+            }
+
+            fn go_let(depth, name, bindings, body) {
+                puts("(");
+                puts(name);
+                puts(" [");
+                go_bindings(depth, bindings);
+                put_indent(depth);
+                puts("]");
+                put_indent(depth + 1);
+                go(depth + 1, body);
+                puts(")");
+            }
+
+            fn go_sequence(depth, exprs) {
+                list.for_each(fn(e) { put_indent(depth + 1); go(depth + 1, e) }, exprs)
+            }
+
+            fn go (depth, x) {
+                switch (x) {
+                    (lambdac(args, e)) {
+                        puts("(λ* (");
+                        go_list(args, puts, " ");
+                        puts(")");
+                        put_indent(depth + 1);
+                        go(depth + 1, e);
+                        puts(")");
+                        x;
+                    }
+                    (make_closure(func, env)) {
+                        puts("[CLO");
+                        put_indent(depth + 1);
+                        go(depth + 1, func);
+                        put_indent(depth + 1);
+                        go(depth + 1, env);
+                        puts("]");
+                        x;
+                    }
+                    (make_env(bindings)) {
+                        let
+                            fn print_binding(sep, d, name, e) {
+                                puts(sep);
+                                puts(name);
+                                switch (e) {
+                                    (var(name2)) {
+                                        if (name == name2) { "" }
+                                        else { puts(": "); go(d, e); "" }
+                                    }
+                                    (_) { puts(": "); go(d, e); "" }
+                                }
+                            }
+                        in
+                        if (all_simple_bindings(bindings)) {
+                            puts("{ ");
+                            switch (bindings) {
+                                ([]) { "" }
+                                (#(name, e) @ rest) {
+                                    print_binding("", depth, name, e);
+                                    list.for_each(fn(#(n, ev)) { print_binding(", ", depth, n, ev) }, rest);
+                                }
+                            };
+                            puts(" }");
+                        } else {
+                            puts("{");
+                            list.for_each(fn(#(name, e)) {
+                                put_indent(depth + 1);
+                                print_binding("", depth + 1, name, e);
+                            }, bindings);
+                            put_indent(depth);
+                            puts("}");
+                        };
+                        x;
+                    }
+                    (env_ref(env, name)) {
+                        go(depth, env);
+                        puts("->");
+                        puts(name);
+                        x;
+                    }
+                    (apply_closure(closure, args)) {
+                        puts("(A/C");
+                        put_indent(depth + 1);
+                        go(depth + 1, closure);
+                        go_sequence(depth, args);
+                        puts(")");
+                        x;
+                    }
+                    (callcc_expr(e)) {
+                        puts("(call/cc");
+                        put_indent(depth + 1);
+                        go(depth + 1, e);
+                        puts(")");
+                        x;
+                    }
+                    (stdint(i)) {
+                        putn(i);
+                        x;
+                    }
+                    (sequence(exprs)) {
+                        puts("(begin");
+                        go_sequence(depth, exprs);
+                        puts(")");
+                        x;
+                    }
+                    (namespaces(exprs)) {
+                        puts("(namespaces");
+                        go_sequence(depth, exprs);
+                        puts(")");
+                        x;
+                    }
+                    (match_cases(exp, cases)) {
+                        puts("(match-cases");
+                        put_indent(depth + 1);
+                        go(depth + 1, exp);
+                        list.for_each(fn(#(indices, caseExpr)) {
+                            put_indent(depth + 1);
+                            puts("((");
+                            go_list(indices, fn(i) { putn(i) }, " ");
+                            puts(")");
+                            put_indent(depth + 2);
+                            go(depth + 2, caseExpr);
+                            puts(")");
+                        }, cases);
+                        puts(")");
+                        x;
+                    }
+                    (make_vec(size, elements)) {
+                        puts("(make-vec ");
+                        putn(size);
+                        go_sequence(depth, elements);
+                        puts(")");
+                        x;
+                    }
+                    (lookup(name, index, e)) {
+                        puts("(lookup ");
+                        puts(name);
+                        puts(" ");
+                        putn(index);
+                        put_indent(depth + 1);
+                        go(depth + 1, e);
+                        puts(")");
+                        x;
+                    }
+                    (env_expr) {
+                        puts("(env)");
+                        x;
+                    }
+                    (error_expr) {
+                        puts("(error)");
+                        x;
+                    }
+                    (cond_expr(test, branches)) {
+                        puts("(cond");
+                        put_indent(depth + 1);
+                        go(depth + 1, test);
+                        list.for_each(fn(#(e1, e2)) {
+                            put_indent(depth + 1);
+                            putc('(');
+                            go(depth + 2, e1);
+                            put_indent(depth + 2);
+                            go(depth + 2, e2);
+                            puts(")");
+                        }, branches);
+                        puts(")");
+                        x;
+                    }
+                    (letrec_expr(bindings, body)) {
+                        go_let(depth, "letrec", bindings, body);
+                        x;
+                    }
+                    (lambda(args, e)) {
+                        puts("(λ (");
+                        go_list(args, fn(name) { puts(name) }, " ");
+                        puts(")");
+                        put_indent(depth + 1);
+                        go(depth + 1, e);
+                        puts(")");
+                        x;
+                    }
+                    (if_expr(e1, e2, e3)) {
+                        puts("(if");
+                        put_indent(depth + 1);
+                        go(depth + 1, e1);
+                        put_indent(depth + 1);
+                        go(depth + 1, e2);
+                        put_indent(depth + 1);
+                        go(depth + 1, e3);
+                        puts(")");
+                        x;
+                    }
+                    (apply(e1, args)) {
+                        if (is_simple(x)) {
+                            puts("(");
+                            go(depth, e1);
+                            list.for_each(fn(e) { puts(" "); go(depth, e) }, args);
+                            puts(")");
+                        } else if (is_simple(e1)) {
+                            puts("(");
+                            go(depth, e1);
+                            switch (args) {
+                                ([]) { "" }
+                                (h @ t) {
+                                    puts(" ");
+                                    go(depth + 1, h);
+                                    list.for_each(fn(e) { put_indent(depth + 1); go(depth + 1, e) }, t);
+                                }
+                            };
+                            puts(")");
+                        } else {
+                            puts("(");
+                            go(depth + 1, e1);
+                            go_sequence(depth, args);
+                            puts(")");
+                        };
+                        x;
+                    }
+                    (bigint(i)) {
+                        putn(i);
+                        x;
+                    }
+                    (var(chars)) {
+                        puts(chars);
+                        x;
+                    }
+                    (amb_expr(e1, e2)) {
+                        puts("(amb");
+                        put_indent(depth + 1);
+                        go(depth + 1, e1);
+                        put_indent(depth + 1);
+                        go(depth + 1, e2);
+                        puts(")");
+                        x;
+                    }
+                    (back_expr) {
+                        puts("(back)");
+                        x;
+                    }
+                    (character(c)) {
+                        putc('\'');
+                        putc(c);
+                        putc('\'');
+                        x;
+                    }
+                    (primop(name)) {
+                        puts(name);
+                        x;
+                    }
                 }
-            }, branches);
-            puts(")");
-            x;
-        }
-        (x=letrec_expr(bindings, body)) {
-            print_let("letrec", bindings, body);
-            x;
-        }
-        (x=lambda(args, expr)) {
-            puts("(λ (");
-            print_list(args, fn(name) { puts(name) }, " ");
-            puts(") ");
-            print_expr(expr);
-            puts(")");
-            x;
-        }
-        (x=if_expr(e1, e2, e3)) {
-            puts("(if ");
-            print_expr(e1);
-            puts(" ");
-            print_expr(e2);
-            puts(" ");
-            print_expr(e3);
-            puts(")");
-            x;
-        }
-        (x=apply(e1, args)) {
-            puts("(");
-            print_expr(e1);
-            print_sequence(args);
-            puts(")");
-            x;
-        }
-        (x=bigint(i)) {
-            putn(i);
-            x;
-        }
-        (x=var(chars)) {
-            puts(chars);
-            x;
-        }
-        (x=amb_expr(e1, e2)) {
-            puts("(amb ");
-            print_expr(e1);
-            puts(" ");
-            print_expr(e2);
-            puts(")");
-            x;
-        }
-        (x=back_expr) {
-            puts("(back)");
-            x;
-        }
-        (x=character(c)) {
-            putc('\'');
-            putc(c);
-            putc('\'');
-            x;
-        }
-        (x=primop(name)) {
-            puts(name);
-            x;
-        }
+            }
+        in
+            go(0, x)
     }
+
+    fn print_expr(x) { print_expr_depth(2, x) }
 
     // A *very* dumb parser for basic s-expressions
     fn parse(s) {

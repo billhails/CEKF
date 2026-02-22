@@ -20,33 +20,10 @@ fn reduce {
 
     (M.apply(fun, aargs)) {
         let redaargs = aargs |> reduce;
-        in
-        switch (fun) {
+        in switch (fun) {
             (M.lambda(fargs, body)) {
-                // handle currying
-                switch (len fargs <=> len redaargs) {
-                    (lt) {
-                        // ((λ (f1) body) a1 a2) => reduce(body[f1/a1] a2)
-                        let newaargs = redaargs take len fargs;
-                            restaargs = redaargs drop len fargs;
-                            newbody = S.substitute(D.make(fargs, newaargs), body);
-                        in  reduce(M.apply(reduce(newbody), restaargs))
-                    }
-                    (gt) {
-                        // ((λ (f1 f2) body) a1) => (λ (f2) body[f1/a1])
-                        let newfargs = fargs take len redaargs;
-                            newbody = S.substitute(D.make(newfargs, redaargs), body);
-                            restfargs = fargs drop len redaargs;
-                        in  M.lambda(restfargs, newbody);
-                    }
-                    (eq) {
-                        // ((λ (f1 f2) body) a1 a2) => reduce(body[f1/a1, f2/a2])
-                        let newbody = S.substitute(D.make(fargs, redaargs), body);
-                        in  reduce(newbody)
-                    }
-                }
+                reduce(S.substitute(D.make(fargs, redaargs), body))
             }
-
             (x) {
                 M.apply(reduce(x), redaargs)
             }
