@@ -1,0 +1,272 @@
+namespace
+
+    link "../dictutils.fn" as D;
+    link "minexpr.fn" as M;
+    link "../listutils.fn" as list;
+    link "../ioutils.fn" as IO;
+    import list operator "_|>_";
+    import list operator "_&&_";
+    import list operator "_zip_";
+    import list operator "unzip_";
+    import list operator "len_";
+    import list operator "_take_";
+    import list operator "_drop_";
+    import IO operator "$_";
+
+// un-currying optimization, create f$arity_n for each letrec-bound
+// f with arity n > 1, and rewrite all saturated applications of f
+// to call the f$arity_n with all arguments at once.
+// N.B. this only applies when the application arity is greater than
+// or equal to the semantic arity of the original function.
+// If greater, then the remaining argument applications are unchanged.
+//
+// i.e. if f originally had arity 3:
+//      (((((f a) b) c) d) e)  -->  (((f$arity_3 a b c) d) e)
+
+// This pass must run before CPS as it assumes actual arities are unchanged.
+
+fn uncurry(expr) {
+    let
+        fn unc(expr, env) {
+            let
+                fn make_arity_n(base, arity) {
+                    base @@ "$arity_" @@ $arity;
+                }
+                fn apply_helper(apply) {
+                    // find the function and the application arity
+                    // if the function is in the env
+                    // and the application arity is >= the env arity
+                    // then apply the f$arity_n function to the first n args
+                    // and apply the remaining args to the result in curried form
+                    let
+                        fn make_saturated_application(s, args) {
+                            M.apply(M.var(make_arity_n(s, len args)), args)
+                        }
+
+                        fn make_curried_application {
+                            (expr, [arg]) {
+                                M.apply(expr, [arg])
+                            }
+                            (expr, arg @ args) {
+                                M.apply(make_curried_application(expr, args), [arg])
+                            }
+                            (_, []) {
+                                error("make_curried_application with no args")
+                            }
+                        }
+
+                        fn re_curry_expr {
+                            (expr, [arg]) {
+                                M.lambda([arg], expr)
+                            }
+                            (expr, arg @ args) {
+                                M.lambda([arg], re_curry_expr(expr, args))
+                            }
+                            (_, []) {
+                                error("re_curry_expr with no args")
+                            }
+                        }
+
+                        fn process_apply_lambda(body, fargs, aargs, env) {
+                            switch (body) {
+                                (M.lambda([arg], body)) {
+                                    process_apply_lambda(body, arg @ fargs, aargs, D.delete(arg, env))
+                                }
+                                (x) {
+                                    switch (len fargs <=> len aargs) {
+                                        (gt) {
+                                            // under-saturated so keep curried
+                                            make_curried_application(
+                                                re_curry_expr(unc(body, env), fargs),
+                                                aargs
+                                            )
+                                        }
+                                        (eq) {
+                                            // saturated application so apply
+                                            M.apply(M.lambda(fargs, unc(body, env)), aargs)
+                                        }
+                                        (lt) {
+                                            // over-saturated, do both
+                                            let
+                                                mainargs = aargs take len fargs;
+                                                restargs = aargs drop len fargs;
+                                            in
+                                                make_curried_application(
+                                                    M.apply(M.lambda(fargs, unc(body, env)), mainargs),
+                                                    restargs
+                                                )
+
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        fn process_apply(expr, args) {
+                            switch (expr) {
+                                (M.var(s)) {
+                                    switch(D.lookup(s, env)) {
+                                        (just(arity)) {
+                                            if (arity > 1) {
+                                                switch (arity <=> len args) {
+                                                    (gt) {
+                                                        // under-application so keep curried
+                                                        make_curried_application(M.var(s), args)
+                                                    }
+                                                    (eq) {
+                                                        // saturated application so apply
+                                                        make_saturated_application(s, args)
+                                                    }
+                                                    (lt) {
+                                                        // over-application so apply and curry the rest
+                                                        let
+                                                            mainargs = args take arity;
+                                                            restargs = args drop arity;
+                                                        in
+                                                            make_curried_application(
+                                                                make_saturated_application(s, mainargs),
+                                                                restargs)
+                                                    }
+                                                }
+                                            } else {
+                                                make_curried_application(M.var(s), args)
+                                            }
+                                        }
+                                        (nothing) {
+                                            make_curried_application(M.var(s), args)
+                                        }
+                                    }
+                                }
+                                (M.apply(op, [arg])) {
+                                    process_apply(op, u(arg) @ args)
+                                }
+                                (M.lambda([arg], body)) {
+                                    process_apply_lambda(body, [arg], args, D.delete(arg, env))
+                                }
+                                (x) {
+                                    make_curried_application(u(x), args)
+                                }
+                            }
+                        }
+
+                    in
+                        switch(apply) {
+                            (M.apply(expr, args)) {
+                                process_apply(expr, args)
+                            }
+                            (x) {
+                                error("bad argument to apply_helper")
+                            }
+                        }
+                }
+
+                fn letrec_helper {
+                    (M.letrec_expr(bindings, body)) {
+                        let
+                            fn collect_arities {
+                                (#(name, #(expr, arity)) @ bindings, env) {
+                                    D.insert(name, arity, collect_arities(bindings, env))
+                                }
+                                ([], env) { env }
+                            }
+                            fn flatten_lambda {
+                                (M.lambda([arg], body)) {
+                                    switch (flatten_lambda(body)) {
+                                        (M.lambda(args, body)) {
+                                            M.lambda(arg @ args, body)
+                                        }
+                                        (body) {
+                                            M.lambda([arg], body)
+                                        }
+                                    }
+                                }
+                                (body) { body }
+                            }
+                            fn extend_bindings {
+                                (#(name, #(expr, arity)) @ bindings, env) {
+                                    let
+                                        rest_bindings = extend_bindings(bindings, env);
+                                        newExpr = unc(expr, env);
+                                    in
+                                        if (arity > 1) {
+                                            #(make_arity_n(name, arity),
+                                                #(flatten_lambda(newExpr), arity)) @
+                                            #(name, #(newExpr, arity)) @ rest_bindings
+                                        } else {
+                                            #(name, #(newExpr, arity)) @ rest_bindings
+                                        }
+                                }
+                                ([], _) { [] }
+                            }
+                            newEnv = collect_arities(bindings, env);
+                            newBindings = extend_bindings(bindings, newEnv)
+                        in
+                            M.letrec_expr(newBindings, unc(body, newEnv))
+                    }
+                    (_) {
+                        error("letrec_helper given non-letrec")
+                    }
+                }
+
+                fn u {
+                    (M.amb_expr(e1, e2)) {
+                        M.amb_expr(u(e1), u(e2))
+                    }
+
+                    (M.apply(x=M.primop(_), args)) {
+                        M.apply(x, args |> u)
+                    }
+
+                    (x=M.apply(_, _)) {
+                        apply_helper(x);
+                    }
+
+                    (M.callcc_expr(e)) {
+                        M.callcc_expr(u(e))
+                    }
+
+                    (M.cond_expr(e, cases)) {
+                        M.cond_expr(u(e), cases |> identity && u)
+                    }
+
+                    (M.if_expr(e1, e2, e3)) {
+                        M.if_expr(u(e1), u(e2), u(e3))
+                    }
+
+                    // "in the wild" not in a letrec binding
+                    (M.lambda(args, body)) {
+                        M.lambda(args, unc(body, D.delete_list(args, env)))
+                    }
+
+                    (x=M.letrec_expr(_, _)) {
+                        letrec_helper(x)
+                    }
+
+                    (M.lookup(name, id, e)) {
+                        M.lookup(name, id, u(e))
+                    }
+
+                    (M.make_vec(num, exprs)) {
+                        M.make_vec(num, exprs |> u)
+                    }
+
+                    (M.match_cases(e, cases)) {
+                        M.match_cases(u(e), cases |> identity && u)
+                    }
+
+                    (M.namespaces(exprs)) {
+                        M.namespaces(exprs |> u)
+                    }
+
+                    (M.sequence(exprs)) {
+                        M.sequence(exprs |> u)
+                    }
+
+                    (x) { x }
+                }
+            in
+                u(expr)
+        }
+    in
+        unc(expr, D.empty())
+}
