@@ -8,11 +8,11 @@ let
 
     operator "_=>_" left 8 fn (arg, fun) { fun(arg) };
     import lst operator "_|>_";
+    import lst operator "len_";
+    import lst operator "_::_";
     operator "_?_" left 8 fn (l, n) { lst.nth(n, l) };
     operator "_??_" left 8 fn (l, ns) { lst.nths(ns, l) };
-    operator "_.._" left 8 lst.range;
     import io operator "$_";
-    import lst operator "len_";
 
     // input data structures
     typedef pattern {
@@ -485,7 +485,7 @@ let
 
     // makeTags: string -> number -> list(pattern)
     fn makeTags(tag, n) {
-        0 .. n - 1 |> makeTag(tag) |> fn (t) { tagged(t, wildcard) }
+        (0 :: (n - 1)) |> makeTag(tag) |> fn (t) { tagged(t, wildcard) }
     }
 
     // arity: pattern -> number
