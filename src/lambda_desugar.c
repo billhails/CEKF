@@ -209,6 +209,7 @@ static MinApply *desugarLamApply(LamApply *node) {
     MinExprList *args = desugarLamArgs(node->args);
     PROTECT(args);
     MinApply *result = newMinApply(CPI(node), function, args);
+    result->isBuiltin = node->isBuiltin;
     UNPROTECT(save);
     LEAVE(desugarLamApply);
     return result;

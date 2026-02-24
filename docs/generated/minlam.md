@@ -14,6 +14,7 @@ MinPrimApp --exp1--> MinExp
 MinPrimApp --exp2--> MinExp
 MinApply --function--> MinExp
 MinApply --args--> MinExprList
+MinApply --isBuiltin--> bool
 MinLookUp --nsId--> int
 MinLookUp --exp--> MinExp
 MinIff --condition--> MinExp

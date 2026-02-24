@@ -77,8 +77,8 @@ fn free {
         list.concat(cases |> fn (#(_, e)) { free(e) }))
     }
 
-    (M.namespaces(exprs)) {
-        list.unique(list.concat(exprs |> free))
+    (M.namespaces(_)) {
+        [] // nothing free in there
     }
 
     (M.sequence(exps)) {

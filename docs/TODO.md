@@ -3,9 +3,18 @@
 More of a wish-list than a hard and fast plan.
 
 * Types.
-  * Consider type classes as a general solution to `EQ <type>` etc.
+  * Consider type classes as a general solution to `EQ <type>`, `map` etc.
   * Records should create accessor functions for each tag.
     * if there is only one type variant.
+* Namespaces.
+  * Figure out how to desugar namespaces in the IR.
+    * There should be no special forms.
+    * We can do without the `namespace.(<arbitrary-expression>)` feature as it is very little used.
+    * Namespaces might be normal functions with a dispatch table.
+    * Or a large vec?
+    * Or name mangled (`namespace.val` becomes `namespace_val` essentially).
+    * We also want `import ns function x` and `import ns functions`.
+    * And `import ns typedef x` and `import ns typedefs`.
 * Parser.
   * re-elist the now-available `macro` keyword for proper syntactic extensibility:
     * if/then/else => `(fn { (true) {then} (false) {else} }(if))` (we already do this but hard-coded in the parser).

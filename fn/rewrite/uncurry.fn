@@ -20,6 +20,8 @@ namespace
 //
 // i.e. if f originally had arity 3:
 //      (((((f a) b) c) d) e)  -->  (((f$arity_3 a b c) d) e)
+// but
+//                  ((f a) b)  -->  ((f a) b)
 
 // This pass must run before CPS as it assumes actual arities are unchanged.
 

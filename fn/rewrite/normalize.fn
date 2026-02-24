@@ -7,7 +7,7 @@ namespace
     import list operator "_|>_";
     import list operator "_&&_";
 
-    // Normalization algorithm
+    // A-Normalization algorithm
 
     fn genstring() { "$" @@ $incr() }
     fn gensym() { M.var(genstring()) }

@@ -1979,6 +1979,7 @@ static LamExp *convertFunCall(AstFunCall *funCall, LamContext *env) {
             return result;
         }
         result = makeApplication(function, args);
+        getLamExp_Apply(result)->isBuiltin = funCall->isBuiltin;
         UNPROTECT(save);
         return result;
     }

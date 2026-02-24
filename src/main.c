@@ -45,6 +45,7 @@
 #include "memory.h"
 #include "minlam_alphaconvert.h"
 #include "minlam_beta.h"
+#include "minlam_curry.h"
 #include "minlam_eta.h"
 #include "minlam_fold.h"
 #include "minlam_pp.h"
@@ -580,6 +581,11 @@ int main(int argc, char *argv[]) {
             exit(0);
         }
 
+        minExp = curryMinExp(minExp);
+        REPLACE_PROTECT(save2, minExp);
+
+        // if we move currying below this point we need to
+        // update the following steps to propagate the isBuiltin flag
         minExp = betaMinExp(minExp);
         REPLACE_PROTECT(save2, minExp);
 

@@ -237,6 +237,7 @@ static MinApply *visitMinApply(MinApply *node, MinAlphaEnv *context) {
     if (changed) {
         // Create new node with modified fields
         MinApply *result = newMinApply(CPI(node), new_function, new_args);
+        result->isBuiltin = node->isBuiltin;
         UNPROTECT(save);
         return result;
     }

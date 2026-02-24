@@ -71,6 +71,7 @@ AstNamedArg --name--> HashSymbol
 AstNamedArg --arg--> AstFarg
 AstFunCall --function--> AstExpression
 AstFunCall --arguments--> AstExpressions
+AstFunCall --isBuiltin--> bool
 AstExpressions --expression--> AstExpression
 AstExpressions --next--> AstExpressions
 AstLookUpSymbol --nsId--> int

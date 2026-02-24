@@ -366,11 +366,12 @@ structs:
             brief: AST Function Call
             description: >-
                 A function call in the AST, which can be a call to a
-                normal function or a macro. Contains the function being
+                normal function, a macro or a builtin. Contains the function being
                 called and its arguments.
         data:
             function: AstExpression
             arguments: AstExpressions
+            isBuiltin: bool=false
 
     AstExpressions:
         meta:

@@ -57,6 +57,7 @@ structs:
         data:
             function: MinExp
             args: MinExprList
+            isBuiltin: bool=false
 
     MinLookUp:
         meta:

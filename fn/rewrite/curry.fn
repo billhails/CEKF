@@ -9,6 +9,11 @@ import list operator "unzip_";
 import list operator "len_";
 
 
+// Basically, this does:
+//     (λ (x y z) body)  -->  (λ x (λ y (λ z body)))
+// and
+//     (f a b c)  -->  (((f a) b) c)
+
 fn arity {
     (M.lambda(params, _)) |
     (M.lambdac(params, _)) { len params }
@@ -33,7 +38,7 @@ fn curry {
     }
 
     (M.apply(e, a @ rest)) {
-        curry(M.apply(M.apply(e, [curry(a)]), rest))
+        curry(M.apply(M.apply(e, [a]), rest))
     }
 
     (M.callcc_expr(e)) {
