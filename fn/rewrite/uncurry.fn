@@ -215,7 +215,7 @@ fn uncurry(expr) {
                     }
 
                     (M.namespaces(exprs)) {
-                        // namespaces don't see variables from outside
+                        // namespaces don't see variables from the outside
                         M.namespaces(exprs |> unc flip D.empty())
                     }
 
