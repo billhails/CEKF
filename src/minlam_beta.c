@@ -36,7 +36,6 @@ static MinLam *betaMinLam(MinLam *node);
 static MinExprList *betaMinExprList(MinExprList *node);
 static MinPrimApp *betaMinPrimApp(MinPrimApp *node);
 static MinExp *betaMinApply(MinExp *node);
-static MinLookUp *betaMinLookUp(MinLookUp *node);
 static MinIff *betaMinIff(MinIff *node);
 static MinCond *betaMinCond(MinCond *node);
 static MinIntCondCases *betaMinIntCondCases(MinIntCondCases *node);
@@ -51,7 +50,6 @@ static MinAlphaEnv *betaMinAlphaEnv(MinAlphaEnv *node);
 static MinCondCases *betaMinCondCases(MinCondCases *node);
 static SymbolMap *betaSymbolMap(SymbolMap *node);
 static SymbolList *betaSymbolList(SymbolList *node);
-static MinNameSpaceArray *betaMinNameSpaceArray(MinNameSpaceArray *node);
 static MinAlphaEnvArray *betaMinAlphaEnvArray(MinAlphaEnvArray *node);
 static bool isAexp(MinExp *exp);
 static bool areAexpList(MinExprList *args);
@@ -95,7 +93,6 @@ static bool isAexp(MinExp *exp) {
     case MINEXP_TYPE_STDINT:
     case MINEXP_TYPE_BIGINTEGER:
     case MINEXP_TYPE_CHARACTER:
-    case MINEXP_TYPE_NAMESPACES:
         return true;
     case MINEXP_TYPE_PRIM: {
         MinPrimApp *prim = getMinExp_Prim(exp);
@@ -105,8 +102,6 @@ static bool isAexp(MinExp *exp) {
         return areAexpList(getMinExp_MakeVec(exp));
     case MINEXP_TYPE_SEQUENCE:
         return areAexpList(getMinExp_Sequence(exp));
-    case MINEXP_TYPE_LOOKUP:
-        return isAexp(getMinExp_LookUp(exp)->exp);
     default:
         return false;
     }
@@ -373,30 +368,6 @@ static MinExp *betaMinApply(MinExp *exp) {
     UNPROTECT(save);
     LEAVE(betaMinApply);
     return exp;
-}
-
-static MinLookUp *betaMinLookUp(MinLookUp *node) {
-    ENTER(betaMinLookUp);
-    if (node == NULL) {
-        LEAVE(betaMinLookUp);
-        return NULL;
-    }
-
-    bool changed = false;
-    MinExp *new_exp = betaMinExp(node->exp);
-    int save = PROTECT(new_exp);
-    changed = changed || (new_exp != node->exp);
-
-    if (changed) {
-        MinLookUp *result = newMinLookUp(CPI(node), node->nsId, new_exp);
-        UNPROTECT(save);
-        LEAVE(betaMinLookUp);
-        return result;
-    }
-
-    UNPROTECT(save);
-    LEAVE(betaMinLookUp);
-    return node;
 }
 
 static MinIff *betaMinIff(MinIff *node) {
@@ -761,9 +732,6 @@ MinExp *betaMinExp(MinExp *node) {
         }
         break;
     }
-    case MINEXP_TYPE_ENV: {
-        break;
-    }
     case MINEXP_TYPE_ERROR: {
         break;
     }
@@ -794,15 +762,6 @@ MinExp *betaMinExp(MinExp *node) {
         }
         break;
     }
-    case MINEXP_TYPE_LOOKUP: {
-        MinLookUp *variant = getMinExp_LookUp(node);
-        MinLookUp *new_variant = betaMinLookUp(variant);
-        if (new_variant != variant) {
-            PROTECT(new_variant);
-            result = newMinExp_LookUp(CPI(node), new_variant);
-        }
-        break;
-    }
     case MINEXP_TYPE_MAKEVEC: {
         MinExprList *variant = getMinExp_MakeVec(node);
         MinExprList *new_variant = betaMinExprList(variant);
@@ -818,15 +777,6 @@ MinExp *betaMinExp(MinExp *node) {
         if (new_variant != variant) {
             PROTECT(new_variant);
             result = newMinExp_Match(CPI(node), new_variant);
-        }
-        break;
-    }
-    case MINEXP_TYPE_NAMESPACES: {
-        MinNameSpaceArray *variant = getMinExp_NameSpaces(node);
-        MinNameSpaceArray *new_variant = betaMinNameSpaceArray(variant);
-        if (new_variant != variant) {
-            PROTECT(new_variant);
-            result = newMinExp_NameSpaces(CPI(node), new_variant);
         }
         break;
     }
@@ -941,36 +891,6 @@ static SymbolList *betaSymbolList(SymbolList *node) {
 
     UNPROTECT(save);
     LEAVE(betaSymbolList);
-    return node;
-}
-
-static MinNameSpaceArray *betaMinNameSpaceArray(MinNameSpaceArray *node) {
-    ENTER(betaMinNameSpaceArray);
-    if (node == NULL) {
-        LEAVE(betaMinNameSpaceArray);
-        return NULL;
-    }
-
-    bool changed = false;
-    MinNameSpaceArray *result = newMinNameSpaceArray();
-    int save = PROTECT(result);
-
-    for (Index i = 0; i < node->size; i++) {
-        struct MinExp *element = peeknMinNameSpaceArray(node, i);
-        struct MinExp *new_element = betaMinExp(element);
-        PROTECT(new_element);
-        changed = changed || (new_element != element);
-        pushMinNameSpaceArray(result, new_element);
-    }
-
-    if (changed) {
-        UNPROTECT(save);
-        LEAVE(betaMinNameSpaceArray);
-        return result;
-    }
-
-    UNPROTECT(save);
-    LEAVE(betaMinNameSpaceArray);
     return node;
 }
 

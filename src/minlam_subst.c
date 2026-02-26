@@ -36,7 +36,6 @@ static MinLam *substMinLam(MinLam *node, MinExpTable *context);
 static MinExprList *substMinExprList(MinExprList *node, MinExpTable *context);
 static MinPrimApp *substMinPrimApp(MinPrimApp *node, MinExpTable *context);
 static MinApply *substMinApply(MinApply *node, MinExpTable *context);
-static MinLookUp *substMinLookUp(MinLookUp *node, MinExpTable *context);
 static MinIff *substMinIff(MinIff *node, MinExpTable *context);
 static MinCond *substMinCond(MinCond *node, MinExpTable *context);
 static MinIntCondCases *substMinIntCondCases(MinIntCondCases *node,
@@ -54,8 +53,6 @@ static MinAlphaEnv *substMinAlphaEnv(MinAlphaEnv *node, MinExpTable *context);
 static MinCondCases *substMinCondCases(MinCondCases *node,
                                        MinExpTable *context);
 static SymbolMap *substSymbolMap(SymbolMap *node, MinExpTable *context);
-static MinNameSpaceArray *substMinNameSpaceArray(MinNameSpaceArray *node,
-                                                 MinExpTable *context);
 static MinAlphaEnvArray *substMinAlphaEnvArray(MinAlphaEnvArray *node,
                                                MinExpTable *context);
 
@@ -198,32 +195,6 @@ static MinApply *substMinApply(MinApply *node, MinExpTable *context) {
 
     UNPROTECT(save);
     LEAVE(substMinApply);
-    return node;
-}
-
-static MinLookUp *substMinLookUp(MinLookUp *node, MinExpTable *context) {
-    ENTER(substMinLookUp);
-    if (node == NULL) {
-        LEAVE(substMinLookUp);
-        return NULL;
-    }
-
-    bool changed = false;
-    // Pass through nsId (type: int, not memory-managed)
-    MinExp *new_exp = substMinExp(node->exp, context);
-    int save = PROTECT(new_exp);
-    changed = changed || (new_exp != node->exp);
-
-    if (changed) {
-        // Create new node with modified fields
-        MinLookUp *result = newMinLookUp(CPI(node), node->nsId, new_exp);
-        UNPROTECT(save);
-        LEAVE(substMinLookUp);
-        return result;
-    }
-
-    UNPROTECT(save);
-    LEAVE(substMinLookUp);
     return node;
 }
 
@@ -629,10 +600,6 @@ MinExp *substMinExp(MinExp *node, MinExpTable *context) {
         }
         break;
     }
-    case MINEXP_TYPE_ENV: {
-        // void_ptr
-        break;
-    }
     case MINEXP_TYPE_ERROR: {
         // void_ptr
         break;
@@ -667,16 +634,6 @@ MinExp *substMinExp(MinExp *node, MinExpTable *context) {
         }
         break;
     }
-    case MINEXP_TYPE_LOOKUP: {
-        // MinLookUp
-        MinLookUp *variant = getMinExp_LookUp(node);
-        MinLookUp *new_variant = substMinLookUp(variant, context);
-        if (new_variant != variant) {
-            PROTECT(new_variant);
-            result = newMinExp_LookUp(CPI(node), new_variant);
-        }
-        break;
-    }
     case MINEXP_TYPE_MAKEVEC: {
         // MinExprList
         MinExprList *variant = getMinExp_MakeVec(node);
@@ -694,17 +651,6 @@ MinExp *substMinExp(MinExp *node, MinExpTable *context) {
         if (new_variant != variant) {
             PROTECT(new_variant);
             result = newMinExp_Match(CPI(node), new_variant);
-        }
-        break;
-    }
-    case MINEXP_TYPE_NAMESPACES: {
-        // MinNameSpaceArray
-        MinNameSpaceArray *variant = getMinExp_NameSpaces(node);
-        MinNameSpaceArray *new_variant =
-            substMinNameSpaceArray(variant, context);
-        if (new_variant != variant) {
-            PROTECT(new_variant);
-            result = newMinExp_NameSpaces(CPI(node), new_variant);
         }
         break;
     }
@@ -807,38 +753,6 @@ static SymbolMap *substSymbolMap(SymbolMap *node, MinExpTable *context) {
     }
 #endif
     LEAVE(substSymbolMap);
-    return node;
-}
-
-static MinNameSpaceArray *substMinNameSpaceArray(MinNameSpaceArray *node,
-                                                 MinExpTable *context) {
-    ENTER(substMinNameSpaceArray);
-    if (node == NULL) {
-        LEAVE(substMinNameSpaceArray);
-        return NULL;
-    }
-
-    bool changed = false;
-    MinNameSpaceArray *result = newMinNameSpaceArray();
-    int save = PROTECT(result);
-
-    // Iterate over all elements
-    for (Index i = 0; i < node->size; i++) {
-        struct MinExp *element = peeknMinNameSpaceArray(node, i);
-        struct MinExp *new_element = substMinExp(element, context);
-        PROTECT(new_element);
-        changed = changed || (new_element != element);
-        pushMinNameSpaceArray(result, new_element);
-    }
-
-    if (changed) {
-        UNPROTECT(save);
-        LEAVE(substMinNameSpaceArray);
-        return result;
-    }
-
-    UNPROTECT(save);
-    LEAVE(substMinNameSpaceArray);
     return node;
 }
 

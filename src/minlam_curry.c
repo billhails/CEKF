@@ -36,7 +36,6 @@ static MinExp *curryMinLam(MinExp *exp);
 static MinExp *curryMinApply(MinExp *exp);
 static MinExprList *curryMinExprList(MinExprList *node);
 static MinPrimApp *curryMinPrimApp(MinPrimApp *node);
-static MinLookUp *curryMinLookUp(MinLookUp *node);
 static MinIff *curryMinIff(MinIff *node);
 static MinCond *curryMinCond(MinCond *node);
 static MinIntCondCases *curryMinIntCondCases(MinIntCondCases *node);
@@ -47,7 +46,6 @@ static MinLetRec *curryMinLetRec(MinLetRec *node);
 static MinBindings *curryMinBindings(MinBindings *node);
 static MinAmb *curryMinAmb(MinAmb *node);
 static MinCondCases *curryMinCondCases(MinCondCases *node);
-static MinNameSpaceArray *curryMinNameSpaceArray(MinNameSpaceArray *node);
 
 // λ(x, y, z) body  -->  λ(x) (λ(y) (λ(z) curry(body)))
 static MinExp *curryMinLam(MinExp *exp) {
@@ -192,26 +190,6 @@ static MinPrimApp *curryMinPrimApp(MinPrimApp *node) {
 
     UNPROTECT(save);
     LEAVE(curryMinPrimApp);
-    return node;
-}
-
-static MinLookUp *curryMinLookUp(MinLookUp *node) {
-    ENTER(curryMinLookUp);
-    if (node == NULL) {
-        LEAVE(curryMinLookUp);
-        return NULL;
-    }
-
-    MinExp *new_exp = curryMinExp(node->exp);
-    if (new_exp != node->exp) {
-        int save = PROTECT(new_exp);
-        MinLookUp *result = newMinLookUp(CPI(node), node->nsId, new_exp);
-        UNPROTECT(save);
-        LEAVE(curryMinLookUp);
-        return result;
-    }
-
-    LEAVE(curryMinLookUp);
     return node;
 }
 
@@ -536,9 +514,6 @@ MinExp *curryMinExp(MinExp *node) {
         }
         break;
     }
-    case MINEXP_TYPE_ENV: {
-        break;
-    }
     case MINEXP_TYPE_ERROR: {
         break;
     }
@@ -564,15 +539,6 @@ MinExp *curryMinExp(MinExp *node) {
         }
         break;
     }
-    case MINEXP_TYPE_LOOKUP: {
-        MinLookUp *variant = getMinExp_LookUp(node);
-        MinLookUp *new_variant = curryMinLookUp(variant);
-        if (new_variant != variant) {
-            PROTECT(new_variant);
-            result = newMinExp_LookUp(CPI(node), new_variant);
-        }
-        break;
-    }
     case MINEXP_TYPE_MAKEVEC: {
         MinExprList *variant = getMinExp_MakeVec(node);
         MinExprList *new_variant = curryMinExprList(variant);
@@ -588,15 +554,6 @@ MinExp *curryMinExp(MinExp *node) {
         if (new_variant != variant) {
             PROTECT(new_variant);
             result = newMinExp_Match(CPI(node), new_variant);
-        }
-        break;
-    }
-    case MINEXP_TYPE_NAMESPACES: {
-        MinNameSpaceArray *variant = getMinExp_NameSpaces(node);
-        MinNameSpaceArray *new_variant = curryMinNameSpaceArray(variant);
-        if (new_variant != variant) {
-            PROTECT(new_variant);
-            result = newMinExp_NameSpaces(CPI(node), new_variant);
         }
         break;
     }
@@ -669,34 +626,4 @@ static MinCondCases *curryMinCondCases(MinCondCases *node) {
     UNPROTECT(save);
     LEAVE(curryMinCondCases);
     return result;
-}
-
-static MinNameSpaceArray *curryMinNameSpaceArray(MinNameSpaceArray *node) {
-    ENTER(curryMinNameSpaceArray);
-    if (node == NULL) {
-        LEAVE(curryMinNameSpaceArray);
-        return NULL;
-    }
-
-    bool changed = false;
-    MinNameSpaceArray *result = newMinNameSpaceArray();
-    int save = PROTECT(result);
-
-    for (Index i = 0; i < node->size; i++) {
-        struct MinExp *element = peeknMinNameSpaceArray(node, i);
-        struct MinExp *new_element = curryMinExp(element);
-        PROTECT(new_element);
-        changed = changed || (new_element != element);
-        pushMinNameSpaceArray(result, new_element);
-    }
-
-    if (changed) {
-        UNPROTECT(save);
-        LEAVE(curryMinNameSpaceArray);
-        return result;
-    }
-
-    UNPROTECT(save);
-    LEAVE(curryMinNameSpaceArray);
-    return node;
 }

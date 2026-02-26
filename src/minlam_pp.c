@@ -139,34 +139,9 @@ void ppMinExp(MinExp *exp) {
     case MINEXP_TYPE_AMB:
         ppMinAmb(getMinExp_Amb(exp));
         break;
-    case MINEXP_TYPE_NAMESPACES:
-        ppMinNameSpaces(getMinExp_NameSpaces(exp));
-        break;
-    case MINEXP_TYPE_ENV:
-        eprintf("env");
-        break;
-    case MINEXP_TYPE_LOOKUP:
-        ppMinLookUp(getMinExp_LookUp(exp));
-        break;
     default:
         eprintf("<unrecognised expression type %s>", minExpTypeName(exp->type));
     }
-}
-
-void ppMinLookUp(MinLookUp *lookUp) {
-    eprintf("(lookUp %d ", lookUp->nsId);
-    ppMinExp(lookUp->exp);
-    eprintf(")");
-}
-
-void ppMinNameSpaces(MinNameSpaceArray *arr) {
-    eprintf("(nameSpaces");
-    for (Index i = 0; i < arr->size; ++i) {
-        eprintf(" [");
-        ppMinExp(arr->entries[i]);
-        eprintf("]");
-    }
-    eprintf(")");
 }
 
 void ppMinPrimApp(MinPrimApp *primApp) {

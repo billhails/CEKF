@@ -104,7 +104,7 @@ static HashSymbol *generateQualifiedSymbol(HashSymbol *unqualified,
                                            FileId *id) {
     SCharVec *buf = newSCharVec(128 + strlen(unqualified->name));
     int save = PROTECT(buf);
-    sprintf(buf->entries, "#%lu$%lu#%s", id->stIno, id->stDev,
+    sprintf(buf->entries, "#%lu#%lu#%s", id->stIno, id->stDev,
             unqualified->name);
     HashSymbol *qualified = newSymbol(buf->entries);
     UNPROTECT(save);

@@ -51,7 +51,6 @@ static MinPrimApp *desugarLamPrimApp(LamPrimApp *node);
 static MinExprList *desugarLamSequence(LamSequence *node);
 static MinExprList *desugarLamArgs(LamArgs *node);
 static MinApply *desugarLamApply(LamApply *node);
-static MinLookUp *desugarLamLookUp(LamLookUp *node);
 static MinExprList *desugarLamMakeVec(LamMakeVec *node);
 static MinIff *desugarLamIff(LamIff *node);
 static MinCond *desugarLamCond(LamCond *node);
@@ -64,7 +63,6 @@ static MinLetRec *desugarLamLetRec(LamLetRec *node);
 static MinBindings *desugarLamBindings(LamBindings *node);
 static MinAmb *desugarLamAmb(LamAmb *node);
 static MinCondCases *desugarLamCondCases(LamCondCases *node);
-static MinNameSpaceArray *desugarLamNameSpaceArray(LamNameSpaceArray *node);
 
 char *desugar_conversion_function = NULL;
 int desugar_flag = 0;
@@ -212,21 +210,6 @@ static MinApply *desugarLamApply(LamApply *node) {
     result->isBuiltin = node->isBuiltin;
     UNPROTECT(save);
     LEAVE(desugarLamApply);
-    return result;
-}
-
-static MinLookUp *desugarLamLookUp(LamLookUp *node) {
-    ENTER(desugarLamLookUp);
-    if (node == NULL) {
-        LEAVE(desugarLamLookUp);
-        return NULL;
-    }
-
-    MinExp *exp = desugarLamExp(node->exp);
-    int save = PROTECT(exp);
-    MinLookUp *result = newMinLookUp(CPI(node), node->nsId, exp);
-    UNPROTECT(save);
-    LEAVE(desugarLamLookUp);
     return result;
 }
 
@@ -671,30 +654,6 @@ static MinCondCases *desugarLamCondCases(LamCondCases *node) {
     return result;
 }
 
-static MinNameSpaceArray *desugarLamNameSpaceArray(LamNameSpaceArray *node) {
-    ENTER(desugarLamNameSpaceArray);
-    if (node == NULL) {
-        LEAVE(desugarLamNameSpaceArray);
-        return NULL;
-    }
-
-    MinNameSpaceArray *result = newMinNameSpaceArray();
-    int save = PROTECT(result);
-
-    // Iterate over all elements
-    for (Index i = 0; i < node->size; i++) {
-        LamExp *element = peeknLamNameSpaceArray(node, i);
-        struct MinExp *new = desugarLamExp(element);
-        int save2 = PROTECT(new);
-        pushMinNameSpaceArray(result, new);
-        UNPROTECT(save2);
-    }
-
-    UNPROTECT(save);
-    LEAVE(desugarLamNameSpaceArray);
-    return result;
-}
-
 // Main desugaring function and public interface
 MinExp *desugarLamExp(LamExp *node) {
     ENTER(desugarLamExp);
@@ -792,12 +751,6 @@ MinExp *desugarLamExp(LamExp *node) {
     case LAMEXP_TYPE_LETSTAR:
         result = desugarLamLetStar(node);
         break;
-    case LAMEXP_TYPE_LOOKUP: {
-        MinLookUp *new = desugarLamLookUp(getLamExp_LookUp(node));
-        PROTECT(new);
-        result = newMinExp_LookUp(CPI(node), new);
-        break;
-    }
     case LAMEXP_TYPE_MAKETUPLE:
         result = desugarLamMakeTuple(node);
         break;
@@ -811,13 +764,6 @@ MinExp *desugarLamExp(LamExp *node) {
         MinMatch *new = desugarLamMatch(getLamExp_Match(node));
         PROTECT(new);
         result = newMinExp_Match(CPI(node), new);
-        break;
-    }
-    case LAMEXP_TYPE_NAMESPACES: {
-        MinNameSpaceArray *new =
-            desugarLamNameSpaceArray(getLamExp_NameSpaces(node));
-        PROTECT(new);
-        result = newMinExp_NameSpaces(CPI(node), new);
         break;
     }
     case LAMEXP_TYPE_PRIM: {
@@ -859,10 +805,6 @@ MinExp *desugarLamExp(LamExp *node) {
         break;
     case LAMEXP_TYPE_VAR: {
         result = newMinExp_Var(CPI(node), getLamExp_Var(node));
-        break;
-    }
-    case LAMEXP_TYPE_ENV: {
-        result = newMinExp_Env(CPI(node));
         break;
     }
     default:

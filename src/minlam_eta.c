@@ -35,7 +35,6 @@ static MinExp *etaMinLam(MinExp *node);
 static MinExprList *etaMinExprList(MinExprList *node);
 static MinPrimApp *etaMinPrimApp(MinPrimApp *node);
 static MinApply *etaMinApply(MinApply *node);
-static MinLookUp *etaMinLookUp(MinLookUp *node);
 static MinIff *etaMinIff(MinIff *node);
 static MinCond *etaMinCond(MinCond *node);
 static MinIntCondCases *etaMinIntCondCases(MinIntCondCases *node);
@@ -46,7 +45,6 @@ static MinLetRec *etaMinLetRec(MinLetRec *node);
 static MinBindings *etaMinBindings(MinBindings *node);
 static MinAmb *etaMinAmb(MinAmb *node);
 static MinCondCases *etaMinCondCases(MinCondCases *node);
-static MinNameSpaceArray *etaMinNameSpaceArray(MinNameSpaceArray *node);
 static bool etaSafeFunction(MinExp *exp);
 static MinExp *etaMinBindingValue(MinExp *exp);
 static SymbolSet *etaBindingSymbols(MinBindings *node);
@@ -237,30 +235,6 @@ static MinApply *etaMinApply(MinApply *node) {
 
     UNPROTECT(save);
     LEAVE(etaMinApply);
-    return node;
-}
-
-static MinLookUp *etaMinLookUp(MinLookUp *node) {
-    ENTER(etaMinLookUp);
-    if (node == NULL) {
-        LEAVE(etaMinLookUp);
-        return NULL;
-    }
-
-    bool changed = false;
-    MinExp *new_exp = etaMinExp(node->exp);
-    int save = PROTECT(new_exp);
-    changed = changed || (new_exp != node->exp);
-
-    if (changed) {
-        MinLookUp *result = newMinLookUp(CPI(node), node->nsId, new_exp);
-        UNPROTECT(save);
-        LEAVE(etaMinLookUp);
-        return result;
-    }
-
-    UNPROTECT(save);
-    LEAVE(etaMinLookUp);
     return node;
 }
 
@@ -603,9 +577,6 @@ MinExp *etaMinExp(MinExp *node) {
         }
         break;
     }
-    case MINEXP_TYPE_ENV: {
-        break;
-    }
     case MINEXP_TYPE_ERROR: {
         break;
     }
@@ -631,15 +602,6 @@ MinExp *etaMinExp(MinExp *node) {
         }
         break;
     }
-    case MINEXP_TYPE_LOOKUP: {
-        MinLookUp *variant = getMinExp_LookUp(node);
-        MinLookUp *new_variant = etaMinLookUp(variant);
-        if (new_variant != variant) {
-            PROTECT(new_variant);
-            result = newMinExp_LookUp(CPI(node), new_variant);
-        }
-        break;
-    }
     case MINEXP_TYPE_MAKEVEC: {
         MinExprList *variant = getMinExp_MakeVec(node);
         MinExprList *new_variant = etaMinExprList(variant);
@@ -655,15 +617,6 @@ MinExp *etaMinExp(MinExp *node) {
         if (new_variant != variant) {
             PROTECT(new_variant);
             result = newMinExp_Match(CPI(node), new_variant);
-        }
-        break;
-    }
-    case MINEXP_TYPE_NAMESPACES: {
-        MinNameSpaceArray *variant = getMinExp_NameSpaces(node);
-        MinNameSpaceArray *new_variant = etaMinNameSpaceArray(variant);
-        if (new_variant != variant) {
-            PROTECT(new_variant);
-            result = newMinExp_NameSpaces(CPI(node), new_variant);
         }
         break;
     }
@@ -736,34 +689,4 @@ static MinCondCases *etaMinCondCases(MinCondCases *node) {
     UNPROTECT(save);
     LEAVE(etaMinCondCases);
     return result;
-}
-
-static MinNameSpaceArray *etaMinNameSpaceArray(MinNameSpaceArray *node) {
-    ENTER(etaMinNameSpaceArray);
-    if (node == NULL) {
-        LEAVE(etaMinNameSpaceArray);
-        return NULL;
-    }
-
-    bool changed = false;
-    MinNameSpaceArray *result = newMinNameSpaceArray();
-    int save = PROTECT(result);
-
-    for (Index i = 0; i < node->size; i++) {
-        MinExp *element = peeknMinNameSpaceArray(node, i);
-        MinExp *new_element = etaMinExp(element);
-        PROTECT(new_element);
-        changed = changed || (new_element != element);
-        pushMinNameSpaceArray(result, new_element);
-    }
-
-    if (changed) {
-        UNPROTECT(save);
-        LEAVE(etaMinNameSpaceArray);
-        return result;
-    }
-
-    UNPROTECT(save);
-    LEAVE(etaMinNameSpaceArray);
-    return node;
 }

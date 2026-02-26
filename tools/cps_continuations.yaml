@@ -266,30 +266,6 @@ continuations:
       sk: MinExp
       cases: MinMatchList
 
-  TkNameSpaces:
-    transformer: T_k
-    key: k_nameSpaces
-    context: |
-      (E.nameSpaces(exprs)) {
-        Ta_k(exprs, fn (sexprs) {
-          k(E.nameSpaces(sexprs))
-        })
-      }
-    free_vars:
-      k: CpsKont
-
-  TcNameSpaces:
-    transformer: T_k
-    key: c_nameSpaces
-    context: |
-      (E.nameSpaces(exprs)) {
-        Ts_k(exprs, fn (sexprs) {
-          E.apply(c, [E.nameSpaces(sexprs)])
-        })
-      }
-    free_vars:
-      c: MinExp
-
   TkPrimApp1:
     transformer: T_k
     key: k_primapp1

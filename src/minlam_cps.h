@@ -33,7 +33,5 @@ MinBindings *mapMOverBindings(MinBindings *);
 MinMatchList *mapTcOverMatchCases(MinMatchList *, MinExp *);
 void cpsUnzipMinBindings(MinBindings *, SymbolList **, MinExprList **);
 MinExp *cpsNestLets(MinBindings *, MinExp *);
-MinExp *nsaToArgs(MinNameSpaceArray *nsa);
-MinNameSpaceArray *argsToNsa(MinExp *seq);
 
 #endif

@@ -59,18 +59,6 @@ structs:
             args: MinExprList
             isBuiltin: bool=false
 
-    MinLookUp:
-        meta:
-            brief: A lookUp in a nameSpace
-            description: >-
-                Allows the evaluation of an expression
-                in a different nameSpace. Typically the
-                expression is just a variable but it can
-                be any expression.
-        data:
-            nsId: int
-            exp: MinExp
-
     MinIff:
         meta:
             brief: An if-then-else expression
@@ -201,15 +189,12 @@ unions:
             callCC: MinExp
             character: character
             cond: MinCond
-            env: void_ptr
             error: void_ptr
             iff: MinIff
             lam: MinLam
             letRec: MinLetRec
-            lookUp: MinLookUp
             makeVec: MinExprList
             match: MinMatch
-            nameSpaces: MinNameSpaceArray
             prim: MinPrimApp
             sequence: MinExprList
             stdint: int
@@ -230,15 +215,6 @@ hashes:
             entries: MinExp
 
 arrays:
-    MinNameSpaceArray:
-        meta:
-            brief: A list of nameSpaces
-            description: >-
-                This array holds the bodies of all nameSpaces.
-                `ns_id` is an index into this array.
-        data:
-            entries: MinExp
-
     MinAlphaEnvArray:
         meta:
             brief: An array of alpha conversion environments per-namespace.

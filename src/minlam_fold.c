@@ -32,7 +32,6 @@ static MinLam *foldMinLam(MinLam *node);
 static MinExprList *foldMinExprList(MinExprList *node);
 static MinPrimApp *foldMinPrimApp(MinPrimApp *node);
 static MinApply *foldMinApply(MinApply *node);
-static MinLookUp *foldMinLookUp(MinLookUp *node);
 static MinIff *foldMinIff(MinIff *node);
 static MinCond *foldMinCond(MinCond *node);
 static MinIntCondCases *foldMinIntCondCases(MinIntCondCases *node);
@@ -44,7 +43,6 @@ static MinLetRec *foldMinLetRec(MinLetRec *node);
 static MinBindings *foldMinBindings(MinBindings *node);
 static MinAmb *foldMinAmb(MinAmb *node);
 static MinCondCases *foldMinCondCases(MinCondCases *node);
-static MinNameSpaceArray *foldMinNameSpaceArray(MinNameSpaceArray *node);
 
 static bool primOpIsArithmetic(MinPrimOp op) {
     switch (op) {
@@ -128,17 +126,6 @@ static MinApply *foldMinApply(MinApply *node) {
     }
 
     UNPROTECT(save);
-    return node;
-}
-
-static MinLookUp *foldMinLookUp(MinLookUp *node) {
-    if (node == NULL)
-        return NULL;
-
-    MinExp *new_exp = foldMinExp(node->exp);
-    if (new_exp != node->exp)
-        return newMinLookUp(CPI(node), node->nsId, new_exp);
-
     return node;
 }
 
@@ -371,7 +358,6 @@ MinExp *foldMinExp(MinExp *node) {
     case MINEXP_TYPE_BACK:
     case MINEXP_TYPE_BIGINTEGER:
     case MINEXP_TYPE_CHARACTER:
-    case MINEXP_TYPE_ENV:
     case MINEXP_TYPE_ERROR:
     case MINEXP_TYPE_STDINT:
     case MINEXP_TYPE_VAR:
@@ -430,15 +416,6 @@ MinExp *foldMinExp(MinExp *node) {
         }
         break;
     }
-    case MINEXP_TYPE_LOOKUP: {
-        MinLookUp *variant = getMinExp_LookUp(node);
-        MinLookUp *new_variant = foldMinLookUp(variant);
-        if (new_variant != variant) {
-            PROTECT(new_variant);
-            result = newMinExp_LookUp(CPI(node), new_variant);
-        }
-        break;
-    }
     case MINEXP_TYPE_MAKEVEC: {
         MinExprList *variant = getMinExp_MakeVec(node);
         MinExprList *new_variant = foldMinExprList(variant);
@@ -454,15 +431,6 @@ MinExp *foldMinExp(MinExp *node) {
         if (new_variant != variant) {
             PROTECT(new_variant);
             result = newMinExp_Match(CPI(node), new_variant);
-        }
-        break;
-    }
-    case MINEXP_TYPE_NAMESPACES: {
-        MinNameSpaceArray *variant = getMinExp_NameSpaces(node);
-        MinNameSpaceArray *new_variant = foldMinNameSpaceArray(variant);
-        if (new_variant != variant) {
-            PROTECT(new_variant);
-            result = newMinExp_NameSpaces(CPI(node), new_variant);
         }
         break;
     }
@@ -533,29 +501,4 @@ static MinCondCases *foldMinCondCases(MinCondCases *node) {
 
     UNPROTECT(save);
     return result;
-}
-
-static MinNameSpaceArray *foldMinNameSpaceArray(MinNameSpaceArray *node) {
-    if (node == NULL)
-        return NULL;
-
-    bool changed = false;
-    MinNameSpaceArray *result = newMinNameSpaceArray();
-    int save = PROTECT(result);
-
-    for (Index i = 0; i < node->size; i++) {
-        MinExp *element = peeknMinNameSpaceArray(node, i);
-        MinExp *new_element = foldMinExp(element);
-        PROTECT(new_element);
-        changed = changed || (new_element != element);
-        pushMinNameSpaceArray(result, new_element);
-    }
-
-    if (changed) {
-        UNPROTECT(save);
-        return result;
-    }
-
-    UNPROTECT(save);
-    return node;
 }

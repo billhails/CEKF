@@ -35,7 +35,6 @@ static MinPrimApp *visitMinPrimApp(MinPrimApp *node, MinAlphaEnv *context);
 static MinExprList *visitMinSequence(MinExprList *node, MinAlphaEnv *context);
 static MinExprList *visitMinArgs(MinExprList *node, MinAlphaEnv *context);
 static MinApply *visitMinApply(MinApply *node, MinAlphaEnv *context);
-static MinLookUp *visitMinLookUp(MinLookUp *node, MinAlphaEnv *context);
 static MinExprList *visitMinMakeVec(MinExprList *node, MinAlphaEnv *context);
 static MinIff *visitMinIff(MinIff *node, MinAlphaEnv *context);
 static MinCond *visitMinCond(MinCond *node, MinAlphaEnv *context);
@@ -52,8 +51,6 @@ static MinAmb *visitMinAmb(MinAmb *node, MinAlphaEnv *context);
 static MinExp *visitMinExp(MinExp *node, MinAlphaEnv *context);
 static MinCondCases *visitMinCondCases(MinCondCases *node,
                                        MinAlphaEnv *context);
-static MinNameSpaceArray *visitMinNameSpaceArray(MinNameSpaceArray *node,
-                                                 MinAlphaEnv *context);
 
 int alpha_flag = 0;
 char *alpha_conversion_function = NULL;
@@ -79,32 +76,6 @@ static HashSymbol *getNameFromContext(ParserInfo PI, HashSymbol *name,
     }
     cant_happen("undefined variable %s [%s +%d]", name->name, PI.fileName,
                 PI.lineNo);
-}
-
-static void pushNameSpaceEnv(MinAlphaEnv *context) {
-    for (MinAlphaEnv *current = context; current != NULL;
-         current = current->next) {
-        if (current->nameSpaces != NULL) {
-            pushMinAlphaEnvArray(current->nameSpaces, context);
-            return;
-        }
-    }
-    cant_happen("no nameSpace array found in context");
-}
-
-static MinAlphaEnv *findAlphaNameSpaceEnv(MinAlphaEnv *context, Index index) {
-    for (MinAlphaEnv *current = context; current != NULL;
-         current = current->next) {
-        if (current->nameSpaces != NULL) {
-            if (index < current->nameSpaces->size) {
-                return current->nameSpaces->entries[index];
-            } else {
-                cant_happen("index %u out of bounds (size %u)", index,
-                            current->nameSpaces->size);
-            }
-        }
-    }
-    cant_happen("no nameSpace array found in context");
 }
 
 static MinLam *visitMinLam(MinLam *node, MinAlphaEnv *context) {
@@ -238,26 +209,6 @@ static MinApply *visitMinApply(MinApply *node, MinAlphaEnv *context) {
         // Create new node with modified fields
         MinApply *result = newMinApply(CPI(node), new_function, new_args);
         result->isBuiltin = node->isBuiltin;
-        UNPROTECT(save);
-        return result;
-    }
-
-    UNPROTECT(save);
-    return node;
-}
-
-static MinLookUp *visitMinLookUp(MinLookUp *node, MinAlphaEnv *context) {
-    if (node == NULL)
-        return NULL;
-
-    bool changed = false;
-    MinAlphaEnv *nsContext = findAlphaNameSpaceEnv(context, node->nsId);
-    MinExp *new_exp = visitMinExp(node->exp, nsContext);
-    int save = PROTECT(new_exp);
-    changed = changed || (new_exp != node->exp);
-
-    if (changed) {
-        MinLookUp *result = newMinLookUp(CPI(node), node->nsId, new_exp);
         UNPROTECT(save);
         return result;
     }
@@ -593,19 +544,6 @@ static MinExp *visitMinExp(MinExp *node, MinAlphaEnv *context) {
         }
         break;
     }
-    case MINEXP_TYPE_ENV: {
-        // void_ptr
-        // the `(env)` directive is a way of capturing the current
-        // environment from the "body" of a nameSpace.
-        // It is a generated instruction and cannot be written
-        // directly in source code.
-        // It must be the only expression in the nameSpace body and
-        // it can only appear there. It is an instruction
-        // that the current environment should be
-        // associated with the current nameSpace at this point.
-        pushNameSpaceEnv(context);
-        break;
-    }
     case MINEXP_TYPE_ERROR: {
         // void_ptr
         break;
@@ -640,16 +578,6 @@ static MinExp *visitMinExp(MinExp *node, MinAlphaEnv *context) {
         }
         break;
     }
-    case MINEXP_TYPE_LOOKUP: {
-        // MinLookUp
-        MinLookUp *variant = getMinExp_LookUp(node);
-        MinLookUp *new_variant = visitMinLookUp(variant, context);
-        if (new_variant != variant) {
-            PROTECT(new_variant);
-            result = newMinExp_LookUp(CPI(node), new_variant);
-        }
-        break;
-    }
     case MINEXP_TYPE_MAKEVEC: {
         // MinMakeVec
         MinExprList *variant = getMinExp_MakeVec(node);
@@ -667,17 +595,6 @@ static MinExp *visitMinExp(MinExp *node, MinAlphaEnv *context) {
         if (new_variant != variant) {
             PROTECT(new_variant);
             result = newMinExp_Match(CPI(node), new_variant);
-        }
-        break;
-    }
-    case MINEXP_TYPE_NAMESPACES: {
-        // MinNameSpaceArray
-        MinNameSpaceArray *variant = getMinExp_NameSpaces(node);
-        MinNameSpaceArray *new_variant =
-            visitMinNameSpaceArray(variant, context);
-        if (new_variant != variant) {
-            PROTECT(new_variant);
-            result = newMinExp_NameSpaces(CPI(node), new_variant);
         }
         break;
     }
@@ -755,34 +672,6 @@ static MinCondCases *visitMinCondCases(MinCondCases *node,
 
     UNPROTECT(save);
     return result;
-}
-
-static MinNameSpaceArray *visitMinNameSpaceArray(MinNameSpaceArray *node,
-                                                 MinAlphaEnv *context) {
-    if (node == NULL)
-        return NULL;
-
-    bool changed = false;
-    MinNameSpaceArray *result = newMinNameSpaceArray();
-    int save = PROTECT(result);
-    context->nameSpaces = newMinAlphaEnvArray();
-
-    // Iterate over all elements
-    for (Index i = 0; i < node->size; i++) {
-        struct MinExp *element = peeknMinNameSpaceArray(node, i);
-        struct MinExp *new_element = visitMinExp(element, context);
-        PROTECT(new_element);
-        changed = changed || (new_element != element);
-        pushMinNameSpaceArray(result, new_element);
-    }
-
-    if (changed) {
-        UNPROTECT(save);
-        return result;
-    }
-
-    UNPROTECT(save);
-    return node;
 }
 
 static void addBuiltInsToMinAlphaEnv(MinAlphaEnv *env, BuiltIns *b) {
