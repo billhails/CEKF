@@ -29,6 +29,7 @@
 #include "arithmetic_next.h"
 #include "ast.h"
 #include "ast_debug.h"
+#include "ast_ns.h"
 #include "bigint.h"
 #include "builtins_helper.h"
 #include "bytecode.h"
@@ -324,12 +325,6 @@ static AstProg *parseFile(char *file) {
     if (hadErrors()) {
         exit(1);
     }
-    if (ast_flag) {
-        SCharArray *dest = newSCharArray();
-        PROTECT(dest);
-        ppAstProg(dest, prog);
-        printf("%s\n", dest->entries);
-    }
     UNPROTECT(save);
     return prog;
 }
@@ -345,12 +340,6 @@ static AstProg *parseString(char *string) {
     int save = PROTECT(prog);
     if (hadErrors()) {
         exit(1);
-    }
-    if (ast_flag) {
-        SCharArray *dest = newSCharArray();
-        PROTECT(dest);
-        ppAstProg(dest, prog);
-        printf("%s\n", dest->entries);
     }
     UNPROTECT(save);
     return prog;
@@ -534,6 +523,16 @@ int main(int argc, char *argv[]) {
         if (parse_only_flag) {
             // Stop after parsing to enable parser-only profiling
             exit(0);
+        }
+
+        prog = nsAstProg(prog);
+        REPLACE_PROTECT(save2, prog);
+
+        if (ast_flag) {
+            SCharArray *dest = newSCharArray();
+            PROTECT(dest);
+            ppAstProg(dest, prog);
+            printf("%s\n", dest->entries);
         }
 
         // forceGcFlag = true;

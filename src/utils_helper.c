@@ -357,3 +357,16 @@ bool eqSymbolSet(SymbolSet *a, SymbolSet *b) {
     }
     return true;
 }
+
+SymbolMap *copySymbolMap(SymbolMap *orig) {
+    SymbolMap *new = newSymbolMap();
+    int save = PROTECT(new);
+    HashSymbol *from = NULL;
+    HashSymbol *to = NULL;
+    Index I = 0;
+    while ((from = iterateSymbolMap(orig, &I, &to)) != NULL) {
+        setSymbolMap(new, from, to);
+    }
+    UNPROTECT(save);
+    return new;
+}
