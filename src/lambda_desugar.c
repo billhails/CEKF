@@ -723,10 +723,6 @@ MinExp *desugarLamExp(LamExp *node) {
     case LAMEXP_TYPE_DECONSTRUCT:
         result = desugarLamDeconstruct(node);
         break;
-    case LAMEXP_TYPE_ERROR: {
-        result = newMinExp_Error(CPI(node));
-        break;
-    }
     case LAMEXP_TYPE_IFF: {
         MinIff *new = desugarLamIff(getLamExp_Iff(node));
         PROTECT(new);

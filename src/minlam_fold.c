@@ -358,7 +358,6 @@ MinExp *foldMinExp(MinExp *node) {
     case MINEXP_TYPE_BACK:
     case MINEXP_TYPE_BIGINTEGER:
     case MINEXP_TYPE_CHARACTER:
-    case MINEXP_TYPE_ERROR:
     case MINEXP_TYPE_STDINT:
     case MINEXP_TYPE_VAR:
         break;

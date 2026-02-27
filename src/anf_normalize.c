@@ -48,7 +48,6 @@ static AnfExp *normalizeSequence(MinExprList *sequence, AnfExp *tail);
 static AnfExp *normalizePrim(MinPrimApp *app, AnfExp *tail);
 static AnfExp *normalizeApply(MinApply *minApply, AnfExp *tail);
 static AnfExp *normalizeBack(ParserInfo I, AnfExp *tail);
-static AnfExp *normalizeError(ParserInfo I, AnfExp *tail);
 static HashSymbol *freshSymbol();
 static Aexp *replaceMinExp(MinExp *minExp, MinExpTable *replacements);
 static AnfExp *letBind(AnfExp *body, MinExpTable *replacements);
@@ -119,8 +118,6 @@ static AnfExp *normalize(MinExp *minExp, AnfExp *tail) {
                                   tail);
     case MINEXP_TYPE_BACK:
         return normalizeBack(CPI(minExp), tail);
-    case MINEXP_TYPE_ERROR:
-        return normalizeError(CPI(minExp), tail);
     default:
         cant_happen("unrecognized type %s", minExpTypeName(minExp->type));
     }
@@ -209,18 +206,6 @@ static AnfExp *normalizeLetRec(MinLetRec *minLetRec, AnfExp *tail) {
     AnfExp *exp = wrapCexp(cexp);
     UNPROTECT(save);
     LEAVE(normalizeLetRec);
-    return exp;
-}
-
-static AnfExp *normalizeError(ParserInfo I, AnfExp *tail) {
-    ENTER(normalizeError);
-    Cexp *error = newCexp_Error(I);
-    int save = PROTECT(error);
-    AnfExp *exp = wrapCexp(error);
-    REPLACE_PROTECT(save, exp);
-    exp = wrapTail(exp, tail);
-    UNPROTECT(save);
-    LEAVE(normalizeError);
     return exp;
 }
 
@@ -658,7 +643,6 @@ static Aexp *replaceMinExp(MinExp *minExp, MinExpTable *replacements) {
     case MINEXP_TYPE_MATCH:
     case MINEXP_TYPE_COND:
     case MINEXP_TYPE_BACK:
-    case MINEXP_TYPE_ERROR:
     case MINEXP_TYPE_AMB:
         res = replaceMinCexp(minExp, replacements);
         break;
@@ -677,7 +661,6 @@ static bool minExpIsMinbda(MinExp *val) {
     case MINEXP_TYPE_BIGINTEGER:
     case MINEXP_TYPE_CHARACTER:
     case MINEXP_TYPE_BACK:
-    case MINEXP_TYPE_ERROR:
     case MINEXP_TYPE_AMB:
     case MINEXP_TYPE_PRIM:
     case MINEXP_TYPE_SEQUENCE:

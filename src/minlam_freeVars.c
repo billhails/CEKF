@@ -272,7 +272,6 @@ void freeVarsMinExp(MinExp *node, SymbolSet *result, SymbolEnv *context) {
     case MINEXP_TYPE_BACK:
     case MINEXP_TYPE_BIGINTEGER:
     case MINEXP_TYPE_CHARACTER:
-    case MINEXP_TYPE_ERROR:
     case MINEXP_TYPE_STDINT:
         break;
     case MINEXP_TYPE_BINDINGS:

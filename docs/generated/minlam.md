@@ -52,7 +52,6 @@ MinExp --bindings--> MinBindings
 MinExp --callCC--> MinExp
 MinExp --character--> character
 MinExp --cond--> MinCond
-MinExp --error--> void_ptr
 MinExp --iff--> MinIff
 MinExp --lam--> MinLam
 MinExp --letRec--> MinLetRec

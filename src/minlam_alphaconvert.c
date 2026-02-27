@@ -544,10 +544,6 @@ static MinExp *visitMinExp(MinExp *node, MinAlphaEnv *context) {
         }
         break;
     }
-    case MINEXP_TYPE_ERROR: {
-        // void_ptr
-        break;
-    }
     case MINEXP_TYPE_IFF: {
         // MinIff
         MinIff *variant = getMinExp_Iff(node);

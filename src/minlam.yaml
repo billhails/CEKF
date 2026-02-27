@@ -189,7 +189,6 @@ unions:
             callCC: MinExp
             character: character
             cond: MinCond
-            error: void_ptr
             iff: MinIff
             lam: MinLam
             letRec: MinLetRec

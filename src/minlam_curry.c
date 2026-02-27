@@ -514,9 +514,6 @@ MinExp *curryMinExp(MinExp *node) {
         }
         break;
     }
-    case MINEXP_TYPE_ERROR: {
-        break;
-    }
     case MINEXP_TYPE_IFF: {
         MinIff *variant = getMinExp_Iff(node);
         MinIff *new_variant = curryMinIff(variant);

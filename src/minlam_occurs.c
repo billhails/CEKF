@@ -177,9 +177,6 @@ bool occursMinExp(MinExp *node, SymbolSet *targets) {
         MinCond *variant = getMinExp_Cond(node);
         return occursMinCond(variant, targets);
     }
-    case MINEXP_TYPE_ERROR: {
-        return false;
-    }
     case MINEXP_TYPE_IFF: {
         MinIff *variant = getMinExp_Iff(node);
         return occursMinIff(variant, targets);
