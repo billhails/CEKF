@@ -20,7 +20,9 @@
 
 #include "common.h"
 #include "lambda.h"
+#include "lambda_conversion.h"
 #include "lambda_helper.h"
+#include "print_generator.h"
 #include "symbol.h"
 #include "tpmc.h"
 #include "tpmc_pp.h"
@@ -651,9 +653,13 @@ static LamExp *translateStateToInlineCode(TpmcState *dfa,
     case TPMCSTATEVALUE_TYPE_FINAL:
         res = getTpmcStateValue_Final(dfa->state)->action;
         break;
-    case TPMCSTATEVALUE_TYPE_ERROR:
-        res = newLamExp_Error(I);
+    case TPMCSTATEVALUE_TYPE_ERROR: {
+        LamExp *errMsg = stringToLamArgs(I, "pattern match exhausted");
+        int save = PROTECT(errMsg);
+        res = callErrorFunction(errMsg);
+        UNPROTECT(save);
         break;
+    }
     default:
         cant_happen("unrecognised state type %d in tpmcTranslate",
                     dfa->state->type);
