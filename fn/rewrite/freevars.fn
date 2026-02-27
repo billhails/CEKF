@@ -20,8 +20,6 @@ fn free {
     (M.bigint(_)) |
     (M.primop(_)) |
     (M.character(_)) |
-    (M.env_expr) |
-    (M.error_expr) |
     (M.env_ref(_, _)) |
     (M.stdint(_)) { [] }
 
@@ -55,10 +53,6 @@ fn free {
             list.unique(list.concat(exprs |> free) @@ free(body)) except names
     }
 
-    (M.lookup(s, n, e)) {
-        free(e)
-    }
-
     (M.make_closure(fun, env)) {
         list.unique(free(fun) @@ free(env));
     }
@@ -75,10 +69,6 @@ fn free {
     (M.match_cases(scrutinee, cases)) {
         list.unique(free(scrutinee) @@
         list.concat(cases |> fn (#(_, e)) { free(e) }))
-    }
-
-    (M.namespaces(_)) {
-        [] // nothing free in there
     }
 
     (M.sequence(exps)) {

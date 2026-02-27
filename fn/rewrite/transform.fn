@@ -25,8 +25,6 @@ fn _transform(t, exp) {
         (M.back_expr) |
         (M.primop(_)) |
         (M.character(_)) |
-        (M.env_expr) |
-        (M.error_expr) |
         (M.stdint(_)) |
         (M.var(_)) |
         (M.bigint(_)) { exp }
@@ -68,10 +66,6 @@ fn _transform(t, exp) {
             M.letrec_expr(bindings |> identity && (t && identity), t(body))
         }
 
-        (M.lookup(s, n, e)) {
-            M.lookup(s, n, t(e))
-        }
-
         (M.make_closure(lam, env)) {
             M.make_closure(t(lam), t(env))
         }
@@ -86,10 +80,6 @@ fn _transform(t, exp) {
 
         (M.match_cases(e, cases)) {
             M.match_cases(t(e), cases |> identity && t)
-        }
-
-        (M.namespaces(exprs)) {
-            M.namespaces(exprs |> t)
         }
 
         (M.sequence(exps)) {

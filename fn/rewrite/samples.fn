@@ -128,15 +128,6 @@ namespace
         ";42. nested let*",
         "(let* ((x (f 1)) (y (g x))) (h x y))",
 
-        ";43. lookup with simple variable",
-        "(lookup ns 0 x)",
-
-        ";44. lookup with function call",
-        "(lookup ns 0 (f x))",
-
-        ";45. nested lookup",
-        "(f (lookup ns 0 (g x)))",
-
         ";46. make_tuple with atomic args",
         "(make_tuple 1 2 3)",
 
@@ -163,19 +154,6 @@ namespace
 
         ";54. match_cases with complex results",
         "(match_cases x ((1) (f 1)) ((2) (g 2)))",
-
-        ";55. namespaces with atomic expressions",
-        "(namespaces x y z)",
-
-        ";56. namespaces with complex expressions",
-        "(namespaces (f 1) (g 2))",
-
-        ";57. namespaces with mixed expressions",
-        "(namespaces x (f y) z)",
-
-        ";58. namespaces with letrec bodies returning env",
-        "(namespaces (letrec ((x (λ () 1)) (y (λ () 2))) (let* ((f 1) (g f)) (env)))"
-                    "(letrec ((a (λ () 3)) (b (λ () 4))) (env)))",
 
         ";59. print_exp with atomic argument",
         "(print x)",

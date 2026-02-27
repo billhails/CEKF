@@ -20,8 +20,6 @@ fn alphaconvert(c, e) {
 
         (x = M.back_expr) |
         (x = M.primop(_)) |
-        (x = M.env_expr) |
-        (x = M.error_expr) |
         (x = M.bigint(_)) |
         (x = M.character(_)) |
         (x = M.constructor_info(_)) |
@@ -71,17 +69,6 @@ fn alphaconvert(c, e) {
                 M.letrec_expr(newbindings, alphaconvert(#(ee, nsa), expr)) // new environment
         }
 
-        (M.lookup(name, index, expr)) {
-            let #(e, nsa) = c;
-                fn find {
-                    (0, h @ t) { h }
-                    (n, h @ t) { find(n - 1, t) }
-                    (_, []) { error("Namespace index out of bounds") }
-                }
-            in
-                M.lookup(name, index, alphaconvert(#(find(index, nsa), nsa), expr))
-        }
-
         (M.make_tuple(args)) {
             M.make_tuple(args |> alphaconvert(c))
         }
@@ -93,10 +80,6 @@ fn alphaconvert(c, e) {
         (M.match_cases(test, cases)) {
             M.match_cases(alphaconvert(c, test),
                           cases |> identity && alphaconvert(c))
-        }
-
-        (M.namespaces(exprs)) {
-            M.namespaces(exprs |> alphaconvert(c))
         }
 
         (M.print_exp(expr)) {

@@ -37,8 +37,12 @@ namespace
         }
 
         (E.back_expr) { M.back_expr }
-        (E.env_expr) { M.env_expr }
-        (E.error_expr) { M.error_expr }
+        (E.env_expr) { 
+            error("desugar: env_expr not supported")
+        }
+        (E.error_expr) { 
+            error("desugar: error_expr not supported")
+        }
         (E.bigint(i)) { M.bigint(i) }
         (E.character(c)) { M.character(c) }
         (E.constructor_info(_)) {
@@ -101,10 +105,6 @@ namespace
                 desugar(nest_lets(bindings, expr));
         }
 
-        (E.lookup(name, index, expr)) {
-            M.lookup(name, index, desugar(expr))
-        }
-
         (E.make_tuple(args)) {
             M.make_vec(len args, args |> desugar)
         }
@@ -117,8 +117,8 @@ namespace
             M.match_cases(desugar(test), cases |> identity && desugar)
         }
 
-        (E.namespaces(exprs)) {
-            M.namespaces(exprs |> desugar)
+        (E.namespaces(_)) {
+            error("desugar: namespaces not supported")
         }
 
         (E.primapp(p, e1, e2)) {

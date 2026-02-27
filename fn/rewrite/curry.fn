@@ -74,20 +74,12 @@ fn curry {
             curry(body))
     }
 
-    (M.lookup(name, id, e)) {
-        M.lookup(name, id, curry(e))
-    }
-
     (M.make_vec(num, exprs)) {
         M.make_vec(num, exprs |> curry)
     }
 
     (M.match_cases(e, cases)) {
         M.match_cases(curry(e), cases |> identity && curry)
-    }
-
-    (M.namespaces(exprs)) {
-        M.namespaces(exprs |> curry)
     }
 
     (M.sequence(exprs)) {

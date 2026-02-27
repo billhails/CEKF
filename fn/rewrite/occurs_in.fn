@@ -26,8 +26,6 @@ fn occurs_in (var, expr) {
 
         (x = M.back_expr) |
         (x = M.primop(_)) |
-        (x = M.env_expr) |
-        (x = M.error_expr) |
         (x = M.bigint(_)) |
         (x = M.character(_)) |
         (x = M.stdint(_)) {
@@ -72,10 +70,6 @@ fn occurs_in (var, expr) {
                 }
         }
 
-        (M.lookup(name, index, expr)) {
-            occurs_in(var, expr)
-        }
-
         (M.make_vec(size, args)) {
             args any occurs_in(var)
         }
@@ -84,10 +78,6 @@ fn occurs_in (var, expr) {
             let #(vals, results) = list.unzip(cases);
             in
                 results any occurs_in(var)
-        }
-
-        (M.namespaces(exprs)) {
-            exprs any occurs_in(var)
         }
 
         (M.sequence(exprs)) {

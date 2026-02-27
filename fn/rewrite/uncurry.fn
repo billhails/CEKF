@@ -202,21 +202,12 @@ fn uncurry(expr) {
                         letrec_helper(x)
                     }
 
-                    (M.lookup(name, id, e)) {
-                        M.lookup(name, id, u(e))
-                    }
-
                     (M.make_vec(num, exprs)) {
                         M.make_vec(num, exprs |> u)
                     }
 
                     (M.match_cases(e, cases)) {
                         M.match_cases(u(e), cases |> identity && u)
-                    }
-
-                    (M.namespaces(exprs)) {
-                        // namespaces don't see variables from the outside
-                        M.namespaces(exprs |> unc flip D.empty())
                     }
 
                     (M.sequence(exprs)) {

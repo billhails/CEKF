@@ -229,8 +229,6 @@ fn fold {
 
     (x = M.back_expr) |
     (x = M.primop(_)) |
-    (x = M.env_expr) |
-    (x = M.error_expr) |
     (x = M.bigint(_)) |
     (x = M.character(_)) |
     (x = M.var(_)) |
@@ -276,11 +274,6 @@ fn fold {
         M.letrec_expr(bindings |> identity && (fold && identity), fold(expr))
     }
 
-    (M.lookup(name, index, expr)) {
-        // lookup(string, number, expr)
-        M.lookup(name, index, fold(expr))
-    }
-
     (M.make_vec(size, args)) {
         // make_vec(number, list(expr))
         M.make_vec(size, args |> fold)
@@ -289,11 +282,6 @@ fn fold {
     (M.match_cases(test, cases)) {
         // match_cases(expr, list(#(list(number), expr)))
         M.match_cases(fold(test), cases |> identity && fold)
-    }
-
-    (M.namespaces(exprs)) {
-        // namespaces(list(expr))
-        M.namespaces(exprs |> fold)
     }
 
     (M.sequence(exprs)) {

@@ -35,8 +35,6 @@ namespace
             (x=M.var(_)) |
             (x=M.back_expr) |
             (x=M.stdint(_)) |
-            (x=M.env_expr) |
-            (x=M.error_expr) |
             (x=M.character(_)) {
                 k(x)
             }
@@ -57,8 +55,6 @@ namespace
         (x=M.var(_), k) |
         (x=M.back_expr, k) |
         (x=M.stdint(_), k) |
-        (x=M.env_expr, k) |
-        (x=M.error_expr, k) |
         (x=M.character(_), k) {
             k(x)
         }
@@ -123,17 +119,6 @@ namespace
             normalize_name(e0, fn (t) {
                 k(M.match_cases(t, normalize_cases(branches)))
             })
-        }
-
-        // we have to treat e0 as a Cexp because it is
-        // inside the scope of a namespace
-        (M.lookup(name, index, e0), k) {
-            k(M.lookup(name, index, (normalize_term(e0))))
-        }
-
-        // each namespace must be individually contained
-        (M.namespaces(exprs), k) {
-            k(M.namespaces(normalize_terms(exprs)))
         }
 
         (other, k) {

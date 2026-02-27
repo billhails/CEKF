@@ -32,8 +32,6 @@ fn reduce {
 
     (x = M.back_expr) |
     (x = M.primop(_)) |
-    (x = M.env_expr) |
-    (x = M.error_expr) |
     (x = M.bigint(_)) |
     (x = M.character(_)) |
     (x = M.var(_)) |
@@ -61,20 +59,12 @@ fn reduce {
         M.letrec_expr(bindings |> identity && (reduce && identity), reduce(expr))
     }
 
-    (M.lookup(name, index, expr)) {
-        M.lookup(name, index, reduce(expr))
-    }
-
     (M.make_vec(size, args)) {
         M.make_vec(size, args |> reduce)
     }
 
     (M.match_cases(test, cases)) {
         M.match_cases(reduce(test), cases |> identity && reduce)
-    }
-
-    (M.namespaces(exprs)) {
-        M.namespaces(exprs |> reduce)
     }
 
     (M.sequence(exprs)) {

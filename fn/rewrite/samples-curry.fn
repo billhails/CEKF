@@ -125,9 +125,4 @@ namespace
         "(g (λ (x y z) (+ x (+ y z)))) "
         "(h (λ (u) (+ u 1)))) "
         "(g (f 1 2) (h 3) ((f 4) 5)))",
-
-        ";27. Namespaced style payload preserved under letrec body",
-        "(letrec ((f (λ (x y) (+ x y))) "
-        "(g (λ (x) (f x 10)))) "
-        "(namespaces (g 1) ((f 2) 3)))"
     ]}

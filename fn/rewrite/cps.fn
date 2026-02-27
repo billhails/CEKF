@@ -10,8 +10,6 @@ namespace
         (M.primop(_)) |
         (M.back_expr) |
         (M.character(_)) |
-        (M.env_expr) |
-        (M.error_expr) |
         (M.lambda(_, _)) |
         (M.stdint(_)) |
         (M.bigint(_)) { true }
@@ -79,10 +77,6 @@ namespace
                     M.letrec_expr(bindings |> identity && (M && identity), T_k(expr, k))
                 }
 
-                (M.lookup(name, index, expr)) {
-                    M.lookup(name, index, T_k(expr, k))
-                }
-
                 (M.make_vec(size, args)) {
                     Ts_k(args, fn (sargs) {
                         k(M.make_vec(size, sargs))
@@ -96,12 +90,6 @@ namespace
                         T_k(test, fn (atest) {
                             M.match_cases(atest, cases |> identity && T_c flip c)
                         })
-                }
-
-                (M.namespaces(exprs)) {
-                    Ts_k(exprs, fn (sexprs) {
-                        k(M.namespaces(sexprs))
-                    })
                 }
 
                 (M.sequence([expr])) { T_k(expr, k) }
@@ -183,10 +171,6 @@ namespace
                     M.letrec_expr(bindings |> identity && (M && identity), T_c(expr, c))
                 }
 
-                (M.lookup(name, index, expr)) {
-                    M.lookup(name, index, T_c(expr, c))
-                }
-
                 (M.make_vec(size, args)) {
                     Ts_k(args, fn (sargs) {
                         M.apply(c, [M.make_vec(size, sargs)])
@@ -201,12 +185,6 @@ namespace
                         M.apply(M.lambda([sk], T_k(test, fn (atest) {
                             M.match_cases(atest, cases |> identity && T_c flip vsk)
                         })), [c])
-                }
-
-                (M.namespaces(exprs)) {
-                    Ts_k(exprs, fn (sexprs) {
-                        M.apply(c, [M.namespaces(sexprs)])
-                    })
                 }
 
                 (M.sequence([expr])) { T_c(expr, c) }
