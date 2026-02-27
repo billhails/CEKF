@@ -138,8 +138,13 @@ static void populateReplacementsFromSymbolList(AstSymbolList *list, FileId *id,
     if (list == NULL)
         return;
     populateReplacementsFromSymbolList(list->next, id, context);
-    HashSymbol *replacement = generateQualifiedSymbol(list->symbol, id);
-    setSymbolMap(context.replacements, list->symbol, replacement);
+    static HashSymbol *wildCard = NULL;
+    if (wildCard == NULL)
+        wildCard = newSymbol("_");
+    if (list->symbol != wildCard) {
+        HashSymbol *replacement = generateQualifiedSymbol(list->symbol, id);
+        setSymbolMap(context.replacements, list->symbol, replacement);
+    }
 }
 
 static void populateReplacementsFromMulti(AstMultiDefine *multi, FileId *id,
