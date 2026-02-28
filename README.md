@@ -82,6 +82,8 @@ parser([Parser]):::process
 parser --> oi([Operator Inlining]):::process
 oi --> scanner
 parser --> ast(AST) -->
+namespace_removal([Namespace Desugaring]):::process -->
+denamespace(Simplified AST) -->
 lc([Lambda Conversion]):::process --> tpmc([Pattern Matching Compiler]):::process
 lc <---> pg([Print Function Generator]):::process
 lc <---> me([Lazy Function Expansion]):::process
@@ -101,14 +103,21 @@ subgraph anf-rewrite-2
    desugaring --> lambda_ds(desugared lambda)
    lambda_ds --> alpha(["ɑ-Conversion"]):::process
    alpha --> lambda_a(alphatized lambda)
-   lambda_eta --> anfr([ANF Rewrite]):::process
-   anfr --> lambda_b(New ANF)
-
-   lambda_a --> beta(["β-conversion"]):::process
+   lambda_a --> curry(["Currying"]):::process
+   curry --> curried(curried lambda)
+   curried --> beta(["β-conversion"]):::process
    beta --> lambda_beta("β-lambda")
    lambda_beta --> eta(["η-conversion"]):::process
    eta --> lambda_eta("η-lambda")
-   lambda_eta --> cps([CPS Transform]):::process
+   lambda_eta --> folding([Operator Folding]):::process
+   folding --> folded(optimized operators)
+   folded --> uncurry(["Un-Currying"]):::process
+   uncurry --> uncurried(uncurried lambda)
+
+   uncurried --> anfr([ANF Rewrite]):::process
+   anfr --> lambda_b(New ANF)
+
+   uncurried --> cps([CPS Transform]):::process
    cps --> lambda_e("CPS λ")
    lambda_e --> cloc([Closure Conversion WiP]):::process
    cloc --> lambda_c(Explicit Closure)
@@ -116,7 +125,7 @@ subgraph anf-rewrite-2
 end
 lambda3 --> desugaring
 lambda3 --> anfc
-lambda_eta --> anfc([A-Normal Form Conversion]):::process
+uncurried --> anfc([A-Normal Form Conversion]):::process
 anfc --> anf(ANF)
 anf --> lexa([Lexical Analysis]):::process
 lexa --> ann(Annotated ANF)
