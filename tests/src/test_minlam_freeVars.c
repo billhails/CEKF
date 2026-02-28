@@ -67,12 +67,6 @@ static MinExp *Apply(MinExp *function, MinExprList *args) {
     return result;
 }
 
-static MinExp *LookUp(Integer nsId, MinExp *exp) {
-    MinExp *result = makeMinExp_LookUp(NULLPI, nsId, exp);
-    PROTECT(result);
-    return result;
-}
-
 static MinExp *Iff(MinExp *condition, MinExp *consequent, MinExp *alternative) {
     MinExp *result = makeMinExp_Iff(NULLPI, condition, consequent, alternative);
     PROTECT(result);
@@ -105,12 +99,6 @@ static MinExp *Chr(Character c) {
 
 static MinExp *CallCC(MinExp *exp) {
     MinExp *result = newMinExp_CallCC(NULLPI, exp);
-    PROTECT(result);
-    return result;
-}
-
-static MinExp *NameSpaces(void) {
-    MinExp *result = makeMinExp_NameSpaces(NULLPI);
     PROTECT(result);
     return result;
 }
@@ -342,11 +330,6 @@ static void test_lookup_iff_amb_collect_free_vars(void) {
     HashSymbol *l = newSymbol("l");
     HashSymbol *r = newSymbol("r");
 
-    SymbolSet *s1 = newSymbolSet();
-    PROTECT(s1);
-    freeVarsMinExp(LookUp(0, V("x")), s1, NULL);
-    assertSetContainsOnly(s1, x, NULL, NULL);
-
     SymbolSet *s2 = newSymbolSet();
     PROTECT(s2);
     freeVarsMinExp(Iff(V("c"), V("t"), V("e")), s2, NULL);
@@ -452,10 +435,6 @@ static void test_non_variable_forms_do_not_add_free_vars(void) {
     freeVarsMinExp(Big(11), s3, NULL);
     assert(countSymbolSet(s3) == 0);
 
-    SymbolSet *s4 = newSymbolSet();
-    PROTECT(s4);
-    freeVarsMinExp(NameSpaces(), s4, NULL);
-    assert(countSymbolSet(s4) == 0);
     UNPROTECT(save);
 }
 

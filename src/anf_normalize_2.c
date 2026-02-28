@@ -70,8 +70,6 @@ static bool isValueExp(MinExp *exp) {
     case MINEXP_TYPE_BACK:
     case MINEXP_TYPE_BIGINTEGER:
     case MINEXP_TYPE_CHARACTER:
-    case MINEXP_TYPE_ENV:
-    case MINEXP_TYPE_ERROR:
     case MINEXP_TYPE_STDINT:
     case MINEXP_TYPE_VAR:
         return true;
@@ -533,51 +531,6 @@ static MinExp *normalize_Lam(MinExp *exp, AnfKont *k) {
     return result;
 }
 
-// (`(lookUp ,name ,id ,expr)
-//     (k `(lookUp ,name ,id ,(normalize-term expr))))
-
-static MinExp *normalize_LookUp(MinExp *exp, AnfKont *k) {
-    ENTER(normalize_LookUp);
-    MinLookUp *lookUpExp = getMinExp_LookUp(exp);
-    MinExp *newExpr = normalize_term(lookUpExp->exp);
-    int save = PROTECT(newExpr);
-    MinExp *newLookUp = makeMinExp_LookUp(CPI(exp), lookUpExp->nsId, newExpr);
-    PROTECT(newLookUp);
-    MinExp *result = INVOKE(k, newLookUp);
-    UNPROTECT(save);
-    LEAVE(normalize_LookUp);
-    return result;
-}
-
-// (`(nameSpaces . ,Ms)
-//     (k `(nameSpaces . ,(normalize-terms Ms))))
-
-static MinNameSpaceArray *normalize_array(MinNameSpaceArray *nsArray) {
-    MinNameSpaceArray *newNsArray = newMinNameSpaceArray();
-    int save = PROTECT(newNsArray);
-    for (Index i = 0; i < nsArray->size; i++) {
-        MinExp *normNs = normalize_term(nsArray->entries[i]);
-        int save = PROTECT(normNs);
-        pushMinNameSpaceArray(newNsArray, normNs);
-        UNPROTECT(save);
-    }
-    UNPROTECT(save);
-    return newNsArray;
-}
-
-static MinExp *normalize_NameSpaces(MinExp *exp, AnfKont *k) {
-    ENTER(normalize_NameSpaces);
-    MinNameSpaceArray *nsExp = normalize_array(getMinExp_NameSpaces(exp));
-    int save = PROTECT(nsExp);
-    MinExp *newNsExp = newMinExp_NameSpaces(CPI(exp), nsExp);
-    PROTECT(newNsExp);
-    MinExp *result = INVOKE(k, newNsExp);
-    ;
-    UNPROTECT(save);
-    LEAVE(normalize_NameSpaces);
-    return result;
-}
-
 // (`(callcc ,e0)
 //     (normalize-name e0
 //         [λ (t0) (k `(callcc ,t0))]))
@@ -664,17 +617,11 @@ static MinExp *normalize(MinExp *exp, AnfKont *k) {
         case MINEXP_TYPE_LETREC:
             res = normalize_LetRec(exp, k);
             break;
-        case MINEXP_TYPE_LOOKUP:
-            res = normalize_LookUp(exp, k);
-            break;
         case MINEXP_TYPE_MAKEVEC:
             res = normalize_MakeVec(exp, k);
             break;
         case MINEXP_TYPE_MATCH:
             res = normalize_Match(exp, k);
-            break;
-        case MINEXP_TYPE_NAMESPACES:
-            res = normalize_NameSpaces(exp, k);
             break;
         case MINEXP_TYPE_PRIM:
             res = normalize_PrimApp(exp, k);

@@ -107,7 +107,6 @@ class Catalog:
         output.append("} VisitorContext;\n\n")
         
         # Forward declarations
-        output.append("// Forward declarations\n")
         for entity in self.contents.values():
             if entity.isExternal():
                 continue
@@ -117,7 +116,9 @@ class Catalog:
         output.append("\n")
         
         # Implementations
+        output.append("///////////////////////////\n")
         output.append("// Visitor implementations\n")
+        output.append("///////////////////////////\n\n")
         for entity in self.contents.values():
             if entity.isExternal():
                 continue

@@ -20,6 +20,7 @@ LamArgs --exp--> LamExp
 LamArgs --next--> LamArgs
 LamApply --function--> LamExp
 LamApply --args--> LamArgs
+LamApply --isBuiltin--> bool
 LamLookUp --nsId--> int
 LamLookUp --nsSymbol--> HashSymbol
 LamLookUp --exp--> LamExp

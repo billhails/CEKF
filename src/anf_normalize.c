@@ -37,8 +37,6 @@
 
 static AnfExp *normalize(MinExp *minExp, AnfExp *tail);
 static AnfExp *normalizeMin(MinLam *minMin, AnfExp *tail);
-static AnfExp *normalizeNameSpaces(ParserInfo I, MinNameSpaceArray *nsArray,
-                                   AnfExp *tail);
 static AnfExp *normalizeVar(ParserInfo I, HashSymbol *var, AnfExp *tail);
 static AnfExp *normalizeMaybeBigInteger(ParserInfo I, MaybeBigInt *integer,
                                         AnfExp *tail);
@@ -50,7 +48,6 @@ static AnfExp *normalizeSequence(MinExprList *sequence, AnfExp *tail);
 static AnfExp *normalizePrim(MinPrimApp *app, AnfExp *tail);
 static AnfExp *normalizeApply(MinApply *minApply, AnfExp *tail);
 static AnfExp *normalizeBack(ParserInfo I, AnfExp *tail);
-static AnfExp *normalizeError(ParserInfo I, AnfExp *tail);
 static HashSymbol *freshSymbol();
 static Aexp *replaceMinExp(MinExp *minExp, MinExpTable *replacements);
 static AnfExp *letBind(AnfExp *body, MinExpTable *replacements);
@@ -60,8 +57,6 @@ static Aexp *aexpNormalizeMaybeBigInteger(ParserInfo I, MaybeBigInt *integer);
 static Aexp *aexpNormalizeStdInteger(ParserInfo I, int integer);
 static Aexp *aexpNormalizeCharacter(ParserInfo I, Character character);
 static Aexp *aexpNormalizeLam(MinLam *minMin);
-static AexpNameSpaceArray *aexpNormalizeNameSpaces(ParserInfo I,
-                                                   MinNameSpaceArray *nsArray);
 static AexpVarList *convertVarList(SymbolList *args);
 static AexpList *replaceMinArgs(MinExprList *, MinExpTable *);
 static Aexp *replaceMinPrim(MinPrimApp *minPrimApp, MinExpTable *replacements);
@@ -79,8 +74,6 @@ static AexpIntList *convertIntList(MinIntList *list);
 static AnfExp *normalizeCond(MinCond *cond, AnfExp *tail);
 static CexpCondCases *normalizeCondCases(MinCondCases *cases);
 static CexpLetRec *normalizeLetRecBindings(CexpLetRec *, MinBindings *);
-static AnfExp *normalizeEnv(ParserInfo I, AnfExp *tail);
-static AnfExp *normalizeMinLookUp(MinLookUp *, AnfExp *);
 
 AnfExp *anfNormalize(MinExp *minExp) { return normalize(minExp, NULL); }
 
@@ -125,15 +118,6 @@ static AnfExp *normalize(MinExp *minExp, AnfExp *tail) {
                                   tail);
     case MINEXP_TYPE_BACK:
         return normalizeBack(CPI(minExp), tail);
-    case MINEXP_TYPE_ERROR:
-        return normalizeError(CPI(minExp), tail);
-    case MINEXP_TYPE_NAMESPACES:
-        return normalizeNameSpaces(CPI(minExp), getMinExp_NameSpaces(minExp),
-                                   tail);
-    case MINEXP_TYPE_ENV:
-        return normalizeEnv(CPI(minExp), tail);
-    case MINEXP_TYPE_LOOKUP:
-        return normalizeMinLookUp(getMinExp_LookUp(minExp), tail);
     default:
         cant_happen("unrecognized type %s", minExpTypeName(minExp->type));
     }
@@ -222,18 +206,6 @@ static AnfExp *normalizeLetRec(MinLetRec *minLetRec, AnfExp *tail) {
     AnfExp *exp = wrapCexp(cexp);
     UNPROTECT(save);
     LEAVE(normalizeLetRec);
-    return exp;
-}
-
-static AnfExp *normalizeError(ParserInfo I, AnfExp *tail) {
-    ENTER(normalizeError);
-    Cexp *error = newCexp_Error(I);
-    int save = PROTECT(error);
-    AnfExp *exp = wrapCexp(error);
-    REPLACE_PROTECT(save, exp);
-    exp = wrapTail(exp, tail);
-    UNPROTECT(save);
-    LEAVE(normalizeError);
     return exp;
 }
 
@@ -457,56 +429,6 @@ static AnfExp *normalizeStdInteger(ParserInfo I, int integer, AnfExp *tail) {
     return exp;
 }
 
-static AnfExp *normalizeNameSpaces(ParserInfo I, MinNameSpaceArray *nsArray,
-                                   AnfExp *tail) {
-    ENTER(normalizeNameSpaces);
-    AexpNameSpaceArray *nsa = aexpNormalizeNameSpaces(I, nsArray);
-    int save = PROTECT(nsa);
-    Aexp *aexp = makeAexp_NameSpaces(I, nsa, tail);
-    PROTECT(aexp);
-    AnfExp *exp = wrapAexp(aexp);
-    UNPROTECT(save);
-    LEAVE(normalizeNameSpaces);
-    return exp;
-}
-
-static AexpNameSpaceArray *aexpNormalizeNameSpaces(ParserInfo I,
-                                                   MinNameSpaceArray *nsArray) {
-    ENTER(aexpNormalizeNameSpaces);
-    AexpNameSpaceArray *res = newAexpNameSpaceArray();
-    int save = PROTECT(res);
-    for (Index i = 0; i < nsArray->size; i++) {
-        AnfExp *nsExp = normalize(nsArray->entries[i], NULL);
-        int save2 = PROTECT(nsExp);
-        AexpNameSpace *ns = newAexpNameSpace(I, nsExp);
-        PROTECT(ns);
-        pushAexpNameSpaceArray(res, ns);
-        UNPROTECT(save2);
-    }
-    UNPROTECT(save);
-    LEAVE(aexpNormalizeNameSpaces);
-    return res;
-}
-
-static AnfExp *normalizeEnv(ParserInfo I, AnfExp *tail) {
-    ENTER(normalizeEnv);
-    if (tail != NULL) {
-        LEAVE(normalizeEnv);
-        return tail;
-    }
-    AnfExp *exp = newAnfExp_Env(I);
-    LEAVE(normalizeMin);
-    return exp;
-}
-
-static AnfExp *normalizeMinLookUp(MinLookUp *lookUp, AnfExp *tail) {
-    AnfExp *rest = normalize(lookUp->exp, tail);
-    int save = PROTECT(rest);
-    AnfExp *res = makeAnfExp_LookUp(CPI(lookUp), lookUp->nsId, rest);
-    UNPROTECT(save);
-    return res;
-}
-
 static AnfExp *normalizeMin(MinLam *minMin, AnfExp *tail) {
     ENTER(normalizeMin);
     if (tail != NULL) {
@@ -713,7 +635,6 @@ static Aexp *replaceMinExp(MinExp *minExp, MinExpTable *replacements) {
     case MINEXP_TYPE_CHARACTER:
         res = aexpNormalizeCharacter(CPI(minExp), getMinExp_Character(minExp));
         break;
-    case MINEXP_TYPE_LOOKUP:
     case MINEXP_TYPE_SEQUENCE:
     case MINEXP_TYPE_APPLY:
     case MINEXP_TYPE_IFF:
@@ -722,7 +643,6 @@ static Aexp *replaceMinExp(MinExp *minExp, MinExpTable *replacements) {
     case MINEXP_TYPE_MATCH:
     case MINEXP_TYPE_COND:
     case MINEXP_TYPE_BACK:
-    case MINEXP_TYPE_ERROR:
     case MINEXP_TYPE_AMB:
         res = replaceMinCexp(minExp, replacements);
         break;
@@ -741,7 +661,6 @@ static bool minExpIsMinbda(MinExp *val) {
     case MINEXP_TYPE_BIGINTEGER:
     case MINEXP_TYPE_CHARACTER:
     case MINEXP_TYPE_BACK:
-    case MINEXP_TYPE_ERROR:
     case MINEXP_TYPE_AMB:
     case MINEXP_TYPE_PRIM:
     case MINEXP_TYPE_SEQUENCE:
@@ -752,7 +671,6 @@ static bool minExpIsMinbda(MinExp *val) {
     case MINEXP_TYPE_MATCH:
     case MINEXP_TYPE_COND:
     case MINEXP_TYPE_MAKEVEC:
-    case MINEXP_TYPE_LOOKUP:
         return false;
     default:
         cant_happen("unrecognised MinExp type %s in minExpIsMinbda",

@@ -4,8 +4,10 @@ namespace
     link "minexpr.fn" as M;
 
     import io operator "$_";
+    import list operator "_|>_";
+    import list operator "_&&_";
 
-    // Normalization algorithm
+    // A-Normalization algorithm
 
     fn genstring() { "$" @@ $incr() }
     fn gensym() { M.var(genstring()) }
@@ -33,8 +35,6 @@ namespace
             (x=M.var(_)) |
             (x=M.back_expr) |
             (x=M.stdint(_)) |
-            (x=M.env_expr) |
-            (x=M.error_expr) |
             (x=M.character(_)) {
                 k(x)
             }
@@ -55,8 +55,6 @@ namespace
         (x=M.var(_), k) |
         (x=M.back_expr, k) |
         (x=M.stdint(_), k) |
-        (x=M.env_expr, k) |
-        (x=M.error_expr, k) |
         (x=M.character(_), k) {
             k(x)
         }
@@ -123,17 +121,6 @@ namespace
             })
         }
 
-        // we have to treat e0 as a Cexp because it is
-        // inside the scope of a namespace
-        (M.lookup(name, index, e0), k) {
-            k(M.lookup(name, index, (normalize_term(e0))))
-        }
-
-        // each namespace must be individually contained
-        (M.namespaces(exprs), k) {
-            k(M.namespaces(normalize_terms(exprs)))
-        }
-
         (other, k) {
             // catch-all for unhandled expressions
             M.print_expr(other);
@@ -143,15 +130,11 @@ namespace
     }
 
     fn normalize_terms(exprs) {
-        list.map (fn (e) { normalize_term(e) }, exprs)
+        exprs |> normalize_term
     }
 
     fn normalize_cases(cases) {
-        list.map (fn {
-            (#(key, caseExpr)) {
-                #(key, normalize_term(caseExpr))
-            }
-        }, cases)
+        cases |> identity && normalize_term
     }
 
     fn normalize_names {

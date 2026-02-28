@@ -1,8 +1,8 @@
 #ifndef cekf_lambda_conversion_h
-#  define cekf_lambda_conversion_h
+#define cekf_lambda_conversion_h
 /*
  * CEKF - VM supporting amb
- * Copyright (C) 2022-2023  Bill Hails
+ * Copyright (C) 2022-2026  Bill Hails
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,10 +18,11 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#  include "ast.h"
-#  include "lambda.h"
+#include "ast.h"
+#include "lambda.h"
 
 LamExp *lamConvertProg(AstProg *prog);
+LamExp *callErrorFunction(LamExp *exp);
 
 extern char *lambda_conversion_function;
 

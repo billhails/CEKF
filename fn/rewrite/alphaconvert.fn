@@ -3,23 +3,23 @@ link "minexpr.fn" as M;
 link "env.fn" as Env;
 link "../listutils.fn" as list;
 link "gensym.fn" as GS;
+import list operator "_|>_";
+import list operator "_&&_";
+import list operator "_zip_";
+import list operator "unzip_";
 
 fn alphaconvert(c, e) {
     switch (e)  {
         (M.amb_expr(expr1, expr2)) {
-            // amb_expr(expr, expr)
             M.amb_expr(alphaconvert(c, expr1), alphaconvert(c, expr2))
         }
 
         (M.apply(fun, args)) {
-            // apply(expr, list(expr))
-            M.apply(alphaconvert(c, fun), list.map(fn (arg) { alphaconvert(c, arg) }, args))
+            M.apply(alphaconvert(c, fun), args |> alphaconvert(c))
         }
 
         (x = M.back_expr) |
         (x = M.primop(_)) |
-        (x = M.env_expr) |
-        (x = M.error_expr) |
         (x = M.bigint(_)) |
         (x = M.character(_)) |
         (x = M.constructor_info(_)) |
@@ -28,123 +28,84 @@ fn alphaconvert(c, e) {
         }
 
         (M.callcc_expr(e)) {
-            // callcc_expr(expr)
             M.callcc_expr(alphaconvert(c, e))
         }
 
         (M.cond_expr(test, branches)) {
-            // cond_expr(expr, list(#(expr, expr)))
-            let #(vals, results) = list.unzip(branches);
-            in
-                M.cond_expr(alphaconvert(c, test),
-                            list.zip(list.map(alphaconvert(c), vals),
-                                        list.map(alphaconvert(c), results)))
+            M.cond_expr(alphaconvert(c, test),
+                        branches |> alphaconvert(c) && alphaconvert(c))
         }
 
         (M.construct(name, args)) {
-            // construct(string, list(expr))
-            M.construct(name, list.map(alphaconvert(c), args))
+            M.construct(name, args |> alphaconvert(c))
         }
 
         (M.deconstruct(name, index, expr)) {
-            // deconstruct(string, number, expr)
             M.deconstruct(name, index, alphaconvert(c, expr))
         }
 
         (M.if_expr(exprc, exprt, exprf)) {
-            // if_expr(expr, expr, expr)
             M.if_expr(alphaconvert(c, exprc),
                       alphaconvert(c, exprt),
                       alphaconvert(c, exprf))
         }
 
         (M.lambda(params, body)) {
-            // lambda(list(string), expr)
             let #(en, nsa) = c;
-                newparams = list.map(GS.genstring, params);
+                newparams = params |> GS.genstring;
                 ee = Env.add_lists(Env.extend(en), params, newparams);
             in
                 M.lambda(newparams, alphaconvert(#(ee, nsa), body))
         }
 
         (M.letrec_expr(bindings, expr)) {
-            // letrec_expr(list(#(string, expr)), expr)
             let #(en, nsa) = c;
-                #(vars, exprs) = list.unzip(bindings);
-                newvars = list.map(GS.genstring, vars);
+                #(vars, exprs) = unzip bindings;
+                newvars = vars |> GS.genstring;
                 ee = Env.add_lists(Env.extend(en), vars, newvars);
-                newvals = list.map(alphaconvert(#(ee, nsa)), exprs); // in new environment
-                newbindings = list.zip(newvars, newvals);
+                newvals = exprs |> alphaconvert(#(ee, nsa)); // in new environment
+                newbindings = newvars zip newvals;
             in
                 M.letrec_expr(newbindings, alphaconvert(#(ee, nsa), expr)) // new environment
         }
 
-        (M.lookup(name, index, expr)) {
-            // lookup(string, number, expr)
-            let #(e, nsa) = c;
-                fn find {
-                    (0, h @ t) { h }
-                    (n, h @ t) { find(n - 1, t) }
-                    (_, []) { error("Namespace index out of bounds") }
-                }
-            in
-                M.lookup(name, index, alphaconvert(#(find(index, nsa), nsa), expr))
-        }
-
         (M.make_tuple(args)) {
-            // make_tuple(list(expr))
-            M.make_tuple(list.map(alphaconvert(c), args))
+            M.make_tuple(args |> alphaconvert(c))
         }
 
         (M.make_vec(size, args)) {
-            // make_vec(number, list(expr))
-            M.make_vec(size, list.map(alphaconvert(c), args))
+            M.make_vec(size, args |> alphaconvert(c))
         }
 
         (M.match_cases(test, cases)) {
-            // match_cases(expr, list(#(list(number), expr)))
-            let #(vals, results) = list.unzip(cases);
-            in
-                M.match_cases(alphaconvert(c, test),
-                              list.zip(vals, list.map(alphaconvert(c), results)))
-        }
-
-        (M.namespaces(exprs)) {
-            // namespaces(list(expr))
-            M.namespaces(list.map(alphaconvert(c), exprs))
+            M.match_cases(alphaconvert(c, test),
+                          cases |> identity && alphaconvert(c))
         }
 
         (M.print_exp(expr)) {
-            // print_exp(expr)
             M.print_exp(alphaconvert(c, expr))
         }
 
         (M.sequence(exprs)) {
-            // sequence(list(expr))
-            M.sequence(list.map(alphaconvert(c), exprs))
+            M.sequence(exprs |> alphaconvert(c))
         }
 
         (M.tag(expr)) {
-            // tag(expr)
             M.tag(alphaconvert(c, expr))
         }
 
         (M.tuple_index(size, index, expr)) {
-            // tuple_index(number, number, expr)
             M.tuple_index(size, index, alphaconvert(c, expr))
         }
 
         (M.typedefs(defs, expr)) {
-            // typedefs(list(def), expr)
             M.typedefs(defs, alphaconvert(c, expr))
         }
 
         (M.typeof_expr(expr)) {
-            // typeof_expr(expr)
             M.typeof_expr(alphaconvert(c, expr))
         }
         (M.var(name)) {
-            // var(string)
             let #(e, nsa) = c;
                 v = Env.get(e, name);
             in

@@ -40,8 +40,6 @@ void ppMinMatch(MinMatch *match);
 void ppMinBindings(MinBindings *bindings);
 void ppMinIntList(MinIntList *list);
 void ppMinMakeTuple(MinExprList *args);
-void ppMinNameSpaces(MinNameSpaceArray *arr);
-void ppMinLookUp(MinLookUp *lookUp);
 void ppHashSymbol(HashSymbol *);
 
 #endif

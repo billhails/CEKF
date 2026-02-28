@@ -1979,6 +1979,7 @@ static LamExp *convertFunCall(AstFunCall *funCall, LamContext *env) {
             return result;
         }
         result = makeApplication(function, args);
+        getLamExp_Apply(result)->isBuiltin = funCall->isBuiltin;
         UNPROTECT(save);
         return result;
     }
@@ -2329,7 +2330,7 @@ static LamExp *convertAssertion(AstExpression *value, LamContext *env) {
     int save = PROTECT(exp);
     LamArgs *args = newLamArgs(CPI(exp), exp, NULL);
     PROTECT(args);
-    LamExp *fileName = newLamExp_Var(CPI(exp), currentFileSymbol());
+    LamExp *fileName = stringToLamArgs(CPI(exp), exp->_yy_parser_info.fileName);
     PROTECT(fileName);
     args = newLamArgs(CPI(exp), fileName, args);
     PROTECT(args);
@@ -2346,36 +2347,39 @@ static LamExp *convertAssertion(AstExpression *value, LamContext *env) {
     return res;
 }
 
-/**
- * @brief Converts an error expression into a lambda expression.
- *
- * The error in question is a runtime error caused by a non-exhaustive
- * pattern match failure in an unsafe function.
- *
- * @param value The error expression to convert.
- * @param env The lambda context to use for conversion.
- * @return The resulting lambda expression for the error.
- */
-static LamExp *convertError(AstExpression *value, LamContext *env) {
-    LamExp *exp = convertExpression(value, env);
+LamExp *callErrorFunction(LamExp *exp) {
     int save = PROTECT(exp);
     LamArgs *args = newLamArgs(CPI(exp), exp, NULL);
     PROTECT(args);
-    LamExp *fileName = newLamExp_Var(CPI(value), currentFileSymbol());
+    LamExp *fileName = stringToLamArgs(CPI(exp), exp->_yy_parser_info.fileName);
     PROTECT(fileName);
     args = newLamArgs(CPI(exp), fileName, args);
     PROTECT(args);
-    MaybeBigInt *num = fakeBigInt(value->_yy_parser_info.lineNo, false);
+    MaybeBigInt *num = fakeBigInt(exp->_yy_parser_info.lineNo, false);
     PROTECT(num);
     LamExp *lineNo = newLamExp_BigInteger(CPI(exp), num);
     PROTECT(lineNo);
     args = newLamArgs(CPI(lineNo), lineNo, args);
     PROTECT(args);
-    LamExp *function = newLamExp_Var(CPI(value), fnErrorSymbol());
+    LamExp *function = newLamExp_Var(CPI(exp), fnErrorSymbol());
     PROTECT(function);
     LamExp *res = makeApplication(function, args);
     UNPROTECT(save);
     return res;
+}
+
+/**
+ * @brief Converts an error expression into a lambda expression.
+ *
+ * Calls the `__error__` function defined in the preamble.
+ *
+ * @param value The error expression (string) to convert.
+ * @param env The lambda context to use for conversion.
+ * @return The resulting lambda expression for the error.
+ */
+static LamExp *convertError(AstExpression *value, LamContext *env) {
+    LamExp *exp = convertExpression(value, env);
+    return callErrorFunction(exp);
 }
 
 /**

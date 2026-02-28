@@ -27,8 +27,6 @@ namespace
 
                 (x = M.back_expr) |
                 (x = M.primop(_)) |
-                (x = M.env_expr) |
-                (x = M.error_expr) |
                 (x = M.bigint(_)) |
                 (x = M.character(_)) |
                 (x = M.stdint(_)) {
@@ -86,11 +84,6 @@ namespace
                     in M.letrec_expr(bindings, substitute(c2, expr)) // new environment
                 }
 
-                // lookup(string, number, expr)
-                (M.lookup(name, index, expr)) {
-                    e
-                }
-
                 // make_vec(number, list(expr))
                 (M.make_vec(size, args)) {
                     M.make_vec(size, args |> substitute(c))
@@ -102,11 +95,6 @@ namespace
                     in
                         M.match_cases(substitute(c, test),
                                       vals zip (results |> substitute(c)))
-                }
-
-                // namespaces(list(expr))
-                (M.namespaces(exprs)) {
-                    M.namespaces(exprs |> substitute(c))
                 }
 
                 // sequence(list(expr))

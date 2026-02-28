@@ -4,6 +4,21 @@ link "../listutils.fn" as list;
 link "minexpr.fn" as M;
 import list operator "_|>_";
 import list operator "_&&_";
+import list operator "_zip_";
+import list operator "unzip_";
+import list operator "len_";
+
+
+// Basically, this does:
+//     (λ (x y z) body)  -->  (λ x (λ y (λ z body)))
+// and
+//     (f a b c)  -->  (((f a) b) c)
+
+fn arity {
+    (M.lambda(params, _)) |
+    (M.lambdac(params, _)) { len params }
+    (_) { 0 }
+}
 
 fn curry {
     (M.amb_expr(e1, e2)) {
@@ -23,7 +38,7 @@ fn curry {
     }
 
     (M.apply(e, a @ rest)) {
-        curry(M.apply(M.apply(e, [curry(a)]), rest))
+        curry(M.apply(M.apply(e, [a]), rest))
     }
 
     (M.callcc_expr(e)) {
@@ -51,11 +66,12 @@ fn curry {
     }
 
     (M.letrec_expr(bindings, body)) {
-        M.letrec_expr(bindings |> identity && curry, curry(body))
-    }
-
-    (M.lookup(name, id, e)) {
-        M.lookup(name, id, curry(e))
+        M.letrec_expr(
+            bindings |> identity &&
+                        fn (#(expr, _)) {
+                            #(curry(expr), arity(expr))
+                        },
+            curry(body))
     }
 
     (M.make_vec(num, exprs)) {
@@ -64,10 +80,6 @@ fn curry {
 
     (M.match_cases(e, cases)) {
         M.match_cases(curry(e), cases |> identity && curry)
-    }
-
-    (M.namespaces(exprs)) {
-        M.namespaces(exprs |> curry)
     }
 
     (M.sequence(exprs)) {

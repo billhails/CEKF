@@ -69,6 +69,7 @@ structs:
         data:
             function: LamExp
             args: LamArgs
+            isBuiltin: bool=false
 
     LamLookUp:
         meta:

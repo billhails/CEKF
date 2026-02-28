@@ -1311,7 +1311,9 @@ static AstDefinition *makeHygenicOperatorBody(ParserInfo PI, HashSymbol *symbol,
     return res;
 }
 
-static inline HashSymbol *makeLazyName() { return genSymDollar("opLazy"); }
+static inline HashSymbol *makeLazyName(HashSymbol *context) {
+    return genSymDollar(context->name);
+}
 
 static AstDefinition *makeHygienicNaryOperatorDef(ParserInfo PI, int arity,
                                                   HashSymbol *lazyName,
@@ -1373,7 +1375,7 @@ static AstDefinition *addOperator(PrattParser *parser, PrattFixity fixity,
         record = newPrattRecord(op, empty, empty, empty);
         PROTECT(record);
     }
-    HashSymbol *hygienicFunc = makeLazyName();
+    HashSymbol *hygienicFunc = makeLazyName(op);
     bool isBareSymbol = (impl && impl->type == AST_EXPRESSION_TYPE_SYMBOL);
     int scaledPrec = precedence * PRECEDENCE_SCALE;
     AstDefinition *def = NULL;

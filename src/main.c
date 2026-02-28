@@ -29,6 +29,7 @@
 #include "arithmetic_next.h"
 #include "ast.h"
 #include "ast_debug.h"
+#include "ast_ns.h"
 #include "bigint.h"
 #include "builtins_helper.h"
 #include "bytecode.h"
@@ -45,9 +46,11 @@
 #include "memory.h"
 #include "minlam_alphaconvert.h"
 #include "minlam_beta.h"
+#include "minlam_curry.h"
 #include "minlam_eta.h"
 #include "minlam_fold.h"
 #include "minlam_pp.h"
+#include "minlam_uncurry.h"
 #include "pratt.h"
 #include "pratt_parser.h"
 #include "pratt_scanner.h"
@@ -323,12 +326,6 @@ static AstProg *parseFile(char *file) {
     if (hadErrors()) {
         exit(1);
     }
-    if (ast_flag) {
-        SCharArray *dest = newSCharArray();
-        PROTECT(dest);
-        ppAstProg(dest, prog);
-        printf("%s\n", dest->entries);
-    }
     UNPROTECT(save);
     return prog;
 }
@@ -344,12 +341,6 @@ static AstProg *parseString(char *string) {
     int save = PROTECT(prog);
     if (hadErrors()) {
         exit(1);
-    }
-    if (ast_flag) {
-        SCharArray *dest = newSCharArray();
-        PROTECT(dest);
-        ppAstProg(dest, prog);
-        printf("%s\n", dest->entries);
     }
     UNPROTECT(save);
     return prog;
@@ -535,6 +526,16 @@ int main(int argc, char *argv[]) {
             exit(0);
         }
 
+        prog = nsAstProg(prog);
+        REPLACE_PROTECT(save2, prog);
+
+        if (ast_flag) {
+            SCharArray *dest = newSCharArray();
+            PROTECT(dest);
+            ppAstProg(dest, prog);
+            printf("%s\n", dest->entries);
+        }
+
         // forceGcFlag = true;
         LamExp *exp = convertProg(prog);
         REPLACE_PROTECT(save2, exp);
@@ -580,6 +581,11 @@ int main(int argc, char *argv[]) {
             exit(0);
         }
 
+        minExp = curryMinExp(minExp);
+        REPLACE_PROTECT(save2, minExp);
+
+        // if we move currying below this point we need to
+        // update the following steps to propagate the isBuiltin flag
         minExp = betaMinExp(minExp);
         REPLACE_PROTECT(save2, minExp);
 
@@ -589,6 +595,9 @@ int main(int argc, char *argv[]) {
         REPLACE_PROTECT(save2, minExp);
 
         minExp = foldMinExp(minExp);
+        REPLACE_PROTECT(save2, minExp);
+
+        minExp = uncurry(minExp);
         REPLACE_PROTECT(save2, minExp);
 
         if (beta_flag) {

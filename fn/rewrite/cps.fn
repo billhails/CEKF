@@ -2,14 +2,14 @@ namespace
     link "minexpr.fn" as M;
     link "../listutils.fn" as list;
     link "gensym.fn" as GS;
+    import list operator "_|>_";
+    import list operator "_&&_";
 
     fn isAexpr {
         (M.var(_)) |
         (M.primop(_)) |
         (M.back_expr) |
         (M.character(_)) |
-        (M.env_expr) |
-        (M.error_expr) |
         (M.lambda(_, _)) |
         (M.stdint(_)) |
         (M.bigint(_)) { true }
@@ -60,9 +60,7 @@ namespace
                         c = kToC(k);
                     in
                         T_k(test, fn (atest) {
-                            M.cond_expr(atest, list.map(fn {(#(val, result)) {
-                                #(val, T_c(result, c))
-                            }}, branches))
+                            M.cond_expr(atest, branches |> identity && T_c flip c)
                         })
                 }
 
@@ -76,14 +74,7 @@ namespace
                 }
 
                 (M.letrec_expr(bindings, expr)) {
-                    let
-                        #(vars, aexps) = list.unzip(bindings);
-                    in
-                        M.letrec_expr(list.zip(vars, list.map(M, aexps)), T_k(expr, k))
-                }
-
-                (M.lookup(name, index, expr)) {
-                    M.lookup(name, index, T_k(expr, k))
+                    M.letrec_expr(bindings |> identity && (M && identity), T_k(expr, k))
                 }
 
                 (M.make_vec(size, args)) {
@@ -97,16 +88,8 @@ namespace
                         c = kToC(k);
                     in
                         T_k(test, fn (atest) {
-                            M.match_cases(atest, list.map(fn {(#(indices, result)) {
-                                #(indices, T_c(result, c))
-                            }}, cases))
+                            M.match_cases(atest, cases |> identity && T_c flip c)
                         })
-                }
-
-                (M.namespaces(exprs)) {
-                    Ts_k(exprs, fn (sexprs) {
-                        k(M.namespaces(sexprs))
-                    })
                 }
 
                 (M.sequence([expr])) { T_k(expr, k) }
@@ -135,7 +118,10 @@ namespace
                         sk = GS.genstring("$k");
                         vsk = M.var(sk);
                     in
-                        M.apply(M.lambda([sk], M.amb_expr(T_c(expr1, vsk), T_c(expr2, vsk))), [c])
+                        M.apply(M.lambda([sk],
+                                M.amb_expr(T_c(expr1, vsk),
+                                           T_c(expr2, vsk))),
+                                [c])
                 }
 
                 (M.apply(p=M.primop(_), [e1, e2])) {
@@ -167,9 +153,7 @@ namespace
                         vsk = M.var(sk);
                     in
                         M.apply(M.lambda([sk], T_k(test, fn (atest) {
-                            M.cond_expr(atest, list.map(fn {(#(val, result)) {
-                                #(val, T_c(result, vsk))
-                            }}, branches))
+                            M.cond_expr(atest, branches |> identity && T_c flip vsk)
                         })), [c])
                 }
 
@@ -179,19 +163,12 @@ namespace
                         vsk = M.var(sk);
                     in
                         M.apply(M.lambda([sk], T_k(exprc, fn (aexp) {
-                            M.if_expr(aexp, T_c(exprt,vsk), T_c(exprf,vsk))
+                            M.if_expr(aexp, T_c(exprt, vsk), T_c(exprf, vsk))
                         })), [c])
                 }
 
                 (M.letrec_expr(bindings, expr)) {
-                    let
-                        #(vars, aexps) = list.unzip(bindings);
-                    in
-                        M.letrec_expr(list.zip(vars, list.map(M, aexps)), T_c(expr, c))
-                }
-
-                (M.lookup(name, index, expr)) {
-                    M.lookup(name, index, T_c(expr, c))
+                    M.letrec_expr(bindings |> identity && (M && identity), T_c(expr, c))
                 }
 
                 (M.make_vec(size, args)) {
@@ -206,16 +183,8 @@ namespace
                         vsk = M.var(sk);
                     in
                         M.apply(M.lambda([sk], T_k(test, fn (atest) {
-                            M.match_cases(atest, list.map(fn {(#(indices, result)) {
-                                #(indices, T_c(result, vsk))
-                            }}, cases))
+                            M.match_cases(atest, cases |> identity && T_c flip vsk)
                         })), [c])
-                }
-
-                (M.namespaces(exprs)) {
-                    Ts_k(exprs, fn (sexprs) {
-                        M.apply(c, [M.namespaces(sexprs)])
-                    })
                 }
 
                 (M.sequence([expr])) { T_c(expr, c) }

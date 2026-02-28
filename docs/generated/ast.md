@@ -9,8 +9,9 @@ AstProg --nameSpaces--> AstNameSpaceArray
 AstProg --body--> AstExpressions
 AstNest --definitions--> AstDefinitions
 AstNest --expressions--> AstExpressions
-AstNameSpaceImpl --id--> file_id
+AstNameSpaceImpl --id--> FileId
 AstNameSpaceImpl --definitions--> AstDefinitions
+AstNameSpaceImpl --replacements--> SymbolMap
 AstNameSpace --symbol--> HashSymbol
 AstNameSpace --reference--> index
 AstDefinitions --definition--> AstDefinition
@@ -71,6 +72,7 @@ AstNamedArg --name--> HashSymbol
 AstNamedArg --arg--> AstFarg
 AstFunCall --function--> AstExpression
 AstFunCall --arguments--> AstExpressions
+AstFunCall --isBuiltin--> bool
 AstExpressions --expression--> AstExpression
 AstExpressions --next--> AstExpressions
 AstLookUpSymbol --nsId--> int
@@ -135,7 +137,7 @@ AstExpression --assertion--> AstExpression
 AstExpression --error--> AstExpression
 AstPosition["enum AstPosition"]
 AstNameSpaceArray["AstNameSpaceArray[]"] --entries--> AstNameSpaceImpl
-AstFileIdArray["AstFileIdArray[]"] --entries--> file_id
+AstFileIdArray["AstFileIdArray[]"] --entries--> FileId
 AstExpressionArray["AstExpressionArray[]"] --entries--> AstExpression
 ```
 

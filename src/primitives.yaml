@@ -60,14 +60,6 @@ byte:
         printf: "%02ux"
         valued: true
 
-file_id:
-    data:
-        cname: "struct FileId *"
-        printFn: printFileId
-        eqFn: eqFileId
-        markFn: markFileId
-        valued: true
-
 opaque:
     data:
         cname: "struct Opaque *"

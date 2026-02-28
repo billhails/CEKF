@@ -44,4 +44,6 @@ SymbolSet *intersectSymbolSet(SymbolSet *a, SymbolSet *b);
 SymbolSet *differenceSymbolSet(SymbolSet *a, SymbolSet *b);
 bool eqSymbolSet(SymbolSet *a, SymbolSet *b);
 
+SymbolMap *copySymbolMap(SymbolMap *orig);
+
 #endif

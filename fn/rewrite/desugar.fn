@@ -5,220 +5,154 @@ namespace
     link "../dictutils.fn" as DICT;
     link "../ioutils.fn" as IO;
     import IO operator "$_";
+    import list operator "_|>_";
+    import list operator "_&&_";
+    import list operator "_::_";
+    import list operator "len_";
+    import list operator "_take_";
+    import list operator "_drop_";
+    import list operator "unzip_";
 
-    // desugar: E.expr -> E.expr
+
+    fn makeVar (s) {
+        M.var(s)
+    }
+
+    // desugar: E.expr -> M.expr
     // rewrites let* to nested lets
     // rewrites let to an anonymous lambda application
-    // uncurries partial function application
-    fn desugar (e) {
-        let
-        fn desug(e, c) {
-            let
-            fn ds {
-                (E.amb_expr(expr1, expr2)) {
-                    // amb_expr(expr, expr)
-                    M.amb_expr(ds(expr1), ds(expr2))
-                }
+    // rewrites constructs and deconstructs to vector operations
 
-                (E.apply(E.var(v), args)) {
-                    switch (DICT.lookup(v, c)) {
-                        (nothing) {
-                            M.apply(M.var(v), list.map(ds, args))
-                        }
-                        (just(arity)) {
-                            switch (list.length(args) <=> arity) {
-                                (eq) {
-                                    M.apply(M.var(v), list.map(ds, args))
-                                }
-                                (lt) {
-                                    // (add 2) -> (lambda (arg0) (add 2 arg0))
-                                    let
-                                        missing = arity - list.length(args);
-                                        new_params = list.map(fn (i) { "arg$" @@ $i },
-                                                              list.range(0, missing));
-                                        new_args = list.map(fn (v) { M.var(v) }, new_params) @@ list.map(ds, args);
-                                    in
-                                        M.lambda(new_params,
-                                                 M.apply(M.var(v), new_args))
-                                    ;
-                                }
-                                (gt) {
-                                    // (make-adder 2 3) -> ((make-adder 2) 3)
-                                    let first_args = list.take(arity, args);
-                                        remaining_args = list.drop(arity, args);
-                                    in
-                                        M.apply(
-                                            M.apply(M.var(v), list.map(ds, first_args)),
-                                            list.map(ds, remaining_args)
-                                        )
-                                }
-                            }
-                        }
+    fn desugar {
+        (E.amb_expr(expr1, expr2)) {
+            M.amb_expr(desugar(expr1), desugar(expr2))
+        }
+
+        (E.apply(E.var(v), args)) {
+            M.apply(M.var(v), args |> desugar)
+        }
+
+        (E.apply(fun, args)) {
+            M.apply(desugar(fun), args |> desugar)
+        }
+
+        (E.back_expr) { M.back_expr }
+        (E.env_expr) { 
+            error("desugar: env_expr not supported")
+        }
+        (E.error_expr) { 
+            error("desugar: error_expr not supported")
+        }
+        (E.bigint(i)) { M.bigint(i) }
+        (E.character(c)) { M.character(c) }
+        (E.constructor_info(_)) {
+            error("desugar: constructor_info not supported")
+        }
+        (E.stdint(i)) { M.stdint(i) }
+        (E.var(v)) { M.var(v) }
+        (E.constant(name, n)) { M.stdint(n) }
+
+        (E.callcc_expr(e)) {
+            M.callcc_expr(desugar(e))
+        }
+
+        (E.cond_expr(test, branches)) {
+            M.cond_expr(desugar(test), branches |> desugar && desugar);
+        }
+
+        (E.construct(name, tag, args)) {
+            let aargs = E.stdint(tag) @ args
+            in
+                desugar(E.make_vec(len aargs, aargs))
+        }
+
+        (E.deconstruct(name, index, expr)) {
+            M.apply(M.primop("vec-ref"), [M.stdint(index), desugar(expr)])
+        }
+
+        (E.if_expr(exprc, exprt, exprf)) {
+            M.if_expr(desugar(exprc),
+                    desugar(exprt),
+                    desugar(exprf))
+        }
+
+        (E.lambda(params, body)) {
+            M.lambda(params, desugar(body))
+        }
+
+        (E.letrec_expr(bindings, expr)) {
+            let
+                bindings2 = bindings |>
+                            identity && desugar |>
+                            identity && fn (e) { #(e, 0) };
+            in M.letrec_expr(bindings2, desugar(expr))
+        }
+
+        (E.let_expr(bindings, expr)) {
+            let #(vars, vals) = unzip (bindings |> identity && desugar);
+            in M.apply(M.lambda(vars, desugar(expr)), vals)
+        }
+
+        (E.letstar_expr(bindings, expr)) {
+            let
+                fn nest_lets {
+                    ([], body) { body }
+                    (#(var, exp) @ rest, body) {
+                        E.let_expr([#(var, exp)], nest_lets(rest, body))
                     }
                 }
-
-                (E.apply(fun, args)) {
-                    // apply(expr, list(expr))
-                    M.apply(ds(fun), list.map(ds, args))
-                }
-
-                (E.back_expr) { M.back_expr }
-                (E.env_expr) { M.env_expr }
-                (E.error_expr) { M.error_expr }
-                (E.bigint(i)) { M.bigint(i) }
-                (E.character(c)) { M.character(c) }
-                (E.constructor_info(_)) { error("desugar: constructor_info not supported") }
-                (E.stdint(i)) { M.stdint(i) }
-                (E.var(v)) { M.var(v) }
-                (E.constant(name, n)) { M.stdint(n) }
-
-                (E.callcc_expr(e)) {
-                    // callcc_expr(expr)
-                    M.callcc_expr(ds(e))
-                }
-
-                (E.cond_expr(test, branches)) {
-                    // cond_expr(expr, list(#(expr, expr)))
-                    let #(vals, results) = list.unzip(branches);
-                    in  M.cond_expr(ds(test),
-                                    list.zip(list.map(ds, vals),
-                                            list.map(ds, results)))
-                }
-
-                (E.construct(name, tag, args)) {
-                    // construct(string, list(expr))
-                    let aargs = E.stdint(tag) @ args
-                    in
-                        ds(E.make_vec(list.length(aargs), aargs))
-                }
-
-                (E.deconstruct(name, index, expr)) {
-                    // deconstruct(string, number, expr)
-                    M.apply(M.primop("vec-ref"), [M.stdint(index), ds(expr)])
-                }
-
-                (E.if_expr(exprc, exprt, exprf)) {
-                    // if_expr(expr, expr, expr)
-                    M.if_expr(ds(exprc),
-                            ds(exprt),
-                            ds(exprf))
-                }
-
-                (E.lambda(params, body)) {
-                    // lambda(list(string), expr)
-                    M.lambda(params, ds(body))
-                }
-
-                (E.letrec_expr(bindings, expr)) {
-                    // letrec_expr(list(#(string, expr)), expr)
-                    let
-                        c2 = list.foldl(fn (#(v, e), dict) {
-                            switch (e) {
-                                (E.lambda(params, _)) { DICT.insert(v, list.length(params), dict) }
-                                (_) { dict }
-                            }
-                        }, c, bindings);
-                        bindings2 = list.map(fn (#(v, e)) { #(v, desug(e, c2)) }, bindings);
-                    in M.letrec_expr(bindings2, desug(expr, c2)) // new environment
-                }
-
-                (E.let_expr(bindings, expr)) {
-                    // let_expr(list(#(string, expr)), expr)
-                    let
-                        c2 = list.foldl(fn (#(v, e), dict) {
-                            switch (e) {
-                                (E.lambda(params, _)) { DICT.insert(v, list.length(params), dict) }
-                                (_) { dict }
-                            }
-                        }, c, bindings);
-                        // let expressions are evaluated in the containing environment c
-                        bindings2 = list.map(fn (#(v, e)) { #(v, desug(e, c)) }, bindings);
-                        #(vars, vals) = list.unzip(bindings2);
-                    in M.apply(M.lambda(vars, desug(expr, c2)), vals)
-                }
-
-                (E.letstar_expr(bindings, expr)) {
-                    // letstar_expr(list(#(string, expr)), expr)
-                    let
-                        fn nest_lets {
-                            ([], body) { body }
-                            (#(var, exp) @ rest, body) {
-                                E.let_expr([#(var, exp)], nest_lets(rest, body))
-                            }
-                        }
-                    in ds(nest_lets(bindings, expr));
-                }
-
-                (E.lookup(name, index, expr)) {
-                    // lookup(string, number, expr)
-                    M.lookup(name, index, ds(expr))
-                }
-
-                (E.make_tuple(args)) {
-                    // make_tuple(list(expr))
-                    M.make_vec(list.length(args), list.map(ds, args))
-                }
-
-                (E.make_vec(size, args)) {
-                    // make_vec(number, list(expr))
-                    M.make_vec(size, list.map(ds, args))
-                }
-
-                (E.match_cases(test, cases)) {
-                    // match_cases(expr, list(#(list(number), expr)))
-                    let #(vals, results) = list.unzip(cases);
-                    in
-                        M.match_cases(ds(test),
-                                    list.zip(vals, list.map(ds, results)))
-                }
-
-                (E.namespaces(exprs)) {
-                    // namespaces(list(expr))
-                    M.namespaces(list.map(ds, exprs))
-                }
-
-                (E.primapp(p, e1, e2)) {
-                    // primapp(string, expr, expr)
-                    M.apply(M.primop(p), [ds(e1), ds(e2)])
-                }
-
-                (E.print_exp(expr)) {
-                    // print_exp(expr)
-                    M.apply(M.lambda(["x"], M.var("x")), [ds(expr)])
-                }
-
-                (E.sequence(exprs)) {
-                    // sequence(list(expr))
-                    M.sequence(list.map(ds, exprs))
-                }
-
-                (E.tag(expr)) {
-                    // tag(expr)
-                    ds(E.primapp("vec", E.stdint(0), expr))
-                }
-
-                (E.tuple_index(size, index, expr)) {
-                    // tuple_index(number, number, expr)
-                    ds(E.primapp("vec", E.stdint(index), expr))
-                }
-
-                (E.typedefs(defs, expr)) {
-                    // typedefs(list(def), expr)
-                    ds(expr)
-                }
-
-                (E.typeof_expr(expr)) {
-                    // typeof_expr(expr) -> string
-                    M.make_vec(2, [M.character('t'), M.make_vec(0, [])])
-                }
-
-                (x) {
-                    E.print_expr(x);
-                    puts("\n");
-                    error("desugar: unsupported expression")
-                }
-            }
-            in ds(e);
+            in
+                desugar(nest_lets(bindings, expr));
         }
-        in desug(e, DICT.E)
+
+        (E.make_tuple(args)) {
+            M.make_vec(len args, args |> desugar)
+        }
+
+        (E.make_vec(size, args)) {
+            M.make_vec(size, args |> desugar)
+        }
+
+        (E.match_cases(test, cases)) {
+            M.match_cases(desugar(test), cases |> identity && desugar)
+        }
+
+        (E.namespaces(_)) {
+            error("desugar: namespaces not supported")
+        }
+
+        (E.primapp(p, e1, e2)) {
+            M.apply(M.primop(p), [desugar(e1), desugar(e2)])
+        }
+
+        (E.print_exp(expr)) {
+            M.apply(M.lambda(["x"], M.var("x")), [desugar(expr)])
+        }
+
+        (E.sequence(exprs)) {
+            M.sequence(exprs |> desugar)
+        }
+
+        (E.tag(expr)) {
+            desugar(E.primapp("vec", E.stdint(0), expr))
+        }
+
+        (E.tuple_index(size, index, expr)) {
+            desugar(E.primapp("vec", E.stdint(index), expr))
+        }
+
+        (E.typedefs(defs, expr)) {
+            desugar(expr)
+        }
+
+        (E.typeof_expr(expr)) {
+            // fake typeof until type checking is implemented
+            M.make_vec(2, [M.character('t'), M.make_vec(0, [])])
+        }
+
+        (x) {
+            E.print_expr(x);
+            puts("\n");
+            error("desugar: unsupported expression")
+        }
     }

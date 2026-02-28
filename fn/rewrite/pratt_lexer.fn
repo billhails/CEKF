@@ -1,8 +1,8 @@
 namespace
 
 link "../listutils.fn" as lst;
-import lst operator "_|>_"
-operator "_|?_" left 8 fn (l, f) { lst.filter(f, l) };
+import lst operator "_|>_";
+import lst operator "_|?_";
 
 typedef Token {
     Atom(char) |

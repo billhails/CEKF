@@ -1,0 +1,128 @@
+namespace
+    fn data() {[
+        ";============================================",
+        ";CURRY / UNCURRY PROTOTYPE SAMPLES",
+        ";============================================",
+
+        ";1. Single function, arity 2, saturated",
+        "(letrec ((add (λ (x y) (+ x y)))) "
+        "(add 2 3))",
+
+        ";2. Single function, arity 2, partial then saturated",
+        "(letrec ((add (λ (x y) (+ x y)))) "
+        "((add 2) 3))",
+
+        ";3. Single function, arity 3, saturated",
+        "(letrec ((f3 (λ (a b c) (+ a (+ b c))))) "
+        "(f3 1 2 3))",
+
+        ";4. Single function, arity 3, chained partial applications",
+        "(letrec ((f3 (λ (a b c) (+ a (+ b c))))) "
+        "(((f3 1) 2) 3))",
+
+        ";5. Single function, arity 3, oversaturated (head then tail apply)",
+        "(letrec ((mk (λ (a b c) (λ (d) (+ a (+ b (+ c d))))))) "
+        "((((mk 1) 2) 3) 4))",
+
+        ";6. Multiple letrec bindings with mixed arities",
+        "(letrec ((id (λ (x) x)) "
+        "(add (λ (x y) (+ x y))) "
+        "(sum3 (λ (a b c) (+ a (+ b c))))) "
+        "(sum3 (id 1) 2 3))",
+
+        ";7. Arity-1 should remain simple",
+        "(letrec ((inc (λ (x) (+ x 1)))) "
+        "(inc 41))",
+
+        ";8. Arity-1 passed to higher-order arity-2 function",
+        "(letrec ((apply1 (λ (f x) (f x))) "
+        "(inc (λ (x) (+ x 1)))) "
+        "(apply1 inc 10))",
+
+        ";9. Arity-2 function passed partially",
+        "(letrec ((apply1 (λ (f x) (f x))) "
+        "(mul (λ (x y) (* x y)))) "
+        "(apply1 (mul 2) 21))",
+
+        ";10. Two arity-2 functions composing partial applications",
+        "(letrec ((add (λ (x y) (+ x y))) "
+        "(mul (λ (x y) (* x y)))) "
+        "((add (mul 2 3)) 4))",
+
+        ";11. Mutual recursion with arity-1 bindings",
+        "(letrec ((even (λ (n) (if (= n 0) true (odd (- n 1))))) "
+        "(odd (λ (n) (if (= n 0) false (even (- n 1)))))) "
+        "(even 6))",
+
+        ";12. Mutual recursion mixed with arity-2 helper",
+        "(letrec ((step (λ (n k) (k (- n 1)))) "
+        "(even (λ (n) (if (= n 0) true (step n odd)))) "
+        "(odd (λ (n) (if (= n 0) false (step n even))))) "
+        "(even 5))",
+
+        ";13. Nested letrec where inner captures outer function",
+        "(letrec ((add (λ (x y) (+ x y)))) "
+        "(letrec ((use (λ (z) ((add z) 10)))) "
+        "(use 32)))",
+
+        ";14. Function value returned from letrec and then applied",
+        "(letrec ((mkadd (λ (x) (λ (y) (+ x y))))) "
+        "((mkadd 7) 8))",
+
+        ";Arity metadata with non-lambda letrec binding",
+        "(letrec ((x 10) (f (λ (a b) (+ a b)))) "
+        "(f x 5))",
+
+        ";16. Apply chain through variable alias",
+        "(letrec ((f (λ (a b c) (+ a (+ b c))))) "
+        "(let ((g f)) (((g 1) 2) 3)))",
+
+        ";17. Saturated call should be candidate for direct worker",
+        "(letrec ((f (λ (a b c) (+ a (+ b c))))) "
+        "(f 10 20 30))",
+
+        ";18. Partial call should remain PAP/generic apply",
+        "(letrec ((f (λ (a b c) (+ a (+ b c))))) "
+        "((f 10) 20))",
+
+        ";19. Unknown callee through conditional should remain generic",
+        "(letrec ((f (λ (x y) (+ x y))) "
+        "(g (λ (x y) (* x y)))) "
+        "((if true f g) 2 3))",
+
+        ";20. Higher-order dispatcher with mixed arities",
+        "(letrec ((dispatch (λ (k f g x y) (if k (f x y) (g x y)))) "
+        "(add (λ (x y) (+ x y))) "
+        "(mul (λ (x y) (* x y)))) "
+        "(dispatch true add mul 5 6))",
+
+        ";21. Three local functions, one uses others in saturated form",
+        "(letrec ((twice (λ (f x) (f (f x)))) "
+        "(inc (λ (x) (+ x 1))) "
+        "(add (λ (x y) (+ x y)))) "
+        "(add (twice inc 10) 5))",
+
+        ";22. Arity-4 function fully saturated",
+        "(letrec ((f4 (λ (a b c d) (+ a (+ b (+ c d)))))) "
+        "(f4 1 2 3 4))",
+
+        ";23. Arity-4 function partially applied in stages",
+        "(letrec ((f4 (λ (a b c d) (+ a (+ b (+ c d)))))) "
+        "((((f4 1) 2) 3) 4))",
+
+        ";24. Curried producer consumed by arity-1 map-like function",
+        "(letrec ((mkadd (λ (x) (λ (y) (+ x y)))) "
+        "(apply1 (λ (f x) (f x)))) "
+        "(apply1 (mkadd 100) 23))",
+
+        ";25. Letrec body with begin sequence and mixed call forms",
+        "(letrec ((add (λ (x y) (+ x y))) "
+        "(sum3 (λ (a b c) (+ a (+ b c))))) "
+        "(begin (add 1 2) ((add 3) 4) (((sum3 5) 6) 7)))",
+
+        ";26. Complex nested applications with multiple known functions",
+        "(letrec ((f (λ (a b) (+ a b))) "
+        "(g (λ (x y z) (+ x (+ y z)))) "
+        "(h (λ (u) (+ u 1)))) "
+        "(g (f 1 2) (h 3) ((f 4) 5)))",
+    ]}

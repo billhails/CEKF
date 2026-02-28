@@ -503,9 +503,6 @@ class SimpleStruct(Base):
                         output.append(f"    PROTECT(new_{fieldName});\n")
                     output.append(f"    changed = changed || (new_{fieldName} != node->{fieldName});\n")
                     visitedFields.append(field)
-                else:
-                    # Non-memory-managed type - pass through unchanged
-                    output.append(f"    // Pass through {fieldName} (type: {fieldType}, not memory-managed)\n")
                     
             except Exception as e:
                 # Field type not in catalog - this should be rare, log for debugging
@@ -518,8 +515,8 @@ class SimpleStruct(Base):
         
         # Check if anything changed
         if visitedFields:
+            output.append(f"    {myName} *result = node;\n")
             output.append(f"    if (changed) {{\n")
-            output.append(f"        // Create new node with modified fields\n")
             
             # Build constructor call
             constructorArgs = []
@@ -534,20 +531,19 @@ class SimpleStruct(Base):
                 constructorArgs.insert(0, "CPI(node)")
                 
             args_str = ", ".join(constructorArgs) if constructorArgs else ""
-            output.append(f"        {myName} *result = new{myName}({args_str});\n")
+            output.append(f"        result = new{myName}({args_str});\n")
             
             # Set any auto-initialized fields that were visited
             constructorFields = set(self.getNewArgs(catalog))
-            for field in visitedFields:
+            for field in visitableFields:
                 if field not in constructorFields:
                     # This is an auto-initialized field that was visited - set it manually
                     fieldName = field.getName()
-                    output.append(f"        result->{fieldName} = new_{fieldName};\n")
+                    if field in visitedFields:
+                        output.append(f"        result->{fieldName} = new_{fieldName};\n")
+                    else:
+                        output.append(f"        result->{fieldName} = node->{fieldName};\n")
             
-            if saved:
-                output.append(f"        UNPROTECT(save);\n")
-            output.append(f"        LEAVE({target}{myName});\n")
-            output.append(f"        return result;\n")
             output.append(f"    }}\n")
             output.append(f"\n")
         else:
@@ -557,7 +553,7 @@ class SimpleStruct(Base):
         if saved:
             output.append(f"    UNPROTECT(save);\n")
         output.append(f"    LEAVE({target}{myName});\n")
-        output.append(f"    return node;\n")
+        output.append(f"    return result;\n")
         output.append(f"}}\n\n")
         
         return ''.join(output)

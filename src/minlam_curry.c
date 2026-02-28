@@ -15,186 +15,169 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  *
- * Minimal AST after desugaring
- * Generated from src/minlam.yaml by tools/generate.py
+ * Currying pass: transforms multi-arg lambdas to nested single-arg
+ * lambdas, and multi-arg applications to nested single-arg applications.
+ *
+ *     (λ (x y z) body)  -->  (λ (x) (λ (y) (λ (z) body)))
+ *     (f a b c)         -->  (((f a) b) c)
  */
 
-#include "minlam_eta.h"
+#include "minlam_curry.h"
 #include "memory.h"
 #include "minlam.h"
-#include "minlam_occurs.h"
-#include "utils_helper.h"
 
-#ifdef DEBUG_MINLAM_ETA
+#ifdef DEBUG_MINLAM_CURRY
 #include "debugging_on.h"
 #else
 #include "debugging_off.h"
 #endif
 
-static MinExp *etaMinLam(MinExp *node);
-static MinExprList *etaMinExprList(MinExprList *node);
-static MinPrimApp *etaMinPrimApp(MinPrimApp *node);
-static MinApply *etaMinApply(MinApply *node);
-static MinIff *etaMinIff(MinIff *node);
-static MinCond *etaMinCond(MinCond *node);
-static MinIntCondCases *etaMinIntCondCases(MinIntCondCases *node);
-static MinCharCondCases *etaMinCharCondCases(MinCharCondCases *node);
-static MinMatch *etaMinMatch(MinMatch *node);
-static MinMatchList *etaMinMatchList(MinMatchList *node);
-static MinLetRec *etaMinLetRec(MinLetRec *node);
-static MinBindings *etaMinBindings(MinBindings *node);
-static MinAmb *etaMinAmb(MinAmb *node);
-static MinCondCases *etaMinCondCases(MinCondCases *node);
-static bool etaSafeFunction(MinExp *exp);
-static MinExp *etaMinBindingValue(MinExp *exp);
-static SymbolSet *etaBindingSymbols(MinBindings *node);
+static MinExp *curryMinLam(MinExp *exp);
+static MinExp *curryMinApply(MinExp *exp);
+static MinExprList *curryMinExprList(MinExprList *node);
+static MinPrimApp *curryMinPrimApp(MinPrimApp *node);
+static MinIff *curryMinIff(MinIff *node);
+static MinCond *curryMinCond(MinCond *node);
+static MinIntCondCases *curryMinIntCondCases(MinIntCondCases *node);
+static MinCharCondCases *curryMinCharCondCases(MinCharCondCases *node);
+static MinMatch *curryMinMatch(MinMatch *node);
+static MinMatchList *curryMinMatchList(MinMatchList *node);
+static MinLetRec *curryMinLetRec(MinLetRec *node);
+static MinBindings *curryMinBindings(MinBindings *node);
+static MinAmb *curryMinAmb(MinAmb *node);
+static MinCondCases *curryMinCondCases(MinCondCases *node);
 
-static SymbolSet *etaLetRecSymbols = NULL;
+// λ(x, y, z) body  -->  λ(x) (λ(y) (λ(z) curry(body)))
+static MinExp *curryMinLam(MinExp *exp) {
+    ENTER(curryMinLam);
+    MinLam *node = getMinExp_Lam(exp);
 
-// true if aargs are all symbols and the same symbols as fargs.
-static bool fargsEqAargs(SymbolList *fargs, MinExprList *aargs) {
-    if (fargs == NULL) {
-        return aargs == NULL;
-    } else if (aargs == NULL) {
-        return false;
-    } else {
-        if (!isMinExp_Var(aargs->exp)) {
-            return false;
+    SymbolList *args = node->args;
+
+    if (args == NULL || args->next == NULL) {
+        // 0 or 1 args: just curry the body
+        MinExp *new_body = curryMinExp(node->exp);
+        if (new_body != node->exp) {
+            int save = PROTECT(new_body);
+            MinExp *result = makeMinExp_Lam(CPI(node), args, new_body);
+            UNPROTECT(save);
+            LEAVE(curryMinLam);
+            return result;
         }
-        return fargs->symbol == getMinExp_Var(aargs->exp) &&
-               fargsEqAargs(fargs->next, aargs->next);
-    }
-}
-
-static bool etaSafeFunction(MinExp *exp) { return exp != NULL; }
-
-static SymbolSet *etaBindingSymbols(MinBindings *node) {
-    ENTER(etaBindingSymbols);
-    SymbolSet *symbols = newSymbolSet();
-    int save = PROTECT(symbols);
-    while (node != NULL) {
-        setSymbolSet(symbols, node->var);
-        node = node->next;
-    }
-    UNPROTECT(save);
-    LEAVE(etaBindingSymbols);
-    return symbols;
-}
-
-static MinExp *etaMinBindingValue(MinExp *exp) {
-    ENTER(etaMinBindingValue);
-    if (exp == NULL) {
-        LEAVE(etaMinBindingValue);
-        return NULL;
-    }
-
-    if (!isMinExp_Lam(exp)) {
-        LEAVE(etaMinBindingValue);
+        LEAVE(curryMinLam);
         return exp;
     }
 
-    MinLam *lambda = getMinExp_Lam(exp);
-    MinExp *new_body = etaMinExp(lambda->exp);
-
-    if (new_body != lambda->exp) {
-        int save = PROTECT(new_body);
-        MinExp *result = makeMinExp_Lam(CPI(lambda), lambda->args, new_body);
-        UNPROTECT(save);
-        LEAVE(etaMinBindingValue);
-        return result;
-    }
-
-    LEAVE(etaMinBindingValue);
-    return exp;
+    // 2+ args: λ([first], curry(λ(rest, body)))
+    SymbolList *firstArg = newSymbolList(CPI(args), args->symbol, NULL);
+    int save = PROTECT(firstArg);
+    MinExp *innerLam = makeMinExp_Lam(CPI(node), args->next, node->exp);
+    PROTECT(innerLam);
+    MinExp *curriedInner = curryMinExp(innerLam);
+    PROTECT(curriedInner);
+    MinExp *result = makeMinExp_Lam(CPI(node), firstArg, curriedInner);
+    UNPROTECT(save);
+    LEAVE(curryMinLam);
+    return result;
 }
 
-//////////////////////////
-// Visitor implementations
-//////////////////////////
+// (f a b c)  -->  curry(((f a) b) c)
+static MinExp *curryMinApply(MinExp *exp) {
+    ENTER(curryMinApply);
+    MinApply *node = getMinExp_Apply(exp);
 
-// N.B. MinExp not MinLam
-static MinExp *etaMinLam(MinExp *exp) {
-    ENTER(etaMinLam);
-    MinLam *lambda = getMinExp_Lam(exp);
+    MinExprList *args = node->args;
 
-    if (lambda == NULL) {
-        LEAVE(etaMinLam);
-        return NULL;
-    }
-
-    // η(λ.x (f x))) => ηf, where x is not free in f
-    if (lambda->exp != NULL && isMinExp_Apply(lambda->exp)) {
-        MinApply *apply = getMinExp_Apply(lambda->exp); // (f x)
-        if (etaSafeFunction(apply->function) &&
-            fargsEqAargs(lambda->args, apply->args)) {
-            SymbolSet *symbols = symbolListToSet(lambda->args);
-            int save = PROTECT(symbols);
-            bool touchesLetRec =
-                etaLetRecSymbols != NULL &&
-                occursMinExp(apply->function, etaLetRecSymbols);
-            if (!touchesLetRec && !occursMinExp(apply->function, symbols)) {
-                MinExp *result = etaMinExp(apply->function); // ηf
-                UNPROTECT(save);
-                LEAVE(etaMinLam);
-                return result;
-            }
+    // If function is a builtin, don't restructure, just curry args
+    if (node->isBuiltin) {
+        MinExp *new_function = curryMinExp(node->function);
+        int save = PROTECT(new_function);
+        MinExprList *new_args = curryMinExprList(args);
+        PROTECT(new_args);
+        if (new_function != node->function || new_args != args) {
+            MinExp *result =
+                makeMinExp_Apply(CPI(node), new_function, new_args);
+            getMinExp_Apply(result)->isBuiltin = true;
             UNPROTECT(save);
+            LEAVE(curryMinApply);
+            return result;
         }
-    }
-
-    // η(λ.x (f x))) => (λ.x (ηf x)) otherwise
-    MinExp *body = etaMinExp(lambda->exp);
-    if (body != lambda->exp) {
-        int save = PROTECT(body);
-        MinExp *result = makeMinExp_Lam(CPI(lambda), lambda->args, body);
         UNPROTECT(save);
-        LEAVE(etaMinLam);
-        return result;
+        LEAVE(curryMinApply);
+        return exp;
     }
 
-    LEAVE(etaMinLam);
-    return exp;
+    // 0 or 1 args: curry function and args
+    if (args == NULL || args->next == NULL) {
+        MinExp *new_function = curryMinExp(node->function);
+        int save = PROTECT(new_function);
+        MinExprList *new_args = curryMinExprList(args);
+        PROTECT(new_args);
+        if (new_function != node->function || new_args != args) {
+            MinExp *result =
+                makeMinExp_Apply(CPI(node), new_function, new_args);
+            UNPROTECT(save);
+            LEAVE(curryMinApply);
+            return result;
+        }
+        UNPROTECT(save);
+        LEAVE(curryMinApply);
+        return exp;
+    }
+
+    // 2+ args: curry(apply(apply(e, [first_arg]), rest))
+    MinExprList *firstArgList = newMinExprList(CPI(args), args->exp, NULL);
+    int save = PROTECT(firstArgList);
+    MinExp *innerApply =
+        makeMinExp_Apply(CPI(node), node->function, firstArgList);
+    PROTECT(innerApply);
+    MinExp *outerApply = makeMinExp_Apply(CPI(node), innerApply, args->next);
+    PROTECT(outerApply);
+    MinExp *result = curryMinExp(outerApply);
+    UNPROTECT(save);
+    LEAVE(curryMinApply);
+    return result;
 }
 
-static MinExprList *etaMinExprList(MinExprList *node) {
-    ENTER(etaMinExprList);
+static MinExprList *curryMinExprList(MinExprList *node) {
+    ENTER(curryMinExprList);
     if (node == NULL) {
-        LEAVE(etaMinExprList);
+        LEAVE(curryMinExprList);
         return NULL;
     }
 
     bool changed = false;
-    MinExp *new_exp = etaMinExp(node->exp);
+    MinExp *new_exp = curryMinExp(node->exp);
     int save = PROTECT(new_exp);
     changed = changed || (new_exp != node->exp);
-    MinExprList *new_next = etaMinExprList(node->next);
+    MinExprList *new_next = curryMinExprList(node->next);
     PROTECT(new_next);
     changed = changed || (new_next != node->next);
 
     if (changed) {
         MinExprList *result = newMinExprList(CPI(node), new_exp, new_next);
         UNPROTECT(save);
-        LEAVE(etaMinExprList);
+        LEAVE(curryMinExprList);
         return result;
     }
 
     UNPROTECT(save);
-    LEAVE(etaMinExprList);
+    LEAVE(curryMinExprList);
     return node;
 }
 
-static MinPrimApp *etaMinPrimApp(MinPrimApp *node) {
-    ENTER(etaMinPrimApp);
+static MinPrimApp *curryMinPrimApp(MinPrimApp *node) {
+    ENTER(curryMinPrimApp);
     if (node == NULL) {
-        LEAVE(etaMinPrimApp);
+        LEAVE(curryMinPrimApp);
         return NULL;
     }
 
     bool changed = false;
-    MinExp *new_exp1 = etaMinExp(node->exp1);
+    MinExp *new_exp1 = curryMinExp(node->exp1);
     int save = PROTECT(new_exp1);
     changed = changed || (new_exp1 != node->exp1);
-    MinExp *new_exp2 = etaMinExp(node->exp2);
+    MinExp *new_exp2 = curryMinExp(node->exp2);
     PROTECT(new_exp2);
     changed = changed || (new_exp2 != node->exp2);
 
@@ -202,58 +185,30 @@ static MinPrimApp *etaMinPrimApp(MinPrimApp *node) {
         MinPrimApp *result =
             newMinPrimApp(CPI(node), node->type, new_exp1, new_exp2);
         UNPROTECT(save);
-        LEAVE(etaMinPrimApp);
+        LEAVE(curryMinPrimApp);
         return result;
     }
 
     UNPROTECT(save);
-    LEAVE(etaMinPrimApp);
+    LEAVE(curryMinPrimApp);
     return node;
 }
 
-static MinApply *etaMinApply(MinApply *node) {
-    ENTER(etaMinApply);
+static MinIff *curryMinIff(MinIff *node) {
+    ENTER(curryMinIff);
     if (node == NULL) {
-        LEAVE(etaMinApply);
+        LEAVE(curryMinIff);
         return NULL;
     }
 
     bool changed = false;
-    MinExp *new_function = etaMinExp(node->function);
-    int save = PROTECT(new_function);
-    changed = changed || (new_function != node->function);
-    MinExprList *new_args = etaMinExprList(node->args);
-    PROTECT(new_args);
-    changed = changed || (new_args != node->args);
-
-    if (changed) {
-        MinApply *result = newMinApply(CPI(node), new_function, new_args);
-        result->isBuiltin = node->isBuiltin;
-        UNPROTECT(save);
-        LEAVE(etaMinApply);
-        return result;
-    }
-
-    UNPROTECT(save);
-    LEAVE(etaMinApply);
-    return node;
-}
-
-static MinIff *etaMinIff(MinIff *node) {
-    ENTER(etaMinIff);
-    if (node == NULL) {
-        LEAVE(etaMinIff);
-        return NULL;
-    }
-
-    bool changed = false;
-    MinExp *new_condition = etaMinExp(node->condition);
+    MinExp *new_condition = curryMinExp(node->condition);
     int save = PROTECT(new_condition);
     changed = changed || (new_condition != node->condition);
-    MinExp *new_consequent = etaMinExp(node->consequent);
+    MinExp *new_consequent = curryMinExp(node->consequent);
     PROTECT(new_consequent);
     changed = changed || (new_consequent != node->consequent);
-    MinExp *new_alternative = etaMinExp(node->alternative);
+    MinExp *new_alternative = curryMinExp(node->alternative);
     PROTECT(new_alternative);
     changed = changed || (new_alternative != node->alternative);
 
@@ -261,54 +216,54 @@ static MinIff *etaMinIff(MinIff *node) {
         MinIff *result = newMinIff(CPI(node), new_condition, new_consequent,
                                    new_alternative);
         UNPROTECT(save);
-        LEAVE(etaMinIff);
+        LEAVE(curryMinIff);
         return result;
     }
 
     UNPROTECT(save);
-    LEAVE(etaMinIff);
+    LEAVE(curryMinIff);
     return node;
 }
 
-static MinCond *etaMinCond(MinCond *node) {
-    ENTER(etaMinCond);
+static MinCond *curryMinCond(MinCond *node) {
+    ENTER(curryMinCond);
     if (node == NULL) {
-        LEAVE(etaMinCond);
+        LEAVE(curryMinCond);
         return NULL;
     }
 
     bool changed = false;
-    MinExp *new_value = etaMinExp(node->value);
+    MinExp *new_value = curryMinExp(node->value);
     int save = PROTECT(new_value);
     changed = changed || (new_value != node->value);
-    MinCondCases *new_cases = etaMinCondCases(node->cases);
+    MinCondCases *new_cases = curryMinCondCases(node->cases);
     PROTECT(new_cases);
     changed = changed || (new_cases != node->cases);
 
     if (changed) {
         MinCond *result = newMinCond(CPI(node), new_value, new_cases);
         UNPROTECT(save);
-        LEAVE(etaMinCond);
+        LEAVE(curryMinCond);
         return result;
     }
 
     UNPROTECT(save);
-    LEAVE(etaMinCond);
+    LEAVE(curryMinCond);
     return node;
 }
 
-static MinIntCondCases *etaMinIntCondCases(MinIntCondCases *node) {
-    ENTER(etaMinIntCondCases);
+static MinIntCondCases *curryMinIntCondCases(MinIntCondCases *node) {
+    ENTER(curryMinIntCondCases);
     if (node == NULL) {
-        LEAVE(etaMinIntCondCases);
+        LEAVE(curryMinIntCondCases);
         return NULL;
     }
 
     bool changed = false;
-    MinExp *new_body = etaMinExp(node->body);
+    MinExp *new_body = curryMinExp(node->body);
     int save = PROTECT(new_body);
     changed = changed || (new_body != node->body);
-    MinIntCondCases *new_next = etaMinIntCondCases(node->next);
+    MinIntCondCases *new_next = curryMinIntCondCases(node->next);
     PROTECT(new_next);
     changed = changed || (new_next != node->next);
 
@@ -316,27 +271,27 @@ static MinIntCondCases *etaMinIntCondCases(MinIntCondCases *node) {
         MinIntCondCases *result =
             newMinIntCondCases(CPI(node), node->constant, new_body, new_next);
         UNPROTECT(save);
-        LEAVE(etaMinIntCondCases);
+        LEAVE(curryMinIntCondCases);
         return result;
     }
 
     UNPROTECT(save);
-    LEAVE(etaMinIntCondCases);
+    LEAVE(curryMinIntCondCases);
     return node;
 }
 
-static MinCharCondCases *etaMinCharCondCases(MinCharCondCases *node) {
-    ENTER(etaMinCharCondCases);
+static MinCharCondCases *curryMinCharCondCases(MinCharCondCases *node) {
+    ENTER(curryMinCharCondCases);
     if (node == NULL) {
-        LEAVE(etaMinCharCondCases);
+        LEAVE(curryMinCharCondCases);
         return NULL;
     }
 
     bool changed = false;
-    MinExp *new_body = etaMinExp(node->body);
+    MinExp *new_body = curryMinExp(node->body);
     int save = PROTECT(new_body);
     changed = changed || (new_body != node->body);
-    MinCharCondCases *new_next = etaMinCharCondCases(node->next);
+    MinCharCondCases *new_next = curryMinCharCondCases(node->next);
     PROTECT(new_next);
     changed = changed || (new_next != node->next);
 
@@ -344,54 +299,55 @@ static MinCharCondCases *etaMinCharCondCases(MinCharCondCases *node) {
         MinCharCondCases *result =
             newMinCharCondCases(CPI(node), node->constant, new_body, new_next);
         UNPROTECT(save);
-        LEAVE(etaMinCharCondCases);
+        LEAVE(curryMinCharCondCases);
         return result;
     }
 
     UNPROTECT(save);
-    LEAVE(etaMinCharCondCases);
+    LEAVE(curryMinCharCondCases);
     return node;
 }
 
-static MinMatch *etaMinMatch(MinMatch *node) {
-    ENTER(etaMinMatch);
+static MinMatch *curryMinMatch(MinMatch *node) {
+    ENTER(curryMinMatch);
     if (node == NULL) {
-        LEAVE(etaMinMatch);
+        LEAVE(curryMinMatch);
         return NULL;
     }
 
     bool changed = false;
-    MinExp *new_index = etaMinExp(node->index);
+    MinExp *new_index = curryMinExp(node->index);
     int save = PROTECT(new_index);
     changed = changed || (new_index != node->index);
-    MinMatchList *new_cases = etaMinMatchList(node->cases);
+    MinMatchList *new_cases = curryMinMatchList(node->cases);
     PROTECT(new_cases);
     changed = changed || (new_cases != node->cases);
 
     if (changed) {
         MinMatch *result = newMinMatch(CPI(node), new_index, new_cases);
         UNPROTECT(save);
-        LEAVE(etaMinMatch);
+        LEAVE(curryMinMatch);
         return result;
     }
 
     UNPROTECT(save);
-    LEAVE(etaMinMatch);
+    LEAVE(curryMinMatch);
     return node;
 }
 
-static MinMatchList *etaMinMatchList(MinMatchList *node) {
-    ENTER(etaMinMatchList);
+static MinMatchList *curryMinMatchList(MinMatchList *node) {
+    ENTER(curryMinMatchList);
     if (node == NULL) {
-        LEAVE(etaMinMatchList);
+        LEAVE(curryMinMatchList);
         return NULL;
     }
 
     bool changed = false;
-    MinExp *new_body = etaMinExp(node->body);
+    // matches is a MinIntList (just ints), no currying needed
+    MinExp *new_body = curryMinExp(node->body);
     int save = PROTECT(new_body);
     changed = changed || (new_body != node->body);
-    MinMatchList *new_next = etaMinMatchList(node->next);
+    MinMatchList *new_next = curryMinMatchList(node->next);
     PROTECT(new_next);
     changed = changed || (new_next != node->next);
 
@@ -399,116 +355,101 @@ static MinMatchList *etaMinMatchList(MinMatchList *node) {
         MinMatchList *result =
             newMinMatchList(CPI(node), node->matches, new_body, new_next);
         UNPROTECT(save);
-        LEAVE(etaMinMatchList);
+        LEAVE(curryMinMatchList);
         return result;
     }
 
     UNPROTECT(save);
-    LEAVE(etaMinMatchList);
+    LEAVE(curryMinMatchList);
     return node;
 }
 
-static MinLetRec *etaMinLetRec(MinLetRec *node) {
-    ENTER(etaMinLetRec);
+static MinLetRec *curryMinLetRec(MinLetRec *node) {
+    ENTER(curryMinLetRec);
     if (node == NULL) {
-        LEAVE(etaMinLetRec);
+        LEAVE(curryMinLetRec);
         return NULL;
     }
 
-    int save = PROTECT(NULL);
-    SymbolSet *previousLetRecSymbols = etaLetRecSymbols;
-    SymbolSet *bindingSymbols = etaBindingSymbols(node->bindings);
-    PROTECT(bindingSymbols);
-    if (previousLetRecSymbols != NULL) {
-        bindingSymbols = unionSymbolSet(previousLetRecSymbols, bindingSymbols);
-        PROTECT(bindingSymbols);
-    }
-    etaLetRecSymbols = bindingSymbols;
-
     bool changed = false;
-    MinBindings *new_bindings = etaMinBindings(node->bindings);
-    PROTECT(new_bindings);
+    MinBindings *new_bindings = curryMinBindings(node->bindings);
+    int save = PROTECT(new_bindings);
     changed = changed || (new_bindings != node->bindings);
-    MinExp *new_body = etaMinExp(node->body);
+    MinExp *new_body = curryMinExp(node->body);
     PROTECT(new_body);
     changed = changed || (new_body != node->body);
-
-    etaLetRecSymbols = previousLetRecSymbols;
 
     if (changed) {
         MinLetRec *result = newMinLetRec(CPI(node), new_bindings, new_body);
         UNPROTECT(save);
-        LEAVE(etaMinLetRec);
+        LEAVE(curryMinLetRec);
         return result;
     }
 
     UNPROTECT(save);
-    LEAVE(etaMinLetRec);
+    LEAVE(curryMinLetRec);
     return node;
 }
 
-static MinBindings *etaMinBindings(MinBindings *node) {
-    ENTER(etaMinBindings);
+static MinBindings *curryMinBindings(MinBindings *node) {
+    ENTER(curryMinBindings);
     if (node == NULL) {
-        LEAVE(etaMinBindings);
+        LEAVE(curryMinBindings);
         return NULL;
     }
 
     bool changed = false;
-    // LetRec bindings are scope-sensitive for later normalization/annotation.
-    // Preserve binding shape, but allow eta reduction inside lambda bodies.
-    MinExp *new_val = etaMinBindingValue(node->val);
+    // error if it's not a lambda
+    Integer arity = countSymbolList(getMinExp_Lam(node->val)->args);
+    MinExp *new_val = curryMinExp(node->val);
     int save = PROTECT(new_val);
     changed = changed || (new_val != node->val);
-    MinBindings *new_next = etaMinBindings(node->next);
+    MinBindings *new_next = curryMinBindings(node->next);
     PROTECT(new_next);
     changed = changed || (new_next != node->next);
 
+    MinBindings *result = node;
     if (changed) {
-        MinBindings *result =
-            newMinBindings(CPI(node), node->var, new_val, new_next);
-        result->arity = node->arity;
-        UNPROTECT(save);
-        LEAVE(etaMinBindings);
-        return result;
+        result = newMinBindings(CPI(node), node->var, new_val, new_next);
     }
+    result->arity = arity; // un-curry later.
 
     UNPROTECT(save);
-    LEAVE(etaMinBindings);
-    return node;
+    LEAVE(curryMinBindings);
+    return result;
 }
 
-static MinAmb *etaMinAmb(MinAmb *node) {
-    ENTER(etaMinAmb);
+static MinAmb *curryMinAmb(MinAmb *node) {
+    ENTER(curryMinAmb);
     if (node == NULL) {
-        LEAVE(etaMinAmb);
+        LEAVE(curryMinAmb);
         return NULL;
     }
 
     bool changed = false;
-    MinExp *new_left = etaMinExp(node->left);
+    MinExp *new_left = curryMinExp(node->left);
     int save = PROTECT(new_left);
     changed = changed || (new_left != node->left);
-    MinExp *new_right = etaMinExp(node->right);
+    MinExp *new_right = curryMinExp(node->right);
     PROTECT(new_right);
     changed = changed || (new_right != node->right);
 
     if (changed) {
         MinAmb *result = newMinAmb(CPI(node), new_left, new_right);
         UNPROTECT(save);
-        LEAVE(etaMinAmb);
+        LEAVE(curryMinAmb);
         return result;
     }
 
     UNPROTECT(save);
-    LEAVE(etaMinAmb);
+    LEAVE(curryMinAmb);
     return node;
 }
 
-MinExp *etaMinExp(MinExp *node) {
-    ENTER(etaMinExp);
+MinExp *curryMinExp(MinExp *node) {
+    ENTER(curryMinExp);
     if (node == NULL) {
-        LEAVE(etaMinExp);
+        LEAVE(curryMinExp);
         return NULL;
     }
 
@@ -518,7 +459,7 @@ MinExp *etaMinExp(MinExp *node) {
     switch (node->type) {
     case MINEXP_TYPE_AMB: {
         MinAmb *variant = getMinExp_Amb(node);
-        MinAmb *new_variant = etaMinAmb(variant);
+        MinAmb *new_variant = curryMinAmb(variant);
         if (new_variant != variant) {
             PROTECT(new_variant);
             result = newMinExp_Amb(CPI(node), new_variant);
@@ -526,18 +467,12 @@ MinExp *etaMinExp(MinExp *node) {
         break;
     }
     case MINEXP_TYPE_APPLY: {
-        MinApply *variant = getMinExp_Apply(node);
-        MinApply *new_variant = etaMinApply(variant);
-        if (new_variant != variant) {
-            PROTECT(new_variant);
-            new_variant->isBuiltin = variant->isBuiltin;
-            result = newMinExp_Apply(CPI(node), new_variant);
-        }
+        result = curryMinApply(node);
         break;
     }
     case MINEXP_TYPE_ARGS: {
         MinExprList *variant = getMinExp_Args(node);
-        MinExprList *new_variant = etaMinExprList(variant);
+        MinExprList *new_variant = curryMinExprList(variant);
         if (new_variant != variant) {
             PROTECT(new_variant);
             result = newMinExp_Args(CPI(node), new_variant);
@@ -552,7 +487,7 @@ MinExp *etaMinExp(MinExp *node) {
     }
     case MINEXP_TYPE_BINDINGS: {
         MinBindings *variant = getMinExp_Bindings(node);
-        MinBindings *new_variant = etaMinBindings(variant);
+        MinBindings *new_variant = curryMinBindings(variant);
         if (new_variant != variant) {
             PROTECT(new_variant);
             result = newMinExp_Bindings(CPI(node), new_variant);
@@ -561,7 +496,7 @@ MinExp *etaMinExp(MinExp *node) {
     }
     case MINEXP_TYPE_CALLCC: {
         MinExp *variant = getMinExp_CallCC(node);
-        MinExp *new_variant = etaMinExp(variant);
+        MinExp *new_variant = curryMinExp(variant);
         if (new_variant != variant) {
             PROTECT(new_variant);
             result = newMinExp_CallCC(CPI(node), new_variant);
@@ -573,7 +508,7 @@ MinExp *etaMinExp(MinExp *node) {
     }
     case MINEXP_TYPE_COND: {
         MinCond *variant = getMinExp_Cond(node);
-        MinCond *new_variant = etaMinCond(variant);
+        MinCond *new_variant = curryMinCond(variant);
         if (new_variant != variant) {
             PROTECT(new_variant);
             result = newMinExp_Cond(CPI(node), new_variant);
@@ -582,7 +517,7 @@ MinExp *etaMinExp(MinExp *node) {
     }
     case MINEXP_TYPE_IFF: {
         MinIff *variant = getMinExp_Iff(node);
-        MinIff *new_variant = etaMinIff(variant);
+        MinIff *new_variant = curryMinIff(variant);
         if (new_variant != variant) {
             PROTECT(new_variant);
             result = newMinExp_Iff(CPI(node), new_variant);
@@ -590,12 +525,12 @@ MinExp *etaMinExp(MinExp *node) {
         break;
     }
     case MINEXP_TYPE_LAM: {
-        result = etaMinLam(node);
+        result = curryMinLam(node);
         break;
     }
     case MINEXP_TYPE_LETREC: {
         MinLetRec *variant = getMinExp_LetRec(node);
-        MinLetRec *new_variant = etaMinLetRec(variant);
+        MinLetRec *new_variant = curryMinLetRec(variant);
         if (new_variant != variant) {
             PROTECT(new_variant);
             result = newMinExp_LetRec(CPI(node), new_variant);
@@ -604,7 +539,7 @@ MinExp *etaMinExp(MinExp *node) {
     }
     case MINEXP_TYPE_MAKEVEC: {
         MinExprList *variant = getMinExp_MakeVec(node);
-        MinExprList *new_variant = etaMinExprList(variant);
+        MinExprList *new_variant = curryMinExprList(variant);
         if (new_variant != variant) {
             PROTECT(new_variant);
             result = newMinExp_MakeVec(CPI(node), new_variant);
@@ -613,7 +548,7 @@ MinExp *etaMinExp(MinExp *node) {
     }
     case MINEXP_TYPE_MATCH: {
         MinMatch *variant = getMinExp_Match(node);
-        MinMatch *new_variant = etaMinMatch(variant);
+        MinMatch *new_variant = curryMinMatch(variant);
         if (new_variant != variant) {
             PROTECT(new_variant);
             result = newMinExp_Match(CPI(node), new_variant);
@@ -622,7 +557,7 @@ MinExp *etaMinExp(MinExp *node) {
     }
     case MINEXP_TYPE_PRIM: {
         MinPrimApp *variant = getMinExp_Prim(node);
-        MinPrimApp *new_variant = etaMinPrimApp(variant);
+        MinPrimApp *new_variant = curryMinPrimApp(variant);
         if (new_variant != variant) {
             PROTECT(new_variant);
             result = newMinExp_Prim(CPI(node), new_variant);
@@ -631,7 +566,7 @@ MinExp *etaMinExp(MinExp *node) {
     }
     case MINEXP_TYPE_SEQUENCE: {
         MinExprList *variant = getMinExp_Sequence(node);
-        MinExprList *new_variant = etaMinExprList(variant);
+        MinExprList *new_variant = curryMinExprList(variant);
         if (new_variant != variant) {
             PROTECT(new_variant);
             result = newMinExp_Sequence(CPI(node), new_variant);
@@ -649,14 +584,14 @@ MinExp *etaMinExp(MinExp *node) {
     }
 
     UNPROTECT(save);
-    LEAVE(etaMinExp);
+    LEAVE(curryMinExp);
     return result;
 }
 
-static MinCondCases *etaMinCondCases(MinCondCases *node) {
-    ENTER(etaMinCondCases);
+static MinCondCases *curryMinCondCases(MinCondCases *node) {
+    ENTER(curryMinCondCases);
     if (node == NULL) {
-        LEAVE(etaMinCondCases);
+        LEAVE(curryMinCondCases);
         return NULL;
     }
 
@@ -666,7 +601,7 @@ static MinCondCases *etaMinCondCases(MinCondCases *node) {
     switch (node->type) {
     case MINCONDCASES_TYPE_INTEGERS: {
         MinIntCondCases *variant = getMinCondCases_Integers(node);
-        MinIntCondCases *new_variant = etaMinIntCondCases(variant);
+        MinIntCondCases *new_variant = curryMinIntCondCases(variant);
         if (new_variant != variant) {
             PROTECT(new_variant);
             result = newMinCondCases_Integers(CPI(node), new_variant);
@@ -675,7 +610,7 @@ static MinCondCases *etaMinCondCases(MinCondCases *node) {
     }
     case MINCONDCASES_TYPE_CHARACTERS: {
         MinCharCondCases *variant = getMinCondCases_Characters(node);
-        MinCharCondCases *new_variant = etaMinCharCondCases(variant);
+        MinCharCondCases *new_variant = curryMinCharCondCases(variant);
         if (new_variant != variant) {
             PROTECT(new_variant);
             result = newMinCondCases_Characters(CPI(node), new_variant);
@@ -687,6 +622,6 @@ static MinCondCases *etaMinCondCases(MinCondCases *node) {
     }
 
     UNPROTECT(save);
-    LEAVE(etaMinCondCases);
+    LEAVE(curryMinCondCases);
     return result;
 }

@@ -58,7 +58,7 @@ void dumpByteCode(ByteCodeArray *b, LocationArray *l) {
         } break;
         case BYTECODES_TYPE_LAM: {
             int nArgs = readByte(b, &i);
-            int letRecOffset = readByte(b, &i);
+            int letRecOffset = readWord(b, &i);
             int offset = readOffset(b, &i);
             eprintf("LAM [%d][%d][%04x]", nArgs, letRecOffset, offset);
             loc(ii, &li, l);
@@ -215,7 +215,7 @@ void dumpByteCode(ByteCodeArray *b, LocationArray *l) {
             loc(ii, &li, l);
         } break;
         case BYTECODES_TYPE_LETREC: {
-            int size = readByte(b, &i);
+            int size = readWord(b, &i);
             eprintf("LETREC [%d]", size);
             loc(ii, &li, l);
         } break;

@@ -61,8 +61,9 @@ structs:
                 An implementation of a nameSpace in the AST,
                 containing its unique file ID and definitions.
         data:
-            id: file_id
+            id: FileId
             definitions: AstDefinitions
+            replacements: SymbolMap=NULL
 
     AstNameSpace:
         meta:
@@ -366,11 +367,12 @@ structs:
             brief: AST Function Call
             description: >-
                 A function call in the AST, which can be a call to a
-                normal function or a macro. Contains the function being
+                normal function, a macro or a builtin. Contains the function being
                 called and its arguments.
         data:
             function: AstExpression
             arguments: AstExpressions
+            isBuiltin: bool=false
 
     AstExpressions:
         meta:
@@ -577,7 +579,7 @@ arrays:
                 An array of file IDs used in the AST, which identify
                 nameSpace files that have already been read.
         data:
-            entries: file_id
+            entries: FileId
 
     AstExpressionArray:
         meta:
@@ -588,3 +590,6 @@ arrays:
             entries: AstExpression
 
 primitives: !include primitives.yaml
+
+external:
+- !include utils.yaml

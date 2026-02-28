@@ -39,8 +39,6 @@ static void freeVarsMinPrimApp(MinPrimApp *node, SymbolSet *result,
                                SymbolEnv *context);
 static void freeVarsMinApply(MinApply *node, SymbolSet *result,
                              SymbolEnv *context);
-static void freeVarsMinLookUp(MinLookUp *node, SymbolSet *result,
-                              SymbolEnv *context);
 static void freeVarsMinIff(MinIff *node, SymbolSet *result, SymbolEnv *context);
 static void freeVarsMinCond(MinCond *node, SymbolSet *result,
                             SymbolEnv *context);
@@ -125,18 +123,6 @@ static void freeVarsMinApply(MinApply *node, SymbolSet *result,
     freeVarsMinExp(node->function, result, context);
     freeVarsMinExprList(node->args, result, context);
     LEAVE(freeVarsMinApply);
-}
-
-static void freeVarsMinLookUp(MinLookUp *node, SymbolSet *result,
-                              SymbolEnv *context) {
-    ENTER(freeVarsMinLookUp);
-    if (node == NULL) {
-        LEAVE(freeVarsMinLookUp);
-        return;
-    }
-
-    freeVarsMinExp(node->exp, result, context);
-    LEAVE(freeVarsMinLookUp);
 }
 
 static void freeVarsMinIff(MinIff *node, SymbolSet *result,
@@ -286,8 +272,6 @@ void freeVarsMinExp(MinExp *node, SymbolSet *result, SymbolEnv *context) {
     case MINEXP_TYPE_BACK:
     case MINEXP_TYPE_BIGINTEGER:
     case MINEXP_TYPE_CHARACTER:
-    case MINEXP_TYPE_ENV:
-    case MINEXP_TYPE_ERROR:
     case MINEXP_TYPE_STDINT:
         break;
     case MINEXP_TYPE_BINDINGS:
@@ -308,16 +292,11 @@ void freeVarsMinExp(MinExp *node, SymbolSet *result, SymbolEnv *context) {
     case MINEXP_TYPE_LETREC:
         freeVarsMinLetRec(getMinExp_LetRec(node), result, context);
         break;
-    case MINEXP_TYPE_LOOKUP:
-        freeVarsMinLookUp(getMinExp_LookUp(node), result, context);
-        break;
     case MINEXP_TYPE_MAKEVEC:
         freeVarsMinExprList(getMinExp_MakeVec(node), result, context);
         break;
     case MINEXP_TYPE_MATCH:
         freeVarsMinMatch(getMinExp_Match(node), result, context);
-        break;
-    case MINEXP_TYPE_NAMESPACES:
         break;
     case MINEXP_TYPE_PRIM:
         freeVarsMinPrimApp(getMinExp_Prim(node), result, context);

@@ -23,6 +23,10 @@
 // making this technically a CESKF machine
 let
     link "../listutils.fn" as list;
+    import list operator "_|>_";
+    import list operator "_::_";
+    import list operator "unzip_";
+    import list operator "len_";
 
     typedef prim { add | sub | mul | div }
 
@@ -77,15 +81,15 @@ let
                 (_, []) { error("store exhausted") }
             }
         in
-            helper(list.length(s) - (index + 1), s)
+            helper(len s - (index + 1), s)
     }
 
     fn indices(arglist, s) {
         let
-            low = list.length(s);
-            high = low + list.length(arglist) - 1;
+            low = len s;
+            high = low + (len arglist) - 1;
         in
-            list.reverse(list.range(low, high))
+            list.reverse(low::high)
     }
 
     unsafe fn zipEnv {
@@ -99,7 +103,7 @@ let
         (_, _, T) { t }
         (_, _, F) { f }
         (ρ, _, lam(l)) { clo(l, ρ) }
-        (ρ, σ, primapp(prim, arglist)) { O(prim)(list.map(A(ρ, σ), arglist)) }
+        (ρ, σ, primapp(prim, arglist)) { O(prim)(arglist |> A(ρ, σ)) }
         (ρ, σ, prin(a)) {
             let
                 v = A(ρ, σ, a);
@@ -120,7 +124,7 @@ let
         (Σ(cexp(application(applicant, arglist)), ρ, σ, κ, ς)) {
             let
                 proc = A(ρ, σ, applicant);
-                aargs = list.map(A(ρ, σ), arglist);
+                aargs = arglist |> A(ρ, σ);
             in
                 applyProc(proc, aargs, σ, κ, ς)
         }
@@ -142,12 +146,10 @@ let
         (Σ(cexp(letrec(bindings, body)), ρ, σ, κ, ς)) {
             let
                 inds = indices(bindings, σ);
-                ks = list.map(fn (#(k, _)) { k }, bindings);
+                #(ks, vs) = unzip bindings;
                 e = zipEnv(ks, inds, ρ);
-                tempStore = list.repeat_prefix(list.length(inds), f, σ);
-                s = list.map_prefix(A(e, tempStore),
-                                    list.map(fn (#(_, v)) { v }, bindings),
-                                    σ);
+                tempStore = list.repeat_prefix(len inds, f, σ);
+                s = list.map_prefix(A(e, tempStore), vs, σ);
             in
                 Σ(body, e, s, κ, ς)
         }
@@ -190,7 +192,7 @@ let
 
     fn applyKont {
         (letk(name, ρ, exp, κ), val, σ, ς) {
-            Σ(exp, frame(name, list.length(σ), ρ), val @ σ, κ, ς)
+            Σ(exp, frame(name, len σ, ρ), val @ σ, κ, ς)
         }
         (halt, _, _, _) {
             end

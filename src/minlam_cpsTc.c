@@ -39,7 +39,6 @@
 static MinExp *cpsTcMinPrimApp(MinPrimApp *node, MinExp *c);
 static MinExp *cpsTcMinSequence(MinExprList *node, MinExp *c);
 static MinExp *cpsTcMinApply(MinApply *node, MinExp *c);
-static MinExp *cpsTcMinLookUp(MinLookUp *node, MinExp *c);
 static MinExp *cpsTcMakeVec(MinExprList *node, MinExp *c);
 static MinExp *cpsTcMinIff(MinIff *node, MinExp *c);
 static MinExp *cpsTcMinCond(MinCond *node, MinExp *c);
@@ -47,7 +46,6 @@ static MinExp *cpsTcMinMatch(MinMatch *node, MinExp *c);
 static MinExp *cpsTcMinLetRec(MinLetRec *node, MinExp *c);
 static MinExp *cpsTcMinAmb(MinAmb *node, MinExp *c);
 static MinExp *cpsTcMinExp(MinExp *node, MinExp *c);
-static MinExp *cpsTcMinNameSpaceArray(MinNameSpaceArray *node, MinExp *c);
 
 /*
     fn M {
@@ -207,21 +205,6 @@ MinExp *TcApply2Kont(MinExp *ses, TcApply2KontEnv *env) {
     MinExp *result = makeMinExp_Apply(CPI(env->sf), env->sf, args);
     UNPROTECT(save);
     LEAVE(TcApply2Kont);
-    return result;
-}
-
-/*
-    (E.lookUp(name, index, expr)) {
-        E.lookUp(name, index, T_c(expr, c))
-    }
-*/
-static MinExp *cpsTcMinLookUp(MinLookUp *node, MinExp *c) {
-    ENTER(cpsTcMinLookUp);
-    MinExp *expr = cpsTcMinExp(node->exp, c);
-    int save = PROTECT(expr);
-    MinExp *result = makeMinExp_LookUp(CPI(node), node->nsId, expr);
-    UNPROTECT(save);
-    LEAVE(cpsTcMinLookUp);
     return result;
 }
 
@@ -584,14 +567,10 @@ static MinExp *cpsTcMinExp(MinExp *node, MinExp *c) {
         return cpsTcMinIff(getMinExp_Iff(node), c);
     case MINEXP_TYPE_LETREC:
         return cpsTcMinLetRec(getMinExp_LetRec(node), c);
-    case MINEXP_TYPE_LOOKUP:
-        return cpsTcMinLookUp(getMinExp_LookUp(node), c);
     case MINEXP_TYPE_MAKEVEC:
         return cpsTcMakeVec(getMinExp_MakeVec(node), c);
     case MINEXP_TYPE_MATCH:
         return cpsTcMinMatch(getMinExp_Match(node), c);
-    case MINEXP_TYPE_NAMESPACES:
-        return cpsTcMinNameSpaceArray(getMinExp_NameSpaces(node), c);
     case MINEXP_TYPE_PRIM:
         return cpsTcMinPrimApp(getMinExp_Prim(node), c);
     case MINEXP_TYPE_SEQUENCE:
@@ -599,39 +578,6 @@ static MinExp *cpsTcMinExp(MinExp *node, MinExp *c) {
     default:
         cant_happen("unrecognized MinExp type %s", minExpTypeName(node->type));
     }
-}
-
-/*
-    (E.nameSpaces(exprs)) {
-        Ts_k(exprs, fn (sexprs) {
-            E.apply(c, [E.nameSpaces(sexprs)])
-        })
-    }
-*/
-static MinExp *cpsTcMinNameSpaceArray(MinNameSpaceArray *node, MinExp *c) {
-    ENTER(cpsTcMinNameSpaceArray);
-    MinExp *seq = nsaToArgs(node);
-    int save = PROTECT(seq);
-    CpsKont *k1 = makeKont_TcNameSpaces(c);
-    PROTECT(k1);
-    MinExp *result = cpsTs_k(seq, k1);
-    UNPROTECT(save);
-    LEAVE(cpsTcMinNameSpaceArray);
-    return result;
-}
-
-MinExp *TcNameSpacesKont(MinExp *sexprs, TcNameSpacesKontEnv *env) {
-    ENTER(TcNameSpacesKont);
-    MinNameSpaceArray *nsa = argsToNsa(sexprs);
-    int save = PROTECT(nsa);
-    MinExp *nsaExp = newMinExp_NameSpaces(CPI(sexprs), nsa);
-    PROTECT(nsaExp);
-    MinExprList *args = newMinExprList(CPI(nsaExp), nsaExp, NULL);
-    PROTECT(args);
-    MinExp *result = makeMinExp_Apply(CPI(env->c), env->c, args);
-    UNPROTECT(save);
-    LEAVE(TcNameSpacesKont);
-    return result;
 }
 
 MinExp *cpsTc(MinExp *node, MinExp *c) {

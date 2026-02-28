@@ -2,107 +2,79 @@
 namespace
 link "minexpr.fn" as M;
 link "../listutils.fn" as list;
+import list operator "_|>_";
+import list operator "_except_";
 
 // free: expr -> list(string)
 fn free {
 
-    // amb_expr(expr, expr)
     (M.amb_expr(e1, e2)) {
         list.unique(free(e1) @@ free(e2))
     }
 
-    // apply[_closure](expr, list(expr))
     (M.apply_closure(f, args)) | (M.apply(f, args)) {
-        list.unique(list.concat(free(f) @ list.map(free, args)))
+        list.unique(list.concat(free(f) @ (args |> free)))
     }
 
     (M.back_expr) |
     (M.bigint(_)) |
     (M.primop(_)) |
     (M.character(_)) |
-    (M.env_expr) |
-    (M.error_expr) |
+    (M.env_ref(_, _)) |
     (M.stdint(_)) { [] }
 
-    // callcc_expr(expr)
     (M.callcc_expr(e)) {
         free(e)
     }
 
-    // env_ref(expr, string)
-    (M.env_ref(e, s)) {
-        free(e)
-    }
-
-    // cond_expr(expr, list(#(expr, expr)))
     (M.cond_expr(test, branches)) {
-        list.unique(free(test) @@ list.concat(list.map(fn (#(cond, res)) {
+        list.unique(free(test) @@ list.concat(branches |> fn (#(cond, res)) {
             list.unique(free(cond) @@ free(res))
-        }, branches)))
+        }))
     }
 
-    // env_ref(expr, string)
     (M.env_ref(e, s)) {
         free(e)
     }
 
-    // if_expr(expr, expr, expr)
     (M.if_expr(cond, then_branch, else_branch)) {
         list.unique(free(cond) @@ free(then_branch) @@ free(else_branch))
     }
 
-    // lambda[c](list(string), expr)
     (M.lambda(params, body)) | (M.lambdac(params, body)) {
-        list.exclude(params, free(body))
+        free(body) except params
     }
 
-    // letrec_expr(list(#(string, expr)), expr)
     (M.letrec_expr(bindings, body)) {
         let
-            #(names, exprs) = list.unzip(bindings);
+            #(names, pairs) = list.unzip(bindings);
+            exprs = pairs |> fn (#(expr, _)) { expr };
         in
-            list.exclude(names, list.unique(list.concat(list.map(free, exprs)) @@ free(body)))
+            list.unique(list.concat(exprs |> free) @@ free(body)) except names
     }
 
-    // lookup(string, number, expr)
-    (M.lookup(s, n, e)) {
-        free(e)
-    }
-
-    // make_closure(expr, expr)
     (M.make_closure(fun, env)) {
         list.unique(free(fun) @@ free(env));
     }
 
-    // make_env(list(#(string, expr)))
     (M.make_env(bindings)) {
-        let #(vs, es) = list.unzip(bindings);
-        in list.unique(list.concat(list.map(free, es)))
+        let #(names, es) = list.unzip(bindings);
+        in list.unique(list.concat(es |> free)) except names
     }
 
-    // make_vec(number, list(expr))
     (M.make_vec(n, elements)) {
-        list.unique(list.concat(list.map(free, elements)))
+        list.unique(list.concat(elements |> free))
     }
 
-    // match_cases(expr, list(#(list(number), expr)))
     (M.match_cases(scrutinee, cases)) {
-        list.unique(free(scrutinee) @@ list.concat(list.map(fn (#(nums, e)) {
-            free(e)
-        }, cases)))
+        list.unique(free(scrutinee) @@
+        list.concat(cases |> fn (#(_, e)) { free(e) }))
     }
 
-    // namespaces(list(expr))
-    (M.namespaces(exprs)) {
-        list.unique(list.concat(list.map(free, exprs)))
-    }
-
-    // sequence(list(expr))
     (M.sequence(exps)) {
-        list.unique(list.concat(list.map(free, exps)))
+        list.unique(list.concat(exps |> free))
     }
 
-    // var(string)
     (M.var(v)) { [v] }
 
     (e) {

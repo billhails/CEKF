@@ -46,8 +46,6 @@ static bool occursMinLetRec(MinLetRec *node, SymbolSet *targets);
 static bool occursMinBindings(MinBindings *node, SymbolSet *targets);
 static bool occursMinAmb(MinAmb *node, SymbolSet *targets);
 static bool occursMinCondCases(MinCondCases *node, SymbolSet *targets);
-static bool occursMinNameSpaceArray(MinNameSpaceArray *node,
-                                    SymbolSet *targets);
 
 // Visitor implementations
 
@@ -179,12 +177,6 @@ bool occursMinExp(MinExp *node, SymbolSet *targets) {
         MinCond *variant = getMinExp_Cond(node);
         return occursMinCond(variant, targets);
     }
-    case MINEXP_TYPE_ENV: {
-        return false;
-    }
-    case MINEXP_TYPE_ERROR: {
-        return false;
-    }
     case MINEXP_TYPE_IFF: {
         MinIff *variant = getMinExp_Iff(node);
         return occursMinIff(variant, targets);
@@ -197,9 +189,6 @@ bool occursMinExp(MinExp *node, SymbolSet *targets) {
         MinLetRec *variant = getMinExp_LetRec(node);
         return occursMinLetRec(variant, targets);
     }
-    case MINEXP_TYPE_LOOKUP: {
-        return false;
-    }
     case MINEXP_TYPE_MAKEVEC: {
         MinExprList *variant = getMinExp_MakeVec(node);
         return occursMinExprList(variant, targets);
@@ -207,10 +196,6 @@ bool occursMinExp(MinExp *node, SymbolSet *targets) {
     case MINEXP_TYPE_MATCH: {
         MinMatch *variant = getMinExp_Match(node);
         return occursMinMatch(variant, targets);
-    }
-    case MINEXP_TYPE_NAMESPACES: {
-        MinNameSpaceArray *variant = getMinExp_NameSpaces(node);
-        return occursMinNameSpaceArray(variant, targets);
     }
     case MINEXP_TYPE_PRIM: {
         MinPrimApp *variant = getMinExp_Prim(node);
@@ -249,19 +234,4 @@ static bool occursMinCondCases(MinCondCases *node, SymbolSet *targets) {
     default:
         cant_happen("unrecognized MinCondCases type %d", node->type);
     }
-}
-
-static bool occursMinNameSpaceArray(MinNameSpaceArray *node,
-                                    SymbolSet *targets) {
-    if (node == NULL) {
-        return false;
-    }
-
-    for (Index i = 0; i < node->size; i++) {
-        struct MinExp *element = peeknMinNameSpaceArray(node, i);
-        if (occursMinExp(element, targets)) {
-            return true;
-        }
-    }
-    return false;
 }

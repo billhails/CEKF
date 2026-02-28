@@ -54,6 +54,7 @@ static AstDefinition *makeWrapper(ParserInfo PI, BuiltIn *builtin) {
     AstExpression *bodyExpr =
         makeAstExpression_FunCall(PI, internalSym, actuals);
     PROTECT(bodyExpr);
+    getAstExpression_FunCall(bodyExpr)->isBuiltin = true;
     AstExpressions *bodyExprs = newAstExpressions(PI, bodyExpr, NULL);
     PROTECT(bodyExprs);
     AstNest *nest = newAstNest(PI, NULL, bodyExprs);

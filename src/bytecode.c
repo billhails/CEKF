@@ -197,7 +197,7 @@ void writeAexpLam(AexpLam *x, ByteCodeArray *b, LocationArray *L) {
         return;
     addByte(b, BYTECODES_TYPE_LAM);
     addByte(b, x->nArgs);
-    addByte(b, x->letRecOffset);
+    addWord(b, x->letRecOffset);
     Control patch = reserveWord(b);
     writeAnfExp(x->exp, b, L);
     addByte(b, BYTECODES_TYPE_RETURN);
@@ -597,7 +597,7 @@ void writeCexpLetRec(CexpLetRec *x, ByteCodeArray *b, LocationArray *L) {
     writeLetRecBindings(x->bindings, b, L);
     writeLocation(CPI(x), b, L);
     addByte(b, BYTECODES_TYPE_LETREC);
-    addByte(b, x->nBindings);
+    addWord(b, x->nBindings);
     writeAnfExp(x->body, b, L);
     LEAVE(writeCexpLetRec);
 }

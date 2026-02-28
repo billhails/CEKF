@@ -5,130 +5,32 @@ namespace
 link "minexpr.fn" as M;
 link "env.fn" as Env;
 link "subst.fn" as SUBST;
+link "occurs_in.fn" as O;
 link "../listutils.fn" as list;
 link "../dictutils.fn" as DICT;
+import list operator "_|>_";
+import list operator "_&&_";
+import list operator "_any_";
 
-fn subst (expr, var, arg) { // replace var with arg in expr
+fn subst (expr, var, arg) {
     SUBST.substitute(DICT.make([var], [arg]), expr)
 }
 
-fn occurs_in (var, expr) {
-    switch (expr) {
-        (M.amb_expr(expr1, expr2)) {
-            // amb_expr(expr, expr)
-            occurs_in(var, expr1) or occurs_in(var, expr2)
-        }
-
-        (M.apply(fun, args)) {
-            // apply(expr, list(expr))
-            occurs_in(var, fun) or list.any(occurs_in(var), args)
-        }
-
-        (M.var(_)) {
-            // var(string)
-            var == expr
-        }
-
-        (x = M.back_expr) |
-        (x = M.primop(_)) |
-        (x = M.env_expr) |
-        (x = M.error_expr) |
-        (x = M.bigint(_)) |
-        (x = M.character(_)) |
-        (x = M.stdint(_)) {
-            false
-        }
-
-        (M.callcc_expr(e)) {
-            // callcc_expr(expr)
-            occurs_in(var, e)
-        }
-
-        (M.cond_expr(test, branches)) {
-            // cond_expr(expr, list(#(expr, expr)))
-            let #(vals, results) = list.unzip(branches);
-            in
-                occurs_in(var, test) or list.any(occurs_in(var), vals) or list.any(occurs_in(var), results)
-        }
-
-        (M.if_expr(exprc, exprt, exprf)) {
-            // if_expr(expr, expr, expr)
-            occurs_in(var, exprc) or occurs_in(var, exprt) or occurs_in(var, exprf)
-        }
-
-        (M.lambda(params, body)) {
-            // lambda(list(string), expr)
-            let vars = list.map(fn (str) { M.var(str) }, params);
-            in
-                if (list.member(var, vars)) {
-                    false
-                } else {
-                    occurs_in(var, body)
-                }
-        }
-
-        (M.letrec_expr(bindings, expr)) {
-            // letrec_expr(list(#(string, expr)), expr)
-            let #(strs, exprs) = list.unzip(bindings);
-                vars = list.map(fn (s) { M.var(s) }, strs);
-            in
-                if (list.member(var, vars)) {
-                    false
-                } else {
-                    list.any(occurs_in(var), exprs) or occurs_in(var, expr)
-                }
-        }
-
-        (M.lookup(name, index, expr)) {
-            // lookup(string, number, expr)
-            occurs_in(var, expr)
-        }
-
-        (M.make_vec(size, args)) {
-            // make_vec(number, list(expr))
-            list.any(occurs_in(var), args)
-        }
-
-        (M.match_cases(test, cases)) {
-            // match_cases(expr, list(#(list(number), expr)))
-            let #(vals, results) = list.unzip(cases);
-            in
-                list.any(occurs_in(var), results)
-        }
-
-        (M.namespaces(exprs)) {
-            // namespaces(list(expr))
-            list.any(occurs_in(var), exprs)
-        }
-
-        (M.sequence(exprs)) {
-            // sequence(list(expr))
-            list.any(occurs_in(var), exprs)
-        }
-
-        (x) {
-            M.print_expr(x);
-            puts("\n");
-            error("occurs_in: unsupported expression")
-        }
-    }
+fn makeVar (s) {
+    M.var(s)
 }
 
 fn reduce {
     (M.amb_expr(expr1, expr2)) {
-        // amb_expr(expr, expr)
         M.amb_expr(reduce(expr1), reduce(expr2))
     }
 
     (M.apply(fun, args)) {
-        // apply(expr, list(expr))
-        M.apply(reduce(fun), list.map(reduce, args))
+        M.apply(reduce(fun), args |> reduce)
     }
 
     (x = M.back_expr) |
     (x = M.primop(_)) |
-    (x = M.env_expr) |
-    (x = M.error_expr) |
     (x = M.bigint(_)) |
     (x = M.character(_)) |
     (x = M.var(_)) |
@@ -137,33 +39,25 @@ fn reduce {
     }
 
     (M.callcc_expr(e)) {
-        // callcc_expr(expr)
         M.callcc_expr(reduce(e))
     }
 
     (M.cond_expr(test, branches)) {
-        // cond_expr(expr, list(#(expr, expr)))
-        let #(vals, results) = list.unzip(branches);
-        in
-            M.cond_expr(reduce(test),
-                        list.zip(list.map(reduce, vals),
-                                list.map(reduce, results)))
+        M.cond_expr(reduce(test), branches |> reduce && reduce)
     }
 
     (M.if_expr(exprc, exprt, exprf)) {
-        // if_expr(expr, expr, expr)
         M.if_expr(reduce(exprc),
                 reduce(exprt),
                 reduce(exprf))
     }
 
     (M.lambda(params, body)) {
-        // lambda(list(string), expr)
         switch (body) {
             (M.apply(f, args)) {
-                let pvars = list.map(fn (v) { M.var(v) }, params);
+                let pvars = params |> makeVar;
                 in
-                    if (pvars == args and not list.any(fn (v) { occurs_in(v, f) }, pvars)) {
+                    if (pvars == args and not pvars any (O.occurs_in flip f)) {
                         f
                     } else {
                         M.lambda(params, reduce(body))
@@ -176,40 +70,19 @@ fn reduce {
     }
 
     (M.letrec_expr(bindings, expr)) {
-        // letrec_expr(list(#(string, expr)), expr)
-        let #(vars, exprs) = list.unzip(bindings);
-            newexprs = list.map(reduce, exprs);
-            newbindings = list.zip(vars, newexprs);
-        in
-            M.letrec_expr(newbindings, reduce(expr))
-    }
-
-    (M.lookup(name, index, expr)) {
-        // lookup(string, number, expr)
-        M.lookup(name, index, reduce(expr))
+        M.letrec_expr(bindings |> identity && (reduce && identity), reduce(expr))
     }
 
     (M.make_vec(size, args)) {
-        // make_vec(number, list(expr))
-        M.make_vec(size, list.map(reduce, args))
+        M.make_vec(size, args |> reduce)
     }
 
     (M.match_cases(test, cases)) {
-        // match_cases(expr, list(#(list(number), expr)))
-        let #(vals, results) = list.unzip(cases);
-        in
-            M.match_cases(reduce(test),
-                        list.zip(vals, list.map(reduce, results)))
-    }
-
-    (M.namespaces(exprs)) {
-        // namespaces(list(expr))
-        M.namespaces(list.map(reduce, exprs))
+        M.match_cases(reduce(test), cases |> identity && reduce)
     }
 
     (M.sequence(exprs)) {
-        // sequence(list(expr))
-        M.sequence(list.map(reduce, exprs))
+        M.sequence(exprs |> reduce)
     }
 
     (x) {

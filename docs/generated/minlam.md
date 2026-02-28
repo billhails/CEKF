@@ -14,8 +14,7 @@ MinPrimApp --exp1--> MinExp
 MinPrimApp --exp2--> MinExp
 MinApply --function--> MinExp
 MinApply --args--> MinExprList
-MinLookUp --nsId--> int
-MinLookUp --exp--> MinExp
+MinApply --isBuiltin--> bool
 MinIff --condition--> MinExp
 MinIff --consequent--> MinExp
 MinIff --alternative--> MinExp
@@ -38,6 +37,7 @@ MinLetRec --bindings--> MinBindings
 MinLetRec --body--> MinExp
 MinBindings --var--> HashSymbol
 MinBindings --val--> MinExp
+MinBindings --arity--> int
 MinBindings --next--> MinBindings
 MinAmb --left--> MinExp
 MinAmb --right--> MinExp
@@ -53,15 +53,11 @@ MinExp --bindings--> MinBindings
 MinExp --callCC--> MinExp
 MinExp --character--> character
 MinExp --cond--> MinCond
-MinExp --env--> void_ptr
-MinExp --error--> void_ptr
 MinExp --iff--> MinIff
 MinExp --lam--> MinLam
 MinExp --letRec--> MinLetRec
-MinExp --lookUp--> MinLookUp
 MinExp --makeVec--> MinExprList
 MinExp --match--> MinMatch
-MinExp --nameSpaces--> MinNameSpaceArray
 MinExp --prim--> MinPrimApp
 MinExp --sequence--> MinExprList
 MinExp --stdint--> int
@@ -69,7 +65,6 @@ MinExp --var--> HashSymbol
 MinCondCases --integers--> MinIntCondCases
 MinCondCases --characters--> MinCharCondCases
 MinPrimOp["enum MinPrimOp"]
-MinNameSpaceArray["MinNameSpaceArray[]"] --entries--> MinExp
 MinAlphaEnvArray["MinAlphaEnvArray[]"] --entries--> MinAlphaEnv
 ```
 

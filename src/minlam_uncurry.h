@@ -1,8 +1,8 @@
-#ifndef cekf_lambda_cps_h
-#define cekf_lambda_cps_h
+#ifndef cekf_minlam_uncurry_h
+#define cekf_minlam_uncurry_h
 /*
  * CEKF - VM supporting amb
- * Copyright (C) 2022-2025  Bill Hails
+ * Copyright (C) 2022-2026  Bill Hails
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,20 +18,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "cps_kont.h"
 #include "minlam.h"
 
-MinExp *cpsTk(MinExp *, CpsKont *);
-MinExprList *appendMinArg(MinExprList *, MinExp *);
-MinExp *makeVar(ParserInfo, char *);
-SymbolList *appendMinVar(ParserInfo, SymbolList *, HashSymbol *);
-MinExp *cpsTs_k(MinExp *, CpsKont *);
-bool isAexpr(MinExp *);
-MinExp *cpsTc(MinExp *, MinExp *);
-MinExp *cpsM(MinExp *);
-MinBindings *mapMOverBindings(MinBindings *);
-MinMatchList *mapTcOverMatchCases(MinMatchList *, MinExp *);
-void cpsUnzipMinBindings(MinBindings *, SymbolList **, MinExprList **);
-MinExp *cpsNestLets(MinBindings *, MinExp *);
+MinExp *uncurry(MinExp *exp);
 
 #endif
