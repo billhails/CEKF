@@ -103,6 +103,86 @@ class SimpleStruct(Base):
             print(f'}} {c}')
             print('')
 
+    def getTakeSignature(self, catalog):
+        myType = self.getTypeDeclaration(catalog)
+        myName = self.getName()
+        return f'{myType} take{myName}({myType} list, Integer count)'
+
+    def getDropSignature(self, catalog):
+        myType = self.getTypeDeclaration(catalog)
+        myName = self.getName()
+        return f'{myType} drop{myName}({myType} list, Integer count)'
+
+    def printTakeDeclaration(self, catalog):
+        if self.isSinglySelfReferential(catalog):
+            c = self.comment('printTakeDeclaration')
+            print(f'{self.getTakeSignature(catalog)}; {c}')
+
+    def printDropDeclaration(self, catalog):
+        if self.isSinglySelfReferential(catalog):
+            c = self.comment('printDropDeclaration')
+            print(f'{self.getDropSignature(catalog)}; {c}')
+
+    def _getConstructorActualsForCopy(self, catalog, sourceVar, restVar):
+        args = []
+        if catalog.getParserInfo(self.name):
+            args.append(f'CPI({sourceVar})')
+        selfRefField = self.getSelfReferentialField(catalog)
+        for field in self.getNewArgs(catalog):
+            fieldName = field.getFieldName()
+            if fieldName == selfRefField:
+                args.append(restVar)
+            else:
+                args.append(f'{sourceVar}->{fieldName}')
+        return ', '.join(args)
+
+    def _printImplicitFieldCopies(self, catalog, sourceVar, targetVar, tailVar):
+        c = self.comment('_printImplicitFieldCopies')
+        selfRefField = self.getSelfReferentialField(catalog)
+        for field in self.getDefaultArgs(catalog):
+            fieldName = field.getFieldName()
+            value = tailVar if fieldName == selfRefField else f'{sourceVar}->{fieldName}'
+            print(f'    {targetVar}->{fieldName} = {value}; {c}')
+
+    def printTakeFunction(self, catalog):
+        if not self.isSinglySelfReferential(catalog):
+            return
+        c = self.comment('printTakeFunction')
+        decl = self.getTakeSignature(catalog)
+        selfRefField = self.getSelfReferentialField(catalog)
+        print('/**')
+        print(f' * Creates a shallow copy of the first `count` nodes in the {self.getName()} list.')
+        print(' */')
+        print(f'{decl} {{ {c}')
+        print(f'    if (count <= 0) return NULL; {c}')
+        print(f'    if (list == NULL) return NULL; {c}')
+        myType = self.getTypeDeclaration(catalog)
+        print(f'    {myType} rest = take{self.getName()}(list->{selfRefField}, count - 1); {c}')
+        print(f'    int save = PROTECT(rest); {c}')
+        ctorArgs = self._getConstructorActualsForCopy(catalog, 'list', 'rest')
+        print(f'    {myType} result = new{self.getName()}({ctorArgs}); {c}')
+        self._printImplicitFieldCopies(catalog, 'list', 'result', 'rest')
+        print(f'    UNPROTECT(save); {c}')
+        print(f'    return result; {c}')
+        print(f'}} {c}')
+        print('')
+
+    def printDropFunction(self, catalog):
+        if not self.isSinglySelfReferential(catalog):
+            return
+        c = self.comment('printDropFunction')
+        decl = self.getDropSignature(catalog)
+        selfRefField = self.getSelfReferentialField(catalog)
+        print('/**')
+        print(f' * Skips the first `count` nodes in the {self.getName()} list.')
+        print(' */')
+        print(f'{decl} {{ {c}')
+        print(f'    if (count <= 0) return list; {c}')
+        print(f'    if (list == NULL) return NULL; {c}')
+        print(f'    return drop{self.getName()}(list->{selfRefField}, count - 1); {c}')
+        print(f'}} {c}')
+        print('')
+
     def getMarkSignature(self, catalog):
         myType = self.getTypeDeclaration(catalog)
         return SignatureHelper.mark_signature(self.getName(), myType)

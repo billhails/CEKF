@@ -168,6 +168,18 @@ class Catalog:
     def printCountFunctions(self):
         self._dispatch('printCountFunction', self)
 
+    def printTakeDeclarations(self):
+        self._dispatch('printTakeDeclaration', self)
+
+    def printTakeFunctions(self):
+        self._dispatch('printTakeFunction', self)
+
+    def printDropDeclarations(self):
+        self._dispatch('printDropDeclaration', self)
+
+    def printDropFunctions(self):
+        self._dispatch('printDropFunction', self)
+
     def printAccessDeclarations(self):
         self._dispatch('printAccessDeclarations', self)
 
