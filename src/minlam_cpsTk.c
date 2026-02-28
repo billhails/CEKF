@@ -495,6 +495,7 @@ MinBindings *mapMOverBindings(MinBindings *bindings) {
     MinExp *val = cpsM(bindings->val);
     PROTECT(val);
     MinBindings *this = newMinBindings(CPI(bindings), bindings->var, val, next);
+    this->arity = bindings->arity;
     UNPROTECT(save);
     return this;
 }

@@ -50,6 +50,7 @@
 #include "minlam_eta.h"
 #include "minlam_fold.h"
 #include "minlam_pp.h"
+#include "minlam_uncurry.h"
 #include "pratt.h"
 #include "pratt_parser.h"
 #include "pratt_scanner.h"
@@ -594,6 +595,9 @@ int main(int argc, char *argv[]) {
         REPLACE_PROTECT(save2, minExp);
 
         minExp = foldMinExp(minExp);
+        REPLACE_PROTECT(save2, minExp);
+
+        minExp = uncurry(minExp);
         REPLACE_PROTECT(save2, minExp);
 
         if (beta_flag) {

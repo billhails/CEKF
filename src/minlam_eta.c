@@ -228,6 +228,7 @@ static MinApply *etaMinApply(MinApply *node) {
 
     if (changed) {
         MinApply *result = newMinApply(CPI(node), new_function, new_args);
+        result->isBuiltin = node->isBuiltin;
         UNPROTECT(save);
         LEAVE(etaMinApply);
         return result;
@@ -466,6 +467,7 @@ static MinBindings *etaMinBindings(MinBindings *node) {
     if (changed) {
         MinBindings *result =
             newMinBindings(CPI(node), node->var, new_val, new_next);
+        result->arity = node->arity;
         UNPROTECT(save);
         LEAVE(etaMinBindings);
         return result;
@@ -528,6 +530,7 @@ MinExp *etaMinExp(MinExp *node) {
         MinApply *new_variant = etaMinApply(variant);
         if (new_variant != variant) {
             PROTECT(new_variant);
+            new_variant->isBuiltin = variant->isBuiltin;
             result = newMinExp_Apply(CPI(node), new_variant);
         }
         break;

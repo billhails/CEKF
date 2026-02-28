@@ -37,6 +37,7 @@ MinLetRec --bindings--> MinBindings
 MinLetRec --body--> MinExp
 MinBindings --var--> HashSymbol
 MinBindings --val--> MinExp
+MinBindings --arity--> int
 MinBindings --next--> MinBindings
 MinAmb --left--> MinExp
 MinAmb --right--> MinExp

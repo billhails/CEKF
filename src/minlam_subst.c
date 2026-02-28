@@ -188,6 +188,7 @@ static MinApply *substMinApply(MinApply *node, MinExpTable *context) {
     if (changed) {
         // Create new node with modified fields
         MinApply *result = newMinApply(CPI(node), new_function, new_args);
+        result->isBuiltin = node->isBuiltin;
         UNPROTECT(save);
         LEAVE(substMinApply);
         return result;
@@ -460,6 +461,7 @@ static MinBindings *substMinBindings(MinBindings *node, MinExpTable *context) {
         // Create new node with modified fields
         MinBindings *result =
             newMinBindings(CPI(node), node->var, new_val, new_next);
+        result->arity = node->arity;
         UNPROTECT(save);
         LEAVE(substMinBindings);
         return result;

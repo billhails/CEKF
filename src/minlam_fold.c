@@ -121,6 +121,7 @@ static MinApply *foldMinApply(MinApply *node) {
 
     if (new_function != node->function || new_args != node->args) {
         MinApply *result = newMinApply(CPI(node), new_function, new_args);
+        result->isBuiltin = node->isBuiltin;
         UNPROTECT(save);
         return result;
     }
@@ -296,6 +297,7 @@ static MinBindings *foldMinBindings(MinBindings *node) {
     if (new_val != node->val || new_next != node->next) {
         MinBindings *result =
             newMinBindings(CPI(node), node->var, new_val, new_next);
+        result->arity = node->arity;
         UNPROTECT(save);
         return result;
     }

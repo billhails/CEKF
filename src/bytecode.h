@@ -24,7 +24,7 @@
 #include "types.h"
 
 // MUST remember to increment this if bytecodes change
-#define CEKF_BYTECODE_VERSION 5
+#define CEKF_BYTECODE_VERSION 6
 
 #define SIXTEEN_BIT_ENVIRONMENT
 

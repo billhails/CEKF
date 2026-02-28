@@ -97,6 +97,7 @@ static MinExp *curryMinApply(MinExp *exp) {
         if (new_function != node->function || new_args != args) {
             MinExp *result =
                 makeMinExp_Apply(CPI(node), new_function, new_args);
+            getMinExp_Apply(result)->isBuiltin = true;
             UNPROTECT(save);
             LEAVE(curryMinApply);
             return result;
@@ -398,6 +399,8 @@ static MinBindings *curryMinBindings(MinBindings *node) {
     }
 
     bool changed = false;
+    // error if it's not a lambda
+    Integer arity = countSymbolList(getMinExp_Lam(node->val)->args);
     MinExp *new_val = curryMinExp(node->val);
     int save = PROTECT(new_val);
     changed = changed || (new_val != node->val);
@@ -405,17 +408,15 @@ static MinBindings *curryMinBindings(MinBindings *node) {
     PROTECT(new_next);
     changed = changed || (new_next != node->next);
 
+    MinBindings *result = node;
     if (changed) {
-        MinBindings *result =
-            newMinBindings(CPI(node), node->var, new_val, new_next);
-        UNPROTECT(save);
-        LEAVE(curryMinBindings);
-        return result;
+        result = newMinBindings(CPI(node), node->var, new_val, new_next);
     }
+    result->arity = arity; // un-curry later.
 
     UNPROTECT(save);
     LEAVE(curryMinBindings);
-    return node;
+    return result;
 }
 
 static MinAmb *curryMinAmb(MinAmb *node) {

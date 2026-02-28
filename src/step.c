@@ -652,7 +652,7 @@ static void step() {
         case BYTECODES_TYPE_LAM: {
             // create a closure and push it
             int nArgs = readCurrentByte();
-            int letRecOffset = readCurrentByte();
+            int letRecOffset = readCurrentWord();
             int end = readCurrentOffset();
             DEBUG("LAM nArgs:[%d] letrec:[%d] end:[%04x]", nArgs, letRecOffset,
                   end);
@@ -1080,7 +1080,7 @@ static void step() {
         case BYTECODES_TYPE_LETREC: {
             // patch each of the lambdas environments with the current stack
             // frame i.e. all the definitions in the current letrec.
-            int nArgs = readCurrentByte();
+            int nArgs = readCurrentWord();
             DEBUG("LETREC [%d] state.S->offset = %d", nArgs, state.S->offset);
             for (Index i = state.S->offset - nArgs; i < state.S->offset; i++) {
                 Value v = peek(i);

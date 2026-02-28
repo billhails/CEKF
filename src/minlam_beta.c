@@ -207,7 +207,7 @@ static MinPrimApp *betaMinPrimApp(MinPrimApp *node) {
 // too many args
 // ((λ (f1) body) a1 a2) => reduce(body[f1/a1] a2)
 static MinExp *betaMinOverApply(MinExp *body, SymbolList *fargs,
-                                MinExprList *aargs) {
+                                MinExprList *aargs, bool isBuiltin) {
 #if 0
     body = betaMinExp(body);
     int save = PROTECT(body);
@@ -228,6 +228,7 @@ static MinExp *betaMinOverApply(MinExp *body, SymbolList *fargs,
     }
 
     MinExp *result = makeMinExp_Apply(CPI(body), body, aargs);
+    getMinExp_Apply(result)->isBuiltin = isBuiltin;
     PROTECT(result);
     result = betaMinExp(result);
     UNPROTECT(save);
@@ -277,7 +278,8 @@ static MinExp *betaMinSimpleApply(MinExp *body, SymbolList *fargs,
     return body;
 }
 
-static MinExp *betaMinApplyLambda(MinLam *lam, MinExprList *aargs) {
+static MinExp *betaMinApplyLambda(MinLam *lam, MinExprList *aargs,
+                                  bool isBuiltin) {
     int num_aargs = countMinExprList(aargs);
     SymbolList *fargs = lam->args;
     int num_fargs = countSymbolList(fargs);
@@ -321,7 +323,7 @@ static MinExp *betaMinApplyLambda(MinLam *lam, MinExprList *aargs) {
     }
 
     if (num_fargs < num_aargs) {
-        return betaMinOverApply(lam->exp, fargs, aargs);
+        return betaMinOverApply(lam->exp, fargs, aargs, isBuiltin);
     } else if (num_fargs > num_aargs) {
         return betaMinUnderApply(lam->exp, fargs, aargs);
     } else {
@@ -349,8 +351,8 @@ static MinExp *betaMinApply(MinExp *exp) {
     changed = changed || (new_function != node->function);
 
     if (new_function->type == MINEXP_TYPE_LAM) {
-        MinExp *result =
-            betaMinApplyLambda(getMinExp_Lam(new_function), redaargs);
+        MinExp *result = betaMinApplyLambda(getMinExp_Lam(new_function),
+                                            redaargs, node->isBuiltin);
         if (result != NULL) {
             UNPROTECT(save);
             LEAVE(betaMinApply);
@@ -360,6 +362,7 @@ static MinExp *betaMinApply(MinExp *exp) {
 
     if (changed) {
         MinExp *result = makeMinExp_Apply(CPI(node), new_function, redaargs);
+        getMinExp_Apply(result)->isBuiltin = node->isBuiltin;
         UNPROTECT(save);
         LEAVE(betaMinApply);
         return result;
@@ -608,18 +611,20 @@ static MinBindings *betaMinBindings(MinBindings *node) {
     PROTECT(new_next);
     changed = changed || (new_next != node->next);
 
+    MinBindings *result = node;
     if (changed) {
-        node = newMinBindings(CPI(node), node->var, new_val, new_next);
+        result = newMinBindings(CPI(node), node->var, new_val, new_next);
+        result->arity = node->arity;
     }
 
     if (beta_conversion_function != NULL &&
-        strcmp(beta_conversion_function, node->var->name) == 0) {
+        strcmp(beta_conversion_function, result->var->name) == 0) {
         ppMinExp(new_val);
     }
 
     UNPROTECT(save);
     LEAVE(betaMinBindings);
-    return node;
+    return result;
 }
 
 static MinAmb *betaMinAmb(MinAmb *node) {

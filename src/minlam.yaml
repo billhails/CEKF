@@ -134,6 +134,7 @@ structs:
         data:
             var: HashSymbol
             val: MinExp
+            arity: int=-1 # populated by minlam_curry, used by minlam_uncurry
             next: MinBindings
 
     MinAmb:

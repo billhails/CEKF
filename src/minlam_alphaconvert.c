@@ -415,6 +415,7 @@ static MinBindings *visitLetRecValues(MinBindings *node, MinAlphaEnv *context) {
     MinBindings *result = newMinBindings(
         CPI(node), getNameFromContext(CPI(node), node->var, context), new_val,
         new_next);
+    result->arity = node->arity;
     UNPROTECT(save);
     return result;
 }
