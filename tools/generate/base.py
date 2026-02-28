@@ -324,6 +324,18 @@ class Base:
     def printCountFunction(self, catalog):
         pass
 
+    def printTakeDeclaration(self, catalog):
+        pass
+
+    def printTakeFunction(self, catalog):
+        pass
+
+    def printDropDeclaration(self, catalog):
+        pass
+
+    def printDropFunction(self, catalog):
+        pass
+
     def isEnum(self):
         return False
 

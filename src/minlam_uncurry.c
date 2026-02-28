@@ -266,28 +266,6 @@ static MinExp *makeSaturatedApplication(HashSymbol *name, MinExprList *args) {
     return result;
 }
 
-// TODO consider generating this
-static MinExprList *takeMinExprList(MinExprList *list, int count) {
-    if (count <= 0)
-        return NULL;
-    if (list == NULL)
-        return NULL;
-    MinExprList *rest = takeMinExprList(list->next, count - 1);
-    int save = PROTECT(rest);
-    MinExprList *this = newMinExprList(CPI(list), list->exp, rest);
-    UNPROTECT(save);
-    return this;
-}
-
-// TODO consider generating this
-static MinExprList *dropMinExprList(MinExprList *list, int count) {
-    if (count <= 0)
-        return list;
-    if (list == NULL)
-        return NULL;
-    return dropMinExprList(list->next, count - 1);
-}
-
 //  fn process_apply(head, args) {
 //      switch (head) {
 //          (M.var(s)) {
