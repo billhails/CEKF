@@ -16,6 +16,7 @@ SymbolEnv --parent--> SymbolEnv
 SymbolEnv --bindings--> SymbolSet
 SCharVec["(SCharVec)"] --entries--> schar
 WCharVec["(WCharVec)"] --entries--> character
+SymbolVec["(SymbolVec)"] --entries--> HashSymbol
 StringArray["StringArray[]"] --entries--> string
 WCharArray["WCharArray[]"] --entries--> character
 UCharArray["UCharArray[]"] --entries--> byte
