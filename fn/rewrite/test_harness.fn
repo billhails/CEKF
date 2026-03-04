@@ -1,5 +1,5 @@
 let
-    link "samples-curry.fn" as Samples;
+    link "samples.fn" as Samples;
     link "beta_reduce.fn" as β;
     link "eta_reduce.fn" as η;
     link "constant_folding.fn" as OF;
@@ -13,6 +13,7 @@ let
     link "curry.fn" as C;
     link "uncurry.fn" as U;
     link "transform.fn" as TR;
+    link "amb.fn" as AMB;
 in
     list.for_each(fn {
         (';' @ s) {
@@ -32,35 +33,38 @@ in
                 e = CPS.T_c(dd, M.var("□"));
                 f = β.reduce(e);
                 g = OF.fold(f);
-                h = CC.shared_closure_convert(g);
+                gg = AMB.amb(g, M.var("Ω"))
+                h = CC.shared_closure_convert(gg);
                 nltab = "\n";
             in
                 E.print_expr(a);
-                puts("\n==> desugar");
+                // puts("\n==> desugar");
+                // puts(nltab);
+                // M.print_expr(b);
+                // puts("\n==> curry");
+                // puts(nltab);
+                // M.print_expr(c);
+                // puts("\n==> eta reduce");
+                // puts(nltab);
+                // M.print_expr(d);
+                // puts("\n==> uncurry");
+                // puts(nltab);
+                // M.print_expr(dd);
+                // puts("\n==> cps transform");
+                // puts(nltab);
+                // M.print_expr(e);
+                // puts("\n==> beta reduce");
+                // puts(nltab);
+                // M.print_expr(f);
+                // puts("\n==> operator folding");
+                // puts(nltab);
+                // M.print_expr(g);
+                puts("\n==> amb transform");
                 puts(nltab);
-                M.print_expr(b);
-                puts("\n==> curry");
-                puts(nltab);
-                M.print_expr(c);
-                puts("\n==> eta reduce");
-                puts(nltab);
-                M.print_expr(d);
-                puts("\n==> uncurry");
-                puts(nltab);
-                M.print_expr(dd);
-                puts("\n==> cps transform");
-                puts(nltab);
-                M.print_expr(e);
-                puts("\n==> beta reduce");
-                puts(nltab);
-                M.print_expr(f);
-                puts("\n==> operator folding");
-                puts(nltab);
-                M.print_expr(g);
-                puts("\n==> shared closure convert");
-                puts(nltab);
-                M.print_expr(h);
+                M.print_expr(gg);
+                // puts("\n==> shared closure convert");
+                // puts(nltab);
+                // M.print_expr(h);
                 puts("\n\n")
         }
     }, Samples.data());
-    print typeof(TR._transform);

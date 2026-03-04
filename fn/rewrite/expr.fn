@@ -346,7 +346,7 @@ namespace
             }
 
             fn to_expr {
-                (atom("back")) { back_expr }
+                (sexp([atom("back")])) { back_expr }
                 (atom("true")) { constant("true", 1) }
                 (atom("false")) { constant("false", 0) }
                 (atom("null")) { constant("null", 0) }

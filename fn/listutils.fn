@@ -284,7 +284,7 @@ fn pairmap(l, r) {
 // element, and returns a 2-tuple of the results. It is particularily useful for
 // mapping over a zipped list without having to unzip and re-zip.
 // example: zipped |> identity && add(2)
-export operator "_&&_" left 9 pairmap;
+export operator "_&&_" right 9 pairmap;
 
 // last: list(#a) -> #a
 unsafe fn last {
