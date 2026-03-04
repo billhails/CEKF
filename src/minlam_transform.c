@@ -95,6 +95,9 @@ static inline MinExp *apply(Context *c, MinExp *node) {
 // Visitor implementations
 ///////////////////////////
 
+//  (M.lambda(params, body)) {
+//      M.lambda(params, t(a, body))
+//  }
 static MinExp *transformMinLam(MinLam *node, Context *c) {
     if (node == NULL)
         return NULL;
@@ -107,20 +110,24 @@ static MinExp *transformMinLam(MinLam *node, Context *c) {
     return result;
 }
 
+//  args |> t(a)
 static MinExprList *transformMinExprList(MinExprList *node, Context *c) {
     if (node == NULL)
         return NULL;
     ENTER(transformMinExprList);
-    MinExp *new_exp = apply(c, node->exp);
-    int save = PROTECT(new_exp);
     MinExprList *new_next = transformMinExprList(node->next, c);
-    PROTECT(new_next);
+    int save = PROTECT(new_next);
+    MinExp *new_exp = apply(c, node->exp);
+    PROTECT(new_exp);
     MinExprList *result = newMinExprList(CPI(node), new_exp, new_next);
     UNPROTECT(save);
     LEAVE(transformMinExprList);
     return result;
 }
 
+//  (M.apply(fun, args)) {
+//      M.apply(t(a, fun), args |> t(a))
+//  }
 static MinExp *transformMinApply(MinApply *node, Context *c) {
     if (node == NULL)
         return NULL;
@@ -138,6 +145,9 @@ static MinExp *transformMinApply(MinApply *node, Context *c) {
     return result;
 }
 
+//  (M.if_expr(test, consequent, alternative)) {
+//      M.if_expr(t(a, test), t(a, consequent), t(a, alternative))
+//  }
 static MinExp *transformMinIff(MinIff *node, Context *c) {
     if (node == NULL)
         return NULL;
@@ -155,6 +165,9 @@ static MinExp *transformMinIff(MinIff *node, Context *c) {
     return result;
 }
 
+//  (M.cond_expr(test, branches)) {
+//      M.cond_expr(t(a, test), branches |> t(a) && t(a))
+//  }
 static MinExp *transformMinCond(MinCond *node, Context *c) {
     if (node == NULL)
         return NULL;
@@ -169,6 +182,7 @@ static MinExp *transformMinCond(MinCond *node, Context *c) {
     return result;
 }
 
+//  branches |> t(a) && t(a)
 static MinCondCases *transformMinCondCases(MinCondCases *node, Context *c) {
     if (node == NULL)
         return NULL;
@@ -199,6 +213,7 @@ static MinCondCases *transformMinCondCases(MinCondCases *node, Context *c) {
     return result;
 }
 
+//  branches |> t(a) && t(a)
 static MinIntCondCases *transformMinIntCondCases(MinIntCondCases *node,
                                                  Context *c) {
     if (node == NULL)
@@ -215,6 +230,7 @@ static MinIntCondCases *transformMinIntCondCases(MinIntCondCases *node,
     return result;
 }
 
+//  branches |> t(a) && t(a)
 static MinCharCondCases *transformMinCharCondCases(MinCharCondCases *node,
                                                    Context *c) {
     if (node == NULL)
@@ -231,6 +247,9 @@ static MinCharCondCases *transformMinCharCondCases(MinCharCondCases *node,
     return result;
 }
 
+//  (M.match_cases(e, cases)) {
+//      M.match_cases(t(a, e), cases |> identity && t(a))
+//  }
 static MinExp *transformMinMatch(MinMatch *node, Context *c) {
     if (node == NULL)
         return NULL;
@@ -245,6 +264,7 @@ static MinExp *transformMinMatch(MinMatch *node, Context *c) {
     return result;
 }
 
+//  cases |> identity && t(a)
 static MinMatchList *transformMinMatchList(MinMatchList *node, Context *c) {
     if (node == NULL)
         return NULL;
@@ -260,6 +280,9 @@ static MinMatchList *transformMinMatchList(MinMatchList *node, Context *c) {
     return result;
 }
 
+//  (M.letrec_expr(bindings, body)) {
+//      M.letrec_expr(bindings |> identity && (t(a) && identity), t(a, body))
+//  }
 static MinExp *transformMinLetRec(MinLetRec *node, Context *c) {
     if (node == NULL)
         return NULL;
@@ -274,6 +297,7 @@ static MinExp *transformMinLetRec(MinLetRec *node, Context *c) {
     return result;
 }
 
+//  identity && (t(a) && identity)
 static MinBindings *transformMinBindings(MinBindings *node, Context *c) {
     if (node == NULL)
         return NULL;
@@ -290,6 +314,9 @@ static MinBindings *transformMinBindings(MinBindings *node, Context *c) {
     return result;
 }
 
+//  (M.amb_expr(e1, e2)) {
+//      M.amb_expr(t(a, e1), t(a, e2))
+//  }
 static MinExp *transformMinAmb(MinAmb *node, Context *c) {
     if (node == NULL)
         return NULL;
@@ -304,6 +331,9 @@ static MinExp *transformMinAmb(MinAmb *node, Context *c) {
     return result;
 }
 
+//  (M.make_vec(size, elements)) {
+//      M.make_vec(size, elements |> t(a))
+//  }
 static MinExp *transformMinMakeVec(MinExprList *node, Context *c) {
     if (node == NULL)
         return NULL;
@@ -316,6 +346,9 @@ static MinExp *transformMinMakeVec(MinExprList *node, Context *c) {
     return result;
 }
 
+//  (M.sequence(exps)) {
+//      M.sequence(exps |> t(a))
+//  }
 static MinExp *transformMinSequence(MinExprList *node, Context *c) {
     if (node == NULL)
         return NULL;
@@ -345,6 +378,7 @@ static MinExp *transformMinExp(MinExp *node, Context *c) {
     case MINEXP_TYPE_BIGINTEGER:
     case MINEXP_TYPE_VAR:
     case MINEXP_TYPE_PRIM:
+    case MINEXP_TYPE_DONE:
         break;
 
     case MINEXP_TYPE_AMB:
@@ -356,7 +390,6 @@ static MinExp *transformMinExp(MinExp *node, Context *c) {
         break;
 
     case MINEXP_TYPE_CALLCC:
-        // MinExp
         result = transformMinExp(getMinExp_CallCC(node), c);
         break;
 
@@ -377,7 +410,6 @@ static MinExp *transformMinExp(MinExp *node, Context *c) {
         break;
 
     case MINEXP_TYPE_MAKEVEC:
-        // MinExprList
         result = transformMinMakeVec(getMinExp_MakeVec(node), c);
         break;
 
@@ -386,12 +418,11 @@ static MinExp *transformMinExp(MinExp *node, Context *c) {
         break;
 
     case MINEXP_TYPE_SEQUENCE:
-        // MinExprList
         result = transformMinSequence(getMinExp_Sequence(node), c);
         break;
 
     default:
-        cant_happen("unrecognized MinExp type %d", node->type);
+        cant_happen("unrecognized MinExp type %s", minExpTypeName(node->type));
     }
 
     UNPROTECT(save);

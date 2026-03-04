@@ -77,10 +77,10 @@ static void populateEnvReferences(MinExpTable *references, HashSymbol *env,
     UNPROTECT(save);
 }
 
-static MinExprList *makeMakeVec(SymbolList *symbols) {
+static MinExprList *makeExprList(SymbolList *symbols) {
     if (symbols == NULL)
         return NULL;
-    MinExprList *rest = makeMakeVec(symbols->next);
+    MinExprList *rest = makeExprList(symbols->next);
     int save = PROTECT(rest);
     MinExp *var = newMinExp_Var(CPI(symbols), symbols->symbol);
     PROTECT(var);
@@ -89,61 +89,79 @@ static MinExprList *makeMakeVec(SymbolList *symbols) {
     return this;
 }
 
-static MinExprList *make2Expr(MinExp *first, MinExp *second) {
-    MinExprList *b = newMinExprList(CPI(second), second, NULL);
+static MinExp *makeEnv(ParserInfo PI, SymbolList *symbols) {
+    MinExprList *list = makeExprList(symbols);
+    int save = PROTECT(list);
+    MinExp *env = newMinExp_MakeVec(PI, list);
+    UNPROTECT(save);
+    return env;
+}
+
+static MinExprList *makeClosure(MinExp *lambdac, MinExp *env) {
+    MinExprList *b = newMinExprList(CPI(env), env, NULL);
     int save = PROTECT(b);
-    MinExprList *a = newMinExprList(CPI(first), first, b);
+    MinExprList *a = newMinExprList(CPI(lambdac), lambdac, b);
     UNPROTECT(save);
     return a;
+}
+
+static SymbolSet *freeVarsMinLam(MinLam *node) {
+    MinExp *lam = newMinExp_Lam(CPI(node), node);
+    int save = PROTECT(lam);
+    SymbolSet *fv = newSymbolSet();
+    PROTECT(fv);
+    freeVarsMinExp(lam, fv, NULL);
+    UNPROTECT(save);
+    return fv;
 }
 
 ///////////////////////////
 // Visitor implementations
 ///////////////////////////
 
+//  (exp=M.lambda(params, body)) {
+//      let
+//          senv = GS.genstring("$env");
+//          fv = FV.free(exp);
+//          venv = fv |> fn (v) { #(v, M.var(v)) };
+//          sub = DICT.make(fv, fv |> fn (v) { M.env_ref(M.var(senv), v) });
+//          vbody = SUBST.substitute(sub, body);
+//      in
+//          M.make_closure(M.lambdac(senv @ params, vbody), M.make_env(venv))
+//  }
 static MinExp *closureConvertMinLam(MinLam *node) {
     ENTER(closureConvertMinLam);
-    //  (exp=M.lambda(params, body)) {
-    //      let
-    //          senv = GS.genstring("$env");
-    //          sparams = senv @ params;
-    //          fv = FV.free(exp);
-    //          venv = fv |> fn (v) { #(v, M.var(v)) };
-    //          sub = DICT.make(fv, fv |> fn (v) { M.env_ref(M.var(senv), v) });
-    //          vbody = SUBST.substitute(sub, body);
-    //      in
-    //          M.make_closure(M.lambdac(sparams, vbody), M.make_env(venv))
-    //  }
-
-    //          senv = GS.genstring("$env");
-    HashSymbol *senv = genSymDollar("env");
-    //          sparams = senv @ params;
-    SymbolList *new_args = newSymbolList(CPI(node), senv, node->args);
-    int save = PROTECT(new_args);
-    //          fv = FV.free(exp);
-    SymbolSet *fv = newSymbolSet();
-    PROTECT(fv);
-    MinExp *lam = newMinExp_Lam(CPI(node), node);
-    PROTECT(lam);
-    freeVarsMinExp(lam, fv, NULL);
-    //          venv = fv |> fn (v) { #(v, M.var(v)) };
+    if (node->cc) {
+        LEAVE(closureConvertMinLam);
+        return newMinExp_Lam(CPI(node), node);
+    }
+    HashSymbol *envName = genSymDollar("env");
+    // get the free variables in the body of the lambda
+    SymbolSet *fv = freeVarsMinLam(node);
+    int save = PROTECT(fv);
+    // create an arbitrary fixed ordering for the free variables
     SymbolList *indexes = symbolSetToList(CPI(node), fv);
     PROTECT(indexes);
-    //          sub = DICT.make(fv, fv |> fn (v) { M.env_ref(M.var(senv), v) });
+    // map from vars to index lookups
     MinExpTable *sub = newMinExpTable();
     PROTECT(sub);
-    populateEnvReferences(sub, senv, indexes);
-    //          vbody = SUBST.substitute(sub, body);
+    populateEnvReferences(sub, envName, indexes);
+    // replace free variables in the body with vec refs into env
     MinExp *vbody = substMinExp(node->exp, sub);
     PROTECT(vbody);
-    //          M.make_closure(M.lambdac(sparams, vbody), M.make_env(venv))
-    MinExprList *elements = makeMakeVec(indexes);
-    PROTECT(elements);
-    MinExp *makeVec = newMinExp_MakeVec(CPI(node), elements);
-    PROTECT(makeVec);
-    MinExp *lambdac = makeMinExp_Lam(CPI(node), new_args, vbody);
+    // construct the env from a vec
+    MinExp *env = makeEnv(CPI(node), indexes);
+    PROTECT(env);
+    // prepend env onto the lambda args
+    SymbolList *sparams = newSymbolList(CPI(node), envName, node->args);
+    PROTECT(sparams);
+    // build the new lambda
+    MinExp *lambdac = makeMinExp_Lam(CPI(node), sparams, vbody);
     PROTECT(lambdac);
-    MinExprList *closureArgs = make2Expr(lambdac, makeVec);
+    // set the lambdac flag
+    getMinExp_Lam(lambdac)->cc = true;
+    // wrap the lambda and the env in a 2-vec closure
+    MinExprList *closureArgs = makeClosure(lambdac, env);
     PROTECT(closureArgs);
     MinExp *result = newMinExp_MakeVec(CPI(closureArgs), closureArgs);
     UNPROTECT(save);
@@ -151,6 +169,9 @@ static MinExp *closureConvertMinLam(MinLam *node) {
     return result;
 }
 
+// newMinApply(newMinPrimApp(MINPRIMOP_TYPE_VEC, 0, vec),
+//             newMinExprList(newMinPrimApp(MINPRIMOP_TYPE_VEC, 1, vec),
+//             args))
 static MinExp *closureConvertMinApply(MinApply *node) {
     if (node == NULL)
         return NULL;
@@ -159,9 +180,10 @@ static MinExp *closureConvertMinApply(MinApply *node) {
         LEAVE(closureConvertMinApply);
         return newMinExp_Apply(CPI(node), node);
     }
-    // newMinApply(newMinPrimApp(MINPRIMOP_TYPE_VEC, 0, vec),
-    //             newMinExprList(newMinPrimApp(MINPRIMOP_TYPE_VEC, 1, vec),
-    //             args))
+    if (node->cc) {
+        LEAVE(closureConvertMinApply);
+        return newMinExp_Apply(CPI(node), node);
+    }
     MinExp *vec = node->function;
     MinExprList *args = node->args;
     MinExp *zero = newMinExp_Stdint(CPI(node), 0);
@@ -176,6 +198,7 @@ static MinExp *closureConvertMinApply(MinApply *node) {
     MinExprList *new_args = newMinExprList(CPI(node), vec_ref, args);
     PROTECT(new_args);
     MinExp *result = makeMinExp_Apply(CPI(node), function, new_args);
+    getMinExp_Apply(result)->cc = true;
     UNPROTECT(save);
     LEAVE(closureConvertMinApply);
     return result;

@@ -17,6 +17,7 @@
  */
 
 #include "minlam_helper.h"
+#include "symbol.h"
 
 SymbolList *minBindingsToSymbolList(MinBindings *bindings) {
     if (bindings == NULL) {
@@ -28,4 +29,14 @@ SymbolList *minBindingsToSymbolList(MinBindings *bindings) {
     SymbolList *this = newSymbolList(CPI(bindings), bindings->var, next);
     UNPROTECT(save);
     return this;
+}
+
+MinExp *makeDoneCont(ParserInfo PI) {
+    MinExp *body = newMinExp_Done(PI);
+    int save = PROTECT(body);
+    SymbolList *args = newSymbolList(PI, newSymbol("_"), NULL);
+    PROTECT(args);
+    MinExp *lambda = makeMinExp_Lam(PI, args, body);
+    UNPROTECT(save);
+    return lambda;
 }
