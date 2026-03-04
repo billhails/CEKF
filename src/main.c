@@ -46,6 +46,7 @@
 #include "memory.h"
 #include "minlam_alphaconvert.h"
 #include "minlam_beta.h"
+#include "minlam_closureConvert.h"
 #include "minlam_curry.h"
 #include "minlam_eta.h"
 #include "minlam_fold.h"
@@ -564,16 +565,6 @@ int main(int argc, char *argv[]) {
 #endif
         minExp = alphaConvertMinExp(minExp, builtIns);
         REPLACE_PROTECT(save2, minExp);
-#ifdef TEST_CPS
-        LamExp *halt = newLamExp_Var(CPI(exp), newSymbol("halt"));
-        PROTECT(halt);
-        forceGcFlag = true;
-        exp = cpsTc(exp, halt);
-        REPLACE_PROTECT(save2, exp);
-        ppLamExp(exp);
-        eprintf("\n");
-        exit(0);
-#endif
 
         if (alpha_flag) {
             ppMinExp(minExp);
@@ -606,12 +597,26 @@ int main(int argc, char *argv[]) {
             exit(0);
         }
 
+#ifdef TEST_CPS
+        MinExp *done = makeDoneCont(CPI(exp));
+        PROTECT(done);
+        minExp = cpsTc(minExp, done);
+        REPLACE_PROTECT(save2, minExp);
+        minExp = sharedClosureConvert(minExp);
+        // minExp = flatClosureConvert(minExp);
+        REPLACE_PROTECT(save2, minExp);
+        ppMinExp(minExp);
+        eprintf("\n");
+        exit(0);
+#endif
+
         AnfExp *anfExp = anfNormalize(minExp);
         REPLACE_PROTECT(save2, anfExp);
 
         if (anf_flag) {
             ppAnfExp(anfExp);
             eprintf("\n");
+            exit(0);
         }
 
         annotate(anfExp, builtIns);

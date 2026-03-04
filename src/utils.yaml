@@ -120,4 +120,10 @@ vectors:
         data:
             entries: character
 
+    SymbolVec:
+        meta:
+            brief: A vector of Symbols
+        data:
+            entries: HashSymbol
+
 primitives: !include primitives.yaml

@@ -7,6 +7,7 @@ flowchart LR
 MinExpTable --entries--> MinExp
 MinLam --args--> SymbolList
 MinLam --exp--> MinExp
+MinLam --cc--> bool
 MinExprList --exp--> MinExp
 MinExprList --next--> MinExprList
 MinPrimApp --type--> MinPrimOp
@@ -15,6 +16,7 @@ MinPrimApp --exp2--> MinExp
 MinApply --function--> MinExp
 MinApply --args--> MinExprList
 MinApply --isBuiltin--> bool
+MinApply --cc--> bool
 MinIff --condition--> MinExp
 MinIff --consequent--> MinExp
 MinIff --alternative--> MinExp
@@ -53,6 +55,7 @@ MinExp --bindings--> MinBindings
 MinExp --callCC--> MinExp
 MinExp --character--> character
 MinExp --cond--> MinCond
+MinExp --done--> void_ptr
 MinExp --iff--> MinIff
 MinExp --lam--> MinLam
 MinExp --letRec--> MinLetRec

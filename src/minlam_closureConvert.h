@@ -1,3 +1,5 @@
+#ifndef cekf_minlam_closureConvert_h
+#define cekf_minlam_closureConvert_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2026  Bill Hails
@@ -16,27 +18,9 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "minlam_helper.h"
-#include "symbol.h"
+#include "minlam.h"
 
-SymbolList *minBindingsToSymbolList(MinBindings *bindings) {
-    if (bindings == NULL) {
-        return NULL;
-    }
+MinExp *flatClosureConvert(MinExp *exp);
+MinExp *sharedClosureConvert(MinExp *exp);
 
-    SymbolList *next = minBindingsToSymbolList(bindings->next);
-    int save = PROTECT(next);
-    SymbolList *this = newSymbolList(CPI(bindings), bindings->var, next);
-    UNPROTECT(save);
-    return this;
-}
-
-MinExp *makeDoneCont(ParserInfo PI) {
-    MinExp *body = newMinExp_Done(PI);
-    int save = PROTECT(body);
-    SymbolList *args = newSymbolList(PI, newSymbol("_"), NULL);
-    PROTECT(args);
-    MinExp *lambda = makeMinExp_Lam(PI, args, body);
-    UNPROTECT(save);
-    return lambda;
-}
+#endif

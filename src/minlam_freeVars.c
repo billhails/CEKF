@@ -273,6 +273,7 @@ void freeVarsMinExp(MinExp *node, SymbolSet *result, SymbolEnv *context) {
     case MINEXP_TYPE_BIGINTEGER:
     case MINEXP_TYPE_CHARACTER:
     case MINEXP_TYPE_STDINT:
+    case MINEXP_TYPE_DONE:
         break;
     case MINEXP_TYPE_BINDINGS:
         cant_happen("encountered MinBindings");
@@ -310,7 +311,7 @@ void freeVarsMinExp(MinExp *node, SymbolSet *result, SymbolEnv *context) {
         }
         break;
     default:
-        cant_happen("unrecognized MinExp type %d", node->type);
+        cant_happen("unrecognized MinExp type %s", minExpTypeName(node->type));
     }
 
     LEAVE(freeVarsMinExp);

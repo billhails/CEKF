@@ -12,6 +12,7 @@ let
     link "closure-convert.fn" as CC;
     link "curry.fn" as C;
     link "uncurry.fn" as U;
+    link "transform.fn" as TR;
 in
     list.for_each(fn {
         (';' @ s) {
@@ -62,3 +63,4 @@ in
                 puts("\n\n")
         }
     }, Samples.data());
+    print typeof(TR._transform);

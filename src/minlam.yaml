@@ -35,6 +35,7 @@ structs:
         data:
             args: SymbolList
             exp: MinExp
+            cc: bool=false
 
     MinExprList:
         meta:
@@ -58,6 +59,7 @@ structs:
             function: MinExp
             args: MinExprList
             isBuiltin: bool=false
+            cc: bool=false
 
     MinIff:
         meta:
@@ -190,6 +192,7 @@ unions:
             callCC: MinExp
             character: character
             cond: MinCond
+            done: void_ptr
             iff: MinIff
             lam: MinLam
             letRec: MinLetRec

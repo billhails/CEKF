@@ -130,6 +130,9 @@ void ppMinExp(MinExp *exp) {
     case MINEXP_TYPE_BACK:
         eprintf("(back)");
         break;
+    case MINEXP_TYPE_DONE:
+        eprintf("(done)");
+        break;
     case MINEXP_TYPE_COND:
         ppMinCond(getMinExp_Cond(exp));
         break;

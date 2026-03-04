@@ -10,6 +10,17 @@ import list operator "_|>_";
 
 // https://matt.might.net/articles/closure-conversion/
 
+// How to avoid having to declare extra types just to support closure conversion?
+// I'm thinking make_env is obviously just make_vec, likewise make_closure.
+// env_ref becomes vec, lambdac becomes lambda.
+// The `(VEC index vector)` needs to know the index of the var in the vector.
+// That can work if we keep an additional IntMap from fv to index, and sort
+// by that when creating the make_vec env.
+// apply closure is just `(λ (vec . args) (apply (VEC 0 vec) (cons (VEC 1 vec) args)))`
+// How to optimize that?
+// minApplyClosure(vec, args) |-->
+//     newMinApply(newMinPrimApp(MINPRIMOP_TYPE_VEC, 0, vec),
+//                 newMinExprList(newMinPrimApp(MINPRIMOP_TYPE_VEC, 1, vec), args))
 fn closure_convert {
     (exp=M.lambda(params, body)) {
         let
