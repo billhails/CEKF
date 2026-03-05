@@ -1,5 +1,5 @@
-#ifndef cekf_minlam_helper_h
-#define cekf_minlam_helper_h
+#ifndef cekf_minlam_amb_h
+#define cekf_minlam_amb_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2026  Bill Hails
@@ -19,9 +19,6 @@
  */
 
 #include "minlam.h"
-#include "utils.h"
-
-SymbolList *minBindingsToSymbolList(MinBindings *bindings);
-MinExp *makeDoneCont(ParserInfo, bool);
+MinExp *ambMinExp(MinExp *node, MinExp *fail);
 
 #endif

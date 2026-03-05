@@ -219,7 +219,7 @@ static MinExp *cpsTcMakeVec(MinExprList *node, MinExp *c) {
     ENTER(cpsTcMakeVec);
     CpsKont *kont = makeKont_TcMakeVec(c);
     int save = PROTECT(kont);
-    MinExp *args = newMinExp_Args(CPI(node), node);
+    MinExp *args = newMinExp_Args(node == NULL ? NULLPI : CPI(node), node);
     PROTECT(args);
     MinExp *result = cpsTs_k(args, kont);
     UNPROTECT(save);

@@ -710,12 +710,7 @@ MinExp *betaMinExp(MinExp *node) {
         result = betaMinApply(node);
         break;
     }
-    case MINEXP_TYPE_BACK: {
-        break;
-    }
-    case MINEXP_TYPE_BIGINTEGER: {
-        break;
-    }
+
     case MINEXP_TYPE_CALLCC: {
         MinExp *variant = getMinExp_CallCC(node);
         MinExp *new_variant = betaMinExp(variant);
@@ -723,9 +718,6 @@ MinExp *betaMinExp(MinExp *node) {
             PROTECT(new_variant);
             result = newMinExp_CallCC(CPI(node), new_variant);
         }
-        break;
-    }
-    case MINEXP_TYPE_CHARACTER: {
         break;
     }
     case MINEXP_TYPE_COND: {
@@ -800,14 +792,15 @@ MinExp *betaMinExp(MinExp *node) {
         }
         break;
     }
-    case MINEXP_TYPE_STDINT: {
+    case MINEXP_TYPE_BACK:
+    case MINEXP_TYPE_BIGINTEGER:
+    case MINEXP_TYPE_CHARACTER:
+    case MINEXP_TYPE_DONE:
+    case MINEXP_TYPE_STDINT:
+    case MINEXP_TYPE_VAR:
         break;
-    }
-    case MINEXP_TYPE_VAR: {
-        break;
-    }
     default:
-        cant_happen("unrecognized MinExp type %d", node->type);
+        cant_happen("unrecognized MinExp type %s", minExpTypeName(node->type));
     }
 
     UNPROTECT(save);

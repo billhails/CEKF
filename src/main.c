@@ -45,6 +45,7 @@
 #include "lambda_simplification.h"
 #include "memory.h"
 #include "minlam_alphaconvert.h"
+#include "minlam_amb.h"
 #include "minlam_beta.h"
 #include "minlam_closureConvert.h"
 #include "minlam_curry.h"
@@ -65,7 +66,7 @@
 #include "tests.h"
 #endif
 
-// #define TEST_CPS
+#define TEST_CPS
 
 #ifdef TEST_CPS
 #include "minlam_cps.h"
@@ -598,15 +599,17 @@ int main(int argc, char *argv[]) {
         }
 
 #ifdef TEST_CPS
-        MinExp *done = makeDoneCont(CPI(exp));
+        MinExp *done = makeDoneCont(CPI(exp), true);
         PROTECT(done);
         minExp = cpsTc(minExp, done);
         REPLACE_PROTECT(save2, minExp);
         minExp = betaMinExp(minExp); // necessary for the amb transform
         REPLACE_PROTECT(save2, minExp);
-        // amb transform will go here
+        MinExp *fail = makeDoneCont(CPI(exp), false);
+        PROTECT(fail);
+        minExp = ambMinExp(minExp, fail);
+        REPLACE_PROTECT(save2, minExp);
         minExp = sharedClosureConvert(minExp);
-        // minExp = flatClosureConvert(minExp);
         REPLACE_PROTECT(save2, minExp);
         ppMinExp(minExp);
         eprintf("\n");
