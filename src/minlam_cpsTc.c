@@ -555,6 +555,8 @@ static MinExp *cpsTcMinExp(MinExp *node, MinExp *c) {
     }
 
     switch (node->type) {
+    case MINEXP_TYPE_BACK:
+        return node;
     case MINEXP_TYPE_AMB:
         return cpsTcMinAmb(getMinExp_Amb(node), c);
     case MINEXP_TYPE_APPLY:

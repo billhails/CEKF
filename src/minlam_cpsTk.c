@@ -55,7 +55,6 @@ static MinExp *INVOKE(CpsKont *k, MinExp *arg) {
 bool isAexpr(MinExp *exp) {
     switch (exp->type) {
     case MINEXP_TYPE_VAR:
-    case MINEXP_TYPE_BACK:
     case MINEXP_TYPE_CHARACTER:
     case MINEXP_TYPE_LAM:
     case MINEXP_TYPE_STDINT:
@@ -571,6 +570,8 @@ static MinExp *cpsTkMinExp(MinExp *node, CpsKont *k) {
     }
 
     switch (node->type) {
+    case MINEXP_TYPE_BACK:
+        return node;
     case MINEXP_TYPE_AMB:
         return cpsTkMinAmb(getMinExp_Amb(node), k);
     case MINEXP_TYPE_APPLY:

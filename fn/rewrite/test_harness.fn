@@ -34,7 +34,8 @@ in
                 f = β.reduce(e);
                 g = OF.fold(f);
                 gg = AMB.amb(g, M.var("Ω"))
-                h = CC.shared_closure_convert(gg);
+                ggg = β.reduce(gg);
+                h = CC.shared_closure_convert(ggg);
                 nltab = "\n";
             in
                 E.print_expr(a);
@@ -62,6 +63,9 @@ in
                 puts("\n==> amb transform");
                 puts(nltab);
                 M.print_expr(gg);
+                puts("\n==> beta reduce");
+                puts(nltab);
+                M.print_expr(ggg);
                 // puts("\n==> shared closure convert");
                 // puts(nltab);
                 // M.print_expr(h);

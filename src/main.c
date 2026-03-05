@@ -602,6 +602,9 @@ int main(int argc, char *argv[]) {
         PROTECT(done);
         minExp = cpsTc(minExp, done);
         REPLACE_PROTECT(save2, minExp);
+        minExp = betaMinExp(minExp); // necessary for the amb transform
+        REPLACE_PROTECT(save2, minExp);
+        // amb transform will go here
         minExp = sharedClosureConvert(minExp);
         // minExp = flatClosureConvert(minExp);
         REPLACE_PROTECT(save2, minExp);

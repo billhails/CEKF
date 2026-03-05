@@ -8,7 +8,6 @@ namespace
     fn isAexpr {
         (M.var(_)) |
         (M.primop(_)) |
-        (M.back_expr) |
         (M.character(_)) |
         (M.lambda(_, _)) |
         (M.stdint(_)) |
@@ -34,6 +33,10 @@ namespace
             k(M(e))
         } else {
             switch (e)  {
+                (M.back_expr) {
+                    e
+                }
+
                 (M.amb_expr(expr1, expr2)) {
                     let
                         c = kToC(k);
@@ -113,6 +116,10 @@ namespace
             M.apply(c, [M(expr)])
         } else {
             switch(expr) {
+                (M.back_expr) {
+                    expr
+                }
+
                 (M.amb_expr(expr1, expr2)) {
                     let
                         sk = GS.genstring("$k");

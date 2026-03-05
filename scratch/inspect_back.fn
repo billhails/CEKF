@@ -1,0 +1,41 @@
+let
+    link "../fn/rewrite/expr.fn" as E;
+    link "../fn/rewrite/desugar.fn" as DS;
+    link "../fn/rewrite/curry.fn" as C;
+    link "../fn/rewrite/beta_reduce.fn" as B;
+    link "../fn/rewrite/eta_reduce.fn" as Eta;
+    link "../fn/rewrite/uncurry.fn" as U;
+    link "../fn/rewrite/cps.fn" as CPS;
+    link "../fn/rewrite/constant_folding.fn" as OF;
+    link "../fn/rewrite/amb.fn" as AMB;
+    link "../fn/rewrite/minexpr.fn" as M;
+    let_expr = "(+ (amb (begin (back) 10) 20) 3)";
+    expr = E.parse(let_expr);
+    desugared = DS.desugar(expr);
+    curried = C.curry(desugared);
+    // beta/eta passes remain unused in harness but keep here
+    cc = B.reduce(curried);
+    ee = Eta.reduce(curried);
+    uncurried = U.uncurry(curried);
+    cps = CPS.T_c(uncurried, M.var("□"));
+    beta2 = B.reduce(cps);
+    folded = OF.fold(beta2);
+    ambed = AMB.amb(folded, M.var("Ω"));
+in
+    puts("Original:\n");
+    E.print_expr(expr);
+    puts("\n\nAfter desugar:\n");
+    M.print_expr(desugared);
+    puts("\n\nAfter curry:\n");
+    M.print_expr(curried);
+    puts("\n\nAfter uncurry:\n");
+    M.print_expr(uncurried);
+    puts("\n\nAfter CPS before β:\n");
+    M.print_expr(cps);
+    puts("\n\nBefore folding (post-β):\n");
+    M.print_expr(beta2);
+    puts("\n\nFolded before AMB:\n");
+    M.print_expr(folded);
+    puts("\n\nAfter AMB:\n");
+    M.print_expr(ambed);
+    puts("\n");
