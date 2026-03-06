@@ -15,43 +15,43 @@ The $\mathcal{AMB}$ transform will affect the following nodes in minexp:
 ## Lambda
 
 $$
-\mathcal{AMB}\big\lgroup\mathtt{(\lambda(a\;k)\;b)}, \cal{f}\big\rgroup
+\mathcal{AMB}\big\lgroup\mathtt{(\lambda(a\ k)\ b)}, \mathcal{f}\big\rgroup
 \mapsto
-\mathtt{(\lambda(a\;k\;\cal{f'})\;\mathcal{AMB}\big\lgroup \mathtt{b}, \cal{f'}\big\rgroup)}
+\mathtt{(\lambda(a\ k\ \mathcal{f'})\ \mathcal{AMB}\big\lgroup \mathtt{b}, \mathcal{f'}\big\rgroup)}
 $$
 
-where $f'$ is a fresh variable.
+where $\mathcal{f}'$ is a fresh variable.
 
 ## Apply
 
 $$
-\mathcal{AMB}\big\lgroup\mathtt{(a\;b\;k)}, \cal{f}\big\rgroup
+\mathcal{AMB}\big\lgroup\mathtt{(a\ b\ k)}, \mathcal{f}\big\rgroup
 \mapsto
-\mathtt{(a\;b\;k\;\cal{f})}
+\mathtt{(a\ b\ k\ \mathcal{f})}
 $$
 
 ## Amb
 
 $$
-\mathtt{(amb\;(k\;a)\;(k\;b))}
+\mathtt{(amb\ (k\ a)\ (k\ b))}
 \mapsto
-\mathtt{(k\;a\;(\lambda\;()\;(k\;b\;f)))}
+\mathtt{(k\ a\ (\lambda\ ()\ (k\ b\ \mathcal{f})))}
 $$
 
 or formally
 
 $$
-\mathcal{AMB}\big\lgroup\mathtt{(amb\;a\;b)}, f\big\rgroup
+\mathcal{AMB}\big\lgroup\mathtt{(amb\ a\ b)}, \mathcal{f}\big\rgroup
 \mapsto
-\mathcal{AMB}\big\lgroup \mathtt{a}, (\lambda ()\;\mathcal{AMB}\big\lgroup \mathtt{b}, f\big\rgroup)\big\rgroup
+\mathcal{AMB}\big\lgroup \mathtt{a}, (\lambda ()\ \mathcal{AMB}\big\lgroup \mathtt{b}, \mathcal{f}\big\rgroup)\big\rgroup
 $$
 
 ## Back
 
 $$
-\mathcal{AMB}\big\lgroup\mathtt{(back)}, \cal{f}\big\rgroup
+\mathcal{AMB}\big\lgroup\mathtt{(back)}, \mathcal{f}\big\rgroup
 \mapsto
-\mathtt{(\cal{f})}
+\mathtt{(\mathcal{f})}
 $$
 
 ## Status
