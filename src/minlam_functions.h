@@ -19,12 +19,13 @@
  */
 
 struct MinExp;
+struct CpsWork;
 struct AnfKontEnv;
 struct CpsKontEnv;
 
 typedef struct MinExp *(*AnfKontProcWrapper)(struct MinExp *,
                                              struct AnfKontEnv *);
-typedef struct MinExp *(*CpsKontProcWrapper)(struct MinExp *,
-                                             struct CpsKontEnv *);
+typedef struct CpsWork *(*CpsKontProcWrapper)(struct MinExp *,
+                                              struct CpsKontEnv *);
 
 #endif

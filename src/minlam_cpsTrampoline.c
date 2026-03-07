@@ -23,11 +23,7 @@
 #include "minlam_cps.h"
 
 static CpsWork *invokeWork(CpsKont *k, MinExp *arg) {
-    MinExp *result = k->wrapper(arg, k->env);
-    int save = PROTECT(result);
-    CpsWork *next = newCpsWork_Result(result);
-    UNPROTECT(save);
-    return next;
+    return k->wrapper(arg, k->env);
 }
 
 static CpsWork *cpsStep(CpsWork *work) {

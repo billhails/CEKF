@@ -47,6 +47,7 @@ static MinExp *cpsTkMinMatch(MinMatch *node, CpsKont *k);
 static MinExp *cpsTkMinLetRec(MinLetRec *node, CpsKont *k);
 static MinExp *cpsTkMinAmb(MinAmb *node, CpsKont *k);
 static MinExp *cpsTkMinExp(MinExp *node, CpsKont *k);
+static CpsWork *bridgeMinExpResult(MinExp *result);
 
 static int cpsTsKDepthCurrent = 0;
 static int cpsTsKDepthMax = 0;
@@ -79,7 +80,12 @@ static void updateCpsDepthStats(void) {
 
 // utilities
 static MinExp *INVOKE(CpsKont *k, MinExp *arg) {
-    return k->wrapper(arg, k->env);
+    CpsWork *work = k->wrapper(arg, k->env);
+    if (work->type != CPSWORK_TYPE_RESULT) {
+        cant_happen("legacy INVOKE expected RESULT, got %s",
+                    cpsWorkTypeName(work->type));
+    }
+    return getCpsWork_Result(work);
 }
 
 bool isAexpr(MinExp *exp) {
@@ -151,7 +157,7 @@ MinExp *cpsTs_k(MinExp *exp, CpsKont *k) {
     return result;
 }
 
-MinExp *TkS1Kont(MinExp *hd, TkS1KontEnv *env) {
+CpsWork *TkS1Kont(MinExp *hd, TkS1KontEnv *env) {
     ENTER(TkS1Kont);
     tkS1DepthCurrent++;
     updateCpsDepthStats();
@@ -163,17 +169,17 @@ MinExp *TkS1Kont(MinExp *hd, TkS1KontEnv *env) {
     LEAVE(TkS1Kont);
     UNPROTECT(save);
     tkS1DepthCurrent--;
-    return result;
+    return bridgeMinExpResult(result);
 }
 
-MinExp *TkS2Kont(MinExp *tl, TkS2KontEnv *env) {
+CpsWork *TkS2Kont(MinExp *tl, TkS2KontEnv *env) {
     ENTER(TkS2Kont);
     MinExp *args = makeMinExp_Args(CPI(env->hd), env->hd, getMinExp_Args(tl));
     int save = PROTECT(args);
     MinExp *result = INVOKE(env->k, args);
     UNPROTECT(save);
     LEAVE(TkS2Kont);
-    return result;
+    return bridgeMinExpResult(result);
 }
 
 /*
@@ -215,24 +221,24 @@ static MinExp *cpsTkMinPrimApp(MinPrimApp *node, CpsKont *k) {
     return result;
 }
 
-MinExp *TkPrimApp1Kont(MinExp *s1, TkPrimApp1KontEnv *env) {
+CpsWork *TkPrimApp1Kont(MinExp *s1, TkPrimApp1KontEnv *env) {
     ENTER(TkPrimApp1Kont);
     CpsKont *k = makeKont_TkPrimApp2(env->k, s1, env->p);
     int save = PROTECT(k);
     MinExp *result = cpsTk(env->e2, k);
     UNPROTECT(save);
     LEAVE(TkPrimApp1Kont);
-    return result;
+    return bridgeMinExpResult(result);
 }
 
-MinExp *TkPrimApp2Kont(MinExp *s2, TkPrimApp2KontEnv *env) {
+CpsWork *TkPrimApp2Kont(MinExp *s2, TkPrimApp2KontEnv *env) {
     ENTER(TkPrimApp2Kont);
     MinExp *primapp = makeMinExp_Prim(CPI(env->s1), env->p, env->s1, s2);
     int save = PROTECT(primapp);
     MinExp *result = INVOKE(env->k, primapp);
     UNPROTECT(save);
     LEAVE(TkPrimApp2Kont);
-    return result;
+    return bridgeMinExpResult(result);
 }
 
 /*
@@ -264,14 +270,14 @@ static MinExp *cpsTkMinSequence(MinExprList *node, CpsKont *k) {
     return result;
 }
 
-MinExp *TkSequenceKont(MinExp *ignored, TkSequenceKontEnv *env) {
+CpsWork *TkSequenceKont(MinExp *ignored, TkSequenceKontEnv *env) {
     ENTER(TkSequenceKont);
     MinExp *sequence = newMinExp_Sequence(CPI(ignored), env->exprs);
     int save = PROTECT(sequence);
     MinExp *result = cpsTk(sequence, env->k);
     UNPROTECT(save);
     LEAVE(TkSequenceKont);
-    return result;
+    return bridgeMinExpResult(result);
 }
 
 /*
@@ -316,14 +322,14 @@ static MinExp *cpsTkMakeVec(MinExprList *node, CpsKont *k) {
     return result;
 }
 
-MinExp *TkMakeVecKont(MinExp *sargs, TkMakeVecKontEnv *env) {
+CpsWork *TkMakeVecKont(MinExp *sargs, TkMakeVecKontEnv *env) {
     ENTER(TkMakeVecKont);
     MinExp *make_vec = newMinExp_MakeVec(CPI(sargs), getMinExp_Args(sargs));
     int save = PROTECT(make_vec);
     MinExp *result = INVOKE(env->k, make_vec);
     UNPROTECT(save);
     LEAVE(TkMakeVecKont);
-    return result;
+    return bridgeMinExpResult(result);
 }
 
 /*
@@ -352,7 +358,7 @@ static MinExp *cpsTkMinIff(MinIff *node, CpsKont *k) {
     return result;
 }
 
-MinExp *TkIffKont(MinExp *aexp, TkIffKontEnv *env) {
+CpsWork *TkIffKont(MinExp *aexp, TkIffKontEnv *env) {
     ENTER(TkIffKont);
     MinExp *consequent = cpsTc(env->exprt, env->c);
     int save = PROTECT(consequent);
@@ -361,7 +367,7 @@ MinExp *TkIffKont(MinExp *aexp, TkIffKontEnv *env) {
     MinExp *result = makeMinExp_Iff(CPI(aexp), aexp, consequent, alternative);
     UNPROTECT(save);
     LEAVE(TkIffKont);
-    return result;
+    return bridgeMinExpResult(result);
 }
 
 static MinIntCondCases *mapIntCondCases(MinIntCondCases *cases, MinExp *c) {
@@ -418,7 +424,7 @@ static MinExp *cpsTkMinCond(MinCond *node, CpsKont *k) {
     return result;
 }
 
-MinExp *TkCondKont(MinExp *atest, TkCondKontEnv *env) {
+CpsWork *TkCondKont(MinExp *atest, TkCondKontEnv *env) {
     ENTER(TkCondKont);
     MinCondCases *cases = NULL;
     int save = PROTECT(NULL);
@@ -444,7 +450,7 @@ MinExp *TkCondKont(MinExp *atest, TkCondKontEnv *env) {
     MinExp *result = makeMinExp_Cond(CPI(atest), atest, cases);
     LEAVE(TkCondKont);
     UNPROTECT(save);
-    return result;
+    return bridgeMinExpResult(result);
 }
 
 /*
@@ -484,14 +490,14 @@ MinMatchList *mapTcOverMatchCases(MinMatchList *cases, MinExp *c) {
     return this;
 }
 
-MinExp *TkMatchKont(MinExp *atest, TkMatchKontEnv *env) {
+CpsWork *TkMatchKont(MinExp *atest, TkMatchKontEnv *env) {
     ENTER(TkMatchKont);
     MinMatchList *cases = mapTcOverMatchCases(env->cases, env->c);
     int save = PROTECT(cases);
     MinExp *result = makeMinExp_Match(CPI(atest), atest, cases);
     UNPROTECT(save);
     LEAVE(TkMatchKont);
-    return result;
+    return bridgeMinExpResult(result);
 }
 
 void cpsUnzipMinBindings(MinBindings *bindings, SymbolList **vars,

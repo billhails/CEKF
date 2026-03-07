@@ -47,6 +47,7 @@ static MinExp *cpsTcMinMatch(MinMatch *node, MinExp *c);
 static MinExp *cpsTcMinLetRec(MinLetRec *node, MinExp *c);
 static MinExp *cpsTcMinAmb(MinAmb *node, MinExp *c);
 static MinExp *cpsTcMinExp(MinExp *node, MinExp *c);
+static CpsWork *bridgeMinExpResult(MinExp *result);
 
 /*
     fn M {
@@ -105,15 +106,15 @@ static MinExp *cpsTcMinPrimApp(MinPrimApp *node, MinExp *c) {
     return result;
 }
 
-MinExp *TcPrimApp1Kont(MinExp *s1, TcPrimApp1KontEnv *env) {
+CpsWork *TcPrimApp1Kont(MinExp *s1, TcPrimApp1KontEnv *env) {
     CpsKont *k = makeKont_TcPrimApp2(env->c, s1, env->p);
     int save = PROTECT(k);
     MinExp *result = cpsTk(env->e2, k);
     UNPROTECT(save);
-    return result;
+    return bridgeMinExpResult(result);
 }
 
-MinExp *TcPrimApp2Kont(MinExp *s2, TcPrimApp2KontEnv *env) {
+CpsWork *TcPrimApp2Kont(MinExp *s2, TcPrimApp2KontEnv *env) {
     ENTER(TcPrimApp2Kont);
     MinExp *primapp = makeMinExp_Prim(CPI(env->s1), env->p, env->s1, s2);
     int save = PROTECT(primapp);
@@ -122,7 +123,7 @@ MinExp *TcPrimApp2Kont(MinExp *s2, TcPrimApp2KontEnv *env) {
     MinExp *result = makeMinExp_Apply(CPI(primapp), env->c, args);
     UNPROTECT(save);
     LEAVE(TcPrimApp2Kont);
-    return result;
+    return bridgeMinExpResult(result);
 }
 
 /*
@@ -154,14 +155,14 @@ static MinExp *cpsTcMinSequence(MinExprList *node, MinExp *c) {
     return result;
 }
 
-MinExp *TcSequenceKont(MinExp *ignored, TcSequenceKontEnv *env) {
+CpsWork *TcSequenceKont(MinExp *ignored, TcSequenceKontEnv *env) {
     ENTER(TcSequenceKont);
     MinExp *sequence = newMinExp_Sequence(CPI(ignored), env->exprs);
     int save = PROTECT(sequence);
     MinExp *result = cpsTcMinExp(sequence, env->c);
     UNPROTECT(save);
     LEAVE(TcSequenceKont);
-    return result;
+    return bridgeMinExpResult(result);
 }
 
 /*
@@ -185,7 +186,7 @@ static MinExp *cpsTcMinApply(MinApply *node, MinExp *c) {
     return result;
 }
 
-MinExp *TcApply1Kont(MinExp *sf, TcApply1KontEnv *env) {
+CpsWork *TcApply1Kont(MinExp *sf, TcApply1KontEnv *env) {
     ENTER(T_c_apply_1Kont);
     CpsKont *kont2 = makeKont_TcApply2(sf, env->c);
     int save = PROTECT(kont2);
@@ -194,17 +195,17 @@ MinExp *TcApply1Kont(MinExp *sf, TcApply1KontEnv *env) {
     MinExp *result = cpsTs_k(args, kont2);
     UNPROTECT(save);
     LEAVE(T_c_apply_1Kont);
-    return result;
+    return bridgeMinExpResult(result);
 }
 
-MinExp *TcApply2Kont(MinExp *ses, TcApply2KontEnv *env) {
+CpsWork *TcApply2Kont(MinExp *ses, TcApply2KontEnv *env) {
     ENTER(TcApply2Kont);
     MinExprList *args = appendMinArg(getMinExp_Args(ses), env->c);
     int save = PROTECT(args);
     MinExp *result = makeMinExp_Apply(CPI(env->sf), env->sf, args);
     UNPROTECT(save);
     LEAVE(TcApply2Kont);
-    return result;
+    return bridgeMinExpResult(result);
 }
 
 /*
@@ -226,7 +227,7 @@ static MinExp *cpsTcMakeVec(MinExprList *node, MinExp *c) {
     return result;
 }
 
-MinExp *TcMakeVecKont(MinExp *sargs, TcMakeVecKontEnv *env) {
+CpsWork *TcMakeVecKont(MinExp *sargs, TcMakeVecKontEnv *env) {
     ENTER(TcMakeVecKont);
     MinExp *make_vec = newMinExp_MakeVec(CPI(sargs), getMinExp_Args(sargs));
     int save = PROTECT(make_vec);
@@ -235,7 +236,7 @@ MinExp *TcMakeVecKont(MinExp *sargs, TcMakeVecKontEnv *env) {
     MinExp *result = makeMinExp_Apply(CPI(sargs), env->c, args);
     UNPROTECT(save);
     LEAVE(TcMakeVecKont);
-    return result;
+    return bridgeMinExpResult(result);
 }
 
 /*
@@ -269,7 +270,7 @@ static MinExp *cpsTcMinIff(MinIff *node, MinExp *c) {
     return result;
 }
 
-MinExp *TcIffKont(MinExp *aexp, TcIffKontEnv *env) {
+CpsWork *TcIffKont(MinExp *aexp, TcIffKontEnv *env) {
     ENTER(TcIffKont);
     MinExp *then_exp = cpsTc(env->exprt, env->sk);
     int save = PROTECT(then_exp);
@@ -278,7 +279,7 @@ MinExp *TcIffKont(MinExp *aexp, TcIffKontEnv *env) {
     MinExp *result = makeMinExp_Iff(CPI(aexp), aexp, then_exp, else_exp);
     UNPROTECT(save);
     LEAVE(TcIffKont);
-    return result;
+    return bridgeMinExpResult(result);
 }
 
 static MinIntCondCases *mapIntCondCases(MinIntCondCases *cases, MinExp *c) {
@@ -339,7 +340,7 @@ static MinExp *cpsTcMinCond(MinCond *node, MinExp *c) {
     return result;
 }
 
-MinExp *TcCondKont(MinExp *atest, TcCondKontEnv *env) {
+CpsWork *TcCondKont(MinExp *atest, TcCondKontEnv *env) {
     ENTER(TcCondKont);
     MinExp *result = NULL;
     MinCondCases *cases = NULL;
@@ -363,7 +364,7 @@ MinExp *TcCondKont(MinExp *atest, TcCondKontEnv *env) {
     result = makeMinExp_Cond(CPI(env->branches), atest, cases);
     UNPROTECT(save);
     LEAVE(TcCondKont);
-    return result;
+    return bridgeMinExpResult(result);
 }
 
 /*
@@ -398,7 +399,7 @@ static MinExp *cpsTcMinMatch(MinMatch *node, MinExp *c) {
     return result;
 }
 
-MinExp *TcMatchKont(MinExp *atest, TcMatchKontEnv *env) {
+CpsWork *TcMatchKont(MinExp *atest, TcMatchKontEnv *env) {
     ENTER(TcMatchKont);
     MinMatchList *cases = mapTcOverMatchCases(env->cases, env->sk);
     int save = PROTECT(cases);
@@ -406,7 +407,7 @@ MinExp *TcMatchKont(MinExp *atest, TcMatchKontEnv *env) {
     MinExp *result = makeMinExp_Match(CPI(env->cases), atest, cases);
     UNPROTECT(save);
     LEAVE(TcMatchKont);
-    return result;
+    return bridgeMinExpResult(result);
 }
 
 /*
@@ -525,7 +526,7 @@ static MinExp *cpsTcCallCC(MinExp *e, MinExp *c) {
     return result;
 }
 
-MinExp *TcCallCCKont(MinExp *sf, TcCallCCKontEnv *env) {
+CpsWork *TcCallCCKont(MinExp *sf, TcCallCCKontEnv *env) {
     ENTER(TcCallCCKont);
     MinExp *callCC = makeCallCC(CPI(sf));
     int save = PROTECT(callCC);
@@ -536,7 +537,7 @@ MinExp *TcCallCCKont(MinExp *sf, TcCallCCKontEnv *env) {
     MinExp *result = makeMinExp_Apply(CPI(env->c), callCC, args);
     UNPROTECT(save);
     LEAVE(TcCallCCKont);
-    return result;
+    return bridgeMinExpResult(result);
 }
 
 static MinExp *cpsTcMinExp(MinExp *node, MinExp *c) {

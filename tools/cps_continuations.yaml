@@ -12,7 +12,7 @@ config:
   description: "Continuation scaffolding for CPS transform"
   parserInfo: false
   currency: MinExp
-  output: MinExp
+  output: CpsWork
   includes:
     - minlam.h
   limited_includes:
