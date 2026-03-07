@@ -70,6 +70,7 @@
 
 #ifdef TEST_CPS
 #include "minlam_cps.h"
+#include "minlam_cpsTrampoline.h"
 #endif
 
 // temporary test
@@ -601,7 +602,7 @@ int main(int argc, char *argv[]) {
 #ifdef TEST_CPS
         MinExp *done = makeDoneCont(CPI(exp), true);
         PROTECT(done);
-        minExp = cpsTc(minExp, done);
+        minExp = runCpsTrampolineTc(minExp, done);
         REPLACE_PROTECT(save2, minExp);
         minExp = betaMinExp(minExp); // necessary for the amb transform
         REPLACE_PROTECT(save2, minExp);

@@ -27,6 +27,7 @@
 #include "cps_kont.h"
 #include "cps_kont_impl.h"
 #include "minlam_cps.h"
+#include "minlam_cpsTrampoline.h"
 #include "minlam_functions.h"
 
 #ifdef DEBUG_LAMBDA_CPSTC
@@ -105,12 +106,10 @@ static MinExp *cpsTcMinPrimApp(MinPrimApp *node, MinExp *c) {
 }
 
 MinExp *TcPrimApp1Kont(MinExp *s1, TcPrimApp1KontEnv *env) {
-    ENTER(TcPrimApp1Kont);
     CpsKont *k = makeKont_TcPrimApp2(env->c, s1, env->p);
     int save = PROTECT(k);
     MinExp *result = cpsTk(env->e2, k);
     UNPROTECT(save);
-    LEAVE(TcPrimApp1Kont);
     return result;
 }
 
@@ -587,4 +586,46 @@ MinExp *cpsTc(MinExp *node, MinExp *c) {
     MinExp *result = cpsTcMinExp(node, c);
     LEAVE(cpsTc);
     return result;
+}
+
+static CpsWork *bridgeMinExpResult(MinExp *result) {
+    int save = PROTECT(result);
+    CpsWork *next = newCpsWork_Result(result);
+    UNPROTECT(save);
+    return next;
+}
+
+static CpsWork *unimplementedTcStep(CpsWork *work) {
+    cant_happen("unimplemented Tc-step for %s", cpsWorkTypeName(work->type));
+    return NULL;
+}
+
+CpsWork *cpsStepTc(CpsWork *work) {
+    switch (work->type) {
+    case CPSWORK_TYPE_TC: {
+        CpsTcThunk *tc = getCpsWork_Tc(work);
+        MinExp *result = cpsTc(tc->exp, tc->cont);
+        return bridgeMinExpResult(result);
+    }
+
+    case CPSWORK_TYPE_TCIFFAFTERCONDITION:
+    case CPSWORK_TYPE_TCIFFAFTERTHEN:
+    case CPSWORK_TYPE_TCIFFBUILD:
+    case CPSWORK_TYPE_TCAMBAFTERLEFT:
+    case CPSWORK_TYPE_TCAMBBUILD:
+    case CPSWORK_TYPE_TCLETRECAFTERBODY:
+    case CPSWORK_TYPE_MLAMAFTERBODY:
+    case CPSWORK_TYPE_TCMAPINTCONDCASES:
+    case CPSWORK_TYPE_TCMAPINTCONDCASESAFTERBODY:
+    case CPSWORK_TYPE_TCMAPCHARCONDCASES:
+    case CPSWORK_TYPE_TCMAPCHARCONDCASESAFTERBODY:
+    case CPSWORK_TYPE_TCMAPMATCHCASES:
+    case CPSWORK_TYPE_TCMAPMATCHCASESAFTERBODY:
+        return unimplementedTcStep(work);
+
+    default:
+        cant_happen("unhandled Tc-tag %s in cpsStepTc",
+                    cpsWorkTypeName(work->type));
+        return NULL;
+    }
 }

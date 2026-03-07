@@ -12,6 +12,7 @@ config:
   description: "Continuation scaffolding for CPS transform"
   parserInfo: false
   currency: MinExp
+  output: MinExp
   includes:
     - minlam.h
   limited_includes:
@@ -357,3 +358,288 @@ continuations:
     free_vars:
       c: MinExp
       exprs: MinExprList
+
+
+structs:
+    # Core entry/task thunks
+    CpsTcRootThunk:
+        meta:
+            brief: Root Tc entrypoint task
+        data:
+            exp: MinExp
+            cont0: MinExp
+
+    CpsTkThunk:
+        meta:
+            brief: Task that invokes cpsTk
+        data:
+            exp: MinExp
+            kont: CpsKont
+
+    CpsTcThunk:
+        meta:
+            brief: Task that invokes cpsTc
+        data:
+            exp: MinExp
+            cont: MinExp
+
+    CpsTskThunk:
+        meta:
+            brief: Task that invokes cpsTs_k
+        data:
+            args: MinExp
+            kont: CpsKont
+
+    CpsInvokeThunk:
+        meta:
+            brief: Task that invokes a kont
+        data:
+            kont: CpsKont
+            arg: MinExp
+
+    # Iff split thunks
+    TkIffAfterConditionThunk:
+        meta:
+            brief: TkIff after condition, schedule consequent
+        data:
+            aexp: MinExp
+            exprt: MinExp
+            exprf: MinExp
+            c: MinExp
+
+    TkIffAfterConsequentThunk:
+        meta:
+            brief: TkIff after consequent, schedule alternative
+        data:
+            aexp: MinExp
+            exprf: MinExp
+            c: MinExp
+            consequent: MinExp
+
+    TkIffBuildThunk:
+        meta:
+            brief: TkIff build final if-expression
+        data:
+            aexp: MinExp
+            consequent: MinExp
+
+    TcIffAfterConditionThunk:
+        meta:
+            brief: TcIff after condition, schedule then branch
+        data:
+            aexp: MinExp
+            exprt: MinExp
+            exprf: MinExp
+            sk: MinExp
+
+    TcIffAfterThenThunk:
+        meta:
+            brief: TcIff after then, schedule else branch
+        data:
+            aexp: MinExp
+            exprf: MinExp
+            sk: MinExp
+            thenExp: MinExp
+
+    TcIffBuildThunk:
+        meta:
+            brief: TcIff build final if-expression
+        data:
+            aexp: MinExp
+            thenExp: MinExp
+
+    # Amb split thunks
+    TkAmbAfterLeftThunk:
+        meta:
+            brief: TkAmb after left, schedule right
+        data:
+            left: MinExp
+            right: MinExp
+            c: MinExp
+
+    TkAmbBuildThunk:
+        meta:
+            brief: TkAmb build amb expression
+        data:
+            leftVal: MinExp
+
+    TcAmbAfterLeftThunk:
+        meta:
+            brief: TcAmb after left, schedule right
+        data:
+            left: MinExp
+            right: MinExp
+            k: MinExp
+
+    TcAmbBuildThunk:
+        meta:
+            brief: TcAmb build amb expression
+        data:
+            k: MinExp
+            leftVal: MinExp
+
+    # LetRec/lambda body completion thunks
+    TkLetRecAfterBodyThunk:
+        meta:
+            brief: Tk letrec body complete, build letrec
+        data:
+            bindings: MinBindings
+
+    TcLetRecAfterBodyThunk:
+        meta:
+            brief: Tc letrec body complete, build letrec
+        data:
+            bindings: MinBindings
+
+    MLamAfterBodyThunk:
+        meta:
+            brief: cpsM lambda body complete, build lambda
+        data:
+            args: SymbolList
+
+    # Cond case mapping thunks
+    TkMapIntCondCasesThunk:
+        meta:
+            brief: Map Tk int cond cases
+        data:
+            cases: MinIntCondCases
+            c: MinExp
+
+    TkMapIntCondCasesAfterBodyThunk:
+        meta:
+            brief: Build Tk int cond case node after body
+        data:
+            constant: MaybeBigInt
+            next: MinIntCondCases
+
+    TkMapCharCondCasesThunk:
+        meta:
+            brief: Map Tk char cond cases
+        data:
+            cases: MinCharCondCases
+            c: MinExp
+
+    TkMapCharCondCasesAfterBodyThunk:
+        meta:
+            brief: Build Tk char cond case node after body
+        data:
+            constant: character
+            next: MinCharCondCases
+
+    TcMapIntCondCasesThunk:
+        meta:
+            brief: Map Tc int cond cases
+        data:
+            cases: MinIntCondCases
+            sk: MinExp
+
+    TcMapIntCondCasesAfterBodyThunk:
+        meta:
+            brief: Build Tc int cond case node after body
+        data:
+            constant: MaybeBigInt
+            next: MinIntCondCases
+
+    TcMapCharCondCasesThunk:
+        meta:
+            brief: Map Tc char cond cases
+        data:
+            cases: MinCharCondCases
+            sk: MinExp
+
+    TcMapCharCondCasesAfterBodyThunk:
+        meta:
+            brief: Build Tc char cond case node after body
+        data:
+            constant: character
+            next: MinCharCondCases
+
+    # Match case mapping thunks
+    TkMapMatchCasesThunk:
+        meta:
+            brief: Map Tk match cases
+        data:
+            cases: MinMatchList
+            c: MinExp
+
+    TkMapMatchCasesAfterBodyThunk:
+        meta:
+            brief: Build Tk match case node after body
+        data:
+            matches: MinIntList
+            next: MinMatchList
+
+    TcMapMatchCasesThunk:
+        meta:
+            brief: Map Tc match cases
+        data:
+            cases: MinMatchList
+            sk: MinExp
+
+    TcMapMatchCasesAfterBodyThunk:
+        meta:
+            brief: Build Tc match case node after body
+        data:
+            matches: MinIntList
+            next: MinMatchList
+
+    # Binding map helper thunks
+    CpsMapBindingsThunk:
+        meta:
+            brief: Map cpsM over letrec bindings
+        data:
+            bindings: MinBindings
+
+    CpsMapBindingsAfterValThunk:
+        meta:
+            brief: Build mapped binding after transformed value
+        data:
+            var: HashSymbol
+            arity: int
+            next: MinBindings
+
+unions:
+    CpsWork:
+        meta:
+            brief: CPS trampoline work item or final result
+        data:
+            tcRoot: CpsTcRootThunk
+            tk: CpsTkThunk
+            tc: CpsTcThunk
+            tsk: CpsTskThunk
+            invoke: CpsInvokeThunk
+
+            tkIffAfterCondition: TkIffAfterConditionThunk
+            tkIffAfterConsequent: TkIffAfterConsequentThunk
+            tkIffBuild: TkIffBuildThunk
+            tcIffAfterCondition: TcIffAfterConditionThunk
+            tcIffAfterThen: TcIffAfterThenThunk
+            tcIffBuild: TcIffBuildThunk
+
+            tkAmbAfterLeft: TkAmbAfterLeftThunk
+            tkAmbBuild: TkAmbBuildThunk
+            tcAmbAfterLeft: TcAmbAfterLeftThunk
+            tcAmbBuild: TcAmbBuildThunk
+
+            tkLetRecAfterBody: TkLetRecAfterBodyThunk
+            tcLetRecAfterBody: TcLetRecAfterBodyThunk
+            mLamAfterBody: MLamAfterBodyThunk
+
+            tkMapIntCondCases: TkMapIntCondCasesThunk
+            tkMapIntCondCasesAfterBody: TkMapIntCondCasesAfterBodyThunk
+            tkMapCharCondCases: TkMapCharCondCasesThunk
+            tkMapCharCondCasesAfterBody: TkMapCharCondCasesAfterBodyThunk
+            tcMapIntCondCases: TcMapIntCondCasesThunk
+            tcMapIntCondCasesAfterBody: TcMapIntCondCasesAfterBodyThunk
+            tcMapCharCondCases: TcMapCharCondCasesThunk
+            tcMapCharCondCasesAfterBody: TcMapCharCondCasesAfterBodyThunk
+
+            tkMapMatchCases: TkMapMatchCasesThunk
+            tkMapMatchCasesAfterBody: TkMapMatchCasesAfterBodyThunk
+            tcMapMatchCases: TcMapMatchCasesThunk
+            tcMapMatchCasesAfterBody: TcMapMatchCasesAfterBodyThunk
+
+            cpsMapBindings: CpsMapBindingsThunk
+            cpsMapBindingsAfterVal: CpsMapBindingsAfterValThunk
+
+            result: MinExp

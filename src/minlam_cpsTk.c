@@ -27,6 +27,7 @@
 #include "cps_kont.h"
 #include "cps_kont_impl.h"
 #include "minlam_cps.h"
+#include "minlam_cpsTrampoline.h"
 #include "minlam_functions.h"
 
 #ifdef DEBUG_LAMBDA_CPSTK
@@ -46,6 +47,35 @@ static MinExp *cpsTkMinMatch(MinMatch *node, CpsKont *k);
 static MinExp *cpsTkMinLetRec(MinLetRec *node, CpsKont *k);
 static MinExp *cpsTkMinAmb(MinAmb *node, CpsKont *k);
 static MinExp *cpsTkMinExp(MinExp *node, CpsKont *k);
+
+static int cpsTsKDepthCurrent = 0;
+static int cpsTsKDepthMax = 0;
+static int tkS1DepthCurrent = 0;
+static int tkS1DepthMax = 0;
+static int cpsTsKS1CombinedMax = 0;
+
+static void updateCpsDepthStats(void) {
+    if (cpsTsKDepthCurrent > cpsTsKDepthMax) {
+        cpsTsKDepthMax = cpsTsKDepthCurrent;
+        if ((cpsTsKDepthMax % 100) == 0) {
+            eprintf("[cpsTk depth] cpsTs_k max=%d\n", cpsTsKDepthMax);
+        }
+    }
+    if (tkS1DepthCurrent > tkS1DepthMax) {
+        tkS1DepthMax = tkS1DepthCurrent;
+        if ((tkS1DepthMax % 100) == 0) {
+            eprintf("[cpsTk depth] TkS1Kont max=%d\n", tkS1DepthMax);
+        }
+    }
+    int combined = cpsTsKDepthCurrent + tkS1DepthCurrent;
+    if (combined > cpsTsKS1CombinedMax) {
+        cpsTsKS1CombinedMax = combined;
+        if ((cpsTsKS1CombinedMax % 100) == 0) {
+            eprintf("[cpsTk depth] cpsTs_k+TkS1 combined max=%d\n",
+                    cpsTsKS1CombinedMax);
+        }
+    }
+}
 
 // utilities
 static MinExp *INVOKE(CpsKont *k, MinExp *arg) {
@@ -103,8 +133,13 @@ SymbolList *appendMinVar(ParserInfo PI, SymbolList *args, HashSymbol *var) {
  */
 MinExp *cpsTs_k(MinExp *exp, CpsKont *k) {
     ENTER(cpsTs_k);
+    cpsTsKDepthCurrent++;
+    updateCpsDepthStats();
     if (getMinExp_Args(exp) == NULL) {
-        return INVOKE(k, exp);
+        MinExp *result = INVOKE(k, exp);
+        cpsTsKDepthCurrent--;
+        LEAVE(cpsTs_k);
+        return result;
     }
     CpsKont *k1 = makeKont_TkS1(getMinExp_Args(exp)->next, k);
     int save = PROTECT(k1);
@@ -112,11 +147,14 @@ MinExp *cpsTs_k(MinExp *exp, CpsKont *k) {
         cpsTk(getMinExp_Args(exp)->exp, k1); // T_k(h, fn (hd) { ...k...t... })
     LEAVE(cpsTs_k);
     UNPROTECT(save);
+    cpsTsKDepthCurrent--;
     return result;
 }
 
 MinExp *TkS1Kont(MinExp *hd, TkS1KontEnv *env) {
     ENTER(TkS1Kont);
+    tkS1DepthCurrent++;
+    updateCpsDepthStats();
     CpsKont *k2 = makeKont_TkS2(env->k, hd);
     int save = PROTECT(k2);
     MinExp *args = newMinExp_Args(CPI(hd), env->t);
@@ -124,6 +162,7 @@ MinExp *TkS1Kont(MinExp *hd, TkS1KontEnv *env) {
     MinExp *result = cpsTs_k(args, k2); // Ts_k(t, fn (tl) { ...k...hd... })
     LEAVE(TkS1Kont);
     UNPROTECT(save);
+    tkS1DepthCurrent--;
     return result;
 }
 
@@ -600,3 +639,51 @@ static MinExp *cpsTkMinExp(MinExp *node, CpsKont *k) {
 }
 
 MinExp *cpsTk(MinExp *node, CpsKont *k) { return cpsTkMinExp(node, k); }
+
+static CpsWork *bridgeMinExpResult(MinExp *result) {
+    int save = PROTECT(result);
+    CpsWork *next = newCpsWork_Result(result);
+    UNPROTECT(save);
+    return next;
+}
+
+static CpsWork *unimplementedTkStep(CpsWork *work) {
+    cant_happen("unimplemented Tk-step for %s", cpsWorkTypeName(work->type));
+    return NULL;
+}
+
+CpsWork *cpsStepTk(CpsWork *work) {
+    switch (work->type) {
+    case CPSWORK_TYPE_TK: {
+        CpsTkThunk *tk = getCpsWork_Tk(work);
+        MinExp *result = cpsTk(tk->exp, tk->kont);
+        return bridgeMinExpResult(result);
+    }
+    case CPSWORK_TYPE_TSK: {
+        CpsTskThunk *tsk = getCpsWork_Tsk(work);
+        MinExp *result = cpsTs_k(tsk->args, tsk->kont);
+        return bridgeMinExpResult(result);
+    }
+
+    case CPSWORK_TYPE_TKIFFAFTERCONDITION:
+    case CPSWORK_TYPE_TKIFFAFTERCONSEQUENT:
+    case CPSWORK_TYPE_TKIFFBUILD:
+    case CPSWORK_TYPE_TKAMBAFTERLEFT:
+    case CPSWORK_TYPE_TKAMBBUILD:
+    case CPSWORK_TYPE_TKLETRECAFTERBODY:
+    case CPSWORK_TYPE_TKMAPINTCONDCASES:
+    case CPSWORK_TYPE_TKMAPINTCONDCASESAFTERBODY:
+    case CPSWORK_TYPE_TKMAPCHARCONDCASES:
+    case CPSWORK_TYPE_TKMAPCHARCONDCASESAFTERBODY:
+    case CPSWORK_TYPE_TKMAPMATCHCASES:
+    case CPSWORK_TYPE_TKMAPMATCHCASESAFTERBODY:
+    case CPSWORK_TYPE_CPSMAPBINDINGS:
+    case CPSWORK_TYPE_CPSMAPBINDINGSAFTERVAL:
+        return unimplementedTkStep(work);
+
+    default:
+        cant_happen("unhandled Tk-tag %s in cpsStepTk",
+                    cpsWorkTypeName(work->type));
+        return NULL;
+    }
+}

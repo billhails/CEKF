@@ -1,57 +1,45 @@
 # Convert AMB to normal CPS after the CPS transform
 
-As a prelude to generating C or LLVM, we need to transform AMB from a `fail` register to a plain
+As a prelude to generating C or LLVM, we need to transform `amb` from a `fail` register to a plain
 continuation.
 
-The orginal inspiration for amb came from SICP, where it is implemented in this way as a second continuation passed as argument along with the first and passed as an extra argument to the first continuation when that is invoked. The only places that actually do anything with, or to, the failure continuation are `amb` itself, which creates a new failure continuation that will resume evaluating its second argument, and `back`, which invokes the failure continuation.
+The orginal inspiration for `amb` came from SICP, where it is implemented in this way as a second continuation passed as argument along with the first and passed as an extra argument to the first continuation when that is invoked. The only places that actually do anything with, or to, the failure continuation are `amb` itself, which creates a new failure continuation that will resume evaluating its second argument, and `back`, which invokes the failure continuation.
 
-This should be much simpler than the CPS transform, we are simply threading the extra continuation through the existing control flow. However it makes sense both for proving and for documentation to implement the AMB transform as a prototype in `fn/rewrite` first, before attempting to implement in C.
+This should be much simpler than the CPS transform, for the most part we are simply threading the extra continuation through the existing control flow. However it makes sense both for proving and for documentation to implement the AMB transform as a prototype in `fn/rewrite` first.
 
 While many transforms (beta reduction, eta reduction etc.) are somewhat interchangeable, the AMB transform
 must occur after CPS and before closure conversion.
 
 The $\mathcal{AMB}$ transform will affect the following nodes in minexp:
 
-## Lambda
-
 $$
-\mathcal{AMB}\big\lgroup\mathtt{(\lambda(a\ k)\ b)}, \mathcal{f}\big\rgroup
-\mapsto
-\mathtt{(\lambda(a\ k\ \mathcal{f'})\ \mathcal{AMB}\big\lgroup \mathtt{b}, \mathcal{f'}\big\rgroup)}
-$$
-
-where $\mathcal{f}'$ is a fresh variable.
-
-## Apply
-
-$$
-\mathcal{AMB}\big\lgroup\mathtt{(a\ b\ k)}, \mathcal{f}\big\rgroup
-\mapsto
+\begin{align*}
+\mathcal{AMB}\lgroup\mathtt{(\lambda(a\ k)\ b)}, \mathcal{f}\rgroup
+&\mapsto
+\mathtt{(\lambda(a\ k\ \mathcal{f'})\ \mathcal{AMB}\lgroup \mathtt{b}, \mathcal{f'}\rgroup)}
+&\texttt{[lambda]}
+\\
+\text{where }\mathcal{f'}&\text{ is a fresh variable}
+\\
+\mathcal{AMB}\lgroup\mathtt{(a\ b\ k)}, \mathcal{f}\rgroup
+&\mapsto
 \mathtt{(a\ b\ k\ \mathcal{f})}
-$$
-
-## Amb
-
-$$
-\mathtt{(amb\ (k\ a)\ (k\ b))}
-\mapsto
-\mathtt{(k\ a\ (\lambda\ ()\ (k\ b\ \mathcal{f})))}
-$$
-
-or formally
-
-$$
-\mathcal{AMB}\big\lgroup\mathtt{(amb\ a\ b)}, \mathcal{f}\big\rgroup
-\mapsto
-\mathcal{AMB}\big\lgroup \mathtt{a}, (\lambda ()\ \mathcal{AMB}\big\lgroup \mathtt{b}, \mathcal{f}\big\rgroup)\big\rgroup
-$$
-
-## Back
-
-$$
-\mathcal{AMB}\big\lgroup\mathtt{(back)}, \mathcal{f}\big\rgroup
-\mapsto
+&\texttt{[apply]}
+\\
+\mathcal{AMB}\lgroup\mathtt{(amb\ a\ b)}, \mathcal{f}\rgroup
+&\mapsto
+\mathcal{AMB}\lgroup \mathtt{a}, (\lambda ()\ \mathcal{AMB}\lgroup \mathtt{b}, \mathcal{f}\rgroup)\rgroup
+&\texttt{[amb]}
+\\
+\mathcal{AMB}\lgroup\mathtt{(back)}, \mathcal{f}\rgroup
+&\mapsto
 \mathtt{(\mathcal{f})}
+&\texttt{[back]}
+\\
+\mathcal{AMB}\lgroup x, \mathcal{f}\rgroup
+&\mapsto
+x &\mathtt{[otherwise]}
+\end{align*}
 $$
 
 ## Status
