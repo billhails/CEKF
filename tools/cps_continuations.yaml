@@ -618,17 +618,20 @@ structs:
   # Binding map helper thunks
   CpsMapBindingsThunk:
     meta:
-      brief: Map cpsM over letrec bindings
+      brief: Map cpsM over letrec bindings with immutable accumulator
     data:
       bindings: MinBindings
+      acc: MinBindings
 
   CpsMapBindingsAfterValThunk:
     meta:
-      brief: Build mapped binding after transformed value
+      brief: Build mapped binding node and continue mapping
     data:
       var: HashSymbol
       arity: int
-      next: MinBindings
+      val: MinExp
+      remaining: MinBindings
+      acc: MinBindings
 
   # Payload wrapper template thunks
   CpsMapBindingsPayloadThunk:

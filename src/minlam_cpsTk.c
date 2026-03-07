@@ -496,16 +496,24 @@ MinExp *cpsNestLets(MinBindings *bindings, MinExp *body) {
 }
 
 MinBindings *mapMOverBindings(MinBindings *bindings) {
-    if (bindings == NULL)
-        return NULL;
-    MinBindings *next = mapMOverBindings(bindings->next);
-    int save = PROTECT(next);
-    MinExp *val = cpsM(bindings->val);
-    PROTECT(val);
-    MinBindings *this = newMinBindings(CPI(bindings), bindings->var, val, next);
-    this->arity = bindings->arity;
+    MinBindingsArray *array = newMinBindingsArray();
+    int save = PROTECT(array);
+    while (bindings != NULL) {
+        pushMinBindingsArray(array, bindings);
+        bindings = bindings->next;
+    }
+    int save2 = PROTECT(array); // claim another stack slot
+    bindings = NULL;
+    for (int i = array->size - 1; i >= 0; i--) {
+        MinBindings *that = array->entries[i];
+        MinExp *val = cpsM(that->val);
+        REPLACE_PROTECT(save2, val);
+        bindings = newMinBindings(CPI(that), that->var, val, bindings);
+        REPLACE_PROTECT(save2, bindings);
+        bindings->arity = that->arity;
+    }
     UNPROTECT(save);
-    return this;
+    return bindings;
 }
 
 /*
@@ -955,40 +963,8 @@ CpsWork *cpsStepTk(CpsWork *work) {
     case CPSWORK_TYPE_CPSMAPBINDINGSAFTERVAL:
         return unimplementedTkStep(work);
 
-    case CPSWORK_TYPE_CPSMAPBINDINGSPAYLOAD: {
-        CpsMapBindingsPayloadThunk *th = getCpsWork_CpsMapBindingsPayload(work);
-        MinBindings *remaining = th->bindings;
-        MinBindings *mappedHead = NULL;
-        MinBindings *mappedTail = NULL;
-        int mappedSave = PROTECT(mappedHead);
-
-        while (remaining != NULL) {
-            MinExp *mappedVal = cpsM(remaining->val);
-            int save = PROTECT(mappedVal);
-            MinBindings *mappedNode =
-                newMinBindings(CPI(remaining), remaining->var, mappedVal, NULL);
-            mappedNode->arity = remaining->arity;
-
-            if (mappedHead == NULL) {
-                mappedHead = mappedNode;
-                mappedTail = mappedNode;
-                REPLACE_PROTECT(mappedSave, mappedHead);
-            } else {
-                mappedTail->next = mappedNode;
-                mappedTail = mappedNode;
-            }
-
-            remaining = remaining->next;
-            UNPROTECT(save);
-        }
-
-        CpsPayload *payload = newCpsPayload_Bindings(mappedHead);
-        int save = PROTECT(payload);
-        CpsWork *next = makeCpsWork_PayloadResult(payload);
-        UNPROTECT(mappedSave);
-        UNPROTECT(save);
-        return next;
-    }
+    case CPSWORK_TYPE_CPSMAPBINDINGSPAYLOAD:
+        return unimplementedTkStep(work);
 
     case CPSWORK_TYPE_PAYLOADRESULT:
         return work;

@@ -69,6 +69,7 @@ MinCondCases --integers--> MinIntCondCases
 MinCondCases --characters--> MinCharCondCases
 MinPrimOp["enum MinPrimOp"]
 MinAlphaEnvArray["MinAlphaEnvArray[]"] --entries--> MinAlphaEnv
+MinBindingsArray["MinBindingsArray[]"] --entries--> MinBindings
 ```
 
 > Generated from src/minlam.yaml by tools/generate.py
