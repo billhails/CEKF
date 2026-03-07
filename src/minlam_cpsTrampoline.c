@@ -82,8 +82,7 @@ static CpsWork *cpsStep(CpsWork *work) {
     }
 }
 
-MinExp *runCpsTrampolineTc(MinExp *rootExp, MinExp *cont0) {
-    CpsWork *work = makeCpsWork_TcRoot(rootExp, cont0);
+MinExp *runCpsWorkToResult(CpsWork *work) {
     int save = PROTECT(work);
 
     while (work->type != CPSWORK_TYPE_RESULT) {
@@ -95,4 +94,9 @@ MinExp *runCpsTrampolineTc(MinExp *rootExp, MinExp *cont0) {
     MinExp *result = getCpsWork_Result(work);
     UNPROTECT(save);
     return result;
+}
+
+MinExp *runCpsTrampolineTc(MinExp *rootExp, MinExp *cont0) {
+    CpsWork *work = makeCpsWork_TcRoot(rootExp, cont0);
+    return runCpsWorkToResult(work);
 }

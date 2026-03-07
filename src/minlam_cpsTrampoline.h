@@ -24,6 +24,7 @@ struct MinExp;
 
 struct CpsWork *cpsStepTk(struct CpsWork *work);
 struct CpsWork *cpsStepTc(struct CpsWork *work);
+struct MinExp *runCpsWorkToResult(struct CpsWork *work);
 
 struct MinExp *runCpsTrampolineTc(struct MinExp *rootExp, struct MinExp *cont0);
 

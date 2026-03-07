@@ -81,11 +81,7 @@ static void updateCpsDepthStats(void) {
 // utilities
 static MinExp *INVOKE(CpsKont *k, MinExp *arg) {
     CpsWork *work = k->wrapper(arg, k->env);
-    if (work->type != CPSWORK_TYPE_RESULT) {
-        cant_happen("legacy INVOKE expected RESULT, got %s",
-                    cpsWorkTypeName(work->type));
-    }
-    return getCpsWork_Result(work);
+    return runCpsWorkToResult(work);
 }
 
 bool isAexpr(MinExp *exp) {
@@ -139,21 +135,11 @@ SymbolList *appendMinVar(ParserInfo PI, SymbolList *args, HashSymbol *var) {
  */
 MinExp *cpsTs_k(MinExp *exp, CpsKont *k) {
     ENTER(cpsTs_k);
-    cpsTsKDepthCurrent++;
-    updateCpsDepthStats();
-    if (getMinExp_Args(exp) == NULL) {
-        MinExp *result = INVOKE(k, exp);
-        cpsTsKDepthCurrent--;
-        LEAVE(cpsTs_k);
-        return result;
-    }
-    CpsKont *k1 = makeKont_TkS1(getMinExp_Args(exp)->next, k);
-    int save = PROTECT(k1);
-    MinExp *result =
-        cpsTk(getMinExp_Args(exp)->exp, k1); // T_k(h, fn (hd) { ...k...t... })
-    LEAVE(cpsTs_k);
+    CpsWork *start = makeCpsWork_Tsk(exp, k);
+    int save = PROTECT(start);
+    MinExp *result = runCpsWorkToResult(start);
     UNPROTECT(save);
-    cpsTsKDepthCurrent--;
+    LEAVE(cpsTs_k);
     return result;
 }
 
@@ -165,21 +151,22 @@ CpsWork *TkS1Kont(MinExp *hd, TkS1KontEnv *env) {
     int save = PROTECT(k2);
     MinExp *args = newMinExp_Args(CPI(hd), env->t);
     PROTECT(args);
-    MinExp *result = cpsTs_k(args, k2); // Ts_k(t, fn (tl) { ...k...hd... })
+    CpsWork *next =
+        makeCpsWork_Tsk(args, k2); // Ts_k(t, fn (tl) { ...k...hd... })
     LEAVE(TkS1Kont);
     UNPROTECT(save);
     tkS1DepthCurrent--;
-    return bridgeMinExpResult(result);
+    return next;
 }
 
 CpsWork *TkS2Kont(MinExp *tl, TkS2KontEnv *env) {
     ENTER(TkS2Kont);
     MinExp *args = makeMinExp_Args(CPI(env->hd), env->hd, getMinExp_Args(tl));
     int save = PROTECT(args);
-    MinExp *result = INVOKE(env->k, args);
+    CpsWork *next = makeCpsWork_Invoke(env->k, args);
     UNPROTECT(save);
     LEAVE(TkS2Kont);
-    return bridgeMinExpResult(result);
+    return next;
 }
 
 /*
@@ -662,13 +649,140 @@ CpsWork *cpsStepTk(CpsWork *work) {
     switch (work->type) {
     case CPSWORK_TYPE_TK: {
         CpsTkThunk *tk = getCpsWork_Tk(work);
-        MinExp *result = cpsTk(tk->exp, tk->kont);
-        return bridgeMinExpResult(result);
+        MinExp *node = tk->exp;
+        CpsKont *k = tk->kont;
+
+        if (isAexpr(node)) {
+            MinExp *expr = cpsM(node);
+            int save = PROTECT(expr);
+            CpsWork *next = makeCpsWork_Invoke(k, expr);
+            UNPROTECT(save);
+            return next;
+        }
+
+        switch (node->type) {
+        case MINEXP_TYPE_BACK:
+            return bridgeMinExpResult(node);
+
+        case MINEXP_TYPE_PRIM: {
+            MinPrimApp *prim = getMinExp_Prim(node);
+            CpsKont *k1 = makeKont_TkPrimApp1(k, prim->exp2, prim->type);
+            int save = PROTECT(k1);
+            CpsWork *next = makeCpsWork_Tk(prim->exp1, k1);
+            UNPROTECT(save);
+            return next;
+        }
+
+        case MINEXP_TYPE_SEQUENCE: {
+            MinExprList *seq = getMinExp_Sequence(node);
+#ifdef SAFETY_CHECKS
+            if (seq == NULL) {
+                cant_happen("NULL sequence in cpsStepTk");
+            }
+#endif
+            if (seq->next == NULL) {
+                return makeCpsWork_Tk(seq->exp, k);
+            }
+            CpsKont *k1 = makeKont_TkSequence(k, seq->next);
+            int save = PROTECT(k1);
+            CpsWork *next = makeCpsWork_Tk(seq->exp, k1);
+            UNPROTECT(save);
+            return next;
+        }
+
+        case MINEXP_TYPE_MAKEVEC: {
+            CpsKont *k1 = makeKont_TkMakeVec(k);
+            int save = PROTECT(k1);
+            MinExprList *vecArgs = getMinExp_MakeVec(node);
+            MinExp *args = newMinExp_Args(CPI(node), vecArgs);
+            PROTECT(args);
+            CpsWork *next = makeCpsWork_Tsk(args, k1);
+            UNPROTECT(save);
+            return next;
+        }
+
+        case MINEXP_TYPE_IFF: {
+            MinIff *iff = getMinExp_Iff(node);
+            MinExp *c = kToC(CPI(node), k);
+            int save = PROTECT(c);
+            CpsKont *k2 = makeKont_TkIff(c, iff->consequent, iff->alternative);
+            PROTECT(k2);
+            CpsWork *next = makeCpsWork_Tk(iff->condition, k2);
+            UNPROTECT(save);
+            return next;
+        }
+
+        case MINEXP_TYPE_COND: {
+            MinCond *cond = getMinExp_Cond(node);
+            MinExp *c = kToC(CPI(node), k);
+            int save = PROTECT(c);
+            CpsKont *k2 = makeKont_TkCond(c, cond->cases);
+            PROTECT(k2);
+            CpsWork *next = makeCpsWork_Tk(cond->value, k2);
+            UNPROTECT(save);
+            return next;
+        }
+
+        case MINEXP_TYPE_MATCH: {
+            MinMatch *match = getMinExp_Match(node);
+            MinExp *c = kToC(CPI(node), k);
+            int save = PROTECT(c);
+            CpsKont *k2 = makeKont_TkMatch(c, match->cases);
+            PROTECT(k2);
+            CpsWork *next = makeCpsWork_Tk(match->index, k2);
+            UNPROTECT(save);
+            return next;
+        }
+
+        case MINEXP_TYPE_APPLY:
+        case MINEXP_TYPE_CALLCC: {
+            MinExp *c = kToC(CPI(node), k);
+            int save = PROTECT(c);
+            CpsWork *next = makeCpsWork_Tc(node, c);
+            UNPROTECT(save);
+            return next;
+        }
+
+        case MINEXP_TYPE_LETREC: {
+            MinLetRec *letrec = getMinExp_LetRec(node);
+            MinBindings *bindings = mapMOverBindings(letrec->bindings);
+            int save = PROTECT(bindings);
+            MinExp *body = cpsTkMinExp(letrec->body, k);
+            PROTECT(body);
+            MinExp *result = makeMinExp_LetRec(CPI(node), bindings, body);
+            UNPROTECT(save);
+            return bridgeMinExpResult(result);
+        }
+
+        case MINEXP_TYPE_AMB: {
+            MinAmb *amb = getMinExp_Amb(node);
+            MinExp *c = kToC(CPI(node), k);
+            int save = PROTECT(c);
+            MinExp *exp1 = cpsTc(amb->left, c);
+            PROTECT(exp1);
+            MinExp *exp2 = cpsTc(amb->right, c);
+            PROTECT(exp2);
+            MinExp *result = makeMinExp_Amb(CPI(node), exp1, exp2);
+            UNPROTECT(save);
+            return bridgeMinExpResult(result);
+        }
+
+        default:
+            cant_happen("unrecognized MinExp type %s in cpsStepTk",
+                        minExpTypeName(node->type));
+            return NULL;
+        }
     }
     case CPSWORK_TYPE_TSK: {
         CpsTskThunk *tsk = getCpsWork_Tsk(work);
-        MinExp *result = cpsTs_k(tsk->args, tsk->kont);
-        return bridgeMinExpResult(result);
+        if (getMinExp_Args(tsk->args) == NULL) {
+            return makeCpsWork_Invoke(tsk->kont, tsk->args);
+        }
+        CpsKont *k1 = makeKont_TkS1(getMinExp_Args(tsk->args)->next, tsk->kont);
+        int save = PROTECT(k1);
+        CpsWork *next = makeCpsWork_Tk(getMinExp_Args(tsk->args)->exp, k1);
+        UNPROTECT(save);
+        return next;
     }
 
     case CPSWORK_TYPE_TKIFFAFTERCONDITION:
