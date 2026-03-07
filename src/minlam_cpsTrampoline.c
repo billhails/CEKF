@@ -52,6 +52,8 @@ static CpsWork *cpsStep(CpsWork *work) {
     case CPSWORK_TYPE_TKMAPMATCHCASESAFTERBODY:
     case CPSWORK_TYPE_CPSMAPBINDINGS:
     case CPSWORK_TYPE_CPSMAPBINDINGSAFTERVAL:
+    case CPSWORK_TYPE_CPSMAPBINDINGSPAYLOAD:
+    case CPSWORK_TYPE_PAYLOADRESULT:
         return cpsStepTk(work);
 
     case CPSWORK_TYPE_TC:
@@ -92,6 +94,21 @@ MinExp *runCpsWorkToResult(CpsWork *work) {
     }
 
     MinExp *result = getCpsWork_Result(work);
+    UNPROTECT(save);
+    return result;
+}
+
+CpsPayload *runCpsWorkToPayload(CpsWork *work) {
+    int save = PROTECT(work);
+
+    while (work->type != CPSWORK_TYPE_PAYLOADRESULT) {
+        CpsWork *next = cpsStep(work);
+        REPLACE_PROTECT(save, next);
+        work = next;
+    }
+
+    CpsPayloadResultThunk *payloadResult = getCpsWork_PayloadResult(work);
+    CpsPayload *result = payloadResult->payload;
     UNPROTECT(save);
     return result;
 }

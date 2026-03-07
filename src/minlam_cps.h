@@ -30,7 +30,6 @@ bool isAexpr(MinExp *);
 MinExp *cpsTc(MinExp *, MinExp *);
 MinExp *cpsM(MinExp *);
 MinBindings *mapMOverBindings(MinBindings *);
-MinMatchList *mapTcOverMatchCases(MinMatchList *, MinExp *);
 void cpsUnzipMinBindings(MinBindings *, SymbolList **, MinExprList **);
 MinExp *cpsNestLets(MinBindings *, MinExp *);
 

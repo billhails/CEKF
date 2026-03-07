@@ -508,89 +508,113 @@ structs:
 
     # Cond case mapping thunks
     TkMapIntCondCasesThunk:
-        meta:
-            brief: Map Tk int cond cases
-        data:
-            cases: MinIntCondCases
-            c: MinExp
+      meta:
+        brief: Map Tk int cond cases
+      data:
+        cases: MinIntCondCases
+        c: MinExp
+        acc: MinIntCondCases
 
     TkMapIntCondCasesAfterBodyThunk:
-        meta:
-            brief: Build Tk int cond case node after body
-        data:
-            constant: MaybeBigInt
-            next: MinIntCondCases
+      meta:
+        brief: Build Tk int cond case node after body
+      data:
+        constant: MaybeBigInt
+        body: MinExp
+        remaining: MinIntCondCases
+        c: MinExp
+        acc: MinIntCondCases
 
     TkMapCharCondCasesThunk:
-        meta:
-            brief: Map Tk char cond cases
-        data:
-            cases: MinCharCondCases
-            c: MinExp
+      meta:
+        brief: Map Tk char cond cases
+      data:
+        cases: MinCharCondCases
+        c: MinExp
+        acc: MinCharCondCases
 
     TkMapCharCondCasesAfterBodyThunk:
-        meta:
-            brief: Build Tk char cond case node after body
-        data:
-            constant: character
-            next: MinCharCondCases
+      meta:
+        brief: Build Tk char cond case node after body
+      data:
+        constant: character
+        body: MinExp
+        remaining: MinCharCondCases
+        c: MinExp
+        acc: MinCharCondCases
 
     TcMapIntCondCasesThunk:
-        meta:
-            brief: Map Tc int cond cases
-        data:
-            cases: MinIntCondCases
-            sk: MinExp
+      meta:
+        brief: Map Tc int cond cases
+      data:
+        cases: MinIntCondCases
+        sk: MinExp
+        acc: MinIntCondCases
 
     TcMapIntCondCasesAfterBodyThunk:
-        meta:
-            brief: Build Tc int cond case node after body
-        data:
-            constant: MaybeBigInt
-            next: MinIntCondCases
+      meta:
+        brief: Build Tc int cond case node after body
+      data:
+        constant: MaybeBigInt
+        body: MinExp
+        remaining: MinIntCondCases
+        sk: MinExp
+        acc: MinIntCondCases
 
     TcMapCharCondCasesThunk:
-        meta:
-            brief: Map Tc char cond cases
-        data:
-            cases: MinCharCondCases
-            sk: MinExp
+      meta:
+        brief: Map Tc char cond cases
+      data:
+        cases: MinCharCondCases
+        sk: MinExp
+        acc: MinCharCondCases
 
     TcMapCharCondCasesAfterBodyThunk:
-        meta:
-            brief: Build Tc char cond case node after body
-        data:
-            constant: character
-            next: MinCharCondCases
+      meta:
+        brief: Build Tc char cond case node after body
+      data:
+        constant: character
+        body: MinExp
+        remaining: MinCharCondCases
+        sk: MinExp
+        acc: MinCharCondCases
 
     # Match case mapping thunks
     TkMapMatchCasesThunk:
-        meta:
-            brief: Map Tk match cases
-        data:
-            cases: MinMatchList
-            c: MinExp
+      meta:
+        brief: Map Tk match cases
+      data:
+        cases: MinMatchList
+        c: MinExp
+        acc: MinMatchList
 
     TkMapMatchCasesAfterBodyThunk:
-        meta:
-            brief: Build Tk match case node after body
-        data:
-            matches: MinIntList
-            next: MinMatchList
+      meta:
+        brief: Build Tk match case node after body
+      data:
+        matches: MinIntList
+        body: MinExp
+        remaining: MinMatchList
+        c: MinExp
+        acc: MinMatchList
 
     TcMapMatchCasesThunk:
-        meta:
-            brief: Map Tc match cases
-        data:
-            cases: MinMatchList
-            sk: MinExp
+      meta:
+        brief: Map Tc match cases
+      data:
+        cases: MinMatchList
+        sk: MinExp
+        acc: MinMatchList
 
     TcMapMatchCasesAfterBodyThunk:
-        meta:
-            brief: Build Tc match case node after body
-        data:
-            matches: MinIntList
-            next: MinMatchList
+      meta:
+        brief: Build Tc match case node after body
+      data:
+        matches: MinIntList
+        body: MinExp
+        remaining: MinMatchList
+        sk: MinExp
+        acc: MinMatchList
 
     # Binding map helper thunks
     CpsMapBindingsThunk:
@@ -607,7 +631,30 @@ structs:
             arity: int
             next: MinBindings
 
+    # Payload wrapper template thunks
+    CpsMapBindingsPayloadThunk:
+      meta:
+        brief: Template payload map over MinBindings
+      data:
+        bindings: MinBindings
+        acc: MinBindings
+
+    CpsPayloadResultThunk:
+      meta:
+        brief: Internal payload result terminal
+      data:
+        payload: CpsPayload
+
 unions:
+    CpsPayload:
+      meta:
+        brief: Internal trampoline payload wrapper for non-MinExp intermediates
+      data:
+        bindings: MinBindings
+        intCondCases: MinIntCondCases
+        charCondCases: MinCharCondCases
+        matchCases: MinMatchList
+
     CpsWork:
         meta:
             brief: CPS trampoline work item or final result
@@ -650,5 +697,7 @@ unions:
 
             cpsMapBindings: CpsMapBindingsThunk
             cpsMapBindingsAfterVal: CpsMapBindingsAfterValThunk
+            cpsMapBindingsPayload: CpsMapBindingsPayloadThunk
+            payloadResult: CpsPayloadResultThunk
 
             result: MinExp
