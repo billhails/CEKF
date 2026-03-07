@@ -347,14 +347,10 @@ static MinExp *cpsTkMinIff(MinIff *node, CpsKont *k) {
 
 CpsWork *TkIffKont(MinExp *aexp, TkIffKontEnv *env) {
     ENTER(TkIffKont);
-    MinExp *consequent = cpsTc(env->exprt, env->c);
-    int save = PROTECT(consequent);
-    MinExp *alternative = cpsTc(env->exprf, env->c);
-    PROTECT(alternative);
-    MinExp *result = makeMinExp_Iff(CPI(aexp), aexp, consequent, alternative);
-    UNPROTECT(save);
+    CpsWork *next =
+        makeCpsWork_TkIffAfterCondition(aexp, env->exprt, env->exprf, env->c);
     LEAVE(TkIffKont);
-    return bridgeMinExpResult(result);
+    return next;
 }
 
 static MinIntCondCases *mapIntCondCases(MinIntCondCases *cases, MinExp *c) {
@@ -641,7 +637,10 @@ static CpsWork *bridgeMinExpResult(MinExp *result) {
 }
 
 static CpsWork *unimplementedTkStep(CpsWork *work) {
-    cant_happen("unimplemented Tk-step for %s", cpsWorkTypeName(work->type));
+    cant_happen("unsupported Tk-step for %s: current CpsWork result currency "
+                "is MinExp, "
+                "but this tag family requires non-MinExp intermediate values",
+                cpsWorkTypeName(work->type));
     return NULL;
 }
 
@@ -749,22 +748,19 @@ CpsWork *cpsStepTk(CpsWork *work) {
             int save = PROTECT(bindings);
             MinExp *body = cpsTkMinExp(letrec->body, k);
             PROTECT(body);
-            MinExp *result = makeMinExp_LetRec(CPI(node), bindings, body);
+            CpsWork *next = makeCpsWork_TkLetRecAfterBody(bindings, body);
             UNPROTECT(save);
-            return bridgeMinExpResult(result);
+            return next;
         }
 
         case MINEXP_TYPE_AMB: {
             MinAmb *amb = getMinExp_Amb(node);
             MinExp *c = kToC(CPI(node), k);
             int save = PROTECT(c);
-            MinExp *exp1 = cpsTc(amb->left, c);
-            PROTECT(exp1);
-            MinExp *exp2 = cpsTc(amb->right, c);
-            PROTECT(exp2);
-            MinExp *result = makeMinExp_Amb(CPI(node), exp1, exp2);
+            CpsWork *next =
+                makeCpsWork_TkAmbAfterLeft(amb->left, amb->right, c);
             UNPROTECT(save);
-            return bridgeMinExpResult(result);
+            return next;
         }
 
         default:
@@ -785,12 +781,58 @@ CpsWork *cpsStepTk(CpsWork *work) {
         return next;
     }
 
-    case CPSWORK_TYPE_TKIFFAFTERCONDITION:
-    case CPSWORK_TYPE_TKIFFAFTERCONSEQUENT:
-    case CPSWORK_TYPE_TKIFFBUILD:
-    case CPSWORK_TYPE_TKAMBAFTERLEFT:
-    case CPSWORK_TYPE_TKAMBBUILD:
-    case CPSWORK_TYPE_TKLETRECAFTERBODY:
+    case CPSWORK_TYPE_TKIFFAFTERCONDITION: {
+        TkIffAfterConditionThunk *th = getCpsWork_TkIffAfterCondition(work);
+        MinExp *consequent = cpsTc(th->exprt, th->c);
+        int save = PROTECT(consequent);
+        CpsWork *next = makeCpsWork_TkIffAfterConsequent(th->aexp, th->exprf,
+                                                         th->c, consequent);
+        UNPROTECT(save);
+        return next;
+    }
+
+    case CPSWORK_TYPE_TKIFFAFTERCONSEQUENT: {
+        TkIffAfterConsequentThunk *th = getCpsWork_TkIffAfterConsequent(work);
+        MinExp *alternative = cpsTc(th->exprf, th->c);
+        int save = PROTECT(alternative);
+        CpsWork *next =
+            makeCpsWork_TkIffBuild(th->aexp, th->consequent, alternative);
+        UNPROTECT(save);
+        return next;
+    }
+
+    case CPSWORK_TYPE_TKIFFBUILD: {
+        TkIffBuildThunk *th = getCpsWork_TkIffBuild(work);
+        MinExp *result = makeMinExp_Iff(CPI(th->aexp), th->aexp, th->consequent,
+                                        th->alternative);
+        return bridgeMinExpResult(result);
+    }
+
+    case CPSWORK_TYPE_TKAMBAFTERLEFT: {
+        TkAmbAfterLeftThunk *th = getCpsWork_TkAmbAfterLeft(work);
+        MinExp *leftVal = cpsTc(th->left, th->c);
+        int save = PROTECT(leftVal);
+        MinExp *rightVal = cpsTc(th->right, th->c);
+        PROTECT(rightVal);
+        CpsWork *next = makeCpsWork_TkAmbBuild(leftVal, rightVal);
+        UNPROTECT(save);
+        return next;
+    }
+
+    case CPSWORK_TYPE_TKAMBBUILD: {
+        TkAmbBuildThunk *th = getCpsWork_TkAmbBuild(work);
+        MinExp *result =
+            makeMinExp_Amb(CPI(th->leftVal), th->leftVal, th->rightVal);
+        return bridgeMinExpResult(result);
+    }
+
+    case CPSWORK_TYPE_TKLETRECAFTERBODY: {
+        TkLetRecAfterBodyThunk *th = getCpsWork_TkLetRecAfterBody(work);
+        MinExp *result =
+            makeMinExp_LetRec(CPI(th->body), th->bindings, th->body);
+        return bridgeMinExpResult(result);
+    }
+
     case CPSWORK_TYPE_TKMAPINTCONDCASES:
     case CPSWORK_TYPE_TKMAPINTCONDCASESAFTERBODY:
     case CPSWORK_TYPE_TKMAPCHARCONDCASES:

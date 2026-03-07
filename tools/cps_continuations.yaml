@@ -422,6 +422,7 @@ structs:
         data:
             aexp: MinExp
             consequent: MinExp
+            alternative: MinExp
 
     TcIffAfterConditionThunk:
         meta:
@@ -447,6 +448,7 @@ structs:
         data:
             aexp: MinExp
             thenExp: MinExp
+            elseExp: MinExp
 
     # Amb split thunks
     TkAmbAfterLeftThunk:
@@ -462,6 +464,7 @@ structs:
             brief: TkAmb build amb expression
         data:
             leftVal: MinExp
+            rightVal: MinExp
 
     TcAmbAfterLeftThunk:
         meta:
@@ -470,13 +473,16 @@ structs:
             left: MinExp
             right: MinExp
             k: MinExp
+            c: MinExp
 
     TcAmbBuildThunk:
         meta:
             brief: TcAmb build amb expression
         data:
             k: MinExp
+            c: MinExp
             leftVal: MinExp
+            rightVal: MinExp
 
     # LetRec/lambda body completion thunks
     TkLetRecAfterBodyThunk:
@@ -484,18 +490,21 @@ structs:
             brief: Tk letrec body complete, build letrec
         data:
             bindings: MinBindings
+            body: MinExp
 
     TcLetRecAfterBodyThunk:
         meta:
             brief: Tc letrec body complete, build letrec
         data:
             bindings: MinBindings
+            body: MinExp
 
     MLamAfterBodyThunk:
         meta:
             brief: cpsM lambda body complete, build lambda
         data:
             args: SymbolList
+            body: MinExp
 
     # Cond case mapping thunks
     TkMapIntCondCasesThunk:
