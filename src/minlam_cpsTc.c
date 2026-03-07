@@ -726,8 +726,9 @@ CpsWork *cpsStepTc(CpsWork *work) {
 
     case CPSWORK_TYPE_TCIFFAFTERCONDITION: {
         TcIffAfterConditionThunk *th = getCpsWork_TcIffAfterCondition(work);
+        int save = PROTECT(th);
         MinExp *thenExp = cpsTc(th->exprt, th->sk);
-        int save = PROTECT(thenExp);
+        PROTECT(thenExp);
         CpsWork *next =
             makeCpsWork_TcIffAfterThen(th->aexp, th->exprf, th->sk, thenExp);
         UNPROTECT(save);
@@ -736,8 +737,9 @@ CpsWork *cpsStepTc(CpsWork *work) {
 
     case CPSWORK_TYPE_TCIFFAFTERTHEN: {
         TcIffAfterThenThunk *th = getCpsWork_TcIffAfterThen(work);
+        int save = PROTECT(th);
         MinExp *elseExp = cpsTc(th->exprf, th->sk);
-        int save = PROTECT(elseExp);
+        PROTECT(elseExp);
         CpsWork *next = makeCpsWork_TcIffBuild(th->aexp, th->thenExp, elseExp);
         UNPROTECT(save);
         return next;
@@ -745,15 +747,18 @@ CpsWork *cpsStepTc(CpsWork *work) {
 
     case CPSWORK_TYPE_TCIFFBUILD: {
         TcIffBuildThunk *th = getCpsWork_TcIffBuild(work);
+        int save = PROTECT(th);
         MinExp *result =
             makeMinExp_Iff(CPI(th->aexp), th->aexp, th->thenExp, th->elseExp);
+        UNPROTECT(save);
         return bridgeMinExpResult(result);
     }
 
     case CPSWORK_TYPE_TCAMBAFTERLEFT: {
         TcAmbAfterLeftThunk *th = getCpsWork_TcAmbAfterLeft(work);
+        int save = PROTECT(th);
         MinExp *leftVal = cpsTc(th->left, th->k);
-        int save = PROTECT(leftVal);
+        PROTECT(leftVal);
         MinExp *rightVal = cpsTc(th->right, th->k);
         PROTECT(rightVal);
         CpsWork *next = makeCpsWork_TcAmbBuild(th->k, th->c, leftVal, rightVal);
@@ -763,9 +768,10 @@ CpsWork *cpsStepTc(CpsWork *work) {
 
     case CPSWORK_TYPE_TCAMBBUILD: {
         TcAmbBuildThunk *th = getCpsWork_TcAmbBuild(work);
+        int save = PROTECT(th);
         MinExp *lamAmb =
             makeMinExp_Amb(CPI(th->leftVal), th->leftVal, th->rightVal);
-        int save = PROTECT(lamAmb);
+        PROTECT(lamAmb);
         SymbolList *fargs =
             newSymbolList(CPI(th->k), getMinExp_Var(th->k), NULL);
         PROTECT(fargs);
@@ -780,22 +786,27 @@ CpsWork *cpsStepTc(CpsWork *work) {
 
     case CPSWORK_TYPE_TCLETRECAFTERBODY: {
         TcLetRecAfterBodyThunk *th = getCpsWork_TcLetRecAfterBody(work);
+        int save = PROTECT(th);
         MinExp *result =
             makeMinExp_LetRec(CPI(th->body), th->bindings, th->body);
+        UNPROTECT(save);
         return bridgeMinExpResult(result);
     }
 
     case CPSWORK_TYPE_MLAMAFTERBODY: {
         MLamAfterBodyThunk *th = getCpsWork_MLamAfterBody(work);
+        int save = PROTECT(th);
         MinExp *result = makeMinExp_Lam(CPI(th->body), th->args, th->body);
+        UNPROTECT(save);
         return bridgeMinExpResult(result);
     }
 
     case CPSWORK_TYPE_TCMAPINTCONDCASES: {
         TcMapIntCondCasesThunk *th = getCpsWork_TcMapIntCondCases(work);
+        int save = PROTECT(th);
         if (th->cases == NULL) {
             MinIntCondCases *mapped = reverseMinIntCondCasesList(th->acc);
-            int save = PROTECT(mapped);
+            PROTECT(mapped);
             CpsPayload *payload = newCpsPayload_IntCondCases(mapped);
             PROTECT(payload);
             CpsWork *next = makeCpsWork_PayloadResult(payload);
@@ -804,7 +815,7 @@ CpsWork *cpsStepTc(CpsWork *work) {
         }
 
         MinExp *body = cpsTc(th->cases->body, th->sk);
-        int save = PROTECT(body);
+        PROTECT(body);
         CpsWork *next = makeCpsWork_TcMapIntCondCasesAfterBody(
             th->cases->constant, body, th->cases->next, th->sk, th->acc);
         UNPROTECT(save);
@@ -814,9 +825,10 @@ CpsWork *cpsStepTc(CpsWork *work) {
     case CPSWORK_TYPE_TCMAPINTCONDCASESAFTERBODY: {
         TcMapIntCondCasesAfterBodyThunk *th =
             getCpsWork_TcMapIntCondCasesAfterBody(work);
+        int save = PROTECT(th);
         MinIntCondCases *node =
             newMinIntCondCases(CPI(th->body), th->constant, th->body, th->acc);
-        int save = PROTECT(node);
+        PROTECT(node);
         CpsWork *next =
             makeCpsWork_TcMapIntCondCases(th->remaining, th->sk, node);
         UNPROTECT(save);
@@ -825,9 +837,10 @@ CpsWork *cpsStepTc(CpsWork *work) {
 
     case CPSWORK_TYPE_TCMAPCHARCONDCASES: {
         TcMapCharCondCasesThunk *th = getCpsWork_TcMapCharCondCases(work);
+        int save = PROTECT(th);
         if (th->cases == NULL) {
             MinCharCondCases *mapped = reverseMinCharCondCasesList(th->acc);
-            int save = PROTECT(mapped);
+            PROTECT(mapped);
             CpsPayload *payload = newCpsPayload_CharCondCases(mapped);
             PROTECT(payload);
             CpsWork *next = makeCpsWork_PayloadResult(payload);
@@ -836,7 +849,7 @@ CpsWork *cpsStepTc(CpsWork *work) {
         }
 
         MinExp *body = cpsTc(th->cases->body, th->sk);
-        int save = PROTECT(body);
+        PROTECT(body);
         CpsWork *next = makeCpsWork_TcMapCharCondCasesAfterBody(
             th->cases->constant, body, th->cases->next, th->sk, th->acc);
         UNPROTECT(save);
@@ -846,9 +859,10 @@ CpsWork *cpsStepTc(CpsWork *work) {
     case CPSWORK_TYPE_TCMAPCHARCONDCASESAFTERBODY: {
         TcMapCharCondCasesAfterBodyThunk *th =
             getCpsWork_TcMapCharCondCasesAfterBody(work);
+        int save = PROTECT(th);
         MinCharCondCases *node =
             newMinCharCondCases(CPI(th->body), th->constant, th->body, th->acc);
-        int save = PROTECT(node);
+        PROTECT(node);
         CpsWork *next =
             makeCpsWork_TcMapCharCondCases(th->remaining, th->sk, node);
         UNPROTECT(save);
@@ -857,9 +871,10 @@ CpsWork *cpsStepTc(CpsWork *work) {
 
     case CPSWORK_TYPE_TCMAPMATCHCASES: {
         TcMapMatchCasesThunk *th = getCpsWork_TcMapMatchCases(work);
+        int save = PROTECT(th);
         if (th->cases == NULL) {
             MinMatchList *mapped = reverseMinMatchList(th->acc);
-            int save = PROTECT(mapped);
+            PROTECT(mapped);
             CpsPayload *payload = newCpsPayload_MatchCases(mapped);
             PROTECT(payload);
             CpsWork *next = makeCpsWork_PayloadResult(payload);
@@ -868,7 +883,7 @@ CpsWork *cpsStepTc(CpsWork *work) {
         }
 
         MinExp *body = cpsTc(th->cases->body, th->sk);
-        int save = PROTECT(body);
+        PROTECT(body);
         CpsWork *next = makeCpsWork_TcMapMatchCasesAfterBody(
             th->cases->matches, body, th->cases->next, th->sk, th->acc);
         UNPROTECT(save);
@@ -878,9 +893,10 @@ CpsWork *cpsStepTc(CpsWork *work) {
     case CPSWORK_TYPE_TCMAPMATCHCASESAFTERBODY: {
         TcMapMatchCasesAfterBodyThunk *th =
             getCpsWork_TcMapMatchCasesAfterBody(work);
+        int save = PROTECT(th);
         MinMatchList *node =
             newMinMatchList(CPI(th->body), th->matches, th->body, th->acc);
-        int save = PROTECT(node);
+        PROTECT(node);
         CpsWork *next =
             makeCpsWork_TcMapMatchCases(th->remaining, th->sk, node);
         UNPROTECT(save);

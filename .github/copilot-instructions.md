@@ -58,6 +58,9 @@ make docs              # Generates Mermaid diagrams from YAML schemas
 - `UNPROTECT(save)` restores the stack pointer to `save` (previous result of `PROTECT()`)
 - Pattern: `int save = PROTECT(obj); /* allocating code */ UNPROTECT(save);`
 - Never use literal numbers with UNPROTECT - only values returned by `PROTECT()`
+- Immediately `PROTECT` any GC-managed object returned from a function call before any further allocation or helper call.
+- Assume any call can allocate and trigger GC. If an object is still in use and not protected, it is unsafe even if tests currently pass.
+- Passing tests does not prove protection correctness; it may only mean no GC sweep happened at the vulnerable point.
 
 ### HashSymbol objects must never be PROTECT'ed
 

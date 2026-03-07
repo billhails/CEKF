@@ -249,6 +249,21 @@ continuations:
       c: MinExp
       cases: MinMatchList
 
+  TkLetRec:
+    transformer: T_k
+    key: k_letrec
+    context: |
+      (M.letrec_expr(bindings, expr)) {
+        let
+          mapped = bindings |> identity && (M && identity);
+        in
+          T_k(expr, fn (body) {
+            M.letrec_expr(mapped, body)
+          })
+      }
+    free_vars:
+      bindings: MinBindings
+
   TcMatch:
     transformer: T_k
     key: c_match
