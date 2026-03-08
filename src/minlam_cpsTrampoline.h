@@ -1,5 +1,5 @@
-#ifndef cekf_minlam_functions_h
-#define cekf_minlam_functions_h
+#ifndef cekf_minlam_cpsTrampoline_h
+#define cekf_minlam_cpsTrampoline_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2026  Bill Hails
@@ -18,14 +18,15 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-struct MinExp;
-struct CpsWork;
-struct AnfKontEnv;
-struct CpsKontEnv;
+#include "cps_kont.h"
 
-typedef struct MinExp *(*AnfKontProcWrapper)(struct MinExp *,
-                                             struct AnfKontEnv *);
-typedef struct CpsWork *(*CpsKontProcWrapper)(struct MinExp *,
-                                              struct CpsKontEnv *);
+struct MinExp;
+
+struct CpsWork *cpsStepTk(struct CpsWork *work);
+struct CpsWork *cpsStepTc(struct CpsWork *work);
+struct MinExp *runCpsWorkToResult(struct CpsWork *work);
+struct CpsPayload *runCpsWorkToPayload(struct CpsWork *work);
+
+struct MinExp *runCpsTrampolineTc(struct MinExp *rootExp, struct MinExp *cont0);
 
 #endif
