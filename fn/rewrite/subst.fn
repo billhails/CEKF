@@ -73,9 +73,9 @@ namespace
                     M.make_env(bindings |> identity && substitute(c))
                 }
 
-                // env_ref(expr, string)
-                (M.env_ref(e, s)) {
-                    M.env_ref(substitute(c, e), s)
+                // env_ref(expr, number)
+                (M.env_ref(e, n)) {
+                    M.env_ref(substitute(c, e), n)
                 }
 
                 // letrec_expr(list(#(string, expr)), expr)

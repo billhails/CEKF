@@ -1,0 +1,100 @@
+namespace
+link "minexpr.fn" as M;
+link "env.fn" as Env;
+link "../listutils.fn" as list;
+link "gensym.fn" as GS;
+import list operator "_|>_";
+import list operator "_&&_";
+import list operator "_zip_";
+import list operator "unzip_";
+
+// desugars the output of closure-conversion
+fn unconvert {
+    (M.amb_expr(expr1, expr2)) {
+        M.amb_expr(unconvert(expr1), unconvert(expr2))
+    }
+
+    (M.apply_closure(closure, args)) {
+        let clos = unconvert(closure);
+            fun = M.apply(M.primop("vec"), [M.stdint(0), clos]);
+            env = M.apply(M.primop("vec"), [M.stdint(1), clos]);
+        in M.apply(fun, env @ (args |> unconvert))
+    }
+
+    (M.apply(fun, args)) {
+        M.apply(unconvert(fun), args |> unconvert)
+    }
+
+    (x = M.back_expr) |
+    (x = M.var(_)) |
+    (x = M.primop(_)) |
+    (x = M.bigint(_)) |
+    (x = M.character(_)) |
+    (x = M.stdint(_)) {
+        x
+    }
+
+    (M.callcc_expr(e)) {
+        M.callcc_expr(unconvert(e))
+    }
+
+    (M.cond_expr(test, branches)) {
+        M.cond_expr(unconvert(test), branches |> unconvert && unconvert)
+    }
+
+    (M.env_ref(e, n)) {
+        M.apply(M.primop("vec"), [M.stdint(n), unconvert(e)])
+    }
+
+    (M.if_expr(exprc, exprt, exprf)) {
+        M.if_expr(
+            unconvert(exprc),
+            unconvert(exprt),
+            unconvert(exprf)
+        )
+    }
+
+    (M.lambdac(params, body)) {
+        M.lambda(params, unconvert(body))
+    }
+
+    (M.lambda(params, body)) {
+        M.lambda(params, unconvert(body))
+    }
+
+    (M.letrec_expr(bindings, expr)) {
+        M.letrec_expr(
+            bindings |> identity && unconvert && identity,
+            unconvert(expr)
+        )
+    }
+
+    (M.make_env(venv)) {
+        M.make_vec(list.length(venv), venv |> fn (#(s, v)) { v })
+    }
+
+    (M.make_closure(fun, env)) {
+        M.make_vec(2, [unconvert(fun), unconvert(env)])
+    }
+
+    (M.make_vec(size, args)) {
+        M.make_vec(size, args |> unconvert)
+    }
+
+    (M.match_cases(test, cases)) {
+        M.match_cases(
+            unconvert(test),
+            cases |> identity && unconvert
+        )
+    }
+
+    (M.sequence(exprs)) {
+        M.sequence(exprs |> unconvert)
+    }
+
+    (x) {
+        M.print_expr(x);
+        puts("\n");
+        error("unconvert: unsupported expression")
+    }
+}

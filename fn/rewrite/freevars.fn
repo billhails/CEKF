@@ -33,7 +33,7 @@ fn free {
         }))
     }
 
-    (M.env_ref(e, s)) {
+    (M.env_ref(e, _)) {
         free(e)
     }
 

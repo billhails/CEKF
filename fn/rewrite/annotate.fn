@@ -1,0 +1,103 @@
+namespace
+link "minexpr.fn" as M;
+link "../listutils.fn" as list;
+link "../dictutils.fn" as D;
+link "../ioutils.fn" as IO;
+link "gensym.fn" as GS;
+import list operator "_|>_";
+import list operator "_&&_";
+import list operator "_::_";
+import list operator "len_";
+import list operator "_zip_";
+import list operator "unzip_";
+import IO operator "$_";
+
+fn annotate(expr) {
+    let
+        fn ann_rec(e, expr) {
+            let
+                fn ann {
+                    (M.amb_expr(expr1, expr2)) {
+                        M.amb_expr(ann(expr1), ann(expr2))
+                    }
+
+                    (M.apply(fun, args)) {
+                        M.apply(ann(fun), args |> ann)
+                    }
+
+                    (x = M.back_expr) |
+                    (x = M.primop(_)) |
+                    (x = M.bigint(_)) |
+                    (x = M.character(_)) |
+                    (x = M.stdint(_)) {
+                        x
+                    }
+
+                    (M.callcc_expr(e)) {
+                        M.callcc_expr(ann(e))
+                    }
+
+                    (M.cond_expr(test, branches)) {
+                        M.cond_expr(ann(test), branches |> ann && ann)
+                    }
+
+                    (M.if_expr(exprc, exprt, exprf)) {
+                        M.if_expr(ann(exprc), ann(exprt), ann(exprf))
+                    }
+
+                    (M.lambda(params, body)) {
+                        // map param => location
+                        let locations = 0 :: ((len params) - 1);
+                            env = D.make(params, locations)
+                        in  M.lambda(params, ann_rec(env, body))
+                    }
+
+                    (M.letrec_expr(bindings, expr)) {
+                        // map param => location
+                        let vars = bindings |> fn (#(var, _)) { var };
+                            locations = 0::((len bindings) - 1);
+                            env = D.make(vars, locations)
+                        in M.letrec_expr(
+                            bindings |> fn (#(var, #(val, arity))) {
+                                #(var, #(ann_rec(env, val), arity))
+                            },
+                            ann_rec(env, expr)
+                        )
+
+                    }
+
+                    (M.make_vec(size, args)) {
+                        M.make_vec(size, args |> ann)
+                    }
+
+                    (M.match_cases(test, cases)) {
+                        M.match_cases(ann(test), cases |> identity && ann)
+                    }
+
+                    (M.sequence(exprs)) {
+                        M.sequence(exprs |> ann)
+                    }
+
+                    (M.var(s)) {
+                        switch (D.lookup(s, e)) {
+                            (just(n)) {
+                                M.var(s @@ "<" @@ $n @@ ">")
+                            }
+                            (nothing) {
+                                M.var(s @@ "<?>") // should be an error really
+                            }
+                        }
+                    }
+
+                    (x) {
+                        M.print_expr(x);
+                        puts("\n");
+                        error("unconvert: unsupported expression")
+                    }
+                }
+            in
+                ann(expr)
+        }
+    in
+        ann_rec(D.E, expr)
+}

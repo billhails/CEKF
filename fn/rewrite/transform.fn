@@ -46,8 +46,8 @@ fn _transform(t, a, exp) {
             M.cond_expr(t(a, test), branches |> t(a) && t(a))
         }
 
-        (M.env_ref(e, s)) {
-            M.env_ref(t(a, e), s)
+        (M.env_ref(e, n)) {
+            M.env_ref(t(a, e), n)
         }
 
         (M.if_expr(test, consequent, alternative)) {

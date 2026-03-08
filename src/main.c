@@ -66,7 +66,7 @@
 #include "tests.h"
 #endif
 
-#define TEST_CPS
+// #define TEST_CPS
 
 #ifdef TEST_CPS
 #include "minlam_cps.h"

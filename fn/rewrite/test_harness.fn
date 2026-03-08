@@ -13,6 +13,8 @@ let
     link "curry.fn" as C;
     link "uncurry.fn" as U;
     link "transform.fn" as TR;
+    link "unconvert.fn" as UCV;
+    link "annotate.fn" as AN;
     link "amb.fn" as AMB;
 in
     list.for_each(fn {
@@ -36,6 +38,8 @@ in
                 gg = AMB.amb(g, M.var("Ω"))
                 ggg = β.reduce(gg);
                 h = CC.shared_closure_convert(ggg);
+                hh = UCV.unconvert(h);
+                hhh = AN.annotate(hh);
                 nltab = "\n";
             in
                 E.print_expr(a);
@@ -60,15 +64,21 @@ in
                 // puts("\n==> operator folding");
                 // puts(nltab);
                 // M.print_expr(g);
-                puts("\n==> amb transform");
-                puts(nltab);
-                M.print_expr(gg);
-                puts("\n==> beta reduce");
-                puts(nltab);
-                M.print_expr(ggg);
+                // puts("\n==> amb transform");
+                // puts(nltab);
+                // M.print_expr(gg);
+                // puts("\n==> beta reduce");
+                // puts(nltab);
+                // M.print_expr(ggg);
                 // puts("\n==> shared closure convert");
                 // puts(nltab);
                 // M.print_expr(h);
+                // puts("\n==> closure unconvert");
+                // puts(nltab);
+                // M.print_expr(hh);
+                puts("\n==> annotate");
+                puts(nltab);
+                M.print_expr(hhh);
                 puts("\n\n")
         }
     }, Samples.data());

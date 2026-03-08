@@ -12,7 +12,7 @@ namespace
         callcc_expr(expr) |
         character(char) |
         cond_expr(expr, list(#(expr, expr))) |
-        env_ref(expr, string) |
+        env_ref(expr, number) |
         if_expr(expr, expr, expr) |
         lambdac(list(string), expr) |
         lambda(list(string), expr) |
@@ -162,10 +162,10 @@ namespace
                         };
                         x;
                     }
-                    (env_ref(env, name)) {
+                    (env_ref(env, pos)) {
                         go(depth, env);
                         puts("->");
-                        puts(name);
+                        putn(pos);
                         x;
                     }
                     (apply_closure(closure, args)) {

@@ -7,6 +7,8 @@ link "freevars.fn" as FV;
 link "gensym.fn" as GS;
 link "subst.fn" as SUBST;
 import list operator "_|>_";
+import list operator "_::_";
+import list operator "len_";
 
 // https://matt.might.net/articles/closure-conversion/
 
@@ -24,11 +26,19 @@ import list operator "_|>_";
 fn closure_convert {
     (exp=M.lambda(params, body)) {
         let
+            fn safe {
+                (just(n)) { n }
+                (nothing) { -1 }
+            }
             senv = GS.genstring("$env");
             sparams = senv @ params;
             fv = FV.free(exp);
+            locations = 0::((len fv) - 1);
+            locmap = DICT.make(fv, locations);
             venv = fv |> fn (v) { #(v, M.var(v)) };
-            sub = DICT.make(fv, fv |> fn (v) { M.env_ref(M.var(senv), v) });
+            sub = DICT.make(fv, fv |> fn (v) {
+                M.env_ref(M.var(senv), safe(DICT.lookup(v, locmap)))
+            });
             vbody = SUBST.substitute(sub, body);
         in
             M.make_closure(M.lambdac(sparams, vbody), M.make_env(venv))
