@@ -719,13 +719,95 @@ CpsWork *cpsStepTc(CpsWork *work) {
             return next;
         }
 
-        default: {
-            MinExp *result = cpsTc(node, c);
-            int save = PROTECT(result);
-            CpsWork *work = newCpsWork_Result(result);
+        case MINEXP_TYPE_LETREC: {
+            MinLetRec *letrec = getMinExp_LetRec(node);
+            MinBindings *bindings = mapMOverBindings(letrec->bindings);
+            int save = PROTECT(bindings);
+            CpsWork *tcWork = makeCpsWork_Tc(letrec->body, c);
+            PROTECT(tcWork);
+            MinExp *body = runCpsWorkToResult(tcWork);
+            PROTECT(body);
+            CpsWork *next = makeCpsWork_TcLetRecAfterBody(bindings, body);
             UNPROTECT(save);
-            return work;
+            return next;
         }
+
+        case MINEXP_TYPE_MATCH: {
+            MinMatch *match = getMinExp_Match(node);
+            MinExp *sk = makeVar(CPI(node), "k");
+            int save = PROTECT(sk);
+            CpsKont *k = makeKont_TcMatch(sk, match->cases);
+            PROTECT(k);
+            SymbolList *args =
+                newSymbolList(CPI(node), getMinExp_Var(sk), NULL);
+            PROTECT(args);
+            CpsWork *tkWork = makeCpsWork_Tk(match->index, k);
+            PROTECT(tkWork);
+            MinExp *body = runCpsWorkToResult(tkWork);
+            PROTECT(body);
+            MinExp *lambda = makeMinExp_Lam(CPI(node), args, body);
+            PROTECT(lambda);
+            MinExprList *arglist = newMinExprList(CPI(node), c, NULL);
+            PROTECT(arglist);
+            MinExp *result = makeMinExp_Apply(CPI(node), lambda, arglist);
+            PROTECT(result);
+            CpsWork *next = newCpsWork_Result(result);
+            UNPROTECT(save);
+            return next;
+        }
+
+        case MINEXP_TYPE_COND: {
+            MinCond *cond = getMinExp_Cond(node);
+            MinExp *sk = makeVar(CPI(node), "k");
+            int save = PROTECT(sk);
+            CpsKont *k = makeKont_TcCond(sk, cond->cases);
+            PROTECT(k);
+            SymbolList *args =
+                newSymbolList(CPI(node), getMinExp_Var(sk), NULL);
+            PROTECT(args);
+            CpsWork *tkWork = makeCpsWork_Tk(cond->value, k);
+            PROTECT(tkWork);
+            MinExp *body = runCpsWorkToResult(tkWork);
+            PROTECT(body);
+            MinExp *lambda = makeMinExp_Lam(CPI(node), args, body);
+            PROTECT(lambda);
+            MinExprList *arglist = newMinExprList(CPI(node), c, NULL);
+            PROTECT(arglist);
+            MinExp *result = makeMinExp_Apply(CPI(node), lambda, arglist);
+            PROTECT(result);
+            CpsWork *next = newCpsWork_Result(result);
+            UNPROTECT(save);
+            return next;
+        }
+
+        case MINEXP_TYPE_IFF: {
+            MinIff *iff = getMinExp_Iff(node);
+            MinExp *sk = makeVar(CPI(node), "k");
+            int save = PROTECT(sk);
+            CpsKont *k = makeKont_TcIff(sk, iff->consequent, iff->alternative);
+            PROTECT(k);
+            SymbolList *args =
+                newSymbolList(CPI(node), getMinExp_Var(sk), NULL);
+            PROTECT(args);
+            CpsWork *tkWork = makeCpsWork_Tk(iff->condition, k);
+            PROTECT(tkWork);
+            MinExp *body = runCpsWorkToResult(tkWork);
+            PROTECT(body);
+            MinExp *lambda = makeMinExp_Lam(CPI(node), args, body);
+            PROTECT(lambda);
+            MinExprList *arglist = newMinExprList(CPI(node), c, NULL);
+            PROTECT(arglist);
+            MinExp *result = makeMinExp_Apply(CPI(node), lambda, arglist);
+            PROTECT(result);
+            CpsWork *next = newCpsWork_Result(result);
+            UNPROTECT(save);
+            return next;
+        }
+
+        default:
+            cant_happen("unhandled MinExp type %s in cpsStepTc",
+                        minExpTypeName(node->type));
+            return NULL;
         }
     }
 
