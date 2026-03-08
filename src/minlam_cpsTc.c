@@ -907,7 +907,9 @@ CpsWork *cpsStepTc(CpsWork *work) {
             return next;
         }
 
-        MinExp *body = cpsTc(th->cases->body, th->sk);
+        CpsWork *tcWork = makeCpsWork_Tc(th->cases->body, th->sk);
+        PROTECT(tcWork);
+        MinExp *body = runCpsWorkToResult(tcWork);
         PROTECT(body);
         CpsWork *next = makeCpsWork_TcMapMatchCasesAfterBody(
             th->cases->matches, body, th->cases->next, th->sk, th->acc);

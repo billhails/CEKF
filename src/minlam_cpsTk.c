@@ -548,9 +548,13 @@ static MinExp *cpsTkMinLetRec(MinLetRec *node, CpsKont *k) {
 static MinExp *cpsTkMinAmb(MinAmb *node, CpsKont *k) {
     MinExp *c = kToC(CPI(node), k);
     int save = PROTECT(c);
-    MinExp *exp1 = cpsTc(node->left, c);
+    CpsWork *leftWork = makeCpsWork_Tc(node->left, c);
+    PROTECT(leftWork);
+    MinExp *exp1 = runCpsWorkToResult(leftWork);
     PROTECT(exp1);
-    MinExp *exp2 = cpsTc(node->right, c);
+    CpsWork *rightWork = makeCpsWork_Tc(node->right, c);
+    PROTECT(rightWork);
+    MinExp *exp2 = runCpsWorkToResult(rightWork);
     PROTECT(exp2);
     MinExp *result = makeMinExp_Amb(CPI(node), exp1, exp2);
     UNPROTECT(save);
@@ -903,7 +907,9 @@ CpsWork *cpsStepTk(CpsWork *work) {
             return next;
         }
 
-        MinExp *body = cpsTc(th->cases->body, th->c);
+        CpsWork *tcWork = makeCpsWork_Tc(th->cases->body, th->c);
+        PROTECT(tcWork);
+        MinExp *body = runCpsWorkToResult(tcWork);
         PROTECT(body);
         CpsWork *next = makeCpsWork_TkMapIntCondCasesAfterBody(
             th->cases->constant, body, th->cases->next, th->c, th->acc);
@@ -937,7 +943,9 @@ CpsWork *cpsStepTk(CpsWork *work) {
             return next;
         }
 
-        MinExp *body = cpsTc(th->cases->body, th->c);
+        CpsWork *tcWork = makeCpsWork_Tc(th->cases->body, th->c);
+        PROTECT(tcWork);
+        MinExp *body = runCpsWorkToResult(tcWork);
         PROTECT(body);
         CpsWork *next = makeCpsWork_TkMapCharCondCasesAfterBody(
             th->cases->constant, body, th->cases->next, th->c, th->acc);
@@ -971,7 +979,9 @@ CpsWork *cpsStepTk(CpsWork *work) {
             return next;
         }
 
-        MinExp *body = cpsTc(th->cases->body, th->c);
+        CpsWork *tcWork = makeCpsWork_Tc(th->cases->body, th->c);
+        PROTECT(tcWork);
+        MinExp *body = runCpsWorkToResult(tcWork);
         PROTECT(body);
         CpsWork *next = makeCpsWork_TkMapMatchCasesAfterBody(
             th->cases->matches, body, th->cases->next, th->c, th->acc);
