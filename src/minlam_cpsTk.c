@@ -300,7 +300,9 @@ static MinExp *cpsTkMinApply(MinExp *node, CpsKont *k) {
 
     MinExp *c = kToC(CPI(node), k);
     int save = PROTECT(c);
-    MinExp *result = cpsTc(node, c);
+    CpsWork *tcWork = makeCpsWork_Tc(node, c);
+    PROTECT(tcWork);
+    MinExp *result = runCpsWorkToResult(tcWork);
     UNPROTECT(save);
     LEAVE(cpsTkMinApply);
     return result;
@@ -573,7 +575,9 @@ static MinExp *cpsTkCallCC(MinExp *node, CpsKont *k) {
     ENTER(cpsTkCallCC);
     MinExp *c = kToC(CPI(node), k);
     int save = PROTECT(c);
-    MinExp *result = cpsTc(node, c);
+    CpsWork *tcWork = makeCpsWork_Tc(node, c);
+    PROTECT(tcWork);
+    MinExp *result = runCpsWorkToResult(tcWork);
     UNPROTECT(save);
     LEAVE(cpsTkCallCC);
     return result;
