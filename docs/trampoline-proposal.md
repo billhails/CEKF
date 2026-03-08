@@ -1,5 +1,7 @@
 # Trampoline Infrastructure Proposal
 
+See also: [Trampoline Architecture](trampoline-architecture.md) for a concise description of the implemented runtime model.
+
 ## Problem
 
 Recursive compiler passes (CPS transform, ANF normalization, etc.) overflow the C stack on moderately large programs. The CPS transform processes `samples.fn` (90 strings × ~30 chars each) creating 2700+ nested frames.
