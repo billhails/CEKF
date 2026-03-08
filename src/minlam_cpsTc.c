@@ -47,7 +47,6 @@ static MinExp *cpsTcMinMatch(MinMatch *node, MinExp *c);
 static MinExp *cpsTcMinLetRec(MinLetRec *node, MinExp *c);
 static MinExp *cpsTcMinAmb(MinAmb *node, MinExp *c);
 static MinExp *cpsTcMinExp(MinExp *node, MinExp *c);
-static CpsWork *bridgeMinExpResult(MinExp *result);
 
 static MinExp *packArgsExp(ParserInfo PI, MinExprList *args) {
     return newMinExp_Args(PI, args);
@@ -118,8 +117,10 @@ CpsWork *TcPrimApp1Kont(MinExp *s1, TcPrimApp1KontEnv *env) {
     CpsKont *k = makeKont_TcPrimApp2(env->c, s1, env->p);
     int save = PROTECT(k);
     MinExp *result = cpsTk(env->e2, k);
+    PROTECT(result);
+    CpsWork *next = newCpsWork_Result(result);
     UNPROTECT(save);
-    return bridgeMinExpResult(result);
+    return next;
 }
 
 CpsWork *TcPrimApp2Kont(MinExp *s2, TcPrimApp2KontEnv *env) {
@@ -129,9 +130,11 @@ CpsWork *TcPrimApp2Kont(MinExp *s2, TcPrimApp2KontEnv *env) {
     MinExprList *args = newMinExprList(CPI(primapp), primapp, NULL);
     PROTECT(args);
     MinExp *result = makeMinExp_Apply(CPI(primapp), env->c, args);
+    PROTECT(result);
+    CpsWork *next = newCpsWork_Result(result);
     UNPROTECT(save);
     LEAVE(TcPrimApp2Kont);
-    return bridgeMinExpResult(result);
+    return next;
 }
 
 /*
@@ -168,9 +171,11 @@ CpsWork *TcSequenceKont(MinExp *ignored, TcSequenceKontEnv *env) {
     MinExp *sequence = newMinExp_Sequence(CPI(ignored), env->exprs);
     int save = PROTECT(sequence);
     MinExp *result = cpsTcMinExp(sequence, env->c);
+    PROTECT(result);
+    CpsWork *next = newCpsWork_Result(result);
     UNPROTECT(save);
     LEAVE(TcSequenceKont);
-    return bridgeMinExpResult(result);
+    return next;
 }
 
 /*
@@ -201,9 +206,11 @@ CpsWork *TcApply1Kont(MinExp *sf, TcApply1KontEnv *env) {
     MinExp *args = packArgsExp(CPI(env->c), env->es);
     PROTECT(args);
     MinExp *result = cpsTs_k(args, kont2);
+    PROTECT(result);
+    CpsWork *next = newCpsWork_Result(result);
     UNPROTECT(save);
     LEAVE(T_c_apply_1Kont);
-    return bridgeMinExpResult(result);
+    return next;
 }
 
 CpsWork *TcApply2Kont(MinExp *ses, TcApply2KontEnv *env) {
@@ -211,9 +218,11 @@ CpsWork *TcApply2Kont(MinExp *ses, TcApply2KontEnv *env) {
     MinExprList *args = appendMinArg(unpackArgsExp(ses), env->c);
     int save = PROTECT(args);
     MinExp *result = makeMinExp_Apply(CPI(env->sf), env->sf, args);
+    PROTECT(result);
+    CpsWork *next = newCpsWork_Result(result);
     UNPROTECT(save);
     LEAVE(TcApply2Kont);
-    return bridgeMinExpResult(result);
+    return next;
 }
 
 /*
@@ -242,9 +251,11 @@ CpsWork *TcMakeVecKont(MinExp *sargs, TcMakeVecKontEnv *env) {
     MinExprList *args = newMinExprList(CPI(sargs), make_vec, NULL);
     PROTECT(args);
     MinExp *result = makeMinExp_Apply(CPI(sargs), env->c, args);
+    PROTECT(result);
+    CpsWork *next = newCpsWork_Result(result);
     UNPROTECT(save);
     LEAVE(TcMakeVecKont);
-    return bridgeMinExpResult(result);
+    return next;
 }
 
 /*
@@ -330,9 +341,8 @@ CpsWork *TcCondKont(MinExp *atest, TcCondKontEnv *env) {
         PROTECT(mapWork);
         CpsPayload *payload = runCpsWorkToPayload(mapWork);
         PROTECT(payload);
-        MinIntCondCases *int_cases = getCpsPayload_IntCondCases(payload);
-        PROTECT(int_cases);
-        cases = newMinCondCases_Integers(CPI(env->branches), int_cases);
+        cases = newMinCondCases_Integers(CPI(env->branches),
+                                         getCpsPayload_IntCondCases(payload));
         PROTECT(cases);
     } break;
     case MINCONDCASES_TYPE_CHARACTERS: {
@@ -341,16 +351,17 @@ CpsWork *TcCondKont(MinExp *atest, TcCondKontEnv *env) {
         PROTECT(mapWork);
         CpsPayload *payload = runCpsWorkToPayload(mapWork);
         PROTECT(payload);
-        MinCharCondCases *char_cases = getCpsPayload_CharCondCases(payload);
-        PROTECT(char_cases);
-        cases = newMinCondCases_Characters(CPI(env->branches), char_cases);
+        cases = newMinCondCases_Characters(
+            CPI(env->branches), getCpsPayload_CharCondCases(payload));
         PROTECT(cases);
     } break;
     }
     result = makeMinExp_Cond(CPI(env->branches), atest, cases);
+    PROTECT(result);
+    CpsWork *next = newCpsWork_Result(result);
     UNPROTECT(save);
     LEAVE(TcCondKont);
-    return bridgeMinExpResult(result);
+    return next;
 }
 
 /*
@@ -394,9 +405,11 @@ CpsWork *TcMatchKont(MinExp *atest, TcMatchKontEnv *env) {
     MinMatchList *cases = getCpsPayload_MatchCases(payload);
     PROTECT(cases);
     MinExp *result = makeMinExp_Match(CPI(env->cases), atest, cases);
+    PROTECT(result);
+    CpsWork *next = newCpsWork_Result(result);
     UNPROTECT(save);
     LEAVE(TcMatchKont);
-    return bridgeMinExpResult(result);
+    return next;
 }
 
 /*
@@ -524,9 +537,11 @@ CpsWork *TcCallCCKont(MinExp *sf, TcCallCCKontEnv *env) {
     args = newMinExprList(CPI(env->c), sf, args);
     PROTECT(args);
     MinExp *result = makeMinExp_Apply(CPI(env->c), callCC, args);
+    PROTECT(result);
+    CpsWork *next = newCpsWork_Result(result);
     UNPROTECT(save);
     LEAVE(TcCallCCKont);
-    return bridgeMinExpResult(result);
+    return next;
 }
 
 static MinExp *cpsTcMinExp(MinExp *node, MinExp *c) {
@@ -576,13 +591,6 @@ MinExp *cpsTc(MinExp *node, MinExp *c) {
     MinExp *result = cpsTcMinExp(node, c);
     LEAVE(cpsTc);
     return result;
-}
-
-static CpsWork *bridgeMinExpResult(MinExp *result) {
-    int save = PROTECT(result);
-    CpsWork *next = newCpsWork_Result(result);
-    UNPROTECT(save);
-    return next;
 }
 
 static MinIntCondCases *reverseMinIntCondCasesList(MinIntCondCases *list) {
@@ -635,7 +643,7 @@ CpsWork *cpsStepTc(CpsWork *work) {
         MinExp *c = tc->cont;
 
         if (node == NULL) {
-            return bridgeMinExpResult(NULL);
+            return newCpsWork_Result(NULL);
         }
 
         if (isAexpr(node)) {
@@ -644,13 +652,15 @@ CpsWork *cpsStepTc(CpsWork *work) {
             MinExprList *arglist = newMinExprList(CPI(node), exp, NULL);
             PROTECT(arglist);
             MinExp *result = makeMinExp_Apply(CPI(node), c, arglist);
+            PROTECT(result);
+            CpsWork *next = newCpsWork_Result(result);
             UNPROTECT(save);
-            return bridgeMinExpResult(result);
+            return next;
         }
 
         switch (node->type) {
         case MINEXP_TYPE_BACK:
-            return bridgeMinExpResult(node);
+            return newCpsWork_Result(node);
 
         case MINEXP_TYPE_PRIM: {
             MinPrimApp *prim = getMinExp_Prim(node);
@@ -719,7 +729,10 @@ CpsWork *cpsStepTc(CpsWork *work) {
 
         default: {
             MinExp *result = cpsTc(node, c);
-            return bridgeMinExpResult(result);
+            int save = PROTECT(result);
+            CpsWork *work = newCpsWork_Result(result);
+            UNPROTECT(save);
+            return work;
         }
         }
     }
@@ -727,7 +740,9 @@ CpsWork *cpsStepTc(CpsWork *work) {
     case CPSWORK_TYPE_TCIFFAFTERCONDITION: {
         TcIffAfterConditionThunk *th = getCpsWork_TcIffAfterCondition(work);
         int save = PROTECT(th);
-        MinExp *thenExp = cpsTc(th->exprt, th->sk);
+        CpsWork *tcWork = makeCpsWork_Tc(th->exprt, th->sk);
+        PROTECT(tcWork);
+        MinExp *thenExp = runCpsWorkToResult(tcWork);
         PROTECT(thenExp);
         CpsWork *next =
             makeCpsWork_TcIffAfterThen(th->aexp, th->exprf, th->sk, thenExp);
@@ -738,7 +753,9 @@ CpsWork *cpsStepTc(CpsWork *work) {
     case CPSWORK_TYPE_TCIFFAFTERTHEN: {
         TcIffAfterThenThunk *th = getCpsWork_TcIffAfterThen(work);
         int save = PROTECT(th);
-        MinExp *elseExp = cpsTc(th->exprf, th->sk);
+        CpsWork *tcWork = makeCpsWork_Tc(th->exprf, th->sk);
+        PROTECT(tcWork);
+        MinExp *elseExp = runCpsWorkToResult(tcWork);
         PROTECT(elseExp);
         CpsWork *next = makeCpsWork_TcIffBuild(th->aexp, th->thenExp, elseExp);
         UNPROTECT(save);
@@ -750,16 +767,22 @@ CpsWork *cpsStepTc(CpsWork *work) {
         int save = PROTECT(th);
         MinExp *result =
             makeMinExp_Iff(CPI(th->aexp), th->aexp, th->thenExp, th->elseExp);
+        PROTECT(result);
+        CpsWork *next = newCpsWork_Result(result);
         UNPROTECT(save);
-        return bridgeMinExpResult(result);
+        return next;
     }
 
     case CPSWORK_TYPE_TCAMBAFTERLEFT: {
         TcAmbAfterLeftThunk *th = getCpsWork_TcAmbAfterLeft(work);
         int save = PROTECT(th);
-        MinExp *leftVal = cpsTc(th->left, th->k);
+        CpsWork *leftWork = makeCpsWork_Tc(th->left, th->k);
+        PROTECT(leftWork);
+        MinExp *leftVal = runCpsWorkToResult(leftWork);
         PROTECT(leftVal);
-        MinExp *rightVal = cpsTc(th->right, th->k);
+        CpsWork *rightWork = makeCpsWork_Tc(th->right, th->k);
+        PROTECT(rightWork);
+        MinExp *rightVal = runCpsWorkToResult(rightWork);
         PROTECT(rightVal);
         CpsWork *next = makeCpsWork_TcAmbBuild(th->k, th->c, leftVal, rightVal);
         UNPROTECT(save);
@@ -780,8 +803,10 @@ CpsWork *cpsStepTc(CpsWork *work) {
         MinExprList *aargs = newMinExprList(CPI(th->k), th->c, NULL);
         PROTECT(aargs);
         MinExp *result = makeMinExp_Apply(CPI(th->k), lambda, aargs);
+        PROTECT(result);
+        CpsWork *next = newCpsWork_Result(result);
         UNPROTECT(save);
-        return bridgeMinExpResult(result);
+        return next;
     }
 
     case CPSWORK_TYPE_TCLETRECAFTERBODY: {
@@ -789,16 +814,20 @@ CpsWork *cpsStepTc(CpsWork *work) {
         int save = PROTECT(th);
         MinExp *result =
             makeMinExp_LetRec(CPI(th->body), th->bindings, th->body);
+        PROTECT(result);
+        CpsWork *next = newCpsWork_Result(result);
         UNPROTECT(save);
-        return bridgeMinExpResult(result);
+        return next;
     }
 
     case CPSWORK_TYPE_MLAMAFTERBODY: {
         MLamAfterBodyThunk *th = getCpsWork_MLamAfterBody(work);
         int save = PROTECT(th);
         MinExp *result = makeMinExp_Lam(CPI(th->body), th->args, th->body);
+        PROTECT(result);
+        CpsWork *next = newCpsWork_Result(result);
         UNPROTECT(save);
-        return bridgeMinExpResult(result);
+        return next;
     }
 
     case CPSWORK_TYPE_TCMAPINTCONDCASES: {
@@ -814,7 +843,9 @@ CpsWork *cpsStepTc(CpsWork *work) {
             return next;
         }
 
-        MinExp *body = cpsTc(th->cases->body, th->sk);
+        CpsWork *tcWork = makeCpsWork_Tc(th->cases->body, th->sk);
+        PROTECT(tcWork);
+        MinExp *body = runCpsWorkToResult(tcWork);
         PROTECT(body);
         CpsWork *next = makeCpsWork_TcMapIntCondCasesAfterBody(
             th->cases->constant, body, th->cases->next, th->sk, th->acc);
@@ -848,7 +879,9 @@ CpsWork *cpsStepTc(CpsWork *work) {
             return next;
         }
 
-        MinExp *body = cpsTc(th->cases->body, th->sk);
+        CpsWork *tcWork = makeCpsWork_Tc(th->cases->body, th->sk);
+        PROTECT(tcWork);
+        MinExp *body = runCpsWorkToResult(tcWork);
         PROTECT(body);
         CpsWork *next = makeCpsWork_TcMapCharCondCasesAfterBody(
             th->cases->constant, body, th->cases->next, th->sk, th->acc);

@@ -36,7 +36,7 @@ The build depends heavily on code generation. Do not manually edit files in `gen
 (via `MODE=` variable):
 
 ```bash
-make                    # default MODE=debug: -g, enables `--stress-gc` flag which will force GC on every malloc
+make                    # default MODE=debug: -g
 make MODE=production    # -O2, all safety checks disabled
 ```
 
@@ -53,12 +53,16 @@ make docs              # Generates Mermaid diagrams from YAML schemas
 
 ### Mark-and-sweep GC with global protection stack
 
-- Use `PROTECT(obj)` macro to shield objects during construction
-- `PROTECT(obj)` pushes `obj` onto protection stack and returns the previous stack pointer
-- `UNPROTECT(save)` restores the stack pointer to `save` (previous result of `PROTECT()`)
-- Pattern: `int save = PROTECT(obj); /* allocating code */ UNPROTECT(save);`
-- Never use literal numbers with UNPROTECT - only values returned by `PROTECT()`
-- Immediately `PROTECT` any GC-managed object returned from a function call before any further allocation or helper call.
+- Use `PROTECT(obj)` macro to shield objects during construction.
+- `PROTECT(obj)` pushes `obj` onto protection stack and returns the previous stack pointer.
+- `PROTECT(NULL)` returns the current stack pointer.
+- `UNPROTECT(save)` restores the stack pointer to `save` (previous result of `PROTECT()`).
+- `REPLACE_PROTECT(save, newObj)` replaces whatever was at stack position `save` with `newObj`.
+- Pattern: `int save = PROTECT(obj); /* allocating code */ UNPROTECT(save);`.
+- Never use literal numbers with UNPROTECT - only values returned by `PROTECT()`.
+- Two invariants you can assume and should enforce:
+  - memory-managed arguments to functions must protected by the caller, functions can assume their arguments are already protected.
+  - memory-managed results of functions must be protected by the caller, functions can assume their caller will (re-)protect.
 - Assume any call can allocate and trigger GC. If an object is still in use and not protected, it is unsafe even if tests currently pass.
 - Passing tests does not prove protection correctness; it may only mean no GC sweep happened at the vulnerable point.
 
@@ -132,7 +136,7 @@ make docs              # Generates Mermaid diagrams from YAML schemas
 
 - `--dump-ast`, `--dump-lambda`, `--dump-anf`, `--dump-bytecode` etc.
 - `--exec="<snippet>"` to run code snippet directly
-- `--stress-gc` forces GC on every allocation
+- `--stress-gc` forces GC on every allocation (but is very, very slow)
 - `--help` shows all.
 
 ## Common Patterns
