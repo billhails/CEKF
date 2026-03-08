@@ -48,14 +48,6 @@ static MinExp *cpsTcMinLetRec(MinLetRec *node, MinExp *c);
 static MinExp *cpsTcMinAmb(MinAmb *node, MinExp *c);
 static MinExp *cpsTcMinExp(MinExp *node, MinExp *c);
 
-static MinExp *packArgsExp(ParserInfo PI, MinExprList *args) {
-    return newMinExp_Args(PI, args);
-}
-
-static MinExprList *unpackArgsExp(MinExp *argsExp) {
-    return getMinExp_Args(argsExp);
-}
-
 /*
     fn M {
         (E.lambda(vars, body)) {
@@ -203,7 +195,7 @@ CpsWork *TcApply1Kont(MinExp *sf, TcApply1KontEnv *env) {
     ENTER(T_c_apply_1Kont);
     CpsKont *kont2 = makeKont_TcApply2(sf, env->c);
     int save = PROTECT(kont2);
-    MinExp *args = packArgsExp(CPI(env->c), env->es);
+    MinExp *args = newMinExp_Args(CPI(env->c), env->es);
     PROTECT(args);
     MinExp *result = cpsTs_k(args, kont2);
     PROTECT(result);
@@ -215,7 +207,7 @@ CpsWork *TcApply1Kont(MinExp *sf, TcApply1KontEnv *env) {
 
 CpsWork *TcApply2Kont(MinExp *ses, TcApply2KontEnv *env) {
     ENTER(TcApply2Kont);
-    MinExprList *args = appendMinArg(unpackArgsExp(ses), env->c);
+    MinExprList *args = appendMinArg(getMinExp_Args(ses), env->c);
     int save = PROTECT(args);
     MinExp *result = makeMinExp_Apply(CPI(env->sf), env->sf, args);
     PROTECT(result);
@@ -236,7 +228,7 @@ static MinExp *cpsTcMakeVec(MinExprList *node, MinExp *c) {
     ENTER(cpsTcMakeVec);
     CpsKont *kont = makeKont_TcMakeVec(c);
     int save = PROTECT(kont);
-    MinExp *args = packArgsExp(node == NULL ? NULLPI : CPI(node), node);
+    MinExp *args = newMinExp_Args(node == NULL ? NULLPI : CPI(node), node);
     PROTECT(args);
     MinExp *result = cpsTs_k(args, kont);
     UNPROTECT(save);
@@ -246,7 +238,7 @@ static MinExp *cpsTcMakeVec(MinExprList *node, MinExp *c) {
 
 CpsWork *TcMakeVecKont(MinExp *sargs, TcMakeVecKontEnv *env) {
     ENTER(TcMakeVecKont);
-    MinExp *make_vec = newMinExp_MakeVec(CPI(sargs), unpackArgsExp(sargs));
+    MinExp *make_vec = newMinExp_MakeVec(CPI(sargs), getMinExp_Args(sargs));
     int save = PROTECT(make_vec);
     MinExprList *args = newMinExprList(CPI(sargs), make_vec, NULL);
     PROTECT(args);
@@ -594,8 +586,8 @@ MinExp *cpsTc(MinExp *node, MinExp *c) {
 }
 
 static MinIntCondCases *reverseMinIntCondCasesList(MinIntCondCases *list) {
+    int save = PROTECT(list); // claim a stack slot
     MinIntCondCases *result = NULL;
-    int save = PROTECT(result);
     while (list != NULL) {
         MinIntCondCases *node =
             newMinIntCondCases(CPI(list), list->constant, list->body, result);
@@ -608,8 +600,8 @@ static MinIntCondCases *reverseMinIntCondCasesList(MinIntCondCases *list) {
 }
 
 static MinCharCondCases *reverseMinCharCondCasesList(MinCharCondCases *list) {
+    int save = PROTECT(list); // claim a stack slot
     MinCharCondCases *result = NULL;
-    int save = PROTECT(result);
     while (list != NULL) {
         MinCharCondCases *node =
             newMinCharCondCases(CPI(list), list->constant, list->body, result);
@@ -622,8 +614,8 @@ static MinCharCondCases *reverseMinCharCondCasesList(MinCharCondCases *list) {
 }
 
 static MinMatchList *reverseMinMatchList(MinMatchList *list) {
+    int save = PROTECT(list); // claim a stack slot
     MinMatchList *result = NULL;
-    int save = PROTECT(result);
     while (list != NULL) {
         MinMatchList *node =
             newMinMatchList(CPI(list), list->matches, list->body, result);
@@ -709,8 +701,8 @@ CpsWork *cpsStepTc(CpsWork *work) {
             MinExprList *vecArgs = getMinExp_MakeVec(node);
             CpsKont *kont = makeKont_TcMakeVec(c);
             int save = PROTECT(kont);
-            MinExp *args =
-                packArgsExp(vecArgs == NULL ? NULLPI : CPI(vecArgs), vecArgs);
+            MinExp *args = newMinExp_Args(
+                vecArgs == NULL ? NULLPI : CPI(vecArgs), vecArgs);
             PROTECT(args);
             CpsWork *next = makeCpsWork_Tsk(args, kont);
             UNPROTECT(save);

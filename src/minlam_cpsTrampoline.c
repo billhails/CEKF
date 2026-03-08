@@ -85,12 +85,11 @@ static CpsWork *cpsStep(CpsWork *work) {
 }
 
 MinExp *runCpsWorkToResult(CpsWork *work) {
-    int save = PROTECT(work);
+    int save = PROTECT(work); // claim a slot
 
     while (work->type != CPSWORK_TYPE_RESULT) {
-        CpsWork *next = cpsStep(work);
-        REPLACE_PROTECT(save, next);
-        work = next;
+        work = cpsStep(work);
+        REPLACE_PROTECT(save, work);
     }
 
     MinExp *result = getCpsWork_Result(work);
@@ -115,5 +114,8 @@ CpsPayload *runCpsWorkToPayload(CpsWork *work) {
 
 MinExp *runCpsTrampolineTc(MinExp *rootExp, MinExp *cont0) {
     CpsWork *work = makeCpsWork_TcRoot(rootExp, cont0);
-    return runCpsWorkToResult(work);
+    int save = PROTECT(work);
+    MinExp *result = runCpsWorkToResult(work);
+    UNPROTECT(save);
+    return result;
 }

@@ -60,11 +60,12 @@ make docs              # Generates Mermaid diagrams from YAML schemas
 - `REPLACE_PROTECT(save, newObj)` replaces whatever was at stack position `save` with `newObj`.
 - Pattern: `int save = PROTECT(obj); /* allocating code */ UNPROTECT(save);`.
 - Never use literal numbers with UNPROTECT - only values returned by `PROTECT()`.
-- Two invariants you can assume and should enforce:
-  - memory-managed arguments to functions must protected by the caller, functions can assume their arguments are already protected.
-  - memory-managed results of functions must be protected by the caller, functions can assume their caller will (re-)protect.
+- An invariant you can assume and should always enforce: **CALLER PROECTS**.
+  - The caller must protect memory managed arguments to functions before calling, and protect any memory-managed result of calling.
+  - Even though this may lead to a few extra lines of code, the consistency is well worth it as avoids subtle and hard to track bugs.
 - Assume any call can allocate and trigger GC. If an object is still in use and not protected, it is unsafe even if tests currently pass.
 - Passing tests does not prove protection correctness; it may only mean no GC sweep happened at the vulnerable point.
+- One last subtle gotcha: `PROTECT(NULL)` does not advance the stack pointer, so it is never safe to do a `REPLACE_PROTECT(save, newObj)` if `save` was the result of a call to `PROTECT(NULL)`.
 
 ### HashSymbol objects must never be PROTECT'ed
 
