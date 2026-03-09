@@ -183,7 +183,7 @@ static MinExp *cpsTcMinApply(MinApply *node, MinExp *c) {
         LEAVE(cpsTcMinApply);
         return NULL;
     }
-    CpsKont *kont1 = makeKont_TcApply1(node->args, c);
+    CpsKont *kont1 = makeKont_TcApply1(node->isBuiltin, node->args, c);
     int save = PROTECT(kont1);
     MinExp *result = cpsTk(node->function, kont1);
     UNPROTECT(save);
@@ -193,7 +193,7 @@ static MinExp *cpsTcMinApply(MinApply *node, MinExp *c) {
 
 CpsWork *TcApply1Kont(MinExp *sf, TcApply1KontEnv *env) {
     ENTER(T_c_apply_1Kont);
-    CpsKont *kont2 = makeKont_TcApply2(sf, env->c);
+    CpsKont *kont2 = makeKont_TcApply2(env->builtIn, sf, env->c);
     int save = PROTECT(kont2);
     MinExp *args = newMinExp_Args(CPI(env->c), env->es);
     PROTECT(args);
@@ -211,6 +211,7 @@ CpsWork *TcApply2Kont(MinExp *ses, TcApply2KontEnv *env) {
     int save = PROTECT(args);
     MinExp *result = makeMinExp_Apply(CPI(env->sf), env->sf, args);
     PROTECT(result);
+    getMinExp_Apply(result)->isBuiltin = env->builtIn;
     CpsWork *next = newCpsWork_Result(result);
     UNPROTECT(save);
     LEAVE(TcApply2Kont);
@@ -682,7 +683,8 @@ CpsWork *cpsStepTc(CpsWork *work) {
 
         case MINEXP_TYPE_APPLY: {
             MinApply *apply = getMinExp_Apply(node);
-            CpsKont *kont1 = makeKont_TcApply1(apply->args, c);
+            CpsKont *kont1 =
+                makeKont_TcApply1(apply->isBuiltin, apply->args, c);
             int save = PROTECT(kont1);
             CpsWork *next = makeCpsWork_Tk(apply->function, kont1);
             UNPROTECT(save);

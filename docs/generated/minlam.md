@@ -8,6 +8,8 @@ MinExpTable --entries--> MinExp
 MinLam --args--> SymbolList
 MinLam --exp--> MinExp
 MinLam --cc--> bool
+MinAnnotatedVar --var--> HashSymbol
+MinAnnotatedVar --position--> int
 MinExprList --exp--> MinExp
 MinExprList --next--> MinExprList
 MinPrimApp --type--> MinPrimOp
@@ -49,6 +51,7 @@ MinAlphaEnv --nameSpaces--> MinAlphaEnvArray
 MinExp --amb--> MinAmb
 MinExp --apply--> MinApply
 MinExp --args--> MinExprList
+MinExp --avar--> MinAnnotatedVar
 MinExp --back--> void_ptr
 MinExp --bigInteger--> MaybeBigInt
 MinExp --bindings--> MinBindings

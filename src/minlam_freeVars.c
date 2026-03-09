@@ -120,7 +120,9 @@ static void freeVarsMinApply(MinApply *node, SymbolSet *result,
         return;
     }
 
-    freeVarsMinExp(node->function, result, context);
+    if (!node->isBuiltin) {
+        freeVarsMinExp(node->function, result, context);
+    }
     freeVarsMinExprList(node->args, result, context);
     LEAVE(freeVarsMinApply);
 }

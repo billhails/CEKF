@@ -89,6 +89,7 @@ continuations:
           }
       }
     free_vars:
+      builtIn: bool
       es: MinExprList
       c: MinExp
 
@@ -107,6 +108,7 @@ continuations:
           }
       }
     free_vars:
+      builtIn: bool
       sf: MinExp
       c: MinExp
 

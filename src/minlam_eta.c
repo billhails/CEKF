@@ -544,12 +544,6 @@ MinExp *etaMinExp(MinExp *node) {
         }
         break;
     }
-    case MINEXP_TYPE_BACK: {
-        break;
-    }
-    case MINEXP_TYPE_BIGINTEGER: {
-        break;
-    }
     case MINEXP_TYPE_BINDINGS: {
         MinBindings *variant = getMinExp_Bindings(node);
         MinBindings *new_variant = etaMinBindings(variant);
@@ -566,9 +560,6 @@ MinExp *etaMinExp(MinExp *node) {
             PROTECT(new_variant);
             result = newMinExp_CallCC(CPI(node), new_variant);
         }
-        break;
-    }
-    case MINEXP_TYPE_CHARACTER: {
         break;
     }
     case MINEXP_TYPE_COND: {
@@ -638,14 +629,15 @@ MinExp *etaMinExp(MinExp *node) {
         }
         break;
     }
-    case MINEXP_TYPE_STDINT: {
+    case MINEXP_TYPE_CHARACTER:
+    case MINEXP_TYPE_BACK:
+    case MINEXP_TYPE_BIGINTEGER:
+    case MINEXP_TYPE_DONE:
+    case MINEXP_TYPE_STDINT:
+    case MINEXP_TYPE_VAR:
         break;
-    }
-    case MINEXP_TYPE_VAR: {
-        break;
-    }
     default:
-        cant_happen("unrecognized MinExp type %d", node->type);
+        cant_happen("unrecognized MinExp type %s", minExpTypeName(node->type));
     }
 
     UNPROTECT(save);

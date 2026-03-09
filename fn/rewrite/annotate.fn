@@ -78,6 +78,12 @@ fn annotate(expr) {
                         M.sequence(exprs |> ann)
                     }
 
+                    // not production code, these placeholders would be lambdas
+                    (x=M.var("□")) |
+                    (x=M.var("Ω")) {
+                        x
+                    }
+
                     (M.var(s)) {
                         switch (D.lookup(s, e)) {
                             (just(n)) {
