@@ -21,15 +21,16 @@ config:
     description: Common utility structures
     parserInfo: false
     limited_includes:
-    - ast_helper.h
-    - sys/stat.h
+      - ast_helper.h
+      - opaque.h
+      - sys/stat.h
 
 structs:
     FileId:
         meta:
             brief: Unambiguous File Identifier
             eqIgnore:
-            - fileName
+              - fileName
         data:
             stDev: device
             stIno: inode
@@ -50,6 +51,16 @@ structs:
             parent: SymbolEnv
             bindings: SymbolSet
 
+    EmitContext:
+        meta:
+            brief: VisitorContext for emitMinExp
+        data:
+            lambdas: BufferBag
+            indexes: IntMap
+            body: opaque
+            maxReg: int=0
+            currentDepth: int=0
+
 hashes:
     SymbolSet:
         meta:
@@ -67,6 +78,10 @@ hashes:
             brief: Map from Symbol to Symbol
         data:
             entries: HashSymbol
+
+    BufferBag:
+        data:
+            entries: opaque
 
 arrays:
     StringArray:

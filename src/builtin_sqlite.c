@@ -48,24 +48,18 @@ void registerSQLite(BuiltIns *registry) {
     registerSQLiteNames(registry);
 }
 
-static void opaque_sqlite3_close(Opaque *data) {
+static void opaque_sqlite3_close(void *data) {
     if (data == NULL)
-        return;
-    if (data->data == NULL)
         return;
     DEBUG("closing sqlite %p", data->data);
-    sqlite3_close(data->data);
-    data->data = NULL;
+    sqlite3_close(data);
 }
 
-static void opaque_sqlite3_finalize(Opaque *data) {
+static void opaque_sqlite3_finalize(void *data) {
     if (data == NULL)
         return;
-    if (data->data == NULL)
-        return;
-    DEBUG("finalizing sqlite statement %p", data->data);
-    sqlite3_finalize(data->data);
-    data->data = NULL;
+    DEBUG("finalizing sqlite statement %p", data);
+    sqlite3_finalize(data);
 }
 
 static Value builtin_sqlite3_open(Vec *v) {
@@ -82,7 +76,7 @@ static Value builtin_sqlite3_open(Vec *v) {
         return result;
     }
     DEBUG("sqlite open %p", ppDb);
-    Opaque *wrapper = newOpaque(ppDb, opaque_sqlite3_close, NULL);
+    Opaque *wrapper = newOpaque(ppDb, opaque_sqlite3_close, NULL, NULL);
     Value opaque = value_Opaque(wrapper);
     protectValue(opaque);
     Value result = makeTryResult(1, opaque);
@@ -132,7 +126,7 @@ static Value builtin_sqlite3_prepare(Vec *vec) {
         return result;
     }
     DEBUG("sqlite prepare %p", stmt);
-    Opaque *wrapper = newOpaque(stmt, opaque_sqlite3_finalize, NULL);
+    Opaque *wrapper = newOpaque(stmt, opaque_sqlite3_finalize, NULL, NULL);
     Value opaque = value_Opaque(wrapper);
     protectValue(opaque);
     Value result = makeTryResult(1, opaque);

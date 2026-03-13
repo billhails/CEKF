@@ -46,8 +46,9 @@ static MinExp *transformMinCond(MinCond *node, Context *c);
 static MinExp *transformMinMatch(MinMatch *node, Context *c);
 static MinExp *transformMinLetRec(MinLetRec *node, Context *c);
 static MinExp *transformMinAmb(MinAmb *node, Context *c);
-static MinExp *transformMinMakeVec(MinExprList *node, Context *c);
-static MinExp *transformMinSequence(MinExprList *node, Context *c);
+static MinExp *transformMinMakeVec(ParserInfo I, MinExprList *node, Context *c);
+static MinExp *transformMinSequence(ParserInfo I, MinExprList *node,
+                                    Context *c);
 static MinExp *transformMinExp(MinExp *node, Context *c);
 
 static MinExprList *transformMinExprList(MinExprList *node, Context *c);
@@ -334,13 +335,12 @@ static MinExp *transformMinAmb(MinAmb *node, Context *c) {
 //  (M.make_vec(size, elements)) {
 //      M.make_vec(size, elements |> t(a))
 //  }
-static MinExp *transformMinMakeVec(MinExprList *node, Context *c) {
-    if (node == NULL)
-        return NULL;
+static MinExp *transformMinMakeVec(ParserInfo I, MinExprList *node,
+                                   Context *c) {
     ENTER(transformMinMakeVec);
     MinExprList *new_exprs = transformMinExprList(node, c);
     int save = PROTECT(new_exprs);
-    MinExp *result = newMinExp_MakeVec(CPI(node), new_exprs);
+    MinExp *result = newMinExp_MakeVec(I, new_exprs);
     UNPROTECT(save);
     LEAVE(transformMinMakeVec);
     return result;
@@ -349,13 +349,12 @@ static MinExp *transformMinMakeVec(MinExprList *node, Context *c) {
 //  (M.sequence(exps)) {
 //      M.sequence(exps |> t(a))
 //  }
-static MinExp *transformMinSequence(MinExprList *node, Context *c) {
-    if (node == NULL)
-        return NULL;
+static MinExp *transformMinSequence(ParserInfo I, MinExprList *node,
+                                    Context *c) {
     ENTER(transformMinSequence);
     MinExprList *new_exprs = transformMinExprList(node, c);
     int save = PROTECT(new_exprs);
-    MinExp *result = newMinExp_Sequence(CPI(node), new_exprs);
+    MinExp *result = newMinExp_Sequence(I, new_exprs);
     UNPROTECT(save);
     LEAVE(transformMinSequence);
     return result;
@@ -410,7 +409,7 @@ static MinExp *transformMinExp(MinExp *node, Context *c) {
         break;
 
     case MINEXP_TYPE_MAKEVEC:
-        result = transformMinMakeVec(getMinExp_MakeVec(node), c);
+        result = transformMinMakeVec(CPI(node), getMinExp_MakeVec(node), c);
         break;
 
     case MINEXP_TYPE_MATCH:
@@ -418,7 +417,7 @@ static MinExp *transformMinExp(MinExp *node, Context *c) {
         break;
 
     case MINEXP_TYPE_SEQUENCE:
-        result = transformMinSequence(getMinExp_Sequence(node), c);
+        result = transformMinSequence(CPI(node), getMinExp_Sequence(node), c);
         break;
 
     default:

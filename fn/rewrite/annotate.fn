@@ -29,6 +29,7 @@ fn annotate(expr) {
                     (x = M.primop(_)) |
                     (x = M.bigint(_)) |
                     (x = M.character(_)) |
+                    (x = M.done_expr) |
                     (x = M.stdint(_)) {
                         x
                     }
@@ -98,7 +99,7 @@ fn annotate(expr) {
                     (x) {
                         M.print_expr(x);
                         puts("\n");
-                        error("unconvert: unsupported expression")
+                        error("annotate: unsupported expression")
                     }
                 }
             in

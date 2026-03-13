@@ -26,16 +26,19 @@ in
         }
         (str) {
             let
+                halt = M.var("□");
+                // halt = M.parse("(lambda (f) (done))")
+                fail = M.var("Ω");
                 a = E.parse(str);
                 b = DS.desugar(a);
                 c = C.curry(b);
                 cc = β.reduce(c);
                 d = η.reduce(c);
                 dd = U.uncurry(c);
-                e = CPS.T_c(dd, M.var("□"));
+                e = CPS.T_c(dd, halt);
                 f = β.reduce(e);
                 g = OF.fold(f);
-                gg = AMB.amb(g, M.var("Ω"))
+                gg = AMB.amb(g, fail);
                 ggg = β.reduce(gg);
                 h = CC.shared_closure_convert(ggg);
                 hh = UCV.unconvert(h);

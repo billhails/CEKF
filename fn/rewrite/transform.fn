@@ -25,6 +25,7 @@ fn _transform(t, a, exp) {
         (M.back_expr) |
         (M.primop(_)) |
         (M.character(_)) |
+        (M.done_expr) |
         (M.stdint(_)) |
         (M.var(_)) |
         (M.bigint(_)) { exp }
@@ -89,7 +90,7 @@ fn _transform(t, a, exp) {
         (_) {
             M.print_expr(exp);
             puts(": ");
-            error("Unhandled expression type in transform")
+            error("unhandled expression type in transform")
         }
     };
 }

@@ -12,6 +12,7 @@ namespace
         callcc_expr(expr) |
         character(char) |
         cond_expr(expr, list(#(expr, expr))) |
+        done_expr |
         env_ref(expr, number) |
         if_expr(expr, expr, expr) |
         lambdac(list(string), expr) |
@@ -60,6 +61,7 @@ namespace
                 (primop(_))      { true }
                 (character(_))   { true }
                 (back_expr)      { true }
+                (done_expr)      { true }
                 (env_ref(_, _))  { true }
                 (apply(f, args)) { if (is_simple(f)) { all_simple(args) } else { false } }
                 (_)              { false }
@@ -308,6 +310,10 @@ namespace
                         putc('\'');
                         x;
                     }
+                    (done_expr) {
+                        puts("(done)");
+                        x;
+                    }
                     (primop(name)) {
                         puts(name);
                         x;
@@ -370,6 +376,7 @@ namespace
                 (atom(x = '6' @ rest)) | (atom(x = '7' @ rest)) | (atom(x = '8' @ rest)) |
                 (atom(x = '9' @ rest)) { bigint(to_number(x))}
                 (atom(s)) { var(s) }
+                (sexp([atom("done")])) { done_expr }
                 (sexp([atom("amb"), a, b])) { amb_expr(to_expr(a), to_expr(b)) }
                 (sexp([atom("call/cc"), e])) { callcc_expr(to_expr(e)) }
                 (sexp([atom("if"), e1, e2, e3])) { if_expr(to_expr(e1), to_expr(e2), to_expr(e3)) }

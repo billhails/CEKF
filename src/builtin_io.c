@@ -177,13 +177,11 @@ static HashSymbol *fileHandleToKey(FILE *file) {
     return newSymbol(buf);
 }
 
-static void opaque_io_close(Opaque *data) {
+static void opaque_io_close(void *data) {
     if (data == NULL)
         return;
-    if (data->data == NULL)
-        return;
-    fclose(data->data);
-    HashSymbol *key = fileHandleToKey(data->data);
+    fclose(data);
+    HashSymbol *key = fileHandleToKey(data);
     BuiltInMemBuf *memBuf = NULL;
     if (getBuiltInMemBufHash(getMemBufs(), key, &memBuf)) {
         if (memBuf->buffer != NULL) {
@@ -191,17 +189,13 @@ static void opaque_io_close(Opaque *data) {
             memBuf->buffer = NULL;
         }
     }
-    data->data = NULL;
 }
 
-static void opaque_io_closedir(Opaque *data) {
+static void opaque_io_closedir(void *data) {
     if (data == NULL)
         return;
-    if (data->data == NULL)
-        return;
-    DEBUG("closing dir %p", data->data);
-    closedir((DIR *)data->data);
-    data->data = NULL;
+    DEBUG("closing dir %p", data);
+    closedir((DIR *)data);
 }
 
 static Value builtin_open(Vec *args) {
@@ -227,7 +221,7 @@ static Value builtin_open(Vec *args) {
         return errnoToTry();
     }
     DEBUG("io open %p", file);
-    Opaque *wrapper = newOpaque(file, opaque_io_close, NULL);
+    Opaque *wrapper = newOpaque(file, opaque_io_close, NULL, NULL);
     Value opaque = value_Opaque(wrapper);
     protectValue(opaque);
     Value result = makeTryResult(1, opaque);
@@ -242,7 +236,7 @@ static Value builtin_open_memstream(Vec *args __attribute__((unused))) {
     BuiltInMemBufHash *memBufs = getMemBufs();
     HashSymbol *key = fileHandleToKey(file);
     setBuiltInMemBufHash(memBufs, key, memBuf);
-    Opaque *wrapper = newOpaque(file, opaque_io_close, NULL);
+    Opaque *wrapper = newOpaque(file, opaque_io_close, NULL, NULL);
     Value opaque = value_Opaque(wrapper);
     protectValue(opaque);
     Value result = makeTryResult(1, opaque);
@@ -259,7 +253,7 @@ static Value builtin_opendir(Vec *args) {
         return errnoToTry();
     }
     DEBUG("io opendir %p", dir);
-    Opaque *wrapper = newOpaque(dir, opaque_io_closedir, NULL);
+    Opaque *wrapper = newOpaque(dir, opaque_io_closedir, NULL, NULL);
     Value opaque = value_Opaque(wrapper);
     protectValue(opaque);
     Value result = makeTryResult(1, opaque);

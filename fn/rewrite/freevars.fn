@@ -20,6 +20,7 @@ fn free {
     (M.bigint(_)) |
     (M.primop(_)) |
     (M.character(_)) |
+    (M.done_expr) |
     (M.env_ref(_, _)) |
     (M.stdint(_)) { [] }
 
@@ -80,6 +81,6 @@ fn free {
     (e) {
         M.print_expr(e);
         puts(": ");
-        error("unhandled expr type");
+        error("freeVars(): unhandled expr type");
     }
 }

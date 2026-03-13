@@ -50,6 +50,7 @@
 #include "minlam_beta.h"
 #include "minlam_closureConvert.h"
 #include "minlam_curry.h"
+#include "minlam_emit.h"
 #include "minlam_eta.h"
 #include "minlam_fold.h"
 #include "minlam_pp.h"
@@ -617,12 +618,13 @@ int main(int argc, char *argv[]) {
         REPLACE_PROTECT(save2, minExp);
         minExp = etaMinExp(minExp);
         REPLACE_PROTECT(save2, minExp);
-        minExp = flatClosureConvert(minExp);
+        minExp = sharedClosureConvert(minExp);
         REPLACE_PROTECT(save2, minExp);
         minExp = indexMinExp(minExp);
         REPLACE_PROTECT(save2, minExp);
 
-        ppMinExp(minExp);
+        // ppMinExp(minExp);
+        emitProgram(minExp, stdout);
         eprintf("\n");
         exit(0);
 #endif
