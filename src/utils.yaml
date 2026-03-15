@@ -51,16 +51,6 @@ structs:
             parent: SymbolEnv
             bindings: SymbolSet
 
-    EmitContext:
-        meta:
-            brief: VisitorContext for emitMinExp
-        data:
-            lambdas: BufferBag
-            indexes: IntMap
-            body: opaque
-            maxReg: int=0
-            currentDepth: int=0
-
 hashes:
     SymbolSet:
         meta:

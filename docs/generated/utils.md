@@ -15,11 +15,6 @@ SymbolList --symbol--> HashSymbol
 SymbolList --next--> SymbolList
 SymbolEnv --parent--> SymbolEnv
 SymbolEnv --bindings--> SymbolSet
-EmitContext --lambdas--> BufferBag
-EmitContext --indexes--> IntMap
-EmitContext --body--> opaque
-EmitContext --maxReg--> int
-EmitContext --currentDepth--> int
 SCharVec["(SCharVec)"] --entries--> schar
 WCharVec["(WCharVec)"] --entries--> character
 SymbolVec["(SymbolVec)"] --entries--> HashSymbol

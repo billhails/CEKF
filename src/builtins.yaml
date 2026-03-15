@@ -20,10 +20,9 @@ config:
     name: builtins
     description: Support for declaring builtins
     limited_includes:
-    - ast_helper.h
-    - tc.h
-    - tc_debug.h
-
+      - ast_helper.h
+      - tc.h
+      - tc_debug.h
 
 structs:
     BuiltIn:
@@ -33,6 +32,7 @@ structs:
         data:
             externalName: HashSymbol
             internalName: HashSymbol
+            linkerName: HashSymbol # actual name of the C function
             result: TcType
             args: BuiltInArgs
             implementation: void_ptr
@@ -81,5 +81,4 @@ arrays:
 primitives: !include primitives.yaml
 
 external:
-- !include tc.yaml
-
+  - !include tc.yaml

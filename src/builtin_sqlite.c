@@ -378,7 +378,7 @@ static void registerSQLiteOpen(BuiltIns *registry) {
     PROTECT(trySqliteType);
     pushBuiltInArgs(args, stringType);
     pushNewBuiltIn(registry, "sqlite3_open", trySqliteType, args,
-                   (void *)builtin_sqlite3_open);
+                   (void *)builtin_sqlite3_open, "builtin_sqlite3_open");
     UNPROTECT(save);
 }
 
@@ -391,7 +391,7 @@ static void registerSQLiteClose(BuiltIns *registry) {
     PROTECT(b);
     pushBuiltInArgs(args, ppDb);
     pushNewBuiltIn(registry, "sqlite3_close", b, args,
-                   (void *)builtin_sqlite3_close);
+                   (void *)builtin_sqlite3_close, "builtin_sqlite3_close");
     UNPROTECT(save);
 }
 
@@ -411,7 +411,7 @@ static void registerSQLitePrepare(BuiltIns *registry) {
     pushBuiltInArgs(args, sqlite);
     pushBuiltInArgs(args, string);
     pushNewBuiltIn(registry, "sqlite3_prepare", tryStatementType, args,
-                   (void *)builtin_sqlite3_prepare);
+                   (void *)builtin_sqlite3_prepare, "builtin_sqlite3_prepare");
     UNPROTECT(save);
 }
 
@@ -424,7 +424,8 @@ static void registerSQLiteFinalize(BuiltIns *registry) {
     PROTECT(b);
     pushBuiltInArgs(args, statementType);
     pushNewBuiltIn(registry, "sqlite3_finalize", b, args,
-                   (void *)builtin_sqlite3_finalize);
+                   (void *)builtin_sqlite3_finalize,
+                   "builtin_sqlite3_finalize");
     UNPROTECT(save);
 }
 
@@ -456,7 +457,7 @@ static void registerSQLiteBind(BuiltIns *registry) {
     pushBuiltInArgs(args, statementType);
     pushBuiltInArgs(args, basicListType);
     pushNewBuiltIn(registry, "sqlite3_bind", bigIntType, args,
-                   (void *)builtin_sqlite3_bind);
+                   (void *)builtin_sqlite3_bind, "builtin_sqlite3_bind");
     UNPROTECT(save);
 }
 
@@ -469,7 +470,7 @@ static void registerSQLiteFetch(BuiltIns *registry) {
     TcType *maybeListBasicType = makeMaybeListBasicType();
     PROTECT(maybeListBasicType);
     pushNewBuiltIn(registry, "sqlite3_fetch", maybeListBasicType, args,
-                   (void *)builtin_sqlite3_fetch);
+                   (void *)builtin_sqlite3_fetch, "builtin_sqlite3_fetch");
     UNPROTECT(save);
 }
 
@@ -484,6 +485,6 @@ static void registerSQLiteNames(BuiltIns *registry) {
     TcType *listStringType = makeListType(stringType);
     PROTECT(listStringType);
     pushNewBuiltIn(registry, "sqlite3_names", listStringType, args,
-                   (void *)builtin_sqlite3_names);
+                   (void *)builtin_sqlite3_names, "builtin_sqlite3_names");
     UNPROTECT(save);
 }

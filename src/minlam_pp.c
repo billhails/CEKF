@@ -337,7 +337,11 @@ static void iMinApply(MinApply *apply, int d) {
     if (apply->isBuiltin) {
         eprintf("[builtin ");
     } else {
-        eprintf("(");
+        if (apply->cc) {
+            eprintf("(A/C");
+        } else {
+            eprintf("(");
+        }
     }
     iMinExp(apply->function, d + 1);
     if (allSimple(apply->args)) {

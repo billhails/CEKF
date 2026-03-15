@@ -51,10 +51,12 @@ Value --vec--> Vec
 Value --builtIn--> BuiltInImplementation
 Value --nameSpace--> Vec
 Value --opaque--> opaque
+Value --addr--> ptr
 ByteCodeArray["ByteCodeArray[]"] --entries--> byte
 Stack["Stack[]"] --entries--> Value
 ByteCodes["enum ByteCodes"]
 CharacterArray["CharacterArray[]"] --entries--> character
+ValueArray["ValueArray[]"] --entries--> Value
 ByteArray["ByteArray[]"] --entries--> byte
 Frame["Frame[]"] --entries--> Value
 LocationArray["LocationArray[]"] --entries--> Location

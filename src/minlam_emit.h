@@ -18,8 +18,10 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include "builtins.h"
+#include "emit.h"
 #include "minlam.h"
 
-void emitProgram(MinExp *, FILE *);
+void emitProgram(MinExp *, BuiltIns *, FILE *);
 
 #endif

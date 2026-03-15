@@ -624,7 +624,7 @@ int main(int argc, char *argv[]) {
         REPLACE_PROTECT(save2, minExp);
 
         // ppMinExp(minExp);
-        emitProgram(minExp, stdout);
+        emitProgram(minExp, builtIns, stdout);
         eprintf("\n");
         exit(0);
 #endif

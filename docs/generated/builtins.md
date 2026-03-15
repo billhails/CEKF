@@ -7,6 +7,7 @@ flowchart LR
 BuiltInMemBufHash --entries--> BuiltInMemBuf
 BuiltIn --externalName--> HashSymbol
 BuiltIn --internalName--> HashSymbol
+BuiltIn --linkerName--> HashSymbol
 BuiltIn --result--> TcType
 BuiltIn --args--> BuiltInArgs
 BuiltIn --implementation--> void_ptr

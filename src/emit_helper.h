@@ -1,8 +1,8 @@
-#ifndef cekf_tc_helper_h
-#define cekf_tc_helper_h
+#ifndef cekf_emit_helper_h
+#define cekf_emit_helper_h
 /*
  * CEKF - VM supporting amb
- * Copyright (C) 2022-2023  Bill Hails
+ * Copyright (C) 2022-2026  Bill Hails
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,22 +18,6 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "ast_helper.h"
-#include "tc.h"
-#include "utils.h"
-
-struct SCharArray;
-
-void ppTcType(TcType *type);
-void ppTcFunction(TcFunction *function);
-void ppTcPair(TcPair *pair);
-void ppTcThunk(TcThunk *thunk);
-void ppTcVar(TcVar *var);
-void ppTcTypeSig(TcTypeSig *typeSig);
-void ppTcTuple(TcTypeArray *tuple);
-void ppTcEnv(TcEnv *env);
-bool getFromTcEnv(TcEnv *env, HashSymbol *symbol, TcType **type);
-struct SCharArray *tcTypeToSCharArray(TcType *type);
-void appendStringToSCharArray(struct SCharArray *buffer, char *str);
+#include "emit.h"
 
 #endif

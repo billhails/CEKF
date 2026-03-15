@@ -21,10 +21,10 @@ config:
     description: The structures of the CEKFs machine
     parserInfo: false
     limited_includes:
-        - builtins.h
-        - builtins_debug.h
-        - types.h
-        - opaque.h
+      - builtins.h
+      - builtins_debug.h
+      - types.h
+      - opaque.h
 
 structs:
     CEKF:
@@ -122,6 +122,7 @@ inline:
                 builtIn: BuiltInImplementation
                 nameSpace: Vec
                 opaque: opaque
+                addr: ptr
 
     arrays:
         ByteCodeArray:
@@ -138,6 +139,10 @@ arrays:
             description: An array of UTF-32, used for strings.
         data:
             entries: character
+
+    ValueArray:
+        data:
+            entries: Value
 
     ByteArray:
         meta:
@@ -189,59 +194,59 @@ enums:
             brief: ByteCodes
             description: The bytecode operations for the CEKFs machine
         data:
-            - NONE
-            - LAM
-            - VAR
-            - LVAR
-            - PRIM_ADD
-            - PRIM_SUB
-            - PRIM_MUL
-            - PRIM_DIV
-            - PRIM_GCD
-            - PRIM_LCM
-            - PRIM_CANON
-            - PRIM_POW
-            - PRIM_MOD
-            - PRIM_EQ
-            - PRIM_NE
-            - PRIM_GT
-            - PRIM_LT
-            - PRIM_GE
-            - PRIM_LE
-            - PRIM_MAKEVEC
-            - PRIM_VEC
-            - MATCH
-            - APPLY
-            - IF
-            - CHARCOND
-            - INTCOND
-            - LETREC
-            - AMB
-            - CUT
-            - BACK
-            - LET
-            - CALLCC
-            - STDINT
-            - BIGINT
-            - IRRATIONAL
-            - CHAR
-            - RETURN
-            - JMP
-            - PUSHN
-            - DONE
-            - ERROR
-            - PRIM_CMP
-            - STDINT_IMAG
-            - BIGINT_IMAG
-            - IRRATIONAL_IMAG
-            - NS_START
-            - NS_END
-            - NS_FINISH
-            - NS_PUSHSTACK
-            - NS_PUSHENV
-            - NS_POP
+          - NONE
+          - LAM
+          - VAR
+          - LVAR
+          - PRIM_ADD
+          - PRIM_SUB
+          - PRIM_MUL
+          - PRIM_DIV
+          - PRIM_GCD
+          - PRIM_LCM
+          - PRIM_CANON
+          - PRIM_POW
+          - PRIM_MOD
+          - PRIM_EQ
+          - PRIM_NE
+          - PRIM_GT
+          - PRIM_LT
+          - PRIM_GE
+          - PRIM_LE
+          - PRIM_MAKEVEC
+          - PRIM_VEC
+          - MATCH
+          - APPLY
+          - IF
+          - CHARCOND
+          - INTCOND
+          - LETREC
+          - AMB
+          - CUT
+          - BACK
+          - LET
+          - CALLCC
+          - STDINT
+          - BIGINT
+          - IRRATIONAL
+          - CHAR
+          - RETURN
+          - JMP
+          - PUSHN
+          - DONE
+          - ERROR
+          - PRIM_CMP
+          - STDINT_IMAG
+          - BIGINT_IMAG
+          - IRRATIONAL_IMAG
+          - NS_START
+          - NS_END
+          - NS_FINISH
+          - NS_PUSHSTACK
+          - NS_PUSHENV
+          - NS_POP
 
 primitives: !include primitives.yaml
 
 external:
-- !include builtins.yaml
+  - !include builtins.yaml
