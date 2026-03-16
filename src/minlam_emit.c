@@ -34,22 +34,23 @@
 #include "debugging_off.h"
 #endif
 
-static void emitMinLam(MinLam *node, EmitContext *context);
-static void emitMinAnnotatedVar(MinAnnotatedVar *node, EmitContext *context);
-static void emitMinExprList(MinExprList *node, EmitContext *context);
-static void emitMinApply(MinApply *node, EmitContext *context);
-static void emitMinIff(MinIff *node, EmitContext *context);
-static void emitMinCond(MinCond *node, EmitContext *context);
-static void emitMinIntCondCases(MinIntCondCases *node, EmitContext *context);
-static void emitMinCharCondCases(MinCharCondCases *node, EmitContext *context);
-static void emitMinMatch(MinMatch *node, EmitContext *context);
-static void emitMinMatchList(MinMatchList *node, EmitContext *context);
-static void emitMinLetRec(MinLetRec *node, EmitContext *context);
-static void emitMinBindings(MinBindings *node, EmitContext *context);
-static void emitMinExp(MinExp *node, EmitContext *context);
-static void emitMinCondCases(MinCondCases *node, EmitContext *context);
-static void emitMakeVec(MinExprList *vecs, char *target, EmitContext *context);
-static void emitSimpleExp(MinExp *exp, char *target, EmitContext *context);
+static void emitMinLam(MinLam *node, EmitterContext *context);
+static void emitMinAnnotatedVar(MinAnnotatedVar *node, EmitterContext *context);
+static void emitMinExprList(MinExprList *node, EmitterContext *context);
+static void emitMinApply(MinApply *node, EmitterContext *context);
+static void emitMinIff(MinIff *node, EmitterContext *context);
+static void emitMinCond(MinCond *node, EmitterContext *context);
+static void emitMinIntCondCases(MinIntCondCases *node, EmitterContext *context);
+static void emitMinCharCondCases(MinCharCondCases *node,
+                                 EmitterContext *context);
+static void emitMinMatch(MinMatch *node, EmitterContext *context);
+static void emitMinMatchList(MinMatchList *node, EmitterContext *context);
+static void emitMinLetRec(MinLetRec *node, EmitterContext *context);
+static void emitMinBindings(MinBindings *node, EmitterContext *context);
+static void emitMinExp(MinExp *node, EmitterContext *context);
+static void emitMinCondCases(MinCondCases *node, EmitterContext *context);
+static EmitResult *emitMakeVec(MinExprList *vecs, EmitterContext *context);
+static EmitResult *emitSimpleExp(MinExp *exp, EmitterContext *context);
 
 ///////////
 // Helpers
@@ -79,8 +80,21 @@ static inline FILE *opaqueEmitBufferFh(Opaque *container) {
     return ((EmitBuffer *)(container->data))->fh;
 }
 
-static inline FILE *FH(EmitContext *context) {
+static inline FILE *FH(EmitterContext *context) {
     return opaqueEmitBufferFh(context->body);
+}
+
+static char *emitResultText(EmitResult *data) {
+    switch (data->type) {
+    case EMITRESULT_TYPE_BUF:
+        return opaqueEmitBufferContent(getEmitResult_Buf(data));
+        break;
+    case EMITRESULT_TYPE_VAR:
+        return getEmitResult_Var(data)->name;
+        break;
+    default:
+        cant_happen("unrecognised %s", emitResultTypeName(data->type));
+    }
 }
 
 static char *getPrimOpName(MinPrimOp type) {
@@ -120,40 +134,32 @@ static char *getPrimOpName(MinPrimOp type) {
     }
 }
 
-static HashSymbol *getSymbol(EmitContext *context, bool *isNew) {
-    if (context->symbols == NULL) {
-        cant_happen("null context symbols in getSymbol");
+static HashSymbol *claimTemp(EmitterContext *context, int lineno) {
+    HashSymbol *result = NULL;
+    bool isAvailable = false;
+    Index i = 0;
+    while ((result = iterateBoolMap(context->symbols, &i, &isAvailable)) !=
+           NULL) {
+        if (isAvailable) {
+            setBoolMap(context->symbols, result, false);
+            setIntMap(context->lines, result, lineno);
+            return result;
+        }
     }
-    if (context->symbols->array->size > 0) {
-        *isNew = false;
-        return popSymbolArray(context->symbols->array);
-    } else {
-        *isNew = true;
-        return genSym("tmp_");
-    }
+    result = genSym("tmp_");
+    setBoolMap(context->symbols, result, false);
+    setIntMap(context->lines, result, lineno);
+    return result;
 }
 
-static void releaseSymbol(HashSymbol *symbol, EmitContext *context) {
-    if (context->symbols == NULL) {
-        cant_happen("null context symbols in releaseSymbol");
-    }
-    pushSymbolArray(context->symbols->array, symbol);
+static void releaseTempSymbol(HashSymbol *result, EmitterContext *context) {
+    setBoolMap(context->symbols, result, true);
 }
 
-static void enterScope(EmitContext *context) {
-    fprintf(FH(context), "{\n");
-    SymbolArray *array = newSymbolArray();
-    int save = PROTECT(array);
-    context->symbols = newSymbolStash(array, context->symbols);
-    UNPROTECT(save);
-}
-
-static void leaveScope(EmitContext *context) {
-    if (context->symbols == NULL) {
-        cant_happen("null context symbols in leaveScope");
-    }
-    fprintf(FH(context), "}\n");
-    context->symbols = context->symbols->parent;
+static void releaseTemp(EmitResult *result, EmitterContext *context) {
+    if (isEmitResult_Buf(result))
+        return;
+    releaseTempSymbol(getEmitResult_Var(result), context);
 }
 
 static EmitBuffer *newEmitBuffer() {
@@ -207,7 +213,7 @@ static bool isAtomic(MinExp *exp) {
     }
 }
 
-static void emitAtomic(MinExp *exp, EmitContext *context) {
+static void emitAtomic(MinExp *exp, EmitterContext *context) {
     switch (exp->type) {
     case MINEXP_TYPE_AVAR:
         fprintf(FH(context), "reg[%d]", getMinExp_Avar(exp)->position);
@@ -293,192 +299,244 @@ static SCharArray *makeLambdaLabel(HashSymbol *symbol) {
     return makeLabel("LAMBDA_", symbol);
 }
 
-__attribute__((unused)) static SCharArray *makeVarName(HashSymbol *symbol) {
-    return makeLabel("var_", symbol);
-}
-
-static inline void incrDepth(EmitContext *context) {
+static inline void incrDepth(EmitterContext *context) {
     context->currentDepth++;
     context->maxReg = MAX(context->maxReg, context->currentDepth);
 }
 
-static inline void retrieveMaxReg(EmitContext *to, EmitContext *from) {
+static inline void retrieveMaxReg(EmitterContext *to, EmitterContext *from) {
     to->maxReg = MAX(to->maxReg, from->maxReg);
 }
 
 // shallow copy
-static EmitContext *copyContext(EmitContext *context, Opaque *body) {
-    EmitContext *new =
-        newEmitContext(body, context->builtIns, context->symbols);
+static EmitterContext *copyContext(EmitterContext *context, Opaque *body) {
+    EmitterContext *new = newEmitterContext(body, context->builtIns);
     int save = PROTECT(new);
     new->lambdas = context->lambdas;
     new->indexes = context->indexes;
+    new->symbols = context->symbols;
+    new->lines = context->lines;
     new->currentDepth = context->currentDepth;
     new->maxReg = context->maxReg;
     UNPROTECT(save);
     return new;
 }
 
-static void emitPrimOp(MinPrimApp *app, char *target, EmitContext *context) {
-    char *name = getPrimOpName(app->type);
-    // Value arg1 = ...;
-    // Value arg2 = ...;
-    // result = op(arg1, arg2);
-    HashSymbol *arg1 = NULL, *arg2 = NULL;
-    if (!isAtomic(app->exp1)) {
-        bool isNew;
-        arg1 = getSymbol(context, &isNew);
-        if (isNew)
-            fprintf(FH(context), "Value %s;\n", arg1->name);
-        emitSimpleExp(app->exp1, arg1->name, context);
-        releaseSymbol(arg1, context);
-    }
-    if (!isAtomic(app->exp2)) {
-        bool isNew;
-        arg2 = getSymbol(context, &isNew);
-        if (isNew)
-            fprintf(FH(context), "Value %s;\n", arg2->name);
-        emitSimpleExp(app->exp2, arg2->name, context);
-        releaseSymbol(arg2, context);
-    }
-    fprintf(FH(context), "%s = %s(", target, name);
-    if (isAtomic(app->exp1))
-        emitAtomic(app->exp1, context);
-    else {
-        fprintf(FH(context), "%s", arg1->name);
-    }
-    fprintf(FH(context), ", ");
-    if (isAtomic(app->exp2))
-        emitAtomic(app->exp2, context);
-    else {
-        fprintf(FH(context), "%s", arg2->name);
-    }
-    fprintf(FH(context), ");\n");
+static EmitResult *emitNewAtomic(MinExp *exp, EmitterContext *context) {
+    Opaque *buffer = newOpaque_EmitBuffer();
+    int save = PROTECT(buffer);
+    EmitterContext *atomicContext = copyContext(context, buffer);
+    PROTECT(atomicContext);
+    emitAtomic(exp, atomicContext);
+    EmitResult *result = newEmitResult_Buf(buffer);
+    UNPROTECT(save);
+    return result;
 }
 
-static void emitAnonymousLambda(MinLam *lambda, char *target,
-                                EmitContext *context) {
+static EmitResult *emitArg(MinExp *arg, EmitterContext *context) {
+    if (isAtomic(arg)) {
+        return emitNewAtomic(arg, context);
+    } else {
+        return emitSimpleExp(arg, context);
+    }
+}
+
+static HashSymbol *emitPrimOp(MinPrimApp *app, EmitterContext *context) {
+    EmitResult *arg1 = emitArg(app->exp1, context);
+    int save = PROTECT(arg1);
+    EmitResult *arg2 = emitArg(app->exp2, context);
+    PROTECT(arg2);
+    // release any temps prior to claiming a new one
+    releaseTemp(arg1, context);
+    releaseTemp(arg2, context);
+    HashSymbol *result = claimTemp(context, __LINE__);
+    char *name = getPrimOpName(app->type);
+    // no need to declare, collected temps will be predeclared at the top of
+    // main()
+    fprintf(FH(context), "%s = %s(%s, %s);\n", result->name, name,
+            emitResultText(arg1), emitResultText(arg2));
+    UNPROTECT(save);
+    return result; // the temp name that the caller can use
+}
+
+static EmitResult *emitAnonymousLambda(MinLam *lambda,
+                                       EmitterContext *context) {
     // emit the lambda to the prelude, this then reduces to &&LABEL
     Opaque *body = newOpaque_EmitBuffer();
     int save = PROTECT(body);
-    EmitContext *lamContext = copyContext(context, body);
+    EmitterContext *lamContext = copyContext(context, body);
     REPLACE_PROTECT(save, lamContext);
     HashSymbol *name = genSym("anon");
     setBufferBag(context->lambdas, name, body);
-    setIntMap(context->indexes, name, context->currentDepth);
+    setIntMap(context->indexes, name, ++context->maxReg);
     emitMinLam(lambda, lamContext);
     retrieveMaxReg(context, lamContext);
     SCharArray *label = makeLambdaLabel(name);
-    fprintf(FH(context), "%s = value_Addr(&&%s);\n", target, label->entries);
+    PROTECT(label);
+    Opaque *buf = newOpaque_EmitBuffer();
+    PROTECT(buf);
+    fprintf(opaqueEmitBufferFh(buf), "value_Addr(&&%s)", label->entries);
+    EmitResult *result = newEmitResult_Buf(buf);
     UNPROTECT(save);
+    return result;
 }
 
-static void emitSimpleExp(MinExp *exp, char *target, EmitContext *context) {
+static EmitResult *emitSimpleExp(MinExp *exp, EmitterContext *context) {
     switch (exp->type) {
     case MINEXP_TYPE_PRIM: {
         MinPrimApp *app = getMinExp_Prim(exp);
-        emitPrimOp(app, target, context);
-        break;
+        HashSymbol *name = emitPrimOp(app, context);
+        return newEmitResult_Var(name);
     }
     case MINEXP_TYPE_AVAR: {
         MinAnnotatedVar *avar = getMinExp_Avar(exp);
-        fprintf(FH(context), "%s = ", target);
-        emitMinAnnotatedVar(avar, context);
-        fprintf(FH(context), ";\n");
-        break;
+        Opaque *buf = newOpaque_EmitBuffer();
+        int save = PROTECT(buf);
+        EmitterContext *aVarContext = copyContext(context, buf);
+        PROTECT(aVarContext);
+        emitMinAnnotatedVar(avar, aVarContext);
+        EmitResult *result = newEmitResult_Buf(buf);
+        UNPROTECT(save);
+        return result;
     }
     case MINEXP_TYPE_MAKEVEC: {
         MinExprList *vecs = getMinExp_MakeVec(exp);
-        emitMakeVec(vecs, target, context);
-        break;
+        return emitMakeVec(vecs, context);
     }
     case MINEXP_TYPE_LAM: {
         MinLam *lambda = getMinExp_Lam(exp);
-        emitAnonymousLambda(lambda, target, context);
-        break;
+        return emitAnonymousLambda(lambda, context);
     }
     case MINEXP_TYPE_BIGINTEGER: {
         MaybeBigInt *mbi = getMinExp_BigInteger(exp);
-        fprintf(FH(context), "%s = value_Stdint(", target);
-        fprintMaybeBigInt(FH(context), mbi); // FIXME
-        fprintf(FH(context), ");\n");
-        break;
+        Opaque *buf = newOpaque_EmitBuffer();
+        int save = PROTECT(buf);
+        fprintf(opaqueEmitBufferFh(buf), "value_Stdint(");
+        fprintMaybeBigInt(opaqueEmitBufferFh(buf), mbi); // FIXME
+        fprintf(opaqueEmitBufferFh(buf), ")");
+        EmitResult *result = newEmitResult_Buf(buf);
+        UNPROTECT(save);
+        return result;
     }
     case MINEXP_TYPE_STDINT: {
-        fprintf(FH(context), "%s = value_Stdint(%d);\n", target,
+        Opaque *buf = newOpaque_EmitBuffer();
+        int save = PROTECT(buf);
+        fprintf(opaqueEmitBufferFh(buf), "value_Stdint(%d)",
                 getMinExp_Stdint(exp));
-        break;
+        EmitResult *result = newEmitResult_Buf(buf);
+        UNPROTECT(save);
+        return result;
     }
     case MINEXP_TYPE_CHARACTER: {
-        fprintf(FH(context), "%s = value_Character(%d);\n", target,
+        Opaque *buf = newOpaque_EmitBuffer();
+        int save = PROTECT(buf);
+        fprintf(opaqueEmitBufferFh(buf), "value_Character(%d)",
                 (int)getMinExp_Character(exp));
-        break;
+        EmitResult *result = newEmitResult_Buf(buf);
+        UNPROTECT(save);
+        return result;
     }
     default:
         cant_happen("unhandled %s", minExpTypeName(exp->type));
     }
 }
 
-static void emitMakeVec(MinExprList *vecs, char *target, EmitContext *context) {
-    SymbolArray *temps = newSymbolArray();
-    int save = PROTECT(temps);
-
+static EmitResult *emitMakeVec(MinExprList *vecs, EmitterContext *context) {
+    ResultArray *results = newResultArray();
+    int save = PROTECT(results);
     int count = countMinExprList(vecs);
-    HashSymbol *placeHolder = newSymbol("fn"); // any existing token
     MinExprList *v = vecs;
     while (v != NULL) {
-        if (isAtomic(v->exp)) {
-            pushSymbolArray(temps, placeHolder);
-        } else {
-            bool isNew;
-            HashSymbol *temp = getSymbol(context, &isNew);
-            pushSymbolArray(temps, temp);
-            if (isNew)
-                fprintf(FH(context), "Value %s;\n", temp->name);
-            emitSimpleExp(v->exp, temp->name, context);
-        }
+        EmitResult *result = emitArg(v->exp, context);
+        int save = PROTECT(result);
+        pushResultArray(results, result);
+        UNPROTECT(save);
         v = v->next;
     }
-    fprintf(FH(context), "%s = make_vec(%d", target, count);
-    v = vecs;
-    for (Index i = 0; i < temps->size; i++) {
-        HashSymbol *temp = temps->entries[i];
-        fprintf(FH(context), ", ");
-        if (temp == placeHolder) { // was atomic
-            emitAtomic(v->exp, context);
-        } else {
-            fprintf(FH(context), "%s", temp->name);
-            releaseSymbol(temp, context);
-        }
-        v = v->next;
+    for (Index i = 0; i < results->size; i++) {
+        releaseTemp(results->entries[i], context);
+    }
+    HashSymbol *target = claimTemp(context, __LINE__);
+    fprintf(FH(context), "%s = make_vec(%d", target->name, count);
+    for (Index i = 0; i < results->size; i++) {
+        EmitResult *result = results->entries[i];
+        fprintf(FH(context), ", %s", emitResultText(result));
     }
     fprintf(FH(context), ");\n");
+    EmitResult *result = newEmitResult_Var(target);
     UNPROTECT(save);
+    return result;
 }
 
 ///////////////////////////
 // Visitor implementations
 ///////////////////////////
 
-static void emitMinLam(MinLam *node, EmitContext *context) {
+static void emitMinLam(MinLam *node, EmitterContext *context) {
     context->currentDepth = 0; // reset
     // emitSymbolList(node->args, context);
     if (node->exp != NULL) {
-        enterScope(context);
         emitMinExp(node->exp, context);
-        leaveScope(context);
     }
 }
 
-static void emitMinAnnotatedVar(MinAnnotatedVar *node, EmitContext *context) {
+static void emitMinAnnotatedVar(MinAnnotatedVar *node,
+                                EmitterContext *context) {
     fprintf(FH(context), "reg[%d] /* %s */", node->position, node->var->name);
 }
 
-static void emitMinExprList(MinExprList *node, EmitContext *context) {
+static void emitMinExprList(MinExprList *node, EmitterContext *context) {
     if (node == NULL)
         return;
     emitMinExp(node->exp, context);
     emitMinExprList(node->next, context);
+}
+
+static void emitBuiltinApply(MinApply *node, EmitterContext *context) {
+    fprintf(FH(context), "// built-in\n");
+    for (Index i = 0; i < context->builtIns->size; i++) {
+        BuiltIn *bi = context->builtIns->entries[i];
+        if (bi->internalName == getMinExp_Var(node->function)) {
+            int numArgs = countBuiltInArgs(bi->args);
+            MinExprList *builtinArgs = takeMinExprList(node->args, numArgs);
+            int save = PROTECT(builtinArgs);
+            MinExprList *myArgs =
+                dropMinExprList(node->args, numArgs); // no need to protect
+            EmitResult *vec = emitMakeVec(builtinArgs, context);
+            PROTECT(vec);
+            fprintf(FH(context), "extern Value %s(Vec *);\n",
+                    bi->linkerName->name);
+            releaseTemp(vec, context);
+            HashSymbol *result = claimTemp(context, __LINE__);
+            fprintf(FH(context), "%s = %s(getValue_Vec(%s));\n", result->name,
+                    bi->linkerName->name, emitResultText(vec));
+            EmitResult *closure = emitSimpleExp(myArgs->exp, context);
+            PROTECT(closure);
+            HashSymbol *target = claimTemp(context, __LINE__);
+            fprintf(FH(context), "%s = vec(value_Stdint(0), %s);\n",
+                    target->name, emitResultText(closure));
+            releaseTemp(closure, context);
+            HashSymbol *env = claimTemp(context, __LINE__);
+            fprintf(FH(context), "%s = vec(value_Stdint(1), %s);\n", env->name,
+                    emitResultText(closure));
+            myArgs = myArgs->next;
+            EmitResult *fail = emitSimpleExp(myArgs->exp, context);
+            PROTECT(fail);
+            fprintf(FH(context), "reg[0] = %s; // env\n", env->name);
+            fprintf(FH(context), "reg[1] = %s; // result\n", result->name);
+            fprintf(FH(context), "reg[2] = %s; //fail\n", emitResultText(fail));
+            fprintf(FH(context), "goto *getValue_Addr(%s); // target\n",
+                    target->name);
+            releaseTemp(fail, context);
+            releaseTempSymbol(env, context);
+            releaseTempSymbol(result, context);
+            releaseTempSymbol(target, context);
+            UNPROTECT(save);
+            return;
+        }
+    }
+    cant_happen("could not find builtin %s",
+                getMinExp_Var(node->function)->name);
 }
 
 // all apply are apply-closure
@@ -501,116 +559,74 @@ static void emitMinExprList(MinExprList *node, EmitContext *context) {
 //  reg[1] = result;    // callee's param 1: the answer (5)
 //  reg[2] = fail;      // callee's param 2: fail cont
 //  goto *target;       // jump to k's code
-static void emitMinApply(MinApply *node, EmitContext *context) {
+static void emitMinApply(MinApply *node, EmitterContext *context) {
     if (node->isBuiltin) {
-        fprintf(FH(context), "// built-in\n");
-        for (Index i = 0; i < context->builtIns->size; i++) {
-            BuiltIn *bi = context->builtIns->entries[i];
-            if (bi->internalName == getMinExp_Var(node->function)) {
-                MinExprList *myArgs = node->args;
-                for (Index i = 0; i < bi->args->size; i++) {
-                    char buffer[32];
-                    sprintf(buffer, "arg%d", i);
-                    fprintf(FH(context), "Value %s;\n", buffer);
-                    emitSimpleExp(myArgs->exp, buffer, context);
-                    myArgs = myArgs->next;
-                }
-                fprintf(FH(context), "Value args = make_vec(%d",
-                        bi->args->size);
-                for (Index i = 0; i < bi->args->size; i++) {
-                    char buffer[32];
-                    sprintf(buffer, "arg%d", i);
-                    fprintf(FH(context), ", %s", buffer);
-                }
-                fprintf(FH(context), ");\n");
-                fprintf(FH(context), "extern Value %s(Vec *);\n",
-                        bi->linkerName->name);
-                fprintf(FH(context), "Value result = %s(args.val.vec);\n",
-                        bi->linkerName->name);
-                fprintf(FH(context), "Value closure;\n");
-                emitSimpleExp(myArgs->exp, "closure", context);
-                fprintf(
-                    FH(context),
-                    "void *target = vec(value_Stdint(0), closure).val.none;\n");
-                fprintf(FH(context),
-                        "Value env = vec(value_Stdint(1), closure);\n");
-                myArgs = myArgs->next;
-                fprintf(FH(context), "Value fail;\n");
-                emitSimpleExp(myArgs->exp, "fail", context);
-                fprintf(FH(context), "reg[0] = env;\n");
-                fprintf(FH(context), "reg[1] = result;\n");
-                fprintf(FH(context), "reg[2] = fail;\n");
-                fprintf(FH(context), "goto *target;\n");
-
-                return;
-            }
-        }
-        cant_happen("could not find builtin %s",
-                    getMinExp_Var(node->function)->name);
+        emitBuiltinApply(node, context);
+        return;
     }
-    if (isAtomic(node->function)) {
-        fprintf(FH(context), "void *target = vec(value_Stdint(0), \n");
-        emitAtomic(node->function, context);
-        fprintf(FH(context), ").val.none;\n");
-        fprintf(FH(context), "Value env = vec(value_Stdint(1), ");
-        emitAtomic(node->function, context);
-        fprintf(FH(context), ");\n");
-    } else {
-        fprintf(FH(context), "Value closure;\n");
-        emitSimpleExp(node->function, "closure", context);
-        fprintf(FH(context),
-                "void *target = vec(value_Stdint(0), closure).val.none;\n");
-        fprintf(FH(context), "Value env = vec(value_Stdint(1), closure);\n");
-    }
+    EmitResult *function = emitArg(node->function, context);
+    int save = PROTECT(function);
+    HashSymbol *target = claimTemp(context, __LINE__);
+    fprintf(FH(context), "%s = vec(value_Stdint(0), %s); // target\n",
+            target->name, emitResultText(function));
+    // deliberate early release allows for behaviour like
+    // tmp_1 = vec(..., tmp_1);
+    releaseTemp(function, context);
+    HashSymbol *env = claimTemp(context, __LINE__);
+    fprintf(FH(context), "%s = vec(value_Stdint(1), %s); // env\n", env->name,
+            emitResultText(function));
     MinExprList *args = node->args;
-    int i = 1;
+    ResultArray *results = newResultArray();
+    PROTECT(results);
     while (args != NULL) {
-        char arg[32];
-        sprintf(arg, "arg%d", i);
-        fprintf(FH(context), "Value %s;\n", arg);
-        emitSimpleExp(args->exp, arg, context);
+        EmitResult *result = emitSimpleExp(args->exp, context);
+        int save2 = PROTECT(result);
+        pushResultArray(results, result);
+        UNPROTECT(save2);
         args = args->next;
-        i++;
     }
-    fprintf(FH(context), "reg[0] = env;\n");
-    int j = 1;
-    while (j < i) {
-        fprintf(FH(context), "reg[%d] = arg%d;\n", j, j);
-        j++;
+    for (Index i = 0; i < results->size; i++) {
+        releaseTemp(results->entries[i], context);
     }
-    fprintf(FH(context), "goto *target;\n\n");
+
+    fprintf(FH(context), "reg[0] = %s;\n", env->name);
+    for (Index i = 0; i < results->size; i++) {
+        fprintf(FH(context), "reg[%d] = %s;\n", i + 1,
+                emitResultText(results->entries[i]));
+    }
+    fprintf(FH(context), "goto *getValue_Addr(%s);\n", target->name);
+    releaseTempSymbol(env, context);
+    releaseTempSymbol(target, context);
+    UNPROTECT(save);
 }
 
-static void emitMinIff(MinIff *node, EmitContext *context) {
-    enterScope(context);
-    fprintf(FH(context), "    Value test;\n");
-    emitSimpleExp(node->condition, "test", context);
-    fprintf(FH(context), "    if (isTrue(test))");
-    enterScope(context);
+static void emitMinIff(MinIff *node, EmitterContext *context) {
+    EmitResult *test = emitSimpleExp(node->condition, context);
+    int save = PROTECT(test);
+    fprintf(FH(context), "    if (isTrue(%s)) {\n", emitResultText(test));
+    releaseTemp(test, context);
+    UNPROTECT(save);
     emitMinExp(node->consequent, context);
-    leaveScope(context);
-    fprintf(FH(context), " else ");
-    enterScope(context);
+    fprintf(FH(context), "} else {\n");
     emitMinExp(node->alternative, context);
-    leaveScope(context);
-    leaveScope(context);
+    fprintf(FH(context), "}\n");
 }
 
-static void emitMinCond(MinCond *node, EmitContext *context) {
-    enterScope(context);
-    fprintf(FH(context), "Value cond;\n");
-    emitSimpleExp(node->value, "cond", context);
+static void emitMinCond(MinCond *node, EmitterContext *context) {
+    EmitResult *cond = emitSimpleExp(node->value, context);
     if (node->cases->type == MINCONDCASES_TYPE_INTEGERS) {
-        fprintf(FH(context), "switch(cond.val.stdint) {\n");
+        fprintf(FH(context), "switch(getValue_Stdint(%s)) {\n",
+                emitResultText(cond));
     } else {
-        fprintf(FH(context), "switch(cond.val.character) {\n");
+        fprintf(FH(context), "switch(getValue_Character(%s)) {\n",
+                emitResultText(cond));
     }
+    releaseTemp(cond, context);
     emitMinCondCases(node->cases, context);
     fprintf(FH(context), "}\n");
-    leaveScope(context);
 }
 
-static void emitMinCondCases(MinCondCases *node, EmitContext *context) {
+static void emitMinCondCases(MinCondCases *node, EmitterContext *context) {
     switch (node->type) {
     case MINCONDCASES_TYPE_INTEGERS: {
         MinIntCondCases *variant = getMinCondCases_Integers(node);
@@ -627,7 +643,8 @@ static void emitMinCondCases(MinCondCases *node, EmitContext *context) {
     }
 }
 
-static void emitMinIntCondCases(MinIntCondCases *node, EmitContext *context) {
+static void emitMinIntCondCases(MinIntCondCases *node,
+                                EmitterContext *context) {
     if (node == NULL) {
         return;
     }
@@ -638,14 +655,13 @@ static void emitMinIntCondCases(MinIntCondCases *node, EmitContext *context) {
         fprintMaybeBigInt(FH(context), node->constant);
         fprintf(FH(context), ": \n");
     }
-    enterScope(context);
     emitMinExp(node->body, context);
     fprintf(FH(context), "break;\n");
-    leaveScope(context);
     emitMinIntCondCases(node->next, context);
 }
 
-static void emitMinCharCondCases(MinCharCondCases *node, EmitContext *context) {
+static void emitMinCharCondCases(MinCharCondCases *node,
+                                 EmitterContext *context) {
     if (node == NULL) {
         fprintf(FH(context), "default:\n");
         fprintf(FH(context), "fprintf(stderr, \"conditions exhausted\\n\");\n");
@@ -653,24 +669,23 @@ static void emitMinCharCondCases(MinCharCondCases *node, EmitContext *context) {
         return;
     }
     fprintf(FH(context), "case %d: \n", (int)(node->constant));
-    enterScope(context);
     emitMinExp(node->body, context);
     fprintf(FH(context), "break;\n");
-    leaveScope(context);
     emitMinCharCondCases(node->next, context);
 }
 
-static void emitMinMatch(MinMatch *node, EmitContext *context) {
-    enterScope(context);
-    fprintf(FH(context), "Value match;\n");
-    emitSimpleExp(node->index, "match", context);
-    fprintf(FH(context), "switch (match.val.stdint) {\n");
+static void emitMinMatch(MinMatch *node, EmitterContext *context) {
+    EmitResult *match = emitSimpleExp(node->index, context);
+    int save = PROTECT(match);
+    fprintf(FH(context), "switch (getValue_Stdint(%s)) {\n",
+            emitResultText(match));
+    releaseTemp(match, context);
+    UNPROTECT(save);
     emitMinMatchList(node->cases, context);
     fprintf(FH(context), "}\n");
-    leaveScope(context);
 }
 
-static void emitMinMatchList(MinMatchList *node, EmitContext *context) {
+static void emitMinMatchList(MinMatchList *node, EmitterContext *context) {
     if (node == NULL)
         return;
     MinIntList *match = node->matches;
@@ -679,35 +694,35 @@ static void emitMinMatchList(MinMatchList *node, EmitContext *context) {
         match = match->next;
     }
 
-    enterScope(context);
     emitMinExp(node->body, context);
     fprintf(FH(context), "break;\n");
-    leaveScope(context);
     emitMinMatchList(node->next, context);
 }
 
-static void emitMinLetRec(MinLetRec *node, EmitContext *context) {
+static void emitMinLetRec(MinLetRec *node, EmitterContext *context) {
     emitMinBindings(node->bindings, context);
     emitMinExp(node->body, context);
 }
 
 static void emitMakeClosure(MinExprList *exprs, HashSymbol *var,
-                            EmitContext *context) {
+                            EmitterContext *context) {
     FILE *out = FH(context);
     SCharArray *label = makeLambdaLabel(var);
-    HashSymbol *tmp = genSym("tmp_");
-    fprintf(out, "Value %s;\n", tmp->name);
-    emitMakeVec(exprs, tmp->name, context);
+    int save = PROTECT(label);
+    EmitResult *tmp = emitMakeVec(exprs, context);
+    PROTECT(tmp);
     fprintf(out, "reg[%d] = make_vec(2, value_Addr(&&%s), %s);\n",
-            context->currentDepth, label->entries, tmp->name);
+            context->currentDepth, label->entries, emitResultText(tmp));
+    releaseTemp(tmp, context);
+    UNPROTECT(save);
 }
 
-static void emitMinBindings(MinBindings *node, EmitContext *context) {
+static void emitMinBindings(MinBindings *node, EmitterContext *context) {
     if (node == NULL)
         return;
     Opaque *body = newOpaque_EmitBuffer();
     int save = PROTECT(body);
-    EmitContext *lamContext = copyContext(context, body);
+    EmitterContext *lamContext = copyContext(context, body);
     REPLACE_PROTECT(save, lamContext);
     setBufferBag(context->lambdas, node->var, body);
     setIntMap(context->indexes, node->var, context->currentDepth);
@@ -721,7 +736,7 @@ static void emitMinBindings(MinBindings *node, EmitContext *context) {
     emitMinBindings(node->next, context);
 }
 
-static void emitMinExp(MinExp *node, EmitContext *context) {
+static void emitMinExp(MinExp *node, EmitterContext *context) {
     switch (node->type) {
     case MINEXP_TYPE_APPLY: {
         MinApply *variant = getMinExp_Apply(node);
@@ -773,8 +788,6 @@ static void emitMinExp(MinExp *node, EmitContext *context) {
         break;
     }
     case MINEXP_TYPE_MAKEVEC: {
-        // MinExprList *variant = getMinExp_MakeVec(node);
-        // emitMakeVec(variant, context);
         cant_happen("non-simple makevec");
         break;
     }
@@ -784,7 +797,6 @@ static void emitMinExp(MinExp *node, EmitContext *context) {
         break;
     }
     case MINEXP_TYPE_PRIM: {
-        // emitSimpleExp(node, context);
         cant_happen("non-simple prim");
         break;
     }
@@ -809,7 +821,7 @@ static void emitMinExp(MinExp *node, EmitContext *context) {
 void emitProgram(MinExp *node, BuiltIns *builtIns, FILE *out) {
     Opaque *body = newOpaque_EmitBuffer();
     int save = PROTECT(body);
-    EmitContext *context = newEmitContext(body, builtIns, NULL);
+    EmitterContext *context = newEmitterContext(body, builtIns);
     REPLACE_PROTECT(save, context);
     fprintf(out, "#include <stdarg.h>\n");
     fprintf(out, "#include \"cekfs.h\"\n");
@@ -817,10 +829,12 @@ void emitProgram(MinExp *node, BuiltIns *builtIns, FILE *out) {
     fprintf(out, "#include \"common.h\"\n");
     fprintf(out, "#include \"types.h\"\n");
     fprintf(out, "static inline bool isTrue(Value v) {\n");
-    fprintf(out, "    return v.val.stdint != 0;");
+    fprintf(out, "    return getValue_Stdint(v) != 0;");
     fprintf(out, "}\n");
     fprintf(out, "static inline Value vec(Value index, Value array) {\n");
-    fprintf(out, "    return array.val.vec->entries[index.val.stdint];\n");
+    fprintf(
+        out,
+        "    return getValue_Vec(array)->entries[getValue_Stdint(index)];\n");
     fprintf(out, "}\n");
     fprintf(out, "static inline Value eq(Value v1, Value v2) {\n");
     fprintf(out, "    return value_Stdint(eqValue(v1, v2));\n");
@@ -842,19 +856,25 @@ void emitProgram(MinExp *node, BuiltIns *builtIns, FILE *out) {
     fprintf(out, "    return value_Vec(v);\n");
     fprintf(out, "}\n");
     fprintf(out, "\n");
-    fprintf(out, "int main(int argc, char *argv[]) {");
-    enterScope(context);
+    fprintf(out, "int main(void) {");
     emitMinExp(node, context);
-    leaveScope(context);
     fprintf(out, "Value reg[%d];\n", context->maxReg);
-    Opaque *buf = NULL;
     Index i = 0;
     HashSymbol *label = NULL;
+    while ((label = iterateBoolMap(context->symbols, &i, NULL))) {
+        int i = 0;
+        getIntMap(context->lines, label, &i);
+        fprintf(out, "Value %s; // %d\n", label->name, i);
+    }
+    fprintf(out, "goto ENTRY;\n");
+    Opaque *buf = NULL;
+    i = 0;
     while ((label = iterateBufferBag(context->lambdas, &i, &buf)) != NULL) {
         SCharArray *l = makeLambdaLabel(label);
         fprintf(out, "%s:\n", l->entries);
         fprintf(out, "%s\n", opaqueEmitBufferContent(buf));
     }
+    fprintf(out, "\nENTRY:\n");
     fprintf(out, "%s\n", opaqueEmitBufferContent(context->body));
     fprintf(out, "}\n");
 }

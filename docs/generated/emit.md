@@ -4,15 +4,18 @@ Code emission utilities
 
 ```mermaid
 flowchart LR
-EmitContext --lambdas--> BufferBag
-EmitContext --indexes--> IntMap
-EmitContext --body--> opaque
-EmitContext --builtIns--> BuiltIns
-EmitContext --symbols--> SymbolStash
-EmitContext --maxReg--> int
-EmitContext --currentDepth--> int
-SymbolStash --array--> SymbolArray
-SymbolStash --parent--> SymbolStash
+BufferBag --entries--> opaque
+EmitterContext --lambdas--> BufferBag
+EmitterContext --indexes--> IntMap
+EmitterContext --body--> opaque
+EmitterContext --builtIns--> BuiltIns
+EmitterContext --symbols--> BoolMap
+EmitterContext --lines--> IntMap
+EmitterContext --maxReg--> int
+EmitterContext --currentDepth--> int
+EmitResult --var--> HashSymbol
+EmitResult --buf--> opaque
+ResultArray["ResultArray[]"] --entries--> EmitResult
 ```
 
 > Generated from src/emit.yaml by tools/generate.py

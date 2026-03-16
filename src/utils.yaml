@@ -69,9 +69,9 @@ hashes:
         data:
             entries: HashSymbol
 
-    BufferBag:
+    BoolMap:
         data:
-            entries: opaque
+            entries: bool
 
 arrays:
     StringArray:

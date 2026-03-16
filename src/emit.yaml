@@ -27,7 +27,7 @@ config:
       - builtins_debug.h
 
 structs:
-    EmitContext:
+    EmitterContext:
         meta:
             brief: VisitorContext for emitMinExp
         data:
@@ -35,18 +35,31 @@ structs:
             indexes: IntMap
             body: opaque
             builtIns: BuiltIns
-            symbols: SymbolStash
+            symbols: BoolMap
+            lines: IntMap
             maxReg: int=0
             currentDepth: int=0
 
-    SymbolStash:
+unions:
+    EmitResult:
         meta:
-            brief: Tracks symbols still in scope but not active (re-usable)
+            description: >
+                Either a hash symbol representing a temp variable, or an Opaque EmitBuffer containing an immediate expression.
         data:
-            array: SymbolArray
-            parent: SymbolStash
+            var: HashSymbol
+            buf: opaque
+
+hashes:
+    BufferBag:
+        data:
+            entries: opaque
 
 primitives: !include primitives.yaml
+
+arrays:
+    ResultArray:
+        data:
+            entries: EmitResult
 
 external:
   - !include utils.yaml

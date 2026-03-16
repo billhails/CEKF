@@ -124,6 +124,8 @@ __attribute__((unused)) static const char *typeName(ObjType type) {
         return typenameUtilsObj(type);
         TERM_OBJTYPE_CASES()
         return typenameTermObj(type);
+        EMIT_OBJTYPE_CASES()
+        return typenameEmitObj(type);
     default: {
         static char buf[64];
         snprintf(buf, sizeof(buf), "%d", type);
@@ -406,6 +408,9 @@ void markObj(Header *h, Index i) {
         TERM_OBJTYPE_CASES()
         markTermObj(h);
         break;
+        EMIT_OBJTYPE_CASES()
+        markEmitObj(h);
+        break;
     default:
         cant_happen("unrecognised ObjType %d in markObj at [%d]", h->type, i);
     }
@@ -477,6 +482,9 @@ void freeObj(Header *h) {
         break;
         TERM_OBJTYPE_CASES()
         freeTermObj(h);
+        break;
+        EMIT_OBJTYPE_CASES()
+        freeEmitObj(h);
         break;
     default:
         cant_happen("unrecognised ObjType %d in freeObj at %p", h->type,

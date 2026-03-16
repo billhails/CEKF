@@ -132,12 +132,19 @@ ALL_DEP=$(DEP) $(EXTRA_DEP) $(TEST_DEP) $(MAIN_DEP) $(PREAMBLE_DEP)
 
 INCLUDE_PATHS=-I $(GENDIR)/ -I $(SRCDIR)/
 
+COMPILE_TARGET=junk/junk.c
+
 all: $(TARGET) docs
 
 $(TARGET): $(MAIN_OBJ) $(ALL_OBJ) | $(BINDIR)
 	$(CC) -o $@ $(MAIN_OBJ) $(ALL_OBJ) $(LIBS)
 
 docs: $(EXTRA_DOCS)
+
+compile_test: all
+	$(TARGET) fn/one.fn > $(COMPILE_TARGET)
+	indent $(COMPILE_TARGET)
+	$(CC) $(INCLUDE_PATHS) $(COMPILE_TARGET)
 
 EXTRA_TYPES=bigint_word \
 BigInt \

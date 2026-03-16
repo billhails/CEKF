@@ -325,3 +325,260 @@ hashes:
 
 primitives: !include primitives.yaml
 ```
+
+## Temporary Variables
+
+After the initial implementation attempt, one problem that becomes very apparent
+is the huge proliferation of temporary variables. These are the results of holding
+intermediate results of primitive operations. We mitigate that to an extent by
+categorizing primitive operations as atomic or non-atomic, where atomic operations
+do not require memory allocation and the operation can be directly substituted for
+the variable use. However there are still many many temps created.
+
+Instead of creating temps on the fly, it is envisaged
+that an initially empty pool is created. At the end
+of processing, all temps in that pool are declared at
+the top-level of `main()`.
+
+Let's look at a hypothetical tree of primitive operations and try to analyse the
+minimum number of temps that would be needed to perform the operations.
+
+```mermaid
+flowchart TD
+op0([start]) --tmp0--> op1
+
+op1 --tmp0--> op2
+op1 --tmp1--> op3
+op1 --tmp2--> op4
+
+op2 --tmp0--> op5
+op2 --tmp1--> op6
+
+op3 --tmp1--> op7
+op3 --tmp2--> op8
+
+op4 --tmp2--> op9
+```
+
+* When `start` requests a temp it gets `tmp0`.
+* When `op1` requests a temp it also gets `tmp0`.
+* When `op1` requests a second temp it gets `tmp1`.
+
+That might be the insight, temps are claimed by assignment **to**, and released by assignment **from**.
+
+Assuming depth first left to right RPN, the sequence is:
+
+| STEP | TEMPS IN USE |
+| --- | --- |
+| `op5` claims `tmp0` | `tmp0` |
+| `op6` claims `tmp1` | `tmp0`, `tmp1` |
+| `op2` releases `tmp0` and `tmp1`; claims `tmp0` | `tmp0` |
+| `op7` claims `tmp1` | `tmp0`, `tmp1` |
+| `op8` claims `tmp2` | `tmp0`, `tmp1`, `tmp2` |
+| `op3` releases `tmp1` and `tmp2`; claims `tmp1` | `tmp0`, `tmp1` |
+| `op9` claims `tmp2` | `tmp0`, `tmp1`, `tmp2` |
+| `op4` releases `tmp2`, claims `tmp2` | `tmp0`, `tmp1`, `tmp2` |
+| `op1` releases `tmp0`, `tmp1` and `tmp2`; claims `tmp0` | `tmp0` |
+
+The current pattern is something like:
+
+```c
+// foreach arg expr
+  if (!isAtomic(expr)) {
+    HashSymbol target = genSym("tmp_");
+    emit("Value %s;", target);
+    emitSimpleExpr(expr, target); // emits the assignment to target
+  }
+// end foreach
+emit("%s(", op);
+// foreach arg expr
+  if (isAtomic(expr)) {
+    emitAtomic(expr); // perform operation in-place
+  } else {
+    emit("%s", target)
+  }
+// end foreach
+emit(")");
+```
+
+So the complication is that the `emitSimpleExpr` is recursive, and the current pattern requires that the temp target is declared up-front.
+
+Rather than accepting an ordained target (which has been claimed too
+early), we should instead return the target. This is probably going to
+be an `Opaque` wrapper around an `EmitBuffer` rather than a `char*`,
+simply because it's more convenient for fprintf etc.  The "target" then
+becomes either a temp variable name or an atomic expression.  Either way
+it is slotted in to the argument list of the containing expression.
+
+### Problem - right-associative operators
+
+Arrays are lists and the cons operator is right-associative.
+That means to build an array of non-atomic elements requires as many temps as there are elements.
+
+```mermaid
+flowchart TD
+op0([start]) --tmp0--> op1
+
+op1 --tmp0--> op2
+op1 --tmp1--> op3
+
+op3 --tmp1--> op4
+op3 --tmp2--> op5
+
+op5 --tmp2--> op6
+op5 --tmp3--> op7
+```
+
+Thankfully this is not true for strings, since chars are atomic they do not require
+temps:
+
+```mermaid
+flowchart TD
+op0([start]) --tmp0--> op1
+
+op1 --> char1
+op1 --tmp0--> op2
+
+op2 --> char2
+op2 --tmp0--> op3
+
+op3 --> char3
+op3 --tmp0--> op4
+```
+
+But returning to arrays in general, if we traverse right to left, we only need two temps:
+
+```mermaid
+flowchart TD
+op0([start]) --tmp0--> op1
+
+op1 --tmp1--> op2
+op1 --tmp0--> op3
+
+op3 --tmp1--> op4
+op3 --tmp0--> op5
+
+op5 --tmp1--> op6
+op5 --tmp0--> op7
+```
+
+It might be adequate to traverse all make-vec right to left for the common case of
+arrays, but the smarter approach would be to choose the longer path first. This might not
+be too inneficient if we compare lengths in tandem and stop when the shorter path expires,
+choosing the longer one.
+
+Of course this will need to generalise to vecs of any width.
+
+## Outstanding Issues
+
+### Memory Management
+
+We've completely ignored issues of protecting intermediate values from
+being garbage collected. It would be relatively simple to add a `markReg`
+to iterate over the registers, but protecting, and the more difficult
+unprotecting of temps is not addressed.
+
+I'm wondering if it might not be easier to re-purpose the current temps
+system to instead use the free registers above the current call frame.
+
+We keep the concept of `claimTemp()` and `releaseTemp()`, but each lambda
+starts with a fresh empty register set. That means the `copyContext()`
+for lambdas gets a fresh symbols hash, or whatever the replacement is.
+Let's write a replacement from scratch rather than rewriting the exiting
+one, using new `claimSlot()` and `releaseSlot()` functions.  The lambda
+first makes cals to `claimSlot()` for as many slots as it needs to
+perform its `goto`, then additional `claimSlot()` and `releaseSlot()`
+calls to get temporary registers.
+
+The context `maxDepth` (already reset to zero on entry to a lambda)
+can be the source of fresh slots.
+
+The `claimSlot()` function would do pretty much the same thing that
+`claimTemp()` does, except the `BoolMap` would be replaced with a
+`SlotMap`, where `Slot` is a struct:
+
+```yaml
+structs:
+  Slot:
+    meta:
+      description: Represents a register allocation
+    data:
+      isAvailable: bool
+      text: SCharArray
+```
+
+```c
+static HashSymbol *claimSlot(EmitterContext *context) {
+    HashSymbol *result = NULL;
+    Slot *slot = NULL;
+    Index i = 0;
+    while ((result = iterateSlotMap(context->slots, &i, &slot)) != NULL) {
+        if (slot->isAvailable) {
+            slot->isAvailable = false;
+            return result;
+        }
+    }
+    result = genSym("tmp_");
+    SCharArray *text = newSCharArray():
+    int save = PROTECT(text);
+    char buf[64];
+    sprintf(buf, "reg[%d]", context->currentDepth);
+    incrDepth(context);
+    for (char *c = buf; *c; c++) {
+      pushSCharArray(text, *c);
+    }
+    pushSCharArray(text, '\0');
+    slot = newSlot(false, text);
+    PROTECT(slot);
+    setSlotMap(context->slots, result, slot);
+    UNPROTECT(save);
+    return result;
+}
+```
+
+`releaseSlot()` and `releaseSlotSymbol()` are also similar:
+
+```c
+static void releaseSlotSymbol(HashSymbol *temp, EmitterContext *context) {
+    Slot *slot = NULL;
+    if (getSlotMap(context->slots, temp, &slot)) {
+      slot->isAvailable = true;
+    } else {
+      cant_happen("slot not found");
+    }
+}
+
+static void releaseSlot(EmitResult *result, EmitterContext *context) {
+    if (isEmitResult_Buf(result))
+        return;
+    releaseSlotSymbol(getEmitResult_Var(result), context);
+}
+```
+
+but we'll need an additional `getSlot()` for the slot:
+
+```c
+static Slot getSlot(HashSymbol *temp, EmitterContext *context) {
+    Slot *slot = NULL;
+    if (getSlotMap(context->slots, temp, &slot)) {
+      return slot;
+    } else {
+      cant_happen("slot not found");
+    }
+}
+```
+
+and `emitResultText()` would need to take an additional context:
+
+```c
+static char *emitResultText(EmitResult *data, EmitterContext *context) {
+    switch (data->type) {
+    case EMITRESULT_TYPE_BUF:
+        return opaqueEmitBufferContent(getEmitResult_Buf(data));
+    case EMITRESULT_TYPE_VAR:
+        return getSlot(getEmitResult_Var(data), context)->text->entries;
+    default:
+        cant_happen("unrecognised %s", emitResultTypeName(data->type));
+    }
+}
+```

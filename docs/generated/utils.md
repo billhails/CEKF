@@ -7,7 +7,7 @@ flowchart LR
 SymbolSet --entries--> NULL
 IntMap --entries--> int
 SymbolMap --entries--> HashSymbol
-BufferBag --entries--> opaque
+BoolMap --entries--> bool
 FileId --stDev--> device
 FileId --stIno--> inode
 FileId --fileName--> SCharVec
