@@ -31,14 +31,20 @@ structs:
         meta:
             brief: VisitorContext for emitMinExp
         data:
+            currentBinding: HashSymbol
             lambdas: BufferBag
-            indexes: IntMap
             body: opaque
             builtIns: BuiltIns
-            symbols: BoolMap
-            lines: IntMap
+            slots: SlotMap
             maxReg: int=0
             currentDepth: int=0
+
+    Slot:
+        meta:
+            description: Represents a register allocation
+        data:
+            isAvailable: bool
+            text: SCharArray
 
 unions:
     EmitResult:
@@ -53,6 +59,10 @@ hashes:
     BufferBag:
         data:
             entries: opaque
+
+    SlotMap:
+        data:
+            entries: Slot
 
 primitives: !include primitives.yaml
 

@@ -5,14 +5,16 @@ Code emission utilities
 ```mermaid
 flowchart LR
 BufferBag --entries--> opaque
+SlotMap --entries--> Slot
+EmitterContext --currentBinding--> HashSymbol
 EmitterContext --lambdas--> BufferBag
-EmitterContext --indexes--> IntMap
 EmitterContext --body--> opaque
 EmitterContext --builtIns--> BuiltIns
-EmitterContext --symbols--> BoolMap
-EmitterContext --lines--> IntMap
+EmitterContext --slots--> SlotMap
 EmitterContext --maxReg--> int
 EmitterContext --currentDepth--> int
+Slot --isAvailable--> bool
+Slot --text--> SCharArray
 EmitResult --var--> HashSymbol
 EmitResult --buf--> opaque
 ResultArray["ResultArray[]"] --entries--> EmitResult

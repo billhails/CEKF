@@ -19,10 +19,6 @@ import list operator "len_";
 // That can work if we keep an additional IntMap from fv to index, and sort
 // by that when creating the make_vec env.
 // apply closure is just `(λ (vec . args) (apply (VEC 0 vec) (cons (VEC 1 vec) args)))`
-// How to optimize that?
-// minApplyClosure(vec, args) |-->
-//     newMinApply(newMinPrimApp(MINPRIMOP_TYPE_VEC, 0, vec),
-//                 newMinExprList(newMinPrimApp(MINPRIMOP_TYPE_VEC, 1, vec), args))
 fn closure_convert {
     (exp=M.lambda(params, body)) {
         let
@@ -33,7 +29,7 @@ fn closure_convert {
             senv = GS.genstring("$env");
             sparams = senv @ params;
             fv = FV.free(exp);
-            locations = 0::((len fv) - 1);
+            locations = 0::((len fv) - 1)♮;
             locmap = DICT.make(fv, locations);
             venv = fv |> fn (v) { #(v, M.var(v)) };
             sub = DICT.make(fv, fv |> fn (v) {

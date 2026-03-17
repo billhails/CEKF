@@ -490,8 +490,7 @@ first makes cals to `claimSlot()` for as many slots as it needs to
 perform its `goto`, then additional `claimSlot()` and `releaseSlot()`
 calls to get temporary registers.
 
-The context `maxDepth` (already reset to zero on entry to a lambda)
-can be the source of fresh slots.
+The context `currentDepth` can be the source of fresh slots.
 
 The `claimSlot()` function would do pretty much the same thing that
 `claimTemp()` does, except the `BoolMap` would be replaced with a
@@ -582,3 +581,24 @@ static char *emitResultText(EmitResult *data, EmitterContext *context) {
     }
 }
 ```
+
+So far so good. We need a rule for each of `apply`, `letrec` and `lambda` to co-ordinate
+the value of that `currentDepth` context field.
+
+If a `letrec` occurs within a `lambda` it must claim slots after the arguments to the lambda.
+So on entry to the body of a `lambda`, `currentDepth` should be set to the length of the
+lambda arguments.
+
+Back-patching the closure environments is a separate step that iterates over the (literal `reg[%d]`) slots
+that were claimed by the `letrec` first pass. Since `currentDepth` by this stage is already above
+the last `letrec` slot, any temporary slots claimed during back-patching are safely out of the way.
+
+The body of the letrec is evaluated in the same context, with any lambda arguments and letrec slots
+already below `currentDepth`.
+
+`apply` can calculate its arguments in the normal way with the same context, but must literally (`reg[%d]`)
+poke slots `0` - `n` for the arguments to the continuation before the final `goto`.
+
+The top-level `letrec` has no enclosing `lambda` so it starts naturally with a `currentDepth` of `0`.
+
+With this in mind we should first refactor to ensure each of these behaviours are cleanly encapsulated.
