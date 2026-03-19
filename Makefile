@@ -142,7 +142,7 @@ $(TARGET): $(MAIN_OBJ) $(ALL_OBJ) | $(BINDIR)
 docs: $(EXTRA_DOCS)
 
 compile_test: all
-	$(TARGET) fn/fib35.fn > $(COMPILE_TARGET)
+	$(TARGET) fn/wonderful-life.fn > $(COMPILE_TARGET)
 	indent $(COMPILE_TARGET)
 	$(LAXCC) $(INCLUDE_PATHS) $(TRACE_FLAGS) -c $(COMPILE_TARGET) -o $(OBJDIR)/junk.o
 	$(LAXCC) -o junk/junk $(OBJDIR)/junk.o $(ALL_OBJ) $(LIBS)
@@ -150,6 +150,26 @@ compile_test: all
 
 generate_test: all
 	$(TARGET) fn/one.fn > junk/junk.scm
+
+TEST_FN_DIR=tests/fn
+JUNK_DIR=junk
+TEST_FN_FILES=$(wildcard $(TEST_FN_DIR)/test_*.fn)
+TEST_FN_CFILES=$(patsubst $(TEST_FN_DIR)/%,$(JUNK_DIR)/%,$(patsubst %.fn,%.c,$(TEST_FN_FILES)))
+TEST_FN_OFILES=$(patsubst %.c,%.o,$(TEST_FN_CFILES))
+TEST_FN_BINARIES=$(patsubst %.o,%,$(TEST_FN_OFILES))
+
+$(TEST_FN_CFILES): $(JUNK_DIR)/%.c: $(TEST_FN_DIR)/%.fn $(TARGET)
+	$(TARGET) --include=fn $<  > $@~ && mv $@~ $@
+	indent $@
+
+$(TEST_FN_OFILES): %.o: %.c
+	$(LAXCC) $(INCLUDE_PATHS) -c $< -o $@
+
+$(TEST_FN_BINARIES): %: %.o $(ALL_OBJ)
+	$(LAXCC) -o $@ $< $(ALL_OBJ) $(LIBS)
+
+test-binary: all $(TEST_FN_BINARIES)
+	for t in $(TEST_FN_BINARIES) ; do echo $$t ; $$t || exit 1 ; done
 
 EXTRA_TYPES=bigint_word \
 BigInt \
@@ -299,7 +319,7 @@ realclean: clean
 	rm -rf tags xref $(UNIDIR)
 
 clean: deps
-	rm -rf $(BINDIR) $(OBJDIR) callgrind.out.* $(GENDIR) $(TEST_TARGETS) .typedefs $(SRCDIR)/*~ .generated gmon.out *.fnc core.* coverage_html coverage_report.txt gcov_output *.gcda *.gcno coverage.info coverage_filtered.info test_output.log
+	rm -rf $(BINDIR) $(OBJDIR) callgrind.out.* $(GENDIR) $(TEST_TARGETS) .typedefs $(SRCDIR)/*~ .generated gmon.out *.fnc core.* coverage_html coverage_report.txt gcov_output *.gcda *.gcno coverage.info coverage_filtered.info test_output.log $(TEST_FN_CFILES) $(TEST_FN_OFILES) $(TEST_FN_BINARIES)
 	$(MAKE) -C scratch clean
 
 deps:

@@ -26,6 +26,7 @@
 #include "symbol.h"
 #include "utils_helper.h"
 #include <ctype.h>
+#include <math.h>
 #include <sys/param.h>
 
 #ifdef DEBUG_MINLAM_EMIT
@@ -51,6 +52,7 @@ static void emitMinCondCases(MinCondCases *, EmitterContext *);
 static EmitResult *emitMakeVec(MinExprList *, EmitterContext *);
 static EmitResult *emitSimpleExp(MinExp *, EmitterContext *);
 static EmitterContext *copyContext(EmitterContext *, Opaque *);
+static void emitMaybeBigInt(MaybeBigInt *mbi, EmitterContext *context);
 
 ///////////
 // Helpers
@@ -82,6 +84,15 @@ static inline FILE *opaqueEmitBufferFh(Opaque *container) {
 
 static inline FILE *FH(EmitterContext *context) {
     return opaqueEmitBufferFh(context->body);
+}
+
+static int getPrimOpArity(MinPrimOp type) {
+    switch (type) {
+    case MINPRIMOP_TYPE_CANON:
+        return 1;
+    default:
+        return 2;
+    }
 }
 
 static char *getPrimOpName(MinPrimOp type) {
@@ -285,9 +296,7 @@ static void emitAtomic(MinExp *exp, EmitterContext *context) {
         emitMinAnnotatedVar(getMinExp_Avar(exp), context);
         break;
     case MINEXP_TYPE_BIGINTEGER:
-        fprintf(FH(context), "value_Stdint(");
-        fprintMaybeBigInt(FH(context), getMinExp_BigInteger(exp));
-        fprintf(FH(context), ")");
+        emitMaybeBigInt(getMinExp_BigInteger(exp), context);
         break;
     case MINEXP_TYPE_CHARACTER:
         fprintf(FH(context), "value_Character(%d)",
@@ -413,9 +422,15 @@ static EmitResult *emitPrimOp(MinPrimApp *app, EmitterContext *context) {
     EmitResult *result = claimSlot(context);
     PROTECT(result);
     char *opName = getPrimOpName(app->type);
-    fprintf(FH(context), "%s = %s(%s, %s);\n", emitResultText(result, context),
-            opName, emitResultText(arg1, context),
-            emitResultText(arg2, context));
+    int nargs = getPrimOpArity(app->type);
+    if (nargs == 2) {
+        fprintf(FH(context), "%s = %s(%s, %s);\n",
+                emitResultText(result, context), opName,
+                emitResultText(arg1, context), emitResultText(arg2, context));
+    } else {
+        fprintf(FH(context), "%s = %s(%s);\n", emitResultText(result, context),
+                opName, emitResultText(arg1, context));
+    }
     UNPROTECT(save);
     return result; // the temp register that the caller can refer to
 }
@@ -439,6 +454,64 @@ static EmitResult *emitAnonymousLambda(MinLam *lambda,
     EmitResult *result = newEmitResult_Buf(buf);
     UNPROTECT(save);
     return result;
+}
+
+static void emitMaybeBigInt(MaybeBigInt *mbi, EmitterContext *context) {
+    // stdint: int
+    // bigint: BigInt
+    // rational: Vec
+    // irrational: double
+    // stdint_imag: int
+    // bigint_imag: BigInt
+    // rational_imag: Vec
+    // irrational_imag: double
+    // complex: Vec
+
+    switch (mbi->type) {
+    case BI_BIG: {
+        if (mbi->imag) {
+            fprintf(FH(context), "value_Bigint_imag(");
+        } else {
+            fprintf(FH(context), "value_Bigint(");
+        }
+        bigint bi = mbi->big;
+        fprintf(FH(context), "minlam_runtime_BigInt(%d, %d, %d", bi.size,
+                bi.capacity, bi.neg);
+        for (int i = 0; i < bi.capacity; i++) {
+            fprintf(FH(context), ", %u", bi.words[i]);
+        }
+        fprintf(FH(context), "))");
+
+        break;
+    }
+    case BI_SMALL: {
+        if (mbi->imag) {
+            fprintf(FH(context), "value_Stdint_imag(%d)", mbi->small);
+        } else {
+            fprintf(FH(context), "value_Stdint(%d)", mbi->small);
+        }
+        break;
+    }
+    case BI_IRRATIONAL: {
+        if (mbi->imag) {
+            if (isnan(mbi->irrational)) {
+                fprintf(FH(context), "value_Irrational_imag(NAN)");
+            } else {
+                fprintf(FH(context), "value_Irrational_imag(%f)",
+                        mbi->irrational);
+            }
+        } else {
+            if (isnan(mbi->irrational)) {
+                fprintf(FH(context), "value_Irrational(NAN)");
+            } else {
+                fprintf(FH(context), "value_Irrational(%f)", mbi->irrational);
+            }
+        }
+        break;
+    }
+    default:
+        cant_happen("unhandled numeric type %d", mbi->type);
+    }
 }
 
 static EmitResult *emitSimpleExp(MinExp *exp, EmitterContext *context) {
@@ -470,9 +543,9 @@ static EmitResult *emitSimpleExp(MinExp *exp, EmitterContext *context) {
         MaybeBigInt *mbi = getMinExp_BigInteger(exp);
         Opaque *buf = newOpaque_EmitBuffer();
         int save = PROTECT(buf);
-        fprintf(opaqueEmitBufferFh(buf), "value_Stdint(");
-        fprintMaybeBigInt(opaqueEmitBufferFh(buf), mbi); // FIXME
-        fprintf(opaqueEmitBufferFh(buf), ")");
+        EmitterContext *biContext = copyContext(context, buf);
+        PROTECT(biContext);
+        emitMaybeBigInt(mbi, biContext);
         EmitResult *result = newEmitResult_Buf(buf);
         UNPROTECT(save);
         return result;
@@ -803,8 +876,10 @@ static void emitMinCharCondCases(MinCharCondCases *node,
                                  EmitterContext *context) {
     if (node == NULL) {
         fprintf(FH(context), "default:\n");
-        fprintf(FH(context), "fprintf(stderr, \"conditions exhausted\\n\");\n");
-        fprintf(FH(context), "exit(1);\n");
+        fprintf(FH(context),
+                "fprintf(stderr, \"conditions exhausted in %s\\n\");\n",
+                context->currentBinding->name);
+        fprintf(FH(context), "abort();\n");
         return;
     }
     fprintf(FH(context), "case %d: \n", (int)(node->constant));
@@ -925,13 +1000,14 @@ static void emitMinExp(MinExp *node, EmitterContext *context) {
         break;
     }
     case MINEXP_TYPE_AVAR: {
+        // bare variable in tail position is dead code (CPS artifact)
+        fprintf(FH(context), "// dead tail: ");
         emitMinAnnotatedVar(getMinExp_Avar(node), context);
+        fprintf(FH(context), ";\n");
         break;
     }
     case MINEXP_TYPE_BIGINTEGER: {
-        fprintf(FH(context), "value_Stdint(");
-        fprintMaybeBigInt(FH(context), getMinExp_BigInteger(node)); // FIXME
-        fprintf(FH(context), ")");
+        emitMaybeBigInt(getMinExp_BigInteger(node), context);
         break;
     }
     case MINEXP_TYPE_CHARACTER: {

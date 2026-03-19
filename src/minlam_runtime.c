@@ -41,3 +41,101 @@ void minlam_runtime_mark_reg() {
         }
     }
 }
+
+static Cmp _vecCmp(Vec *left, Vec *right) {
+    if (left == right) {
+        return CMP_EQ;
+    }
+#ifdef SAFETY_CHECKS
+    if (left == NULL || right == NULL) {
+        cant_happen("null vecs in _vecCmp(%p, %p)", left, right);
+    }
+    if (left->size != right->size) {
+        cant_happen("mismatched vec sizes in _vecCmp()");
+    }
+#endif
+    for (Index i = 0; i < left->size; ++i) {
+        int cmp = minlam_runtime_cmp(left->entries[i], right->entries[i]);
+        if (cmp != CMP_EQ)
+            return cmp;
+    }
+    return CMP_EQ;
+}
+
+#define _CMP_(left, right)                                                     \
+    ((left) < (right) ? CMP_LT : (left) == (right) ? CMP_EQ : CMP_GT)
+
+Cmp minlam_runtime_cmp(Value left, Value right) {
+#ifdef SAFETY_CHECKS
+    if (left.type != right.type) {
+        switch (left.type) {
+        case VALUE_TYPE_BIGINT:
+        case VALUE_TYPE_STDINT:
+        case VALUE_TYPE_RATIONAL:
+        case VALUE_TYPE_IRRATIONAL:
+        case VALUE_TYPE_BIGINT_IMAG:
+        case VALUE_TYPE_STDINT_IMAG:
+        case VALUE_TYPE_IRRATIONAL_IMAG:
+        case VALUE_TYPE_RATIONAL_IMAG:
+        case VALUE_TYPE_COMPLEX:
+            switch (right.type) {
+            case VALUE_TYPE_BIGINT:
+            case VALUE_TYPE_STDINT:
+            case VALUE_TYPE_RATIONAL:
+            case VALUE_TYPE_IRRATIONAL:
+            case VALUE_TYPE_BIGINT_IMAG:
+            case VALUE_TYPE_STDINT_IMAG:
+            case VALUE_TYPE_IRRATIONAL_IMAG:
+            case VALUE_TYPE_RATIONAL_IMAG:
+            case VALUE_TYPE_COMPLEX:
+                break;
+            default:
+                cant_happen("different types in _cmp %s vs %s",
+                            valueTypeName(left.type),
+                            valueTypeName(right.type));
+            }
+            break;
+        default:
+            cant_happen("different types in _cmp %s vs %s",
+                        valueTypeName(left.type), valueTypeName(right.type));
+        }
+    }
+#endif
+    switch (left.type) {
+    case VALUE_TYPE_NONE:
+        return 0;
+    case VALUE_TYPE_BIGINT:
+    case VALUE_TYPE_STDINT:
+    case VALUE_TYPE_RATIONAL:
+    case VALUE_TYPE_IRRATIONAL:
+    case VALUE_TYPE_BIGINT_IMAG:
+    case VALUE_TYPE_STDINT_IMAG:
+    case VALUE_TYPE_RATIONAL_IMAG:
+    case VALUE_TYPE_IRRATIONAL_IMAG:
+    case VALUE_TYPE_COMPLEX:
+        return ncmp(left, right);
+    case VALUE_TYPE_CHARACTER:
+        return _CMP_(left.val.character, right.val.character);
+    case VALUE_TYPE_PCLO:
+        return _CMP_(left.val.addr, right.val.addr);
+    case VALUE_TYPE_VEC:
+        return _vecCmp(left.val.vec, right.val.vec);
+    default:
+        cant_happen("unexpected type for _cmp (%s)", valueTypeName(left.type));
+    }
+}
+
+BigInt *minlam_runtime_BigInt(int size, int capacity, int neg, ...) {
+    va_list ap;
+    va_start(ap, neg);
+    bigint a;
+    bigint_init(&a);
+    bigint_reserve(&a, capacity);
+    for (int j = 0; j < capacity; j++) {
+        a.words[j] = va_arg(ap, bigint_word);
+    }
+    va_end(ap);
+    a.size = size;
+    a.neg = neg;
+    return newBigInt(a);
+}
