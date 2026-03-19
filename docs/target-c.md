@@ -602,3 +602,43 @@ poke slots `0` - `n` for the arguments to the continuation before the final `got
 The top-level `letrec` has no enclosing `lambda` so it starts naturally with a `currentDepth` of `0`.
 
 With this in mind we should first refactor to ensure each of these behaviours are cleanly encapsulated.
+
+Done.
+
+so how will back-patching work?
+
+`EmitMinExpBindings` is given a `MinBindings` where `->var` is a `HashSymbol` and `->val` is
+
+```c
+make_vec(2, lambda(...), make_vec(n, ...bindings))
+```
+
+Remember it doesn't change anything, it's only emitting text.
+
+Currently it emits the lambda to the lambda buffer, and to the current
+buffer it emits (via `emitMakeClosure`):
+
+```c
+reg[TEMP] = make_vec(n, exprs);
+reg[CURRENT] = make_vec(2, value_Addr(&&LABEL), reg[TEMP]);
+```
+
+So the proposal is it does two passes. On pass one it emits the lambda
+as before, but to the body it emits a only placeholder for the env part
+of the closure:
+
+```c
+reg[CURRENT] = make_vec(2, value_Addr(&&LABEL), value_None());
+```
+
+and on pass two it emits to the body only, code that replaces that
+placeholder:
+
+```c
+reg[TEMP] = make_vec(n, exprs);
+getValue_Vec(reg[CURRENT])->entries[1] = reg[TMP];
+```
+
+Only point to mention, remember that letrec can be inside lambda and reg doesn't
+have to start at 0, but the current mechanism of capturing the currentDepth and
+passing it to the recursive `emitMinBindings` (now twice) should work fine.

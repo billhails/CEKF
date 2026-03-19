@@ -29,7 +29,7 @@ fn closure_convert {
             senv = GS.genstring("$env");
             sparams = senv @ params;
             fv = FV.free(exp);
-            locations = 0::((len fv) - 1)♮;
+            locations = 0::((len fv) - 1);
             locmap = DICT.make(fv, locations);
             venv = fv |> fn (v) { #(v, M.var(v)) };
             sub = DICT.make(fv, fv |> fn (v) {

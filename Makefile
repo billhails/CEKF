@@ -142,9 +142,14 @@ $(TARGET): $(MAIN_OBJ) $(ALL_OBJ) | $(BINDIR)
 docs: $(EXTRA_DOCS)
 
 compile_test: all
-	$(TARGET) fn/one.fn > $(COMPILE_TARGET)
+	$(TARGET) fn/fib35.fn > $(COMPILE_TARGET)
 	indent $(COMPILE_TARGET)
-	$(CC) $(INCLUDE_PATHS) $(COMPILE_TARGET)
+	$(LAXCC) $(INCLUDE_PATHS) $(TRACE_FLAGS) -c $(COMPILE_TARGET) -o $(OBJDIR)/junk.o
+	$(LAXCC) -o junk/junk $(OBJDIR)/junk.o $(ALL_OBJ) $(LIBS)
+	junk/junk
+
+generate_test: all
+	$(TARGET) fn/one.fn > junk/junk.scm
 
 EXTRA_TYPES=bigint_word \
 BigInt \

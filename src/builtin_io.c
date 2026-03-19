@@ -126,7 +126,7 @@ static void private_fputc(FILE *fh, Character character) {
     }
 }
 
-static Value builtin_putc(Vec *args) {
+Value builtin_putc(Vec *args) {
 #ifdef SAFETY_CHECKS
     if (args->entries[0].type != VALUE_TYPE_CHARACTER) {
         cant_happen("unexpected %s", valueTypeName(args->entries[0].type));
@@ -136,7 +136,7 @@ static Value builtin_putc(Vec *args) {
     return args->entries[0];
 }
 
-static Value builtin_fputc(Vec *args) {
+Value builtin_fputc(Vec *args) {
 #ifdef SAFETY_CHECKS
     if (args->entries[0].type != VALUE_TYPE_OPAQUE) {
         cant_happen("unexpected %s", valueTypeName(args->entries[0].type));
@@ -150,7 +150,7 @@ static Value builtin_fputc(Vec *args) {
     return args->entries[1];
 }
 
-static Value builtin_fputs(Vec *args) {
+Value builtin_fputs(Vec *args) {
     Opaque *data = args->entries[0].val.opaque;
     SCharVec *buf = listToUtf8(args->entries[1]);
     int save = PROTECT(buf);
@@ -159,7 +159,7 @@ static Value builtin_fputs(Vec *args) {
     return args->entries[1];
 }
 
-static Value builtin_puts(Vec *args) {
+Value builtin_puts(Vec *args) {
     SCharVec *buf = listToUtf8(args->entries[0]);
     int save = PROTECT(buf);
     printf("%s", buf->entries);
@@ -198,7 +198,7 @@ static void opaque_io_closedir(void *data) {
     closedir((DIR *)data);
 }
 
-static Value builtin_open(Vec *args) {
+Value builtin_open(Vec *args) {
     SCharVec *fileName = listToUtf8(args->entries[0]);
     int save = PROTECT(fileName);
     int mode = args->entries[1].val.stdint;
@@ -229,7 +229,7 @@ static Value builtin_open(Vec *args) {
     return result;
 }
 
-static Value builtin_open_memstream(Vec *args __attribute__((unused))) {
+Value builtin_open_memstream(Vec *args __attribute__((unused))) {
     BuiltInMemBuf *memBuf = newBuiltInMemBuf();
     int save = PROTECT(memBuf);
     FILE *file = open_memstream(&memBuf->buffer, &memBuf->size);
@@ -244,7 +244,7 @@ static Value builtin_open_memstream(Vec *args __attribute__((unused))) {
     return result;
 }
 
-static Value builtin_opendir(Vec *args) {
+Value builtin_opendir(Vec *args) {
     SCharVec *dirname = listToUtf8(args->entries[0]);
     int save = PROTECT(dirname);
     DIR *dir = opendir(dirname->entries);
@@ -269,7 +269,7 @@ static Value builtin_opendir(Vec *args) {
 #define FTYPE_CHAR 5
 #define FTYPE_FIFO 6
 
-static Value builtin_ftype(Vec *args) {
+Value builtin_ftype(Vec *args) {
     struct stat statbuf;
     SCharVec *dirname = listToUtf8(args->entries[0]);
     int save = PROTECT(dirname);
@@ -298,7 +298,7 @@ static Value builtin_ftype(Vec *args) {
     }
 }
 
-static Value builtin_close(Vec *args) {
+Value builtin_close(Vec *args) {
 #ifdef SAFETY_CHECKS
     if (args->entries[0].type != VALUE_TYPE_OPAQUE) {
         cant_happen("unexpected %s", valueTypeName(args->entries[0].type));
@@ -310,7 +310,7 @@ static Value builtin_close(Vec *args) {
     return value_Stdint(1);
 }
 
-static Value builtin_closedir(Vec *args) {
+Value builtin_closedir(Vec *args) {
 #ifdef SAFETY_CHECKS
     if (args->entries[0].type != VALUE_TYPE_OPAQUE) {
         cant_happen("unexpected %s", valueTypeName(args->entries[0].type));
@@ -322,7 +322,7 @@ static Value builtin_closedir(Vec *args) {
     return value_Stdint(1);
 }
 
-static Value builtin_readdir(Vec *args) {
+Value builtin_readdir(Vec *args) {
 #ifdef SAFETY_CHECKS
     if (args->entries[0].type != VALUE_TYPE_OPAQUE) {
         cant_happen("unexpected %s", valueTypeName(args->entries[0].type));
@@ -455,7 +455,7 @@ static Value private_fgets(FILE *fh) {
     return string;
 }
 
-static Value builtin_gets() { return private_fgets(stdin); }
+Value builtin_gets() { return private_fgets(stdin); }
 
 static Value private_fgetc(FILE *fh) {
     HashSymbol *key = fileHandleToKey(fh);
@@ -495,9 +495,9 @@ static Value private_fgetc(FILE *fh) {
     return value_Character(wc);
 }
 
-static Value builtin_getc() { return private_fgetc(stdin); }
+Value builtin_getc() { return private_fgetc(stdin); }
 
-static Value builtin_fgetc(Vec *args) {
+Value builtin_fgetc(Vec *args) {
     Opaque *data = args->entries[0].val.opaque;
     if (data == NULL || data->data == NULL) {
         cant_happen("fgets on closed file handle");
@@ -505,7 +505,7 @@ static Value builtin_fgetc(Vec *args) {
     return private_fgetc((FILE *)data->data);
 }
 
-static Value builtin_fgets(Vec *args) {
+Value builtin_fgets(Vec *args) {
     Opaque *data = args->entries[0].val.opaque;
     if (data == NULL || data->data == NULL) {
         cant_happen("fgets on closed file handle");
@@ -513,12 +513,12 @@ static Value builtin_fgets(Vec *args) {
     return private_fgets((FILE *)data->data);
 }
 
-static Value builtin_putv(Vec *args) {
+Value builtin_putv(Vec *args) {
     putValue(args->entries[0]);
     return args->entries[0];
 }
 
-static Value builtin_fputv(Vec *args) {
+Value builtin_fputv(Vec *args) {
     Opaque *data = args->entries[0].val.opaque;
     if (data == NULL || data->data == NULL) {
         cant_happen("fput on closed file handle");

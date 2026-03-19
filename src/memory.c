@@ -34,6 +34,9 @@
 #include "step.h"
 #include "symbol.h"
 #include "wrapper_synthesis.h"
+#ifdef TEST_CPS
+#include "minlam_runtime.h"
+#endif
 
 static int bytesAllocated = 0;
 static int nextGC = 0;
@@ -513,6 +516,9 @@ static void mark() {
     markProtected();
     markNameSpaces();
     markMemBufs();
+#ifdef TEST_CPS
+    minlam_runtime_mark_reg();
+#endif
 #ifdef DEBUG_LOG_GC
     eprintf("starting markVarTables\n");
 #endif

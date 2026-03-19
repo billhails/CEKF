@@ -426,7 +426,9 @@ static EmitResult *emitAnonymousLambda(MinLam *lambda,
     HashSymbol *name = genSym("anon");
     EmitterContext *lamContext = extendContext(name, context);
     int save = PROTECT(lamContext);
-    fprintf(FH(lamContext), "// inside %s\n", context->currentBinding->name);
+    SCharArray *containing_label = makeLambdaLabel(context->currentBinding);
+    PROTECT(containing_label);
+    fprintf(FH(lamContext), "// inside %s\n", containing_label->entries);
     emitMinLam(lambda, lamContext);
     retrieveMaxReg(context, lamContext);
     SCharArray *label = makeLambdaLabel(name);
@@ -551,10 +553,28 @@ static void emitMinExprList(MinExprList *node, EmitterContext *context) {
 
 static void emitGoto(EmitResult *target, ResultArray *args,
                      EmitterContext *context) {
+    // Stage args through temp slots to avoid write-before-read hazards.
+    // Args may contain literal reg[N] references where N < args->size,
+    // and writing reg[i] early would clobber a value needed by a later arg.
+    ResultArray *temps = newResultArray();
+    int save = PROTECT(temps);
     for (Index i = 0; i < args->size; i++) {
-        fprintf(FH(context), "reg[%d] = %s;\n", i,
+        EmitResult *tmp = claimSlot(context);
+        int save2 = PROTECT(tmp);
+        fprintf(FH(context), "%s = %s;\n", emitResultText(tmp, context),
                 emitResultText(args->entries[i], context));
+        pushResultArray(temps, tmp);
+        UNPROTECT(save2);
     }
+    for (Index i = 0; i < temps->size; i++) {
+        fprintf(FH(context), "reg[%d] = %s;\n", i,
+                emitResultText(temps->entries[i], context));
+    }
+    releaseSlots(temps, context);
+    UNPROTECT(save);
+    fprintf(FH(context), "TRACE(\"%s\", getValue_Addr(%s), %d);\n",
+            context->currentBinding->name, emitResultText(target, context),
+            (int)args->size);
     fprintf(FH(context), "goto *getValue_Addr(%s);\n",
             emitResultText(target, context));
 }
@@ -811,26 +831,25 @@ static void emitMinMatchList(MinMatchList *node, EmitterContext *context) {
     emitMinMatchList(node->next, context);
 }
 
-static void emitMinLetRec(MinLetRec *node, EmitterContext *context) {
-    fprintf(FH(context), "// emitMinLetRec\n");
-    // pre-allocate slots;
-    Integer startDepth = context->currentDepth;
-    context->currentDepth += countMinBindings(node->bindings);
-    setMaxReg(context);
-    emitMinBindings(node->bindings, startDepth, context);
-    emitMinExp(node->body, context);
-}
-
 // emitMinLetRec -> emitMinBindings -> emitMakeClosure
-static void emitMakeClosure(MinExprList *exprs, HashSymbol *var, Integer depth,
+static void emitMakeClosure(HashSymbol *var, Integer depth,
                             EmitterContext *context) {
-    FILE *out = FH(context);
+    fprintf(FH(context), "// emitMakeClosure %d\n", depth);
     SCharArray *label = makeLambdaLabel(var);
     int save = PROTECT(label);
+    fprintf(FH(context),
+            "reg[%d] = make_vec(2, value_Addr(&&%s), value_None());\n", depth,
+            label->entries);
+    UNPROTECT(save);
+}
+
+static void emitBackpatchClosure(MinExprList *exprs, Integer depth,
+                                 EmitterContext *context) {
+    fprintf(FH(context), "// emitBackpatchClosure %d\n", depth);
     EmitResult *tmp = emitMakeVec(exprs, context);
-    PROTECT(tmp);
-    fprintf(out, "reg[%d] = make_vec(2, value_Addr(&&%s), %s);\n", depth,
-            label->entries, emitResultText(tmp, context));
+    int save = PROTECT(tmp);
+    fprintf(FH(context), "getValue_Vec(reg[%d])->entries[1] = %s;\n", depth,
+            emitResultText(tmp, context));
     releaseSlot(tmp, context);
     UNPROTECT(save);
 }
@@ -839,19 +858,44 @@ static void emitMinBindings(MinBindings *node, Integer depth,
                             EmitterContext *context) {
     if (node == NULL)
         return;
-    EmitterContext *lamContext = extendContext(node->var, context);
+    // Use a unique name to avoid BufferBag hash collisions when the
+    // same binding name (e.g. h1$0) appears in multiple letrecs.
+    HashSymbol *uniqueName = genSym(node->var->name);
+    EmitterContext *lamContext = extendContext(uniqueName, context);
     int save = PROTECT(lamContext);
-    lamContext->currentBinding = node->var;
+    lamContext->currentBinding = uniqueName;
     MinLam *lambda = extractLambda(node->val);
     // emit the lambda body to the new memstream
     emitMinLam(lambda, lamContext);
     retrieveMaxReg(context, lamContext);
-    MinExprList *makeEnv = extractEnv(node->val);
     // but emit the closure creation to the current memstream
-    emitMakeClosure(makeEnv, node->var, depth, context);
+    emitMakeClosure(uniqueName, depth, context);
     UNPROTECT(save);
-    incrDepth(context);
     emitMinBindings(node->next, depth + 1, context);
+}
+
+static void emitBackpatchBindings(MinBindings *node, Integer depth,
+                                  EmitterContext *context) {
+    if (node == NULL)
+        return;
+    MinExprList *makeEnv = extractEnv(node->val);
+    emitBackpatchClosure(makeEnv, depth, context);
+    emitBackpatchBindings(node->next, depth + 1, context);
+}
+
+static void emitMinLetRec(MinLetRec *node, EmitterContext *context) {
+    fprintf(FH(context), "// emitMinLetRec\n");
+    // pre-allocate slots;
+    Integer startDepth = context->currentDepth;
+    int numBindings = countMinBindings(node->bindings);
+    context->currentDepth += numBindings;
+    setMaxReg(context);
+    emitMinBindings(node->bindings, startDepth, context);
+    emitBackpatchBindings(node->bindings, startDepth, context);
+    // Reset currentDepth: temps claimed during backpatching are released,
+    // and the annotator expects the next variable at startDepth + numBindings.
+    context->currentDepth = startDepth + numBindings;
+    emitMinExp(node->body, context);
 }
 
 static void emitMinExp(MinExp *node, EmitterContext *context) {
@@ -942,46 +986,28 @@ void emitProgram(MinExp *node, BuiltIns *builtIns, FILE *out) {
     HashSymbol *main = newSymbol("main");
     EmitterContext *context = newEmitterContext(main, body, builtIns);
     REPLACE_PROTECT(save, context);
-    fprintf(out, "#include <stdarg.h>\n");
-    fprintf(out, "#include \"cekfs.h\"\n");
-    fprintf(out, "#include \"arithmetic_next.h\"\n");
-    fprintf(out, "#include \"common.h\"\n");
-    fprintf(out, "#include \"types.h\"\n");
-    fprintf(out, "static inline bool isTrue(Value v) {\n");
-    fprintf(out, "    return getValue_Stdint(v) != 0;");
-    fprintf(out, "}\n");
-    fprintf(out, "static inline Value vec(Value index, Value array) {\n");
-    fprintf(
-        out,
-        "    return getValue_Vec(array)->entries[getValue_Stdint(index)];\n");
-    fprintf(out, "}\n");
-    fprintf(out, "static inline Value eq(Value v1, Value v2) {\n");
-    fprintf(out, "    return value_Stdint(eqValue(v1, v2));\n");
-    fprintf(out, "}\n");
-    fprintf(out, "Value ne(Value, Value);\n");
-    fprintf(out, "Value lt(Value, Value);\n");
-    fprintf(out, "Value gt(Value, Value);\n");
-    fprintf(out, "Value cmp(Value, Value);\n");
-    fprintf(out, "static Value make_vec(int count, ...) {\n");
-    fprintf(out, "    va_list ap;\n");
-    fprintf(out, "    va_start(ap, count);\n");
-    fprintf(out, "    Vec *v = newVec(count);\n");
-    fprintf(out, "    int save = PROTECT(v);\n");
-    fprintf(out, "    for (int j = 0; j < count; j++) {\n");
-    fprintf(out, "        v->entries[j] = va_arg(ap, Value);\n");
-    fprintf(out, "    }\n");
-    fprintf(out, "    va_end(ap);\n");
-    fprintf(out, "    UNPROTECT(save);\n");
-    fprintf(out, "    return value_Vec(v);\n");
-    fprintf(out, "}\n");
-    fprintf(out, "\n");
-
-    fprintf(out, "int main(void) {");
+    fprintf(out, "// CODE GENERATED DO NOT EDIT\n");
+    fprintf(out, "#include \"minlam_runtime.h\"\n");
+    fprintf(out, "#ifdef TRACE_GOTO\n");
+    fprintf(out, "#  define TRACE(from, target, nargs) "
+                 "fprintf(stderr, \"%%s -> %%p (%%d args)\\n\", (from), (void "
+                 "*)(target), (nargs))\n");
+    fprintf(out, "#else\n");
+    fprintf(out, "#  define TRACE(from, target, nargs)\n");
+    fprintf(out, "#endif\n");
     emitMinExp(node, context);
-    fprintf(out, "Value reg[%d];\n", context->maxReg);
+    fprintf(out, "#define MAX_REG %d\n", context->maxReg);
+    fprintf(out, "static Value reg[MAX_REG];\n");
+    fprintf(out, "int main(void) {\n");
+    fprintf(out, "for (int i = 0; i < MAX_REG; i++) {\n");
+    fprintf(out, "reg[i] = value_None();\n");
+    fprintf(out, "}\n");
+    fprintf(out, "minlam_runtime_reg = reg;\n");
+    fprintf(out, "minlam_runtime_max_reg = MAX_REG;\n");
+    fprintf(out, "initAll();\n");
+    fprintf(out, "goto ENTRY;\n");
     Index i = 0;
     HashSymbol *label = NULL;
-    fprintf(out, "goto ENTRY;\n");
     Opaque *buf = NULL;
     i = 0;
     while ((label = iterateBufferBag(context->lambdas, &i, &buf)) != NULL) {

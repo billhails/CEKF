@@ -68,8 +68,6 @@
 #include "tests.h"
 #endif
 
-#define TEST_CPS
-
 #ifdef TEST_CPS
 #include "minlam_cps.h"
 #include "minlam_cpsTrampoline.h"
@@ -623,7 +621,10 @@ int main(int argc, char *argv[]) {
         minExp = indexMinExp(minExp);
         REPLACE_PROTECT(save2, minExp);
 
-        // ppMinExp(minExp);
+#if (0)
+        ppMinExp(minExp);
+        exit(0);
+#endif
         emitProgram(minExp, builtIns, stdout);
         eprintf("\n");
         exit(0);

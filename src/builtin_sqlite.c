@@ -62,7 +62,7 @@ static void opaque_sqlite3_finalize(void *data) {
     sqlite3_finalize(data);
 }
 
-static Value builtin_sqlite3_open(Vec *v) {
+Value builtin_sqlite3_open(Vec *v) {
     SCharVec *buf = listToUtf8(v->entries[0]);
     int save = PROTECT(buf);
     sqlite3 *ppDb = NULL;
@@ -84,7 +84,7 @@ static Value builtin_sqlite3_open(Vec *v) {
     return result;
 }
 
-static Value builtin_sqlite3_close(Vec *vec) {
+Value builtin_sqlite3_close(Vec *vec) {
 #ifdef SAFETY_CHECKS
     if (vec->entries[0].type != VALUE_TYPE_OPAQUE) {
         cant_happen("unexpected %s", valueTypeName(vec->entries[0].type));
@@ -96,7 +96,7 @@ static Value builtin_sqlite3_close(Vec *vec) {
     return value_Stdint(1);
 }
 
-static Value builtin_sqlite3_finalize(Vec *vec) {
+Value builtin_sqlite3_finalize(Vec *vec) {
 #ifdef SAFETY_CHECKS
     if (vec->entries[0].type != VALUE_TYPE_OPAQUE) {
         cant_happen("unexpected %s", valueTypeName(vec->entries[0].type));
@@ -108,7 +108,7 @@ static Value builtin_sqlite3_finalize(Vec *vec) {
     return value_Stdint(1);
 }
 
-static Value builtin_sqlite3_prepare(Vec *vec) {
+Value builtin_sqlite3_prepare(Vec *vec) {
 #ifdef SAFETY_CHECKS
     if (vec->entries[0].type != VALUE_TYPE_OPAQUE) {
         cant_happen("unexpected %s", valueTypeName(vec->entries[0].type));
@@ -187,7 +187,7 @@ static int helper_bind_char(sqlite3_stmt *stmt, int index, Value character) {
     return sqlite3_bind_text(stmt, index, buf, size, helper_free_str);
 }
 
-static Value builtin_sqlite3_bind(Vec *vec) {
+Value builtin_sqlite3_bind(Vec *vec) {
 #ifdef SAFETY_CHECKS
     if (vec->entries[0].type != VALUE_TYPE_OPAQUE) {
         cant_happen("unexpected %s", valueTypeName(vec->entries[0].type));
@@ -298,7 +298,7 @@ static Value helper_fetch_row(sqlite3_stmt *stmt) {
     return result;
 }
 
-static Value builtin_sqlite3_fetch(Vec *vec) {
+Value builtin_sqlite3_fetch(Vec *vec) {
 #ifdef SAFETY_CHECKS
     if (vec->entries[0].type != VALUE_TYPE_OPAQUE) {
         cant_happen("unexpected %s", valueTypeName(vec->entries[0].type));
@@ -320,7 +320,7 @@ static Value builtin_sqlite3_fetch(Vec *vec) {
     }
 }
 
-static Value builtin_sqlite3_names(Vec *vec) {
+Value builtin_sqlite3_names(Vec *vec) {
 #ifdef SAFETY_CHECKS
     if (vec->entries[0].type != VALUE_TYPE_OPAQUE) {
         cant_happen("unexpected %s", valueTypeName(vec->entries[0].type));
