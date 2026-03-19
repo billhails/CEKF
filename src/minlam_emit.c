@@ -558,6 +558,12 @@ static void emitGoto(EmitResult *target, ResultArray *args,
     // and writing reg[i] early would clobber a value needed by a later arg.
     ResultArray *temps = newResultArray();
     int save = PROTECT(temps);
+    // Stage the target too: the copy-down loop writes reg[0..N-1], which
+    // could clobber the target if it lives in one of those registers.
+    EmitResult *stagedTarget = claimSlot(context);
+    PROTECT(stagedTarget);
+    fprintf(FH(context), "%s = %s;\n", emitResultText(stagedTarget, context),
+            emitResultText(target, context));
     for (Index i = 0; i < args->size; i++) {
         EmitResult *tmp = claimSlot(context);
         int save2 = PROTECT(tmp);
@@ -571,12 +577,13 @@ static void emitGoto(EmitResult *target, ResultArray *args,
                 emitResultText(temps->entries[i], context));
     }
     releaseSlots(temps, context);
-    UNPROTECT(save);
     fprintf(FH(context), "TRACE(\"%s\", getValue_Addr(%s), %d);\n",
-            context->currentBinding->name, emitResultText(target, context),
-            (int)args->size);
+            context->currentBinding->name,
+            emitResultText(stagedTarget, context), (int)args->size);
     fprintf(FH(context), "goto *getValue_Addr(%s);\n",
-            emitResultText(target, context));
+            emitResultText(stagedTarget, context));
+    releaseSlot(stagedTarget, context);
+    UNPROTECT(save);
 }
 
 static EmitResult *emitExtractFromClosure(EmitResult *closure, int index,
@@ -891,10 +898,17 @@ static void emitMinLetRec(MinLetRec *node, EmitterContext *context) {
     context->currentDepth += numBindings;
     setMaxReg(context);
     emitMinBindings(node->bindings, startDepth, context);
+    // Discard stale slot pool so backpatching can't reuse a register
+    // that now holds a pre-allocated letrec binding closure.
+    context->slots = newSlotMap();
     emitBackpatchBindings(node->bindings, startDepth, context);
-    // Reset currentDepth: temps claimed during backpatching are released,
-    // and the annotator expects the next variable at startDepth + numBindings.
+    // Reset currentDepth: temps claimed during backpatching inflated it,
+    // but the annotator expects the next variable at startDepth + numBindings.
     context->currentDepth = startDepth + numBindings;
+    // Discard again: released backpatch temps at positions >= startDepth +
+    // numBindings would be reclaimed, but currentDepth was just rewound to
+    // that same value, so a fresh claimSlot would allocate at the same index.
+    context->slots = newSlotMap();
     emitMinExp(node->body, context);
 }
 
