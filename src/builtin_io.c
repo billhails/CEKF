@@ -305,8 +305,8 @@ Value builtin_close(Vec *args) {
     }
 #endif
     Opaque *data = args->entries[0].val.opaque;
-    opaque_io_close(data);
-    args->entries[0].val.opaque = NULL;
+    opaque_io_close(data->data);
+    data->data = NULL;
     return value_Stdint(1);
 }
 
@@ -317,8 +317,8 @@ Value builtin_closedir(Vec *args) {
     }
 #endif
     Opaque *data = args->entries[0].val.opaque;
-    opaque_io_closedir(data);
-    args->entries[0].val.opaque = NULL;
+    opaque_io_closedir(data->data);
+    data->data = NULL;
     return value_Stdint(1);
 }
 

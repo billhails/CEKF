@@ -91,8 +91,8 @@ Value builtin_sqlite3_close(Vec *vec) {
     }
 #endif
     Opaque *data = vec->entries[0].val.opaque;
-    opaque_sqlite3_close(data);
-    vec->entries[0].val.opaque = NULL;
+    opaque_sqlite3_close(data->data);
+    data->data = NULL;
     return value_Stdint(1);
 }
 
@@ -103,8 +103,8 @@ Value builtin_sqlite3_finalize(Vec *vec) {
     }
 #endif
     Opaque *data = vec->entries[0].val.opaque;
-    opaque_sqlite3_finalize(data);
-    vec->entries[0].val.opaque = NULL;
+    opaque_sqlite3_finalize(data->data);
+    data->data = NULL;
     return value_Stdint(1);
 }
 
