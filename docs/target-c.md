@@ -642,3 +642,182 @@ getValue_Vec(reg[CURRENT])->entries[1] = reg[TMP];
 Only point to mention, remember that letrec can be inside lambda and reg doesn't
 have to start at 0, but the current mechanism of capturing the currentDepth and
 passing it to the recursive `emitMinBindings` (now twice) should work fine.
+
+## Slot Pool Discipline
+
+Various attempts at slot allocation have encountered problems. The current
+approach is that each context has a SlotPool (hash of gensym'd symbols to
+slots, where each slot represents a register).
+
+```yaml
+structs:
+  EmitterContext:
+    meta:
+      brief: VisitorContext for emitMinExp
+    data:
+      currentBinding: HashSymbol
+      lambdas: BufferBag
+      body: opaque
+      builtIns: BuiltIns
+      slots: SlotPool
+      maxReg: int=0
+      currentDepth: int=0
+      needsUnprotect: bool=false
+
+  Slot:
+    meta:
+      description: Represents a register allocation
+    data:
+      isAvailable: bool
+      text: SCharArray
+
+unions:
+  EmitResult:
+    meta:
+      description: >
+        Either a hash symbol representing a temp variable, or an Opaque EmitBuffer containing an immediate expression.
+    data:
+      var: HashSymbol
+      buf: opaque
+
+arrays:
+  ResultArray:
+    data:
+      entries: EmitResult
+
+hashes:
+  SlotPool:
+    data:
+      entries: Slot
+```
+
+Claiming a stack slot first searches the slot pool for slots marked
+available. If one is found it is marked as in-use and returned. If a
+free slot is not found, a new one is created at the context's incremented
+`currentDepth`, marked in use, and returned.
+
+Releasing a slot merely involves setting it as available.
+
+The main purpose of a slot pool like this is to handle register allocation
+during the calculation of intermediate values.  Using a slot pool for
+lambda and letrec bindings is merely because we then only need one
+allocation mechanism.
+
+### Scenarios
+
+#### lambda
+
+Each lambda is a closure, it only accesses registers within its own
+stack frame, free variables are accessed via the closure's environment.
+Lambdas are always top level.
+
+For those reasons, on emitting a lambda a fresh context is created with
+an empty slot pool; `currentDepth` (the current stack top) is reset to
+zero.
+
+The lambda emitter first claims stack slots for its formal arguments
+and sets those aside.
+
+It then processes its body. That body may be a letrec or an apply.
+
+After emitting the final `goto` (see below) the lambda context is dicarded
+(after recovering `maxReg`) no cleanup necessary.
+
+#### apply
+
+Can only occur as a letrec body or a lambda body.
+
+`EmitMinApply` branches into either `EmitApplyClosure` or `EmitApplyBuiltin`.
+
+##### `EmitApplyBuiltin`
+
+> constructs a Vec of arguments to the built-in,
+> invokes the built-in directly and then passes the result to its
+> continuation.
+
+It must first ensure, by claiming stack slots if necessary, that `currentDepth`
+is above the required number of arguments to the continuation.
+
+> This works even deep inside a nested `letrec`, we're always overwriting
+> registers 0..N before invoking the closure.
+
+Then `EmitApplyBuiltin` can invoke the builtin passing its argument Vec and storing
+the result safely.
+
+Finally it can call `emitGoto` with the target lambda address and a `ResultArray` of `[kenv, result, f]` to invoke the continuation.
+
+##### `EmitApplyClosure`
+
+There should be no need to distinguish between continuation and lambda
+here, it's all the same.
+
+`EmitApplyClosure` (not `emitGoto`) must ensure that `currentDepth` is
+above the number of arguments to its closure, Reserving those slots
+*before* the arguments are calculated and assigned.
+
+It can then iterate over the closure's arguments calling `emitSimpleExp`
+on each and colllecting the results in a `ResultArray`. The `ResultArray` is
+prepended with the closure env.
+
+Then it can call `emitGoto` with the target address and the argument
+`ResultArray`.
+
+##### `emitGoto`
+
+Iterates over its `ResultArray` emitting assignments to fresh slots in
+a new `ResultArray`. This ensures we aren't clobbering values in the
+targets argument range.
+
+Then the arguments to the continuation are poked back in to registers
+0-N for the continuation's arguments, and the `goto` is emitted.
+
+Possible optimisation: if the result of emitting a continuation argument
+during `emitApplyClosure` or `emitApplyBuiltin` is a new temp then the
+result will be an `EmitResult_Var` which is already above the reserved
+slots, so there is no need to copy it to yet another slot before poking
+it in to the final location, it can just be added directly to the growing
+`ResultArray`.
+
+We must resist the temptation to optimize anything at this stage
+however, just noting for later.
+
+#### closure
+
+Lambdas are always wrapped in a closure. For an anonymous lambda this
+closure can be created atomically in one go, but for letrec-bound
+closures the closure environments must be back-patched once all the
+letrec bindings are in place.
+
+#### letrec
+
+Letrecs can occur at the top-level, or can nest within lambdas or other
+letrecs.
+
+Do letrecs need a new context? I don't see why they should, they emit
+to the current buffer, and they should respect the current stack depth.
+Of course they emit lambdas separately but those are stashed away for
+later re-emission.
+
+We somehow need to ensure that there are no temp slots that have not
+been released. We might be able to track the same details as the
+DeBruijn annotator by keeping count of nesting depth (sum outer lambda
+argcount + sum nested letrec bindings) and asserting that it's the same as the `currentDepth` on entry to a `letrec`. That won't work, `currentDepth`
+doesn't get decremented as temps are released, but we could set `currentDepth`
+to that calculated sum. We should probably do this, keep a `currentReg`
+that gets set to `nargs` on entry to a lambda body and has numbindings added
+to it on entry to a `letrec` body.
+
+On the other hand, all registers not actually in use by enclosing lambda
+and letrec bindings should have been released by the time we get to the
+start of a letrec, it would be a bug if they were not, so letrec bindings
+should be able to assert that the actual register index returned by
+`claimSlot` matches the expected `currentReg` + binding index.
+
+So for letrec emission there are four steps:
+
+1. Claim all the required slots.
+2. Emit each lambda and bind it in a closure with a placeholder environment, putting the result in its slot.
+3. Re-iterate over each slot poking the final required environment for the lambda into its closure.
+4. Emit the body of the letrec.
+
+Each of these steps merely re-uses scenarios we have already discussed.

@@ -35,7 +35,7 @@ structs:
             lambdas: BufferBag
             body: opaque
             builtIns: BuiltIns
-            slots: SlotMap
+            slots: SlotPool
             maxReg: int=0
             currentDepth: int=0
             needsUnprotect: bool=false
@@ -61,7 +61,7 @@ hashes:
         data:
             entries: opaque
 
-    SlotMap:
+    SlotPool:
         data:
             entries: Slot
 

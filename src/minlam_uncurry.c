@@ -103,11 +103,14 @@ static void collectArities(MinBindings *bindings, IntMap *map) {
 //      (body) { body }
 //  }
 
-static MinExp *flattenLambda(MinExp *exp) {
+static MinExp *flattenLambda(MinExp *exp, int depth) {
+    if (depth <= 1) {
+        return exp;
+    }
     if (isMinExp_Lam(exp)) {
         MinLam *lam = getMinExp_Lam(exp);
         if (countSymbolList(lam->args) == 1) {
-            MinExp *flat = flattenLambda(lam->exp);
+            MinExp *flat = flattenLambda(lam->exp, depth - 1);
             int save = PROTECT(flat);
             MinExp *res = NULL;
             if (isMinExp_Lam(flat)) {
@@ -173,7 +176,7 @@ static MinBindings *extendBindings(MinBindings *bindings, IntMap *context) {
     this->arity = bindings->arity; // probably unnecessary
     if (bindings->arity > 1) {
         HashSymbol *arityName = makeArityName(bindings->var, bindings->arity);
-        MinExp *flat = flattenLambda(newExp);
+        MinExp *flat = flattenLambda(newExp, bindings->arity);
         PROTECT(flat);
         MinBindings *extra =
             newMinBindings(CPI(bindings), arityName, flat, this);

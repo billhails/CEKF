@@ -5,12 +5,12 @@ Code emission utilities
 ```mermaid
 flowchart LR
 BufferBag --entries--> opaque
-SlotMap --entries--> Slot
+SlotPool --entries--> Slot
 EmitterContext --currentBinding--> HashSymbol
 EmitterContext --lambdas--> BufferBag
 EmitterContext --body--> opaque
 EmitterContext --builtIns--> BuiltIns
-EmitterContext --slots--> SlotMap
+EmitterContext --slots--> SlotPool
 EmitterContext --maxReg--> int
 EmitterContext --currentDepth--> int
 EmitterContext --needsUnprotect--> bool

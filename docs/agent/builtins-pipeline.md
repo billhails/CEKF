@@ -39,7 +39,7 @@ flag on apply nodes.
 `generateBuiltinWrappers()` runs once, before parsing. For each
 registered builtin it creates an AST definition equivalent to:
 
-```
+```fn
 fn rand(a$0) { builtin$rand(a$0) }
 ```
 
@@ -161,7 +161,7 @@ This is fine because the wrapper lambda handles currying in user space.
 
 ## Summary of the Dual-Name Architecture
 
-```
+```text
 User writes:           rand(42)
                          │
 Parser + wrappers:     rand(42)  ──where rand is──▶  fn rand(a$0) { builtin$rand(a$0) }

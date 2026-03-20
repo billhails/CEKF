@@ -23,9 +23,12 @@ static int minlam_runtime_max_reg = 0;
 
 static int minlam_runtime_save;
 
-void minlam_runtime_init(Value *reg, int max_reg) {
+void minlam_runtime_init(Value *reg, int max_reg, int argc, char **argv) {
     minlam_runtime_reg = reg;
     minlam_runtime_max_reg = max_reg;
+    builtin_args_argc = argc;
+    builtin_args_cargc = 1;
+    builtin_args_argv = argv;
     initAll();
     minlam_runtime_save = PROTECT(NULL);
 }
@@ -61,14 +64,17 @@ static Cmp _vecCmp(Vec *left, Vec *right) {
     if (left == NULL || right == NULL) {
         cant_happen("null vecs in _vecCmp(%p, %p)", left, right);
     }
-    if (left->size != right->size) {
-        cant_happen("mismatched vec sizes in _vecCmp()");
-    }
 #endif
-    for (Index i = 0; i < left->size; ++i) {
+    for (Index i = 0; i < left->size && i < right->size; ++i) {
         int cmp = minlam_runtime_cmp(left->entries[i], right->entries[i]);
         if (cmp != CMP_EQ)
             return cmp;
+    }
+    if (left->size < right->size) {
+        return CMP_LT;
+    }
+    if (left->size > right->size) {
+        return CMP_GT;
     }
     return CMP_EQ;
 }

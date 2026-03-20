@@ -1,7 +1,7 @@
 .PHONY: all clean realclean deps profile leak-check check-grammar \
 list-cores test indent indent-src indent-generated docs \
 install-sqlite3 coverage extracov view-coverage \
-coverage-target \
+coverage-target test-binary \
 help \
 establish-baseline test-refactoring update-baseline clean-baseline \
 scratch
@@ -164,6 +164,8 @@ $(TEST_FN_BINARIES): %: %.o $(ALL_OBJ)
 
 test-binary: all $(TEST_FN_BINARIES)
 	@for t in $(TEST_FN_BINARIES) ; do echo $$t ; $$t || exit 1 ; done
+
+irs: $(TEST_FN_SFILES)
 
 EXTRA_TYPES=bigint_word \
 BigInt \

@@ -26,6 +26,10 @@
 #include <math.h>
 #include <stdarg.h>
 
+extern char **builtin_args_argv;
+extern int builtin_args_argc;
+extern int builtin_args_cargc;
+
 static inline bool isTrue(Value v) { return getValue_Stdint(v) != 0; }
 
 static inline Value vec(Value index, Value array) {
@@ -67,7 +71,7 @@ Value make_vec(int count, ...);
 
 void minlam_runtime_mark_reg();
 
-void minlam_runtime_init(Value *reg, int max_reg);
+void minlam_runtime_init(Value *, int, int, char **);
 void minlam_runtime_unprotect();
 
 BigInt *minlam_runtime_BigInt(int size, int capacity, int neg, ...);
