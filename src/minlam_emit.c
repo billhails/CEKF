@@ -147,6 +147,10 @@ static EmitterContext *extendContext(HashSymbol *var, EmitterContext *context) {
 static inline void setMaxReg(EmitterContext *context) {
     context->maxReg = MAX(context->maxReg, context->currentDepth);
 }
+static inline void setProtectionStatus(EmitterContext *to,
+                                       EmitterContext *from) {
+    to->needsUnprotect = to->needsUnprotect || from->needsUnprotect;
+}
 
 static inline void incrDepth(EmitterContext *context) {
     context->currentDepth++;
@@ -397,6 +401,7 @@ static EmitResult *emitNewAtomic(MinExp *exp, EmitterContext *context) {
     EmitterContext *atomicContext = copyContext(context, buffer);
     PROTECT(atomicContext);
     emitAtomic(exp, atomicContext);
+    setProtectionStatus(context, atomicContext);
     EmitResult *result = newEmitResult_Buf(buffer);
     UNPROTECT(save);
     return result;
@@ -457,16 +462,6 @@ static EmitResult *emitAnonymousLambda(MinLam *lambda,
 }
 
 static void emitMaybeBigInt(MaybeBigInt *mbi, EmitterContext *context) {
-    // stdint: int
-    // bigint: BigInt
-    // rational: Vec
-    // irrational: double
-    // stdint_imag: int
-    // bigint_imag: BigInt
-    // rational_imag: Vec
-    // irrational_imag: double
-    // complex: Vec
-
     switch (mbi->type) {
     case BI_BIG: {
         if (mbi->imag) {
@@ -481,7 +476,7 @@ static void emitMaybeBigInt(MaybeBigInt *mbi, EmitterContext *context) {
             fprintf(FH(context), ", %u", bi.words[i]);
         }
         fprintf(FH(context), "))");
-
+        context->needsUnprotect = true;
         break;
     }
     case BI_SMALL: {
@@ -525,6 +520,7 @@ static EmitResult *emitSimpleExp(MinExp *exp, EmitterContext *context) {
         Opaque *buf = newOpaque_EmitBuffer();
         int save = PROTECT(buf);
         EmitterContext *aVarContext = copyContext(context, buf);
+        setProtectionStatus(context, aVarContext);
         PROTECT(aVarContext);
         emitMinAnnotatedVar(avar, aVarContext);
         EmitResult *result = newEmitResult_Buf(buf);
@@ -547,6 +543,7 @@ static EmitResult *emitSimpleExp(MinExp *exp, EmitterContext *context) {
         PROTECT(biContext);
         emitMaybeBigInt(mbi, biContext);
         EmitResult *result = newEmitResult_Buf(buf);
+        setProtectionStatus(context, biContext);
         UNPROTECT(save);
         return result;
     }
@@ -650,6 +647,10 @@ static void emitGoto(EmitResult *target, ResultArray *args,
                 emitResultText(temps->entries[i], context));
     }
     releaseSlots(temps, context);
+    if (context->needsUnprotect) {
+        fprintf(FH(context), "minlam_runtime_unprotect();\n");
+        context->needsUnprotect = false;
+    }
     fprintf(FH(context), "TRACE(\"%s\", getValue_Addr(%s), %d);\n",
             context->currentBinding->name,
             emitResultText(stagedTarget, context), (int)args->size);
@@ -1078,6 +1079,7 @@ void emitProgram(MinExp *node, BuiltIns *builtIns, FILE *out) {
     REPLACE_PROTECT(save, context);
     fprintf(out, "// CODE GENERATED DO NOT EDIT\n");
     fprintf(out, "#include \"minlam_runtime.h\"\n");
+    fprintf(out, "extern int forceGcFlag;\n");
     fprintf(out, "#ifdef TRACE_GOTO\n");
     fprintf(out, "#  define TRACE(from, target, nargs) "
                  "fprintf(stderr, \"%%s -> %%p (%%d args)\\n\", (from), (void "
@@ -1088,13 +1090,14 @@ void emitProgram(MinExp *node, BuiltIns *builtIns, FILE *out) {
     emitMinExp(node, context);
     fprintf(out, "#define MAX_REG %d\n", context->maxReg);
     fprintf(out, "static Value reg[MAX_REG];\n");
+    fprintf(out, "\n");
+
     fprintf(out, "int main(void) {\n");
+    fprintf(out, "forceGcFlag = 1;\n");
     fprintf(out, "for (int i = 0; i < MAX_REG; i++) {\n");
     fprintf(out, "reg[i] = value_None();\n");
     fprintf(out, "}\n");
-    fprintf(out, "minlam_runtime_reg = reg;\n");
-    fprintf(out, "minlam_runtime_max_reg = MAX_REG;\n");
-    fprintf(out, "initAll();\n");
+    fprintf(out, "minlam_runtime_init(reg, MAX_REG);\n");
     fprintf(out, "goto ENTRY;\n");
     Index i = 0;
     HashSymbol *label = NULL;

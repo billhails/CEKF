@@ -38,6 +38,7 @@ structs:
             slots: SlotMap
             maxReg: int=0
             currentDepth: int=0
+            needsUnprotect: bool=false
 
     Slot:
         meta:

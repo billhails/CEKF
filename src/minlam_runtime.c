@@ -18,8 +18,19 @@
 
 #include "minlam_runtime.h"
 
-Value *minlam_runtime_reg = NULL;
-int minlam_runtime_max_reg = 0;
+static Value *minlam_runtime_reg = NULL;
+static int minlam_runtime_max_reg = 0;
+
+static int minlam_runtime_save;
+
+void minlam_runtime_init(Value *reg, int max_reg) {
+    minlam_runtime_reg = reg;
+    minlam_runtime_max_reg = max_reg;
+    initAll();
+    minlam_runtime_save = PROTECT(NULL);
+}
+
+void minlam_runtime_unprotect() { UNPROTECT(minlam_runtime_save); }
 
 Value make_vec(int count, ...) {
     va_list ap;
@@ -137,5 +148,7 @@ BigInt *minlam_runtime_BigInt(int size, int capacity, int neg, ...) {
     va_end(ap);
     a.size = size;
     a.neg = neg;
-    return newBigInt(a);
+    BigInt *result = newBigInt(a);
+    PROTECT(result);
+    return result;
 }

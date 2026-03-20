@@ -13,6 +13,7 @@ EmitterContext --builtIns--> BuiltIns
 EmitterContext --slots--> SlotMap
 EmitterContext --maxReg--> int
 EmitterContext --currentDepth--> int
+EmitterContext --needsUnprotect--> bool
 Slot --isAvailable--> bool
 Slot --text--> SCharArray
 EmitResult --var--> HashSymbol

@@ -39,7 +39,7 @@ static inline Value eq(Value v1, Value v2) {
 }
 
 static inline Value ne(Value v1, Value v2) {
-    return value_Stdint(minlam_runtime_cmp(v1, v2) == CMP_EQ);
+    return value_Stdint(minlam_runtime_cmp(v1, v2) != CMP_EQ);
 }
 
 static inline Value lt(Value v1, Value v2) {
@@ -59,15 +59,16 @@ static inline Value ge(Value v1, Value v2) {
 }
 
 static inline Value cmp(Value v1, Value v2) {
-    return value_Stdint(minlam_runtime_cmp(v1, v2));
+    // CMP_LT=-1, CMP_EQ=0, CMP_GT=1 but language-level lt=0, eq=1, gt=2
+    return value_Stdint(minlam_runtime_cmp(v1, v2) + 1);
 }
 
 Value make_vec(int count, ...);
 
 void minlam_runtime_mark_reg();
 
-extern int minlam_runtime_max_reg;
-extern Value *minlam_runtime_reg;
+void minlam_runtime_init(Value *reg, int max_reg);
+void minlam_runtime_unprotect();
 
 BigInt *minlam_runtime_BigInt(int size, int capacity, int neg, ...);
 
