@@ -364,6 +364,7 @@ static MinCharCondCases *desugarLamCharCondCases(LamCharCondCases *node) {
     PROTECT(next);
     MinCharCondCases *result =
         newMinCharCondCases(CPI(node), node->constant, body, next);
+    result->isDefault = node->isDefault;
     UNPROTECT(save);
     LEAVE(desugarLamCharCondCases);
     return result;

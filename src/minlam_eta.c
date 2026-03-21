@@ -354,6 +354,7 @@ static MinCharCondCases *etaMinCharCondCases(MinCharCondCases *node) {
     if (changed) {
         MinCharCondCases *result =
             newMinCharCondCases(CPI(node), node->constant, new_body, new_next);
+        result->isDefault = node->isDefault;
         UNPROTECT(save);
         LEAVE(etaMinCharCondCases);
         return result;

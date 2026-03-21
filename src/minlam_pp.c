@@ -388,7 +388,11 @@ static void _iMinIntCondCases(MinIntCondCases *cases, int d) {
 
 static void _iMinCharCondCases(MinCharCondCases *cases, int d) {
     newlineIndent(d);
-    eprintf("(\"%c\" ", cases->constant);
+    if (cases->isDefault) {
+        eprintf("(_ ");
+    } else {
+        eprintf("(\"%c\" ", cases->constant);
+    }
     iMinExp(cases->body, d + 1);
     eprintf(")");
     if (cases->next != NULL) {

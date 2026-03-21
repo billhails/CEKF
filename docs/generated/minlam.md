@@ -27,6 +27,7 @@ MinCond --cases--> MinCondCases
 MinIntCondCases --constant--> MaybeBigInt
 MinIntCondCases --body--> MinExp
 MinIntCondCases --next--> MinIntCondCases
+MinCharCondCases --isDefault--> bool
 MinCharCondCases --constant--> character
 MinCharCondCases --body--> MinExp
 MinCharCondCases --next--> MinCharCondCases

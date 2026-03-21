@@ -484,6 +484,7 @@ static LamCharCondCases *makeConstantCharCondCase(TpmcArcList *arcList,
 
 static LamCharCondCases *makeCharCondDefault(LamExp *action) {
     LamCharCondCases *res = newLamCharCondCases(I, 0, action, NULL);
+    res->isDefault = true;
     return res;
 }
 

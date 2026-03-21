@@ -553,6 +553,7 @@ structs:
     meta:
       brief: Build Tk char cond case node after body
     data:
+      isDefault: bool=false
       constant: character
       body: MinExp
       remaining: MinCharCondCases
@@ -589,6 +590,7 @@ structs:
     meta:
       brief: Build Tc char cond case node after body
     data:
+      isDefault: bool=false
       constant: character
       body: MinExp
       remaining: MinCharCondCases

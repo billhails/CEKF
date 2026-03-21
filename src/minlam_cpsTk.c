@@ -655,6 +655,7 @@ static MinCharCondCases *reverseMinCharCondCasesList(MinCharCondCases *list) {
     while (list != NULL) {
         MinCharCondCases *node =
             newMinCharCondCases(CPI(list), list->constant, list->body, result);
+        node->isDefault = list->isDefault;
         result = node;
         REPLACE_PROTECT(save, result);
         list = list->next;
@@ -955,6 +956,8 @@ CpsWork *cpsStepTk(CpsWork *work) {
         PROTECT(body);
         CpsWork *next = makeCpsWork_TkMapCharCondCasesAfterBody(
             th->cases->constant, body, th->cases->next, th->c, th->acc);
+        getCpsWork_TkMapCharCondCasesAfterBody(next)->isDefault =
+            th->cases->isDefault;
         UNPROTECT(save);
         return next;
     }
@@ -965,6 +968,7 @@ CpsWork *cpsStepTk(CpsWork *work) {
         int save = PROTECT(th);
         MinCharCondCases *node =
             newMinCharCondCases(CPI(th->body), th->constant, th->body, th->acc);
+        node->isDefault = th->isDefault;
         PROTECT(node);
         CpsWork *next =
             makeCpsWork_TkMapCharCondCases(th->remaining, th->c, node);

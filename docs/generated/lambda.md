@@ -49,6 +49,7 @@ LamCond --cases--> LamCondCases
 LamIntCondCases --constant--> MaybeBigInt
 LamIntCondCases --body--> LamExp
 LamIntCondCases --next--> LamIntCondCases
+LamCharCondCases --isDefault--> bool
 LamCharCondCases --constant--> character
 LamCharCondCases --body--> LamExp
 LamCharCondCases --next--> LamCharCondCases

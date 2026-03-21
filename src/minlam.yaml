@@ -97,6 +97,7 @@ structs:
         meta:
             brief: Character conditional cases
         data:
+            isDefault: bool=false
             constant: character
             body: MinExp
             next: MinCharCondCases

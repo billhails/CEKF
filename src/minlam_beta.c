@@ -489,6 +489,7 @@ static MinCharCondCases *betaMinCharCondCases(MinCharCondCases *node) {
     if (changed) {
         MinCharCondCases *result =
             newMinCharCondCases(CPI(node), node->constant, new_body, new_next);
+        result->isDefault = node->isDefault;
         UNPROTECT(save);
         LEAVE(betaMinCharCondCases);
         return result;

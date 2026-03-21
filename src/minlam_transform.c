@@ -243,6 +243,7 @@ static MinCharCondCases *transformMinCharCondCases(MinCharCondCases *node,
     PROTECT(new_next);
     MinCharCondCases *result =
         newMinCharCondCases(CPI(node), node->constant, new_body, new_next);
+    result->isDefault = node->isDefault;
     UNPROTECT(save);
     LEAVE(transformMinCharCondCases);
     return result;

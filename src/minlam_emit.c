@@ -1000,6 +1000,13 @@ static void emitMinCharCondCases(MinCharCondCases *node,
         fprintf(FH(context), "abort();\n");
         return;
     }
+    if (node->isDefault) {
+        fprintf(FH(context), "default: \n");
+        ASSERT_TEMPS(context);
+        emitMinExp(node->body, context);
+        fprintf(FH(context), "break;\n");
+        return;
+    }
     fprintf(FH(context), "case %d: \n", (int)(node->constant));
     ASSERT_TEMPS(context);
     emitMinExp(node->body, context);
