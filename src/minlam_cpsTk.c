@@ -779,9 +779,11 @@ CpsWork *cpsStepTk(CpsWork *work) {
             MinLetRec *letrec = getMinExp_LetRec(node);
             MinBindings *bindings = mapMOverBindings(letrec->bindings);
             int save = PROTECT(bindings);
-            CpsKont *k1 = makeKont_TkLetRec(bindings);
-            PROTECT(k1);
-            CpsWork *next = makeCpsWork_Tk(letrec->body, k1);
+            CpsWork *tkWork = makeCpsWork_Tk(letrec->body, k);
+            PROTECT(tkWork);
+            MinExp *body = runCpsWorkToResult(tkWork);
+            PROTECT(body);
+            CpsWork *next = makeCpsWork_TkLetRecAfterBody(bindings, body);
             UNPROTECT(save);
             return next;
         }
