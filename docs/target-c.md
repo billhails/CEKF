@@ -646,7 +646,7 @@ passing it to the recursive `emitMinBindings` (now twice) should work fine.
 ## Slot Pool Discipline
 
 Various attempts at slot allocation have encountered problems. The current
-approach is that each context has a SlotPool (hash of gensym'd symbols to
+approach is that each context has a `SlotPool` (hash of gensym'd symbols to
 slots, where each slot represents a register).
 
 ```yaml
@@ -699,9 +699,8 @@ free slot is not found, a new one is created at the context's incremented
 Releasing a slot merely involves setting it as available.
 
 The main purpose of a slot pool like this is to handle register allocation
-during the calculation of intermediate values.  Using a slot pool for
-lambda and letrec bindings is merely because we then only need one
-allocation mechanism.
+during the calculation of intermediate values.  Using the slot pool for
+lambda and letrec bindings is just code re-use.
 
 ### Scenarios
 
@@ -712,7 +711,7 @@ stack frame, free variables are accessed via the closure's environment.
 Lambdas are always top level.
 
 For those reasons, on emitting a lambda a fresh context is created with
-an empty slot pool; `currentDepth` (the current stack top) is reset to
+an empty slot pool and `currentDepth` (the current stack top) is reset to
 zero.
 
 The lambda emitter first claims stack slots for its formal arguments
@@ -727,7 +726,7 @@ After emitting the final `goto` (see below) the lambda context is dicarded
 
 Can only occur as a letrec body or a lambda body.
 
-`EmitMinApply` branches into either `EmitApplyClosure` or `EmitApplyBuiltin`.
+`EmitMinApply` branches into either `EmitApplyBuiltin` or `EmitApplyClosure`.
 
 ##### `EmitApplyBuiltin`
 
@@ -735,14 +734,16 @@ Can only occur as a letrec body or a lambda body.
 > invokes the built-in directly and then passes the result to its
 > continuation.
 
-It must first ensure, by claiming stack slots if necessary, that `currentDepth`
-is above the required number of arguments to the continuation.
+It must first ensure, by claiming stack slots if necessary, that slots
+0..N for the continuation's arguments are not available. It is not
+sufficient to just look at `currentDepth` as that is an internal counter
+for slot allocation, not an indication of what is currently in use.
 
-> This works even deep inside a nested `letrec`, we're always overwriting
-> registers 0..N before invoking the closure.
+So we'll need a `slotsAvailableBelow(N, context)` query on the slot
+pool, and iterate claiming slots while it is true.
 
-Then `EmitApplyBuiltin` can invoke the builtin passing its argument Vec and storing
-the result safely.
+Then `EmitApplyBuiltin` can invoke the builtin passing its argument Vec
+and storing the result safely out of the way of the continuation arguments.
 
 Finally it can call `emitGoto` with the target lambda address and a `ResultArray` of `[kenv, result, f]` to invoke the continuation.
 
@@ -751,9 +752,10 @@ Finally it can call `emitGoto` with the target lambda address and a `ResultArray
 There should be no need to distinguish between continuation and lambda
 here, it's all the same.
 
-`EmitApplyClosure` (not `emitGoto`) must ensure that `currentDepth` is
-above the number of arguments to its closure, Reserving those slots
-*before* the arguments are calculated and assigned.
+`EmitApplyClosure` (not `emitGoto`) must also ensure its closure's
+argument slots are safe, using the same `slotsAvailableBelow`
+function discussed above.  Reserving those slots *before* the arguments
+are calculated and assigned.
 
 It can then iterate over the closure's arguments calling `emitSimpleExp`
 on each and colllecting the results in a `ResultArray`. The `ResultArray` is
@@ -766,7 +768,9 @@ Then it can call `emitGoto` with the target address and the argument
 
 Iterates over its `ResultArray` emitting assignments to fresh slots in
 a new `ResultArray`. This ensures we aren't clobbering values in the
-targets argument range.
+targets argument range (some `EmitResult` are `EmitResult_Buf` that
+may reference slots in that range even though they didn't claim them -
+arguments to the lambda for example).
 
 Then the arguments to the continuation are poked back in to registers
 0-N for the continuation's arguments, and the `goto` is emitted.
@@ -813,6 +817,15 @@ start of a letrec, it would be a bug if they were not, so letrec bindings
 should be able to assert that the actual register index returned by
 `claimSlot` matches the expected `currentReg` + binding index.
 
+There is still a problem here. As we enter a letrec, there can legitimately
+be free slots in the pool, and the order that the pool will return them is
+non-deterministic. A quick hacky fix is when iterating the pool in `claimSlot`,
+don't return the first one, instead remember it and swap it repeatedly for
+any you find that are lower, finally returning the lowest. Hacky because
+we'd be better off just maintaining a sorted linked list and splicing
+slots in and out, but the fact that slots are fronted by HashSymbols
+means that would be a more far-reaching change.
+
 So for letrec emission there are four steps:
 
 1. Claim all the required slots.
@@ -821,3 +834,10 @@ So for letrec emission there are four steps:
 4. Emit the body of the letrec.
 
 Each of these steps merely re-uses scenarios we have already discussed.
+
+### Assertion Protection
+
+For this to work, we need to be careful to release all temps between
+sections. It makes sense to have an assertion available to catch those
+bugs early. We can count in-use slots and assert that is equal to
+`currentReg`.

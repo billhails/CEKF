@@ -54,9 +54,9 @@ static EmitResult *emitSimpleExp(MinExp *, EmitterContext *);
 static EmitterContext *copyContext(EmitterContext *, Opaque *);
 static void emitMaybeBigInt(MaybeBigInt *mbi, EmitterContext *context);
 
-///////////
-// Helpers
-///////////
+///////////////////////
+// Emit Buffer Helpers
+///////////////////////
 
 typedef struct EmitBuffer {
     FILE *fh;
@@ -84,78 +84,6 @@ static inline FILE *opaqueEmitBufferFh(Opaque *container) {
 
 static inline FILE *FH(EmitterContext *context) {
     return opaqueEmitBufferFh(context->body);
-}
-
-static int getPrimOpArity(MinPrimOp type) {
-    switch (type) {
-    case MINPRIMOP_TYPE_CANON:
-        return 1;
-    default:
-        return 2;
-    }
-}
-
-static char *getPrimOpName(MinPrimOp type) {
-    switch (type) {
-    case MINPRIMOP_TYPE_VEC:
-        return "vec";
-    case MINPRIMOP_TYPE_MUL:
-        return "nmul";
-    case MINPRIMOP_TYPE_DIV:
-        return "ndiv";
-    case MINPRIMOP_TYPE_CMP:
-        return "cmp";
-    case MINPRIMOP_TYPE_NE:
-        return "ne";
-    case MINPRIMOP_TYPE_LT:
-        return "lt";
-    case MINPRIMOP_TYPE_LE:
-        return "le";
-    case MINPRIMOP_TYPE_EQ:
-        return "eq";
-    case MINPRIMOP_TYPE_GE:
-        return "ge";
-    case MINPRIMOP_TYPE_GT:
-        return "gt";
-    case MINPRIMOP_TYPE_ADD:
-        return "nadd";
-    case MINPRIMOP_TYPE_MOD:
-        return "nmod";
-    case MINPRIMOP_TYPE_POW:
-        return "npow";
-    case MINPRIMOP_TYPE_SUB:
-        return "nsub";
-    case MINPRIMOP_TYPE_CANON:
-        return "ncanon";
-    default:
-        cant_happen("unhandled %s", minPrimOpName(type));
-    }
-}
-
-static EmitterContext *extendContextForLambda(HashSymbol *var,
-                                              EmitterContext *context) {
-    // create a new memstream for the lambda body
-    Opaque *body = newOpaque_EmitBuffer();
-    int save = PROTECT(body);
-    EmitterContext *lamContext = copyContext(context, body);
-    REPLACE_PROTECT(save, lamContext);
-    // add it to the global set of lambdas
-    setBufferBag(context->lambdas, var, body);
-    UNPROTECT(save);
-    return lamContext;
-}
-
-static inline void setMaxReg(EmitterContext *context) {
-    context->maxReg = MAX(context->maxReg, context->currentDepth);
-}
-static inline void setProtectionStatus(EmitterContext *to,
-                                       EmitterContext *from) {
-    to->needsUnprotect = to->needsUnprotect || from->needsUnprotect;
-}
-
-static inline void incrDepth(EmitterContext *context) {
-    context->currentDepth++;
-    setMaxReg(context);
 }
 
 static EmitBuffer *newEmitBuffer() {
@@ -187,6 +115,74 @@ static void printEmitBuffer(void *buffer) {
     if (b->buffer != NULL)
         eprintf("%s", b->buffer);
 }
+
+///////////////////
+// Context Helpers
+///////////////////
+
+static EmitterContext *extendContextForLambda(HashSymbol *var,
+                                              EmitterContext *context) {
+    // create a new memstream for the lambda body
+    Opaque *body = newOpaque_EmitBuffer();
+    int save = PROTECT(body);
+    EmitterContext *lamContext = copyContext(context, body);
+    REPLACE_PROTECT(save, lamContext);
+    // add it to the global set of lambdas
+    setBufferBag(context->lambdas, var, body);
+    UNPROTECT(save);
+    return lamContext;
+}
+
+// shallow copy
+static EmitterContext *copyContext(EmitterContext *context, Opaque *body) {
+    EmitterContext *new =
+        newEmitterContext(context->currentBinding, body, context->builtIns);
+    int save = PROTECT(new);
+    new->lambdas = context->lambdas;
+    // don't copy slots
+    new->currentDepth = context->currentDepth;
+    new->maxReg = context->maxReg;
+    UNPROTECT(save);
+    return new;
+}
+
+static inline void setMaxReg(EmitterContext *context) {
+    context->maxReg = MAX(context->maxReg, context->currentDepth);
+}
+
+static inline void setProtectionStatus(EmitterContext *to,
+                                       EmitterContext *from) {
+    to->needsUnprotect = to->needsUnprotect || from->needsUnprotect;
+}
+
+static inline void incrDepth(EmitterContext *context) {
+    context->currentDepth++;
+    setMaxReg(context);
+}
+
+static inline void retrieveMaxReg(EmitterContext *to, EmitterContext *from) {
+    to->maxReg = MAX(to->maxReg, from->maxReg);
+}
+
+static BuiltIn *findBuiltIn(MinApply *node, EmitterContext *context) {
+    BuiltIn *bi = NULL;
+    for (Index i = 0; i < context->builtIns->size; i++) {
+        if (context->builtIns->entries[i]->internalName ==
+            getMinExp_Var(node->function)) {
+            bi = context->builtIns->entries[i];
+            break;
+        }
+    }
+    if (bi == NULL) {
+        cant_happen("could not find builtin %s",
+                    getMinExp_Var(node->function)->name);
+    }
+    return bi;
+}
+
+////////////////////
+// SlotPool Helpers
+////////////////////
 
 static HashSymbol *claimSlotSymbol(EmitterContext *context) {
     HashSymbol *result = NULL;
@@ -263,22 +259,15 @@ static void releaseSlots(ResultArray *slots, EmitterContext *context) {
     }
 }
 
-static char *emitResultText(EmitResult *data, EmitterContext *context) {
-    switch (data->type) {
-    case EMITRESULT_TYPE_BUF:
-        return opaqueEmitBufferContent(getEmitResult_Buf(data));
-    case EMITRESULT_TYPE_VAR:
-        return getSlot(getEmitResult_Var(data), context)->text->entries;
-    default:
-        cant_happen("unrecognised %s", emitResultTypeName(data->type));
-    }
-}
+//////////////////
+// MinExp Helpers
+//////////////////
 
 // an expression is atomic if it causes no memory allocation
 static bool isAtomic(MinExp *exp) {
     switch (exp->type) {
     case MINEXP_TYPE_AVAR:
-    case MINEXP_TYPE_BIGINTEGER:
+    case MINEXP_TYPE_BIGINTEGER: // not true, but there is a workaround
     case MINEXP_TYPE_CHARACTER:
     case MINEXP_TYPE_STDINT:
         return true;
@@ -294,6 +283,109 @@ static bool isAtomic(MinExp *exp) {
         return false;
     }
 }
+
+// assertive retrieval, all letrec bindings are expected to be closures
+static MinLam *extractLambda(MinExp *node) {
+    MinExprList *makeVec = getMinExp_MakeVec(node);
+#ifdef SAFETY_CHECKS
+    if (makeVec == NULL)
+        cant_happen("letrec binding must be a 2-vec");
+#endif
+    return getMinExp_Lam(makeVec->exp);
+}
+
+static MinExprList *extractEnv(MinExp *node) {
+    MinExprList *makeVec = getMinExp_MakeVec(node);
+#ifdef SAFETY_CHECKS
+    if (makeVec == NULL)
+        cant_happen("letrec binding must be a 2-vec");
+#endif
+    makeVec = makeVec->next;
+#ifdef SAFETY_CHECKS
+    if (makeVec == NULL)
+        cant_happen("letrec binding must be a 2-vec");
+#endif
+    return getMinExp_MakeVec(makeVec->exp);
+}
+
+static int getPrimOpArity(MinPrimOp type) {
+    switch (type) {
+    case MINPRIMOP_TYPE_CANON:
+        return 1;
+    default:
+        return 2;
+    }
+}
+
+static char *getPrimOpName(MinPrimOp type) {
+    switch (type) {
+    case MINPRIMOP_TYPE_VEC:
+        return "vec";
+    case MINPRIMOP_TYPE_MUL:
+        return "nmul";
+    case MINPRIMOP_TYPE_DIV:
+        return "ndiv";
+    case MINPRIMOP_TYPE_CMP:
+        return "cmp";
+    case MINPRIMOP_TYPE_NE:
+        return "ne";
+    case MINPRIMOP_TYPE_LT:
+        return "lt";
+    case MINPRIMOP_TYPE_LE:
+        return "le";
+    case MINPRIMOP_TYPE_EQ:
+        return "eq";
+    case MINPRIMOP_TYPE_GE:
+        return "ge";
+    case MINPRIMOP_TYPE_GT:
+        return "gt";
+    case MINPRIMOP_TYPE_ADD:
+        return "nadd";
+    case MINPRIMOP_TYPE_MOD:
+        return "nmod";
+    case MINPRIMOP_TYPE_POW:
+        return "npow";
+    case MINPRIMOP_TYPE_SUB:
+        return "nsub";
+    case MINPRIMOP_TYPE_CANON:
+        return "ncanon";
+    default:
+        cant_happen("unhandled %s", minPrimOpName(type));
+    }
+}
+
+/////////////////
+// Label Helpers
+/////////////////
+
+static SCharArray *makeLabel(char *prefix, HashSymbol *symbol) {
+    SCharArray *label = newSCharArray();
+    int save = PROTECT(label);
+    static char buffer[128];
+    for (char *c = prefix; *c; c++) {
+        pushSCharArray(label, *c);
+    }
+    for (char *c = symbol->name; *c; c++) {
+        if (isalnum(*c) || *c == '_')
+            pushSCharArray(label, *c);
+        else {
+            sprintf(buffer, "%d", (int)*c);
+            for (char *d = buffer; *d; d++)
+                pushSCharArray(label, *d);
+        }
+    }
+    pushSCharArray(label, '\0');
+    UNPROTECT(save);
+    return label;
+}
+
+static SCharArray *makeLambdaLabel(HashSymbol *symbol) {
+    return makeLabel("LAMBDA_", symbol);
+}
+
+////////////
+// Emitters
+////////////
 
 static void emitAtomic(MinExp *exp, EmitterContext *context) {
     switch (exp->type) {
@@ -330,70 +422,15 @@ static void emitAtomic(MinExp *exp, EmitterContext *context) {
     }
 }
 
-// assertive retrieval, all letrec bindings are expected to be closures
-static MinLam *extractLambda(MinExp *node) {
-    MinExprList *makeVec = getMinExp_MakeVec(node);
-#ifdef SAFETY_CHECKS
-    if (makeVec == NULL)
-        cant_happen("letrec binding must be a 2-vec");
-#endif
-    return getMinExp_Lam(makeVec->exp);
-}
-
-static MinExprList *extractEnv(MinExp *node) {
-    MinExprList *makeVec = getMinExp_MakeVec(node);
-#ifdef SAFETY_CHECKS
-    if (makeVec == NULL)
-        cant_happen("letrec binding must be a 2-vec");
-#endif
-    makeVec = makeVec->next;
-#ifdef SAFETY_CHECKS
-    if (makeVec == NULL)
-        cant_happen("letrec binding must be a 2-vec");
-#endif
-    return getMinExp_MakeVec(makeVec->exp);
-}
-
-static SCharArray *makeLabel(char *prefix, HashSymbol *symbol) {
-    SCharArray *label = newSCharArray();
-    int save = PROTECT(label);
-    static char buffer[128];
-    for (char *c = prefix; *c; c++) {
-        pushSCharArray(label, *c);
+static char *emitResultText(EmitResult *data, EmitterContext *context) {
+    switch (data->type) {
+    case EMITRESULT_TYPE_BUF:
+        return opaqueEmitBufferContent(getEmitResult_Buf(data));
+    case EMITRESULT_TYPE_VAR:
+        return getSlot(getEmitResult_Var(data), context)->text->entries;
+    default:
+        cant_happen("unrecognised %s", emitResultTypeName(data->type));
     }
-    for (char *c = symbol->name; *c; c++) {
-        if (isalnum(*c) || *c == '_')
-            pushSCharArray(label, *c);
-        else {
-            sprintf(buffer, "%d", (int)*c);
-            for (char *d = buffer; *d; d++)
-                pushSCharArray(label, *d);
-        }
-    }
-    pushSCharArray(label, '\0');
-    UNPROTECT(save);
-    return label;
-}
-
-static SCharArray *makeLambdaLabel(HashSymbol *symbol) {
-    return makeLabel("LAMBDA_", symbol);
-}
-
-static inline void retrieveMaxReg(EmitterContext *to, EmitterContext *from) {
-    to->maxReg = MAX(to->maxReg, from->maxReg);
-}
-
-// shallow copy
-static EmitterContext *copyContext(EmitterContext *context, Opaque *body) {
-    EmitterContext *new =
-        newEmitterContext(context->currentBinding, body, context->builtIns);
-    int save = PROTECT(new);
-    new->lambdas = context->lambdas;
-    // don't copy slots
-    new->currentDepth = context->currentDepth;
-    new->maxReg = context->maxReg;
-    UNPROTECT(save);
-    return new;
 }
 
 static EmitResult *emitNewAtomic(MinExp *exp, EmitterContext *context) {
@@ -599,10 +636,6 @@ static EmitResult *emitMakeVec(MinExprList *vecs, EmitterContext *context) {
     return target;
 }
 
-///////////////////////////
-// Visitor implementations
-///////////////////////////
-
 static void emitMinLam(MinLam *node, EmitterContext *context) {
     context->currentDepth = countSymbolList(node->args);
     setMaxReg(context);
@@ -672,22 +705,6 @@ static EmitResult *emitExtractFromClosure(EmitResult *closure, int index,
             emitResultText(closure, context));
     UNPROTECT(save);
     return result;
-}
-
-static BuiltIn *findBuiltIn(MinApply *node, EmitterContext *context) {
-    BuiltIn *bi = NULL;
-    for (Index i = 0; i < context->builtIns->size; i++) {
-        if (context->builtIns->entries[i]->internalName ==
-            getMinExp_Var(node->function)) {
-            bi = context->builtIns->entries[i];
-            break;
-        }
-    }
-    if (bi == NULL) {
-        cant_happen("could not find builtin %s",
-                    getMinExp_Var(node->function)->name);
-    }
-    return bi;
 }
 
 static EmitResult *emitCallBuiltin(BuiltIn *bi, MinExprList *builtinArgs,
