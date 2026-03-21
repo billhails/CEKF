@@ -46,13 +46,20 @@ static void emitMinCharCondCases(MinCharCondCases *, EmitterContext *);
 static void emitMinMatch(MinMatch *, EmitterContext *);
 static void emitMinMatchList(MinMatchList *, EmitterContext *);
 static void emitMinLetRec(MinLetRec *, EmitterContext *);
-static void emitMinBindings(MinBindings *, Integer, EmitterContext *);
+static void emitMinBindings(MinBindings *, Integer, ResultArray *,
+                            EmitterContext *);
 static void emitMinExp(MinExp *, EmitterContext *);
 static void emitMinCondCases(MinCondCases *, EmitterContext *);
 static EmitResult *emitMakeVec(MinExprList *, EmitterContext *);
 static EmitResult *emitSimpleExp(MinExp *, EmitterContext *);
-static EmitterContext *copyContext(EmitterContext *, Opaque *);
+static EmitterContext *extendContext(EmitterContext *, Opaque *);
 static void emitMaybeBigInt(MaybeBigInt *mbi, EmitterContext *context);
+#ifdef SAFETY_CHECKS
+static void assertNoLeakedTemps(EmitterContext *context);
+#define ASSERT_TEMPS(context) assertNoLeakedTemps(context)
+#else
+#define ASSERT_TEMPS(context)
+#endif
 
 ///////////////////////
 // Emit Buffer Helpers
@@ -125,23 +132,29 @@ static EmitterContext *extendContextForLambda(HashSymbol *var,
     // create a new memstream for the lambda body
     Opaque *body = newOpaque_EmitBuffer();
     int save = PROTECT(body);
-    EmitterContext *lamContext = copyContext(context, body);
-    REPLACE_PROTECT(save, lamContext);
     // add it to the global set of lambdas
     setBufferBag(context->lambdas, var, body);
+    EmitterContext *new =
+        newEmitterContext(context->currentBinding, body, context->builtIns);
+    PROTECT(new);
+    new->lambdas = context->lambdas;
+    new->maxReg = context->maxReg;
     UNPROTECT(save);
-    return lamContext;
+    return new;
 }
 
-// shallow copy
-static EmitterContext *copyContext(EmitterContext *context, Opaque *body) {
+// only for atomics: sub-context must not allocate slots
+static EmitterContext *extendContext(EmitterContext *context, Opaque *body) {
     EmitterContext *new =
         newEmitterContext(context->currentBinding, body, context->builtIns);
     int save = PROTECT(new);
     new->lambdas = context->lambdas;
-    // don't copy slots
+    new->slots = context->slots;
     new->currentDepth = context->currentDepth;
     new->maxReg = context->maxReg;
+    new->currentReg = context->currentReg;
+    new->totalSlots = context->totalSlots;
+    new->activeSlots = context->activeSlots;
     UNPROTECT(save);
     return new;
 }
@@ -186,27 +199,38 @@ static BuiltIn *findBuiltIn(MinApply *node, EmitterContext *context) {
 
 static HashSymbol *claimSlotSymbol(EmitterContext *context) {
     HashSymbol *result = NULL;
+    HashSymbol *key = NULL;
     Slot *slot = NULL;
+    Slot *resultSlot = NULL;
     Index i = 0;
-    while ((result = iterateSlotPool(context->slots, &i, &slot)) != NULL) {
+    while ((key = iterateSlotPool(context->slots, &i, &slot)) != NULL) {
         if (slot->isAvailable) {
-            slot->isAvailable = false;
-            return result;
+            if (resultSlot == NULL || slot->index < resultSlot->index) {
+                resultSlot = slot;
+                result = key;
+            }
         }
+    }
+    if (resultSlot != NULL) {
+        resultSlot->isAvailable = false;
+        context->activeSlots++;
+        return result;
     }
     result = genSym("tmp_");
     SCharArray *text = newSCharArray();
     int save = PROTECT(text);
     char buf[64];
     sprintf(buf, "reg[%d]", context->currentDepth);
-    incrDepth(context);
     for (char *c = buf; *c; c++) {
         pushSCharArray(text, *c);
     }
     pushSCharArray(text, '\0');
-    slot = newSlot(false, text);
+    slot = newSlot(false, text, context->currentDepth);
+    incrDepth(context);
     PROTECT(slot);
     setSlotPool(context->slots, result, slot);
+    context->activeSlots++;
+    context->totalSlots++;
     UNPROTECT(save);
     return result;
 }
@@ -233,6 +257,7 @@ static void releaseSlotSymbol(HashSymbol *temp, EmitterContext *context) {
     Slot *slot = NULL;
     if (getSlotPool(context->slots, temp, &slot)) {
         slot->isAvailable = true;
+        context->activeSlots--;
     } else {
         cant_happen("slot not found");
     }
@@ -258,6 +283,57 @@ static void releaseSlots(ResultArray *slots, EmitterContext *context) {
         releaseSlot(slots->entries[i], context);
     }
 }
+
+static bool slotsAvailableBelow(int N, EmitterContext *context) {
+    HashSymbol *key = NULL;
+    Slot *slot = NULL;
+    Index i = 0;
+    if (N == 0)
+        return false;
+    if (context->currentDepth < N) // we've never allocated them
+        return true;
+    while ((key = iterateSlotPool(context->slots, &i, &slot)) != NULL) {
+        if (slot->isAvailable && slot->index < N) {
+            return true;
+        }
+    }
+    return false;
+}
+
+static ResultArray *claimSlotsBelow(int N, EmitterContext *context) {
+    ResultArray *slots = newResultArray();
+    int save = PROTECT(slots);
+    while (slotsAvailableBelow(N, context)) {
+        EmitResult *slot = claimSlot(context);
+        int save2 = PROTECT(slot);
+        pushResultArray(slots, slot);
+        UNPROTECT(save2);
+    }
+    UNPROTECT(save);
+    return slots;
+}
+
+static ResultArray *claimSlots(int N, EmitterContext *context) {
+    ResultArray *slots = newResultArray();
+    int save = PROTECT(slots);
+    for (int i = 0; i < N; ++i) {
+        EmitResult *slot = claimSlot(context);
+        int save2 = PROTECT(slot);
+        pushResultArray(slots, slot);
+        UNPROTECT(save2);
+    }
+    UNPROTECT(save);
+    return slots;
+}
+
+#ifdef SAFETY_CHECKS
+static void assertNoLeakedTemps(EmitterContext *context) {
+    if (context->activeSlots != context->currentReg) {
+        cant_happen("slot leak: active %d, expected %d", context->activeSlots,
+                    context->currentReg);
+    }
+}
+#endif
 
 //////////////////
 // MinExp Helpers
@@ -369,7 +445,7 @@ static SCharArray *makeLabel(char *prefix, HashSymbol *symbol) {
         if (isalnum(*c) || *c == '_')
             pushSCharArray(label, *c);
         else {
-            sprintf(buffer, "%d", (int)*c);
+            sprintf(buffer, "_%d", (int)*c);
             for (char *d = buffer; *d; d++)
                 pushSCharArray(label, *d);
         }
@@ -436,7 +512,7 @@ static char *emitResultText(EmitResult *data, EmitterContext *context) {
 static EmitResult *emitNewAtomic(MinExp *exp, EmitterContext *context) {
     Opaque *buffer = newOpaque_EmitBuffer();
     int save = PROTECT(buffer);
-    EmitterContext *atomicContext = copyContext(context, buffer);
+    EmitterContext *atomicContext = extendContext(context, buffer);
     PROTECT(atomicContext);
     emitAtomic(exp, atomicContext);
     setProtectionStatus(context, atomicContext);
@@ -557,7 +633,7 @@ static EmitResult *emitSimpleExp(MinExp *exp, EmitterContext *context) {
         MinAnnotatedVar *avar = getMinExp_Avar(exp);
         Opaque *buf = newOpaque_EmitBuffer();
         int save = PROTECT(buf);
-        EmitterContext *aVarContext = copyContext(context, buf);
+        EmitterContext *aVarContext = extendContext(context, buf);
         setProtectionStatus(context, aVarContext);
         PROTECT(aVarContext);
         emitMinAnnotatedVar(avar, aVarContext);
@@ -577,7 +653,7 @@ static EmitResult *emitSimpleExp(MinExp *exp, EmitterContext *context) {
         MaybeBigInt *mbi = getMinExp_BigInteger(exp);
         Opaque *buf = newOpaque_EmitBuffer();
         int save = PROTECT(buf);
-        EmitterContext *biContext = copyContext(context, buf);
+        EmitterContext *biContext = extendContext(context, buf);
         PROTECT(biContext);
         emitMaybeBigInt(mbi, biContext);
         EmitResult *result = newEmitResult_Buf(buf);
@@ -637,11 +713,20 @@ static EmitResult *emitMakeVec(MinExprList *vecs, EmitterContext *context) {
 }
 
 static void emitMinLam(MinLam *node, EmitterContext *context) {
-    context->currentDepth = countSymbolList(node->args);
-    setMaxReg(context);
-    if (node->exp != NULL) {
+#ifdef SAFETY_CHECKS
+    if (node == NULL)
+        cant_happen("NULL MinLam");
+#endif
+    int nargs = countSymbolList(node->args);
+    ResultArray *slots = claimSlots(nargs, context);
+    int save = PROTECT(slots);
+    context->currentReg += nargs;
+    ASSERT_TEMPS(context);
+    if (node->exp != NULL)
         emitMinExp(node->exp, context);
-    }
+    releaseSlots(slots, context);
+    context->currentReg -= nargs;
+    UNPROTECT(save);
 }
 
 static void emitMinAnnotatedVar(MinAnnotatedVar *node,
@@ -658,41 +743,39 @@ static void emitMinExprList(MinExprList *node, EmitterContext *context) {
 
 static void emitGoto(EmitResult *target, ResultArray *args,
                      EmitterContext *context) {
-    // Stage through fresh registers, bypassing the pool entirely.
-    // Staging must start above both currentDepth (to avoid clobbering
-    // in-use temps) and args->size (since the copy-down loop writes
-    // reg[0..N-1], which would overwrite the staged target if N >
-    // stageBase).
-    int stageBase = MAX(context->currentDepth, (int)args->size);
-
-    int targetSlot = stageBase;
-    stageBase++;
-    if (stageBase > context->maxReg)
-        context->maxReg = stageBase;
-    fprintf(FH(context), "reg[%d] = %s;\n", targetSlot,
-            emitResultText(target, context));
-
-    int argsBase = stageBase;
-    stageBase += args->size;
-    if (stageBase > context->maxReg)
-        context->maxReg = stageBase;
+    ResultArray *tempSlots = newResultArray();
+    int save = PROTECT(tempSlots);
     for (Index i = 0; i < args->size; i++) {
-        fprintf(FH(context), "reg[%d] = %s;\n", argsBase + (int)i,
+        EmitResult *tempSlot = claimSlot(context);
+        int save2 = PROTECT(tempSlot);
+        fprintf(FH(context), "%s = %s;\n", emitResultText(tempSlot, context),
                 emitResultText(args->entries[i], context));
+        pushResultArray(tempSlots, tempSlot);
+        UNPROTECT(save2);
     }
-
+    EmitResult *savedTarget = claimSlot(context);
+    PROTECT(savedTarget);
+    fprintf(FH(context), "%s = %s;\n", emitResultText(savedTarget, context),
+            emitResultText(target, context));
     // Copy down to reg[0..N-1]
-    for (Index i = 0; i < args->size; i++) {
-        fprintf(FH(context), "reg[%d] = reg[%d];\n", (int)i, argsBase + (int)i);
+    for (Index i = 0; i < tempSlots->size; i++) {
+        fprintf(FH(context), "reg[%d] = %s;\n", (int)i,
+                emitResultText(tempSlots->entries[i], context));
     }
 
     if (context->needsUnprotect) {
         fprintf(FH(context), "minlam_runtime_unprotect();\n");
         context->needsUnprotect = false;
     }
-    fprintf(FH(context), "TRACE(\"%s\", getValue_Addr(reg[%d]), %d);\n",
-            context->currentBinding->name, targetSlot, (int)args->size);
-    fprintf(FH(context), "goto *getValue_Addr(reg[%d]);\n", targetSlot);
+
+    fprintf(FH(context), "TRACE(\"%s\", getValue_Addr(%s), %d);\n",
+            context->currentBinding->name, emitResultText(savedTarget, context),
+            (int)args->size);
+    fprintf(FH(context), "goto *getValue_Addr(%s);\n",
+            emitResultText(savedTarget, context));
+    releaseSlot(savedTarget, context);
+    releaseSlots(tempSlots, context);
+    UNPROTECT(save);
 }
 
 static EmitResult *emitExtractFromClosure(EmitResult *closure, int index,
@@ -728,6 +811,9 @@ static EmitResult *emitCallBuiltin(BuiltIn *bi, MinExprList *builtinArgs,
 static void emitApplyBuiltin(MinApply *node, EmitterContext *context) {
     fprintf(FH(context), "// emitBuiltinApply\n");
 
+    ResultArray *contArgSlots = claimSlotsBelow(3, context); // (env result f)
+    int save = PROTECT(contArgSlots);
+
     BuiltIn *bi = findBuiltIn(node, context);
     int numBuiltinArgs = countBuiltInArgs(bi->args);
 
@@ -749,7 +835,7 @@ static void emitApplyBuiltin(MinApply *node, EmitterContext *context) {
 
     // (env result)
     MinExprList *builtinArgs = takeMinExprList(node->args, numBuiltinArgs);
-    int save = PROTECT(builtinArgs);
+    PROTECT(builtinArgs);
     EmitResult *builtinResult = emitCallBuiltin(bi, builtinArgs, context);
     PROTECT(builtinResult);
     pushResultArray(targetArgs, builtinResult);
@@ -767,6 +853,8 @@ static void emitApplyBuiltin(MinApply *node, EmitterContext *context) {
     // (k env result f)
     emitGoto(target, targetArgs, context);
     releaseSlots(targetArgs, context);
+    releaseSlots(contArgSlots, context);
+    releaseSlot(target, context);
     UNPROTECT(save);
     return;
 }
@@ -795,8 +883,13 @@ static void emitApplyBuiltin(MinApply *node, EmitterContext *context) {
 static void emitApplyClosure(MinApply *apply, EmitterContext *context) {
     fprintf(FH(context), "// emitNormalApply\n");
 
+    ResultArray *closureArgSlots =
+        claimSlotsBelow(countMinExprList(apply->args) + 1, // +1 for closure env
+                        context);
+    int save = PROTECT(closureArgSlots);
+
     EmitResult *closure = emitArg(apply->function, context);
-    int save = PROTECT(closure);
+    PROTECT(closure);
 
     EmitResult *target = emitExtractFromClosure(closure, 0, context);
     PROTECT(target);
@@ -817,9 +910,11 @@ static void emitApplyClosure(MinApply *apply, EmitterContext *context) {
         pushResultArray(targetArgs, result);
         UNPROTECT(save2);
     }
+
     emitGoto(target, targetArgs, context);
     releaseSlot(target, context);
     releaseSlots(targetArgs, context);
+    releaseSlots(closureArgSlots, context);
     UNPROTECT(save);
 }
 
@@ -838,8 +933,10 @@ static void emitMinIff(MinIff *node, EmitterContext *context) {
             emitResultText(test, context));
     releaseSlot(test, context);
     UNPROTECT(save);
+    ASSERT_TEMPS(context);
     emitMinExp(node->consequent, context);
     fprintf(FH(context), "} else {\n");
+    ASSERT_TEMPS(context);
     emitMinExp(node->alternative, context);
     fprintf(FH(context), "}\n");
 }
@@ -887,6 +984,7 @@ static void emitMinIntCondCases(MinIntCondCases *node,
         fprintMaybeBigInt(FH(context), node->constant);
         fprintf(FH(context), ": \n");
     }
+    ASSERT_TEMPS(context);
     emitMinExp(node->body, context);
     fprintf(FH(context), "break;\n");
     emitMinIntCondCases(node->next, context);
@@ -903,6 +1001,7 @@ static void emitMinCharCondCases(MinCharCondCases *node,
         return;
     }
     fprintf(FH(context), "case %d: \n", (int)(node->constant));
+    ASSERT_TEMPS(context);
     emitMinExp(node->body, context);
     fprintf(FH(context), "break;\n");
     emitMinCharCondCases(node->next, context);
@@ -927,7 +1026,7 @@ static void emitMinMatchList(MinMatchList *node, EmitterContext *context) {
         fprintf(FH(context), "case %d:\n", match->item);
         match = match->next;
     }
-
+    ASSERT_TEMPS(context);
     emitMinExp(node->body, context);
     fprintf(FH(context), "break;\n");
     emitMinMatchList(node->next, context);
@@ -935,29 +1034,29 @@ static void emitMinMatchList(MinMatchList *node, EmitterContext *context) {
 
 // emitMinLetRec -> emitMinBindings -> emitMakeClosure
 static void emitMakeClosure(HashSymbol *var, Integer depth,
-                            EmitterContext *context) {
+                            ResultArray *bindings, EmitterContext *context) {
     fprintf(FH(context), "// emitMakeClosure %d\n", depth);
     SCharArray *label = makeLambdaLabel(var);
     int save = PROTECT(label);
-    fprintf(FH(context),
-            "reg[%d] = make_vec(2, value_Addr(&&%s), value_None());\n", depth,
-            label->entries);
+    fprintf(FH(context), "%s = make_vec(2, value_Addr(&&%s), value_None());\n",
+            emitResultText(bindings->entries[depth], context), label->entries);
     UNPROTECT(save);
 }
 
-static void emitBackpatchClosure(MinExprList *exprs, Integer depth,
-                                 EmitterContext *context) {
+static void emitBackpatchClosure(MinExprList *exprs, int depth,
+                                 ResultArray *slots, EmitterContext *context) {
     fprintf(FH(context), "// emitBackpatchClosure %d\n", depth);
     EmitResult *tmp = emitMakeVec(exprs, context);
     int save = PROTECT(tmp);
-    fprintf(FH(context), "getValue_Vec(reg[%d])->entries[1] = %s;\n", depth,
+    fprintf(FH(context), "getValue_Vec(%s)->entries[1] = %s;\n",
+            emitResultText(slots->entries[depth], context),
             emitResultText(tmp, context));
     releaseSlot(tmp, context);
     UNPROTECT(save);
 }
 
 static void emitMinBindings(MinBindings *node, Integer depth,
-                            EmitterContext *context) {
+                            ResultArray *bindings, EmitterContext *context) {
     if (node == NULL)
         return;
     // Use a unique name to avoid BufferBag hash collisions when the
@@ -971,42 +1070,36 @@ static void emitMinBindings(MinBindings *node, Integer depth,
     emitMinLam(lambda, lamContext);
     retrieveMaxReg(context, lamContext);
     // but emit the closure creation to the current memstream
-    emitMakeClosure(uniqueName, depth, context);
+    emitMakeClosure(uniqueName, depth, bindings, context);
     UNPROTECT(save);
-    emitMinBindings(node->next, depth + 1, context);
+    emitMinBindings(node->next, depth + 1, bindings, context);
 }
 
 static void emitBackpatchBindings(MinBindings *node, Integer depth,
+                                  ResultArray *bindings,
                                   EmitterContext *context) {
     if (node == NULL)
         return;
     MinExprList *makeEnv = extractEnv(node->val);
-    emitBackpatchClosure(makeEnv, depth, context);
-    emitBackpatchBindings(node->next, depth + 1, context);
+    emitBackpatchClosure(makeEnv, depth, bindings, context);
+    emitBackpatchBindings(node->next, depth + 1, bindings, context);
 }
 
 static void emitMinLetRec(MinLetRec *node, EmitterContext *context) {
     fprintf(FH(context), "// emitMinLetRec\n");
-    // Advance currentDepth past the binding positions. Bindings are
-    // written directly via reg[depth] in emitMakeClosure, not through
-    // the pool, so the positions are implicitly protected by being
-    // below currentDepth with no pool entries pointing to them.
-    Integer startDepth = context->currentDepth;
+    ASSERT_TEMPS(context);
     int numBindings = countMinBindings(node->bindings);
-    context->currentDepth += numBindings;
-    setMaxReg(context);
-    emitMinBindings(node->bindings, startDepth, context);
-    // Nuke pool so backpatching can't reuse a register that now
-    // holds a pre-allocated letrec binding closure.
-    context->slots = newSlotPool();
-    emitBackpatchBindings(node->bindings, startDepth, context);
-    // Reset currentDepth: backpatching temps inflated it, but the
-    // annotator expects the next variable at startDepth + numBindings.
-    context->currentDepth = startDepth + numBindings;
-    // Nuke again: released backpatch temps would be reclaimed at
-    // positions that conflict with the reset currentDepth.
-    context->slots = newSlotPool();
+    ResultArray *bindings = claimSlots(numBindings, context);
+    int save = PROTECT(bindings);
+    emitMinBindings(node->bindings, 0, bindings, context);
+    emitBackpatchBindings(node->bindings, 0, bindings, context);
+    context->currentReg += numBindings;
+    ASSERT_TEMPS(context);
     emitMinExp(node->body, context);
+    context->currentReg -= numBindings;
+    releaseSlots(bindings, context);
+    ASSERT_TEMPS(context);
+    UNPROTECT(save);
 }
 
 static void emitMinExp(MinExp *node, EmitterContext *context) {
