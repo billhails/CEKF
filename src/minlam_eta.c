@@ -32,6 +32,17 @@
 #endif
 
 static MinExp *etaMinLam(MinExp *node);
+
+static int curryDepth(MinExp *exp) {
+    int depth = 0;
+    while (isMinExp_Lam(exp)) {
+        MinLam *lam = getMinExp_Lam(exp);
+        depth += countSymbolList(lam->args);
+        exp = lam->exp;
+    }
+    return depth;
+}
+
 static MinExprList *etaMinExprList(MinExprList *node);
 static MinPrimApp *etaMinPrimApp(MinPrimApp *node);
 static MinApply *etaMinApply(MinApply *node);
@@ -467,7 +478,7 @@ static MinBindings *etaMinBindings(MinBindings *node) {
     if (changed) {
         MinBindings *result =
             newMinBindings(CPI(node), node->var, new_val, new_next);
-        result->arity = node->arity;
+        result->arity = curryDepth(new_val);
         UNPROTECT(save);
         LEAVE(etaMinBindings);
         return result;

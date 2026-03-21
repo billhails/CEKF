@@ -25,6 +25,7 @@
 #include "minlam_beta.h"
 #include "minlam_pp.h"
 #include "minlam_subst.h"
+#include "utils_helper.h"
 
 #ifdef DEBUG_MINLAM_BETA
 #include "debugging_on.h"
@@ -33,6 +34,17 @@
 #endif
 
 static MinLam *betaMinLam(MinLam *node);
+
+static int curryDepth(MinExp *exp) {
+    int depth = 0;
+    while (isMinExp_Lam(exp)) {
+        MinLam *lam = getMinExp_Lam(exp);
+        depth += countSymbolList(lam->args);
+        exp = lam->exp;
+    }
+    return depth;
+}
+
 static MinExprList *betaMinExprList(MinExprList *node);
 static MinPrimApp *betaMinPrimApp(MinPrimApp *node);
 static MinExp *betaMinApply(MinExp *node);
@@ -614,7 +626,7 @@ static MinBindings *betaMinBindings(MinBindings *node) {
     MinBindings *result = node;
     if (changed) {
         result = newMinBindings(CPI(node), node->var, new_val, new_next);
-        result->arity = node->arity;
+        result->arity = curryDepth(new_val);
     }
 
     if (beta_conversion_function != NULL &&
