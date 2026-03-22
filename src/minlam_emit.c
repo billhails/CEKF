@@ -61,10 +61,10 @@ static void emitMaybeBigInt(MaybeBigInt *mbi, EmitterContext *context);
 /////////////////
 
 #ifdef SAFETY_CHECKS
-static void assertNoLeakedTemps(EmitterContext *context);
-#define ASSERT_TEMPS(context) assertNoLeakedTemps(context)
+static void assertNoLeakedSlots(EmitterContext *, int);
+#define ASSERT_SLOTS(context) assertNoLeakedSlots(context, __LINE__)
 #else
-#define ASSERT_TEMPS(context)
+#define ASSERT_SLOTS(context)
 #endif
 
 #define EMITLOC(name, node, context)                                           \
@@ -269,8 +269,10 @@ static EmitResult *claimSlot(EmitterContext *context) {
 static void releaseSlotSymbol(HashSymbol *temp, EmitterContext *context) {
     Slot *slot = NULL;
     if (getSlotPool(context->slots, temp, &slot)) {
-        slot->isAvailable = true;
-        context->activeSlots--;
+        if (!slot->isAvailable) {
+            context->activeSlots--;
+            slot->isAvailable = true;
+        }
     } else {
         cant_happen("slot not found");
     }
@@ -340,10 +342,10 @@ static ResultArray *claimSlots(int N, EmitterContext *context) {
 }
 
 #ifdef SAFETY_CHECKS
-static void assertNoLeakedTemps(EmitterContext *context) {
+static void assertNoLeakedSlots(EmitterContext *context, int line) {
     if (context->activeSlots != context->currentReg) {
-        cant_happen("slot leak: active %d, expected %d", context->activeSlots,
-                    context->currentReg);
+        cant_happen("slot leak: active %d, expected %d line %d",
+                    context->activeSlots, context->currentReg, line);
     }
 }
 #endif
@@ -477,7 +479,6 @@ static SCharArray *makeLambdaLabel(HashSymbol *symbol) {
 ////////////
 
 static void emitAtomic(MinExp *exp, EmitterContext *context) {
-    EMITLOC("emitAtomic", exp, context);
     switch (exp->type) {
     case MINEXP_TYPE_AVAR:
         emitMinAnnotatedVar(getMinExp_Avar(exp), context);
@@ -740,7 +741,7 @@ static void emitMinLam(MinLam *node, EmitterContext *context) {
     ResultArray *slots = claimSlots(nargs, context);
     int save = PROTECT(slots);
     context->currentReg += nargs;
-    ASSERT_TEMPS(context);
+    ASSERT_SLOTS(context);
     if (node->exp != NULL)
         emitMinExp(node->exp, context);
     releaseSlots(slots, context);
@@ -761,27 +762,53 @@ static void emitMinExprList(MinExprList *node, EmitterContext *context) {
     emitMinExprList(node->next, context);
 }
 
+static inline void emitAssign(EmitResult *to, EmitResult *from,
+                              EmitterContext *context) {
+    fprintf(FH(context), "%s = %s;\n", emitResultText(to, context),
+            emitResultText(from, context));
+}
+
+static inline void emitAssignReg(Index i, EmitResult *value,
+                                 EmitterContext *context) {
+    fprintf(FH(context), "reg[%d] = %s;\n", (int)i,
+            emitResultText(value, context));
+}
+
 static void emitGoto(EmitResult *target, ResultArray *args,
                      EmitterContext *context) {
     fprintf(FH(context), "// emitGoto\n");
-    ResultArray *tempSlots = newResultArray();
-    int save = PROTECT(tempSlots);
+    ResultArray *sourceSlots = newResultArray();
+    int save = PROTECT(sourceSlots);
+    ResultArray *claimedSlots = newResultArray();
+    PROTECT(claimedSlots);
+
     for (Index i = 0; i < args->size; i++) {
         EmitResult *tempSlot = claimSlot(context);
         int save2 = PROTECT(tempSlot);
-        fprintf(FH(context), "%s = %s;\n", emitResultText(tempSlot, context),
-                emitResultText(args->entries[i], context));
-        pushResultArray(tempSlots, tempSlot);
+        if (isEmitResult_Buf(args->entries[i])) {
+            emitAssign(tempSlot, args->entries[i], context);
+            pushResultArray(sourceSlots, tempSlot);
+        } else {
+            // a var has already claimed a safe slot, use it directly for
+            // copy-down
+            pushResultArray(sourceSlots, args->entries[i]);
+        }
+        pushResultArray(claimedSlots, tempSlot);
         UNPROTECT(save2);
     }
+
     EmitResult *savedTarget = claimSlot(context);
     PROTECT(savedTarget);
-    fprintf(FH(context), "%s = %s;\n", emitResultText(savedTarget, context),
-            emitResultText(target, context));
+    pushResultArray(claimedSlots, savedTarget);
+    if (isEmitResult_Buf(target)) {
+        emitAssign(savedTarget, target, context);
+    } else {
+        savedTarget = target;
+    }
+
     // Copy down to reg[0..N-1]
-    for (Index i = 0; i < tempSlots->size; i++) {
-        fprintf(FH(context), "reg[%d] = %s;\n", (int)i,
-                emitResultText(tempSlots->entries[i], context));
+    for (Index i = 0; i < sourceSlots->size; i++) {
+        emitAssignReg(i, sourceSlots->entries[i], context);
     }
 
     if (context->needsUnprotect) {
@@ -794,8 +821,7 @@ static void emitGoto(EmitResult *target, ResultArray *args,
             (int)args->size);
     fprintf(FH(context), "goto *getValue_Addr(%s);\n",
             emitResultText(savedTarget, context));
-    releaseSlot(savedTarget, context);
-    releaseSlots(tempSlots, context);
+    releaseSlots(claimedSlots, context);
     UNPROTECT(save);
 }
 
@@ -955,10 +981,10 @@ static void emitMinIff(MinIff *node, EmitterContext *context) {
             emitResultText(test, context));
     releaseSlot(test, context);
     UNPROTECT(save);
-    ASSERT_TEMPS(context);
+    ASSERT_SLOTS(context);
     emitMinExp(node->consequent, context);
     fprintf(FH(context), "} else {\n");
-    ASSERT_TEMPS(context);
+    ASSERT_SLOTS(context);
     emitMinExp(node->alternative, context);
     fprintf(FH(context), "}\n");
 }
@@ -1009,7 +1035,7 @@ static void emitMinIntCondCases(MinIntCondCases *node, const char *condText,
         emitMaybeBigInt(node->constant, context);
         fprintf(FH(context), ") == CMP_EQ) {\n");
     }
-    ASSERT_TEMPS(context);
+    ASSERT_SLOTS(context);
     emitMinExp(node->body, context);
     if (node->next != NULL) {
         fprintf(FH(context), "} else ");
@@ -1032,13 +1058,13 @@ static void emitMinCharCondCases(MinCharCondCases *node,
     }
     if (node->isDefault) {
         fprintf(FH(context), "default: \n");
-        ASSERT_TEMPS(context);
+        ASSERT_SLOTS(context);
         emitMinExp(node->body, context);
         fprintf(FH(context), "break;\n");
         return;
     }
     fprintf(FH(context), "case %d: \n", (int)(node->constant));
-    ASSERT_TEMPS(context);
+    ASSERT_SLOTS(context);
     emitMinExp(node->body, context);
     fprintf(FH(context), "break;\n");
     emitMinCharCondCases(node->next, context);
@@ -1065,7 +1091,7 @@ static void emitMinMatchList(MinMatchList *node, EmitterContext *context) {
         fprintf(FH(context), "case %d:\n", match->item);
         match = match->next;
     }
-    ASSERT_TEMPS(context);
+    ASSERT_SLOTS(context);
     emitMinExp(node->body, context);
     fprintf(FH(context), "break;\n");
     emitMinMatchList(node->next, context);
@@ -1128,18 +1154,18 @@ static void emitBackpatchBindings(MinBindings *node, Integer depth,
 
 static void emitMinLetRec(MinLetRec *node, EmitterContext *context) {
     EMITLOC("emitMinLetRec", node, context);
-    ASSERT_TEMPS(context);
+    ASSERT_SLOTS(context);
     int numBindings = countMinBindings(node->bindings);
     ResultArray *bindings = claimSlots(numBindings, context);
     int save = PROTECT(bindings);
     emitMinBindings(node->bindings, 0, bindings, context);
     emitBackpatchBindings(node->bindings, 0, bindings, context);
     context->currentReg += numBindings;
-    ASSERT_TEMPS(context);
+    ASSERT_SLOTS(context);
     emitMinExp(node->body, context);
     context->currentReg -= numBindings;
     releaseSlots(bindings, context);
-    ASSERT_TEMPS(context);
+    ASSERT_SLOTS(context);
     UNPROTECT(save);
 }
 
