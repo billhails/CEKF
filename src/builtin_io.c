@@ -180,8 +180,8 @@ static HashSymbol *fileHandleToKey(FILE *file) {
 static void opaque_io_close(void *data) {
     if (data == NULL)
         return;
-    fclose(data);
     HashSymbol *key = fileHandleToKey(data);
+    fclose(data);
     BuiltInMemBuf *memBuf = NULL;
     if (getBuiltInMemBufHash(getMemBufs(), key, &memBuf)) {
         if (memBuf->buffer != NULL) {
