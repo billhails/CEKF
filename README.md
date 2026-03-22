@@ -75,6 +75,7 @@ the $step$ function: one to deal with `amb` and one to deal with `back`.
 ```mermaid
 flowchart TD
 classDef process fill:#aef,color:#123;
+classDef minlam fill:#456,color:#fea;
 source(Source) -->
 scanner([Scanner]):::process -->
 tokens(Tokens) -->
@@ -98,33 +99,41 @@ tc <--> pc([Print Compiler]):::process
 tc --> lambda2(Plain Lambda Form)
 lambda2 --> ci([Constructor Inlining]):::process
 ci --> lambda3(Inlined Lambda)
-subgraph anf-rewrite-2
-   desugaring(["Desugaring"]):::process
-   desugaring --> lambda_ds(desugared lambda)
-   lambda_ds --> alpha(["ɑ-Conversion"]):::process
-   alpha --> lambda_a(alphatized lambda)
-   lambda_a --> curry(["Currying"]):::process
-   curry --> curried(curried lambda)
-   curried --> beta(["β-conversion"]):::process
-   beta --> lambda_beta("β-lambda")
-   lambda_beta --> eta(["η-conversion"]):::process
-   eta --> lambda_eta("η-lambda")
-   lambda_eta --> folding([Operator Folding]):::process
-   folding --> folded(optimized operators)
-   folded --> uncurry(["Un-Currying"]):::process
-   uncurry --> uncurried(uncurried lambda)
+desugaring(["Desugaring"]):::process
+desugaring --> lambda_ds(desugared lambda):::minlam
+lambda_ds --> alpha(["ɑ-Conversion"]):::process
+alpha --> lambda_a(alphatized lambda):::minlam
 
-   uncurried --> anfr([ANF Rewrite]):::process
-   anfr --> lambda_b(New ANF)
+lambda_a --> curry(["Currying"]):::process
+curry --> curried(curried lambda):::minlam
+curried --> beta(["β-conversion"]):::process
+beta --> lambda_beta("β-lambda"):::minlam
+lambda_beta --> eta(["η-conversion"]):::process
+eta --> lambda_eta("η-lambda"):::minlam
+lambda_eta --> folding([Operator Folding]):::process
+folding --> folded(optimized operators):::minlam
+folded --> uncurry(["Un-Currying"]):::process
+uncurry --> uncurried(uncurried lambda):::minlam
 
-   uncurried --> cps([CPS Transform]):::process
-   cps --> lambda_e("CPS λ")
-   lambda_e --> cloc([Closure Conversion WiP]):::process
-   cloc --> lambda_c(Explicit Closure)
+uncurried --> anfr([ANF Rewrite]):::process
+anfr --> lambda_b(New ANF)
+
+uncurried --> cps([CPS Transform]):::process
+cps --> beta2([Additional β-conversion]):::process -->
+lambda_e("CPS λ"):::minlam
+lambda_e --> cloc([Closure Conversion]):::process
+cloc --> lambda_c(Explicit Closure):::minlam
+lambda_c --> amb_conversion([AMB Conversion]):::process
+amb_conversion --> amb(Pure CPS λ with failllure continuation):::minlam
+amb --> closure_conversion([Closure Lifting]):::process
+closure_conversion --> closures(Explicit Closures):::minlam
+closures --> beta3([Yet another β]):::process --> eta2([And another η]):::process -->
+de_bruijn([DeBruijn Indexing]):::process
+de_bruijn --> indexed("Annotated Variables (Final IR)"):::minlam
+indexed --> c_emitter([Emit C]):::process
+c_emitter --> target_c(Pure C code)
    
-end
 lambda3 --> desugaring
-lambda3 --> anfc
 uncurried --> anfc([A-Normal Form Conversion]):::process
 anfc --> anf(ANF)
 anf --> lexa([Lexical Analysis]):::process
@@ -135,7 +144,11 @@ bc <--> bcf(Bytecode Files)
 bc --> cekf([CEKF Runtime VM]):::process
 ```
 
-The "anf-rewrite-2" section is a WiP on the `anf-rewrite-2` branch. Although that branch started as a rewrite of the ANF transform, it became apparent that the CEK machine itself was blocking optimizations and so the intention is to target a more "traditional" register machine with an eye towards LLVM in the longer term. On that branch the ɑ-conversion is complete and incorporated (though it achieves nothing for the ANF path it is required for CPS.) The ANF rewrite is complete but abandoned, and the CPS transform is also complete.
+A big driver for the progress made has been arriving at a minimalist
+lambda (`minlam`) set of structures for the IR. In the diagram above
+the stages making use of this `minlam` representation are coloured mid-blue/grey.
+
+The "ANF Rewrite" stage was a successful attempt to re-implement the clunky existing ANF transform, but in the process it became apparent that the CEK machine itself was blocking optimizations and so the trajectory pivoted towards targeting a more "traditional" register machine via CPS, initially in C but with an eye towards LLVM in the longer term.
 
 The various components named in the diagram above are linked to their implementation entry point here:
 
