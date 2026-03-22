@@ -66,7 +66,7 @@ void vcan_happen(ParserInfo I, const char *message, va_list args) {
     if (I.lineNo != 0) {
         fprintf(stderr, " at +%d %s", I.lineNo, I.fileName);
     }
-    eprintf("\n");
+    fprintf(stderr, "\n");
     errors = true;
 }
 

@@ -41,7 +41,8 @@ static void emitMinExprList(MinExprList *, EmitterContext *);
 static void emitMinApply(MinApply *, EmitterContext *);
 static void emitMinIff(MinIff *, EmitterContext *);
 static void emitMinCond(MinCond *, EmitterContext *);
-static void emitMinIntCondCases(MinIntCondCases *, EmitterContext *);
+static void emitMinIntCondCases(MinIntCondCases *, const char *,
+                                EmitterContext *);
 static void emitMinCharCondCases(MinCharCondCases *, EmitterContext *);
 static void emitMinMatch(MinMatch *, EmitterContext *);
 static void emitMinMatchList(MinMatchList *, EmitterContext *);
@@ -54,12 +55,24 @@ static EmitResult *emitMakeVec(MinExprList *, EmitterContext *);
 static EmitResult *emitSimpleExp(MinExp *, EmitterContext *);
 static EmitterContext *extendContext(EmitterContext *, Opaque *);
 static void emitMaybeBigInt(MaybeBigInt *mbi, EmitterContext *context);
+
+/////////////////
+// Debug Helpers
+/////////////////
+
 #ifdef SAFETY_CHECKS
 static void assertNoLeakedTemps(EmitterContext *context);
 #define ASSERT_TEMPS(context) assertNoLeakedTemps(context)
 #else
 #define ASSERT_TEMPS(context)
 #endif
+
+#define EMITLOC(name, node, context)                                           \
+    if (node == NULL || CPI(node).lineNo == 0)                                 \
+        fprintf(FH(context), "// %s\n", name);                                 \
+    else                                                                       \
+        fprintf(FH(context), "// %s +%d, %s\n", name, CPI(node).lineNo,        \
+                CPI(node).fileName)
 
 ///////////////////////
 // Emit Buffer Helpers
@@ -464,6 +477,7 @@ static SCharArray *makeLambdaLabel(HashSymbol *symbol) {
 ////////////
 
 static void emitAtomic(MinExp *exp, EmitterContext *context) {
+    EMITLOC("emitAtomic", exp, context);
     switch (exp->type) {
     case MINEXP_TYPE_AVAR:
         emitMinAnnotatedVar(getMinExp_Avar(exp), context);
@@ -530,6 +544,7 @@ static EmitResult *emitArg(MinExp *arg, EmitterContext *context) {
 }
 
 static EmitResult *emitPrimOp(MinPrimApp *app, EmitterContext *context) {
+    EMITLOC("emitPrimOp", app, context);
     EmitResult *arg1 = emitArg(app->exp1, context);
     int save = PROTECT(arg1);
     EmitResult *arg2 = emitArg(app->exp2, context);
@@ -556,6 +571,7 @@ static EmitResult *emitPrimOp(MinPrimApp *app, EmitterContext *context) {
 
 static EmitResult *emitAnonymousLambda(MinLam *lambda,
                                        EmitterContext *context) {
+    EMITLOC("emitAnonymousLambda", lambda, context);
     // emit the lambda to the prelude, this then reduces to &&LABEL
     HashSymbol *name = genSym("anon");
     EmitterContext *lamContext = extendContextForLambda(name, context);
@@ -624,6 +640,7 @@ static void emitMaybeBigInt(MaybeBigInt *mbi, EmitterContext *context) {
 }
 
 static EmitResult *emitSimpleExp(MinExp *exp, EmitterContext *context) {
+    EMITLOC("emitSimpleExp", exp, context);
     switch (exp->type) {
     case MINEXP_TYPE_PRIM: {
         MinPrimApp *app = getMinExp_Prim(exp);
@@ -685,6 +702,7 @@ static EmitResult *emitSimpleExp(MinExp *exp, EmitterContext *context) {
 }
 
 static EmitResult *emitMakeVec(MinExprList *vecs, EmitterContext *context) {
+    EMITLOC("emitMakeVec", vecs, context);
     ResultArray *results = newResultArray();
     int save = PROTECT(results);
     int count = countMinExprList(vecs);
@@ -713,6 +731,7 @@ static EmitResult *emitMakeVec(MinExprList *vecs, EmitterContext *context) {
 }
 
 static void emitMinLam(MinLam *node, EmitterContext *context) {
+    EMITLOC("emitMinLam", node, context);
 #ifdef SAFETY_CHECKS
     if (node == NULL)
         cant_happen("NULL MinLam");
@@ -737,12 +756,14 @@ static void emitMinAnnotatedVar(MinAnnotatedVar *node,
 static void emitMinExprList(MinExprList *node, EmitterContext *context) {
     if (node == NULL)
         return;
+    EMITLOC("emitMinExprList", node, context);
     emitMinExp(node->exp, context);
     emitMinExprList(node->next, context);
 }
 
 static void emitGoto(EmitResult *target, ResultArray *args,
                      EmitterContext *context) {
+    fprintf(FH(context), "// emitGoto\n");
     ResultArray *tempSlots = newResultArray();
     int save = PROTECT(tempSlots);
     for (Index i = 0; i < args->size; i++) {
@@ -809,7 +830,7 @@ static EmitResult *emitCallBuiltin(BuiltIn *bi, MinExprList *builtinArgs,
 // basically: "give the result of calling the builtin to k, passing f along"
 // Where k itself is a closure (2-vec)
 static void emitApplyBuiltin(MinApply *node, EmitterContext *context) {
-    fprintf(FH(context), "// emitBuiltinApply\n");
+    EMITLOC("emitApplyBuiltin", node, context);
 
     ResultArray *contArgSlots = claimSlotsBelow(3, context); // (env result f)
     int save = PROTECT(contArgSlots);
@@ -881,7 +902,7 @@ static void emitApplyBuiltin(MinApply *node, EmitterContext *context) {
 //  goto *target;       // jump to k's code
 
 static void emitApplyClosure(MinApply *apply, EmitterContext *context) {
-    fprintf(FH(context), "// emitNormalApply\n");
+    EMITLOC("emitApplyClosure", apply, context);
 
     ResultArray *closureArgSlots =
         claimSlotsBelow(countMinExprList(apply->args) + 1, // +1 for closure env
@@ -927,6 +948,7 @@ static void emitMinApply(MinApply *node, EmitterContext *context) {
 }
 
 static void emitMinIff(MinIff *node, EmitterContext *context) {
+    EMITLOC("emitMinIff", node, context);
     EmitResult *test = emitSimpleExp(node->condition, context);
     int save = PROTECT(test);
     fprintf(FH(context), "    if (isTrue(%s)) {\n",
@@ -942,26 +964,27 @@ static void emitMinIff(MinIff *node, EmitterContext *context) {
 }
 
 static void emitMinCond(MinCond *node, EmitterContext *context) {
+    EMITLOC("emitMinCond", node, context);
     EmitResult *cond = emitSimpleExp(node->value, context);
     if (node->cases->type == MINCONDCASES_TYPE_INTEGERS) {
-        fprintf(FH(context), "switch(getValue_Stdint(%s)) {\n",
-                emitResultText(cond, context));
+        const char *condText = emitResultText(cond, context);
+        releaseSlot(cond, context);
+        emitMinIntCondCases(getMinCondCases_Integers(node->cases), condText,
+                            context);
     } else {
         fprintf(FH(context), "switch(getValue_Character(%s)) {\n",
                 emitResultText(cond, context));
+        releaseSlot(cond, context);
+        emitMinCondCases(node->cases, context);
+        fprintf(FH(context), "}\n");
     }
-    releaseSlot(cond, context);
-    emitMinCondCases(node->cases, context);
-    fprintf(FH(context), "}\n");
 }
 
 static void emitMinCondCases(MinCondCases *node, EmitterContext *context) {
     switch (node->type) {
-    case MINCONDCASES_TYPE_INTEGERS: {
-        MinIntCondCases *variant = getMinCondCases_Integers(node);
-        emitMinIntCondCases(variant, context);
+    case MINCONDCASES_TYPE_INTEGERS:
+        cant_happen("integer cond cases handled in emitMinCond");
         break;
-    }
     case MINCONDCASES_TYPE_CHARACTERS: {
         MinCharCondCases *variant = getMinCondCases_Characters(node);
         emitMinCharCondCases(variant, context);
@@ -972,26 +995,33 @@ static void emitMinCondCases(MinCondCases *node, EmitterContext *context) {
     }
 }
 
-static void emitMinIntCondCases(MinIntCondCases *node,
+static void emitMinIntCondCases(MinIntCondCases *node, const char *condText,
                                 EmitterContext *context) {
     if (node == NULL) {
         return;
     }
+    EMITLOC("emitMinIntCondCases", node, context);
     if (node->constant == NULL) {
-        fprintf(FH(context), "default:\n");
+        // default case
+        fprintf(FH(context), "{ // default\n");
     } else {
-        fprintf(FH(context), "case ");
-        fprintMaybeBigInt(FH(context), node->constant);
-        fprintf(FH(context), ": \n");
+        fprintf(FH(context), "if (minlam_runtime_cmp(%s, ", condText);
+        emitMaybeBigInt(node->constant, context);
+        fprintf(FH(context), ") == CMP_EQ) {\n");
     }
     ASSERT_TEMPS(context);
     emitMinExp(node->body, context);
-    fprintf(FH(context), "break;\n");
-    emitMinIntCondCases(node->next, context);
+    if (node->next != NULL) {
+        fprintf(FH(context), "} else ");
+        emitMinIntCondCases(node->next, condText, context);
+    } else {
+        fprintf(FH(context), "}\n");
+    }
 }
 
 static void emitMinCharCondCases(MinCharCondCases *node,
                                  EmitterContext *context) {
+    EMITLOC("emitMinCharCondCases", node, context);
     if (node == NULL) {
         fprintf(FH(context), "default:\n");
         fprintf(FH(context),
@@ -1015,6 +1045,7 @@ static void emitMinCharCondCases(MinCharCondCases *node,
 }
 
 static void emitMinMatch(MinMatch *node, EmitterContext *context) {
+    EMITLOC("emitMinMatch", node, context);
     EmitResult *match = emitSimpleExp(node->index, context);
     int save = PROTECT(match);
     fprintf(FH(context), "switch (getValue_Stdint(%s)) {\n",
@@ -1028,6 +1059,7 @@ static void emitMinMatch(MinMatch *node, EmitterContext *context) {
 static void emitMinMatchList(MinMatchList *node, EmitterContext *context) {
     if (node == NULL)
         return;
+    EMITLOC("emitMinMatchList", node, context);
     MinIntList *match = node->matches;
     while (match != NULL) {
         fprintf(FH(context), "case %d:\n", match->item);
@@ -1066,6 +1098,7 @@ static void emitMinBindings(MinBindings *node, Integer depth,
                             ResultArray *bindings, EmitterContext *context) {
     if (node == NULL)
         return;
+    EMITLOC("emitMinBindings", node, context);
     // Use a unique name to avoid BufferBag hash collisions when the
     // same binding name (e.g. h1$0) appears in multiple letrecs.
     HashSymbol *uniqueName = genSym(node->var->name);
@@ -1087,13 +1120,14 @@ static void emitBackpatchBindings(MinBindings *node, Integer depth,
                                   EmitterContext *context) {
     if (node == NULL)
         return;
+    EMITLOC("emitBackpatchBindings", node, context);
     MinExprList *makeEnv = extractEnv(node->val);
     emitBackpatchClosure(makeEnv, depth, bindings, context);
     emitBackpatchBindings(node->next, depth + 1, bindings, context);
 }
 
 static void emitMinLetRec(MinLetRec *node, EmitterContext *context) {
-    fprintf(FH(context), "// emitMinLetRec\n");
+    EMITLOC("emitMinLetRec", node, context);
     ASSERT_TEMPS(context);
     int numBindings = countMinBindings(node->bindings);
     ResultArray *bindings = claimSlots(numBindings, context);
@@ -1110,6 +1144,7 @@ static void emitMinLetRec(MinLetRec *node, EmitterContext *context) {
 }
 
 static void emitMinExp(MinExp *node, EmitterContext *context) {
+    EMITLOC("emitMinExp", node, context);
     switch (node->type) {
     case MINEXP_TYPE_APPLY: {
         MinApply *variant = getMinExp_Apply(node);
@@ -1214,7 +1249,6 @@ void emitProgram(MinExp *node, BuiltIns *builtIns, FILE *out) {
     fprintf(out, "\n");
 
     fprintf(out, "int main(int argc, char *argv[]) {\n");
-    fprintf(out, "forceGcFlag = 1;\n");
     fprintf(out, "for (int i = 0; i < MAX_REG; i++) {\n");
     fprintf(out, "reg[i] = value_None();\n");
     fprintf(out, "}\n");

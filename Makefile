@@ -167,6 +167,19 @@ test-binary: all $(TEST_FN_BINARIES)
 
 irs: $(TEST_FN_SFILES)
 
+test-big-binary: all junk/test_harness
+	junk/test_harness
+
+junk/test_harness: junk/test_harness.o
+	$(LAXCC) -o $@ $< $(ALL_OBJ) $(LIBS)
+
+junk/test_harness.o: junk/test_harness.c
+	$(LAXCC) $(INCLUDE_PATHS) -c $< -o $@
+
+junk/test_harness.c: fn/rewrite/test_harness.fn
+	$(TARGET) --include=fn --target-c $<  > $@~ && mv $@~ $@
+	indent $@
+
 EXTRA_TYPES=bigint_word \
 BigInt \
 IntegerBinOp \
