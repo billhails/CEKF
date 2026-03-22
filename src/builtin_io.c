@@ -126,7 +126,7 @@ static void private_fputc(FILE *fh, Character character) {
     }
 }
 
-static Value builtin_putc(Vec *args) {
+Value builtin_putc(Vec *args) {
 #ifdef SAFETY_CHECKS
     if (args->entries[0].type != VALUE_TYPE_CHARACTER) {
         cant_happen("unexpected %s", valueTypeName(args->entries[0].type));
@@ -136,7 +136,7 @@ static Value builtin_putc(Vec *args) {
     return args->entries[0];
 }
 
-static Value builtin_fputc(Vec *args) {
+Value builtin_fputc(Vec *args) {
 #ifdef SAFETY_CHECKS
     if (args->entries[0].type != VALUE_TYPE_OPAQUE) {
         cant_happen("unexpected %s", valueTypeName(args->entries[0].type));
@@ -150,7 +150,7 @@ static Value builtin_fputc(Vec *args) {
     return args->entries[1];
 }
 
-static Value builtin_fputs(Vec *args) {
+Value builtin_fputs(Vec *args) {
     Opaque *data = args->entries[0].val.opaque;
     SCharVec *buf = listToUtf8(args->entries[1]);
     int save = PROTECT(buf);
@@ -159,7 +159,7 @@ static Value builtin_fputs(Vec *args) {
     return args->entries[1];
 }
 
-static Value builtin_puts(Vec *args) {
+Value builtin_puts(Vec *args) {
     SCharVec *buf = listToUtf8(args->entries[0]);
     int save = PROTECT(buf);
     printf("%s", buf->entries);
@@ -177,13 +177,11 @@ static HashSymbol *fileHandleToKey(FILE *file) {
     return newSymbol(buf);
 }
 
-static void opaque_io_close(Opaque *data) {
+static void opaque_io_close(void *data) {
     if (data == NULL)
         return;
-    if (data->data == NULL)
-        return;
-    fclose(data->data);
-    HashSymbol *key = fileHandleToKey(data->data);
+    HashSymbol *key = fileHandleToKey(data);
+    fclose(data);
     BuiltInMemBuf *memBuf = NULL;
     if (getBuiltInMemBufHash(getMemBufs(), key, &memBuf)) {
         if (memBuf->buffer != NULL) {
@@ -191,20 +189,16 @@ static void opaque_io_close(Opaque *data) {
             memBuf->buffer = NULL;
         }
     }
-    data->data = NULL;
 }
 
-static void opaque_io_closedir(Opaque *data) {
+static void opaque_io_closedir(void *data) {
     if (data == NULL)
         return;
-    if (data->data == NULL)
-        return;
-    DEBUG("closing dir %p", data->data);
-    closedir((DIR *)data->data);
-    data->data = NULL;
+    DEBUG("closing dir %p", data);
+    closedir((DIR *)data);
 }
 
-static Value builtin_open(Vec *args) {
+Value builtin_open(Vec *args) {
     SCharVec *fileName = listToUtf8(args->entries[0]);
     int save = PROTECT(fileName);
     int mode = args->entries[1].val.stdint;
@@ -227,7 +221,7 @@ static Value builtin_open(Vec *args) {
         return errnoToTry();
     }
     DEBUG("io open %p", file);
-    Opaque *wrapper = newOpaque(file, opaque_io_close, NULL);
+    Opaque *wrapper = newOpaque(file, opaque_io_close, NULL, NULL);
     Value opaque = value_Opaque(wrapper);
     protectValue(opaque);
     Value result = makeTryResult(1, opaque);
@@ -235,14 +229,14 @@ static Value builtin_open(Vec *args) {
     return result;
 }
 
-static Value builtin_open_memstream(Vec *args __attribute__((unused))) {
+Value builtin_open_memstream(Vec *args __attribute__((unused))) {
     BuiltInMemBuf *memBuf = newBuiltInMemBuf();
     int save = PROTECT(memBuf);
     FILE *file = open_memstream(&memBuf->buffer, &memBuf->size);
     BuiltInMemBufHash *memBufs = getMemBufs();
     HashSymbol *key = fileHandleToKey(file);
     setBuiltInMemBufHash(memBufs, key, memBuf);
-    Opaque *wrapper = newOpaque(file, opaque_io_close, NULL);
+    Opaque *wrapper = newOpaque(file, opaque_io_close, NULL, NULL);
     Value opaque = value_Opaque(wrapper);
     protectValue(opaque);
     Value result = makeTryResult(1, opaque);
@@ -250,7 +244,7 @@ static Value builtin_open_memstream(Vec *args __attribute__((unused))) {
     return result;
 }
 
-static Value builtin_opendir(Vec *args) {
+Value builtin_opendir(Vec *args) {
     SCharVec *dirname = listToUtf8(args->entries[0]);
     int save = PROTECT(dirname);
     DIR *dir = opendir(dirname->entries);
@@ -259,7 +253,7 @@ static Value builtin_opendir(Vec *args) {
         return errnoToTry();
     }
     DEBUG("io opendir %p", dir);
-    Opaque *wrapper = newOpaque(dir, opaque_io_closedir, NULL);
+    Opaque *wrapper = newOpaque(dir, opaque_io_closedir, NULL, NULL);
     Value opaque = value_Opaque(wrapper);
     protectValue(opaque);
     Value result = makeTryResult(1, opaque);
@@ -275,7 +269,7 @@ static Value builtin_opendir(Vec *args) {
 #define FTYPE_CHAR 5
 #define FTYPE_FIFO 6
 
-static Value builtin_ftype(Vec *args) {
+Value builtin_ftype(Vec *args) {
     struct stat statbuf;
     SCharVec *dirname = listToUtf8(args->entries[0]);
     int save = PROTECT(dirname);
@@ -304,31 +298,31 @@ static Value builtin_ftype(Vec *args) {
     }
 }
 
-static Value builtin_close(Vec *args) {
+Value builtin_close(Vec *args) {
 #ifdef SAFETY_CHECKS
     if (args->entries[0].type != VALUE_TYPE_OPAQUE) {
         cant_happen("unexpected %s", valueTypeName(args->entries[0].type));
     }
 #endif
     Opaque *data = args->entries[0].val.opaque;
-    opaque_io_close(data);
-    args->entries[0].val.opaque = NULL;
+    opaque_io_close(data->data);
+    data->data = NULL;
     return value_Stdint(1);
 }
 
-static Value builtin_closedir(Vec *args) {
+Value builtin_closedir(Vec *args) {
 #ifdef SAFETY_CHECKS
     if (args->entries[0].type != VALUE_TYPE_OPAQUE) {
         cant_happen("unexpected %s", valueTypeName(args->entries[0].type));
     }
 #endif
     Opaque *data = args->entries[0].val.opaque;
-    opaque_io_closedir(data);
-    args->entries[0].val.opaque = NULL;
+    opaque_io_closedir(data->data);
+    data->data = NULL;
     return value_Stdint(1);
 }
 
-static Value builtin_readdir(Vec *args) {
+Value builtin_readdir(Vec *args) {
 #ifdef SAFETY_CHECKS
     if (args->entries[0].type != VALUE_TYPE_OPAQUE) {
         cant_happen("unexpected %s", valueTypeName(args->entries[0].type));
@@ -461,7 +455,7 @@ static Value private_fgets(FILE *fh) {
     return string;
 }
 
-static Value builtin_gets() { return private_fgets(stdin); }
+Value builtin_gets() { return private_fgets(stdin); }
 
 static Value private_fgetc(FILE *fh) {
     HashSymbol *key = fileHandleToKey(fh);
@@ -501,9 +495,9 @@ static Value private_fgetc(FILE *fh) {
     return value_Character(wc);
 }
 
-static Value builtin_getc() { return private_fgetc(stdin); }
+Value builtin_getc() { return private_fgetc(stdin); }
 
-static Value builtin_fgetc(Vec *args) {
+Value builtin_fgetc(Vec *args) {
     Opaque *data = args->entries[0].val.opaque;
     if (data == NULL || data->data == NULL) {
         cant_happen("fgets on closed file handle");
@@ -511,7 +505,7 @@ static Value builtin_fgetc(Vec *args) {
     return private_fgetc((FILE *)data->data);
 }
 
-static Value builtin_fgets(Vec *args) {
+Value builtin_fgets(Vec *args) {
     Opaque *data = args->entries[0].val.opaque;
     if (data == NULL || data->data == NULL) {
         cant_happen("fgets on closed file handle");
@@ -519,12 +513,12 @@ static Value builtin_fgets(Vec *args) {
     return private_fgets((FILE *)data->data);
 }
 
-static Value builtin_putv(Vec *args) {
+Value builtin_putv(Vec *args) {
     putValue(args->entries[0]);
     return args->entries[0];
 }
 
-static Value builtin_fputv(Vec *args) {
+Value builtin_fputv(Vec *args) {
     Opaque *data = args->entries[0].val.opaque;
     if (data == NULL || data->data == NULL) {
         cant_happen("fput on closed file handle");
@@ -586,7 +580,8 @@ static void registerPutc(BuiltIns *registry) {
     BuiltInArgs *args = newBuiltInArgs();
     int save = PROTECT(args);
     TcType *charType = pushCharacterArg(args);
-    pushNewBuiltIn(registry, "putc", charType, args, (void *)builtin_putc);
+    pushNewBuiltIn(registry, "putc", charType, args, (void *)builtin_putc,
+                   "builtin_putc");
     UNPROTECT(save);
 }
 
@@ -596,7 +591,8 @@ static void registerFPutc(BuiltIns *registry) {
     int save = PROTECT(args);
     pushFileArg(args);
     TcType *charType = pushCharacterArg(args);
-    pushNewBuiltIn(registry, "fputc", charType, args, (void *)builtin_fputc);
+    pushNewBuiltIn(registry, "fputc", charType, args, (void *)builtin_fputc,
+                   "builtin_fputc");
     UNPROTECT(save);
 }
 
@@ -605,8 +601,8 @@ static void registerPutn(BuiltIns *registry) {
     BuiltInArgs *args = newBuiltInArgs();
     int save = PROTECT(args);
     TcType *numberType = pushIntegerArg(args);
-    pushNewBuiltIn(registry, "putn", numberType, args,
-                   (void *)builtin_putv); // re-use putv
+    pushNewBuiltIn(registry, "putn", numberType, args, (void *)builtin_putv,
+                   "builtin_putv"); // re-use putv
     UNPROTECT(save);
 }
 
@@ -616,8 +612,8 @@ static void registerFPutn(BuiltIns *registry) {
     int save = PROTECT(args);
     pushFileArg(args);
     TcType *numberType = pushIntegerArg(args);
-    pushNewBuiltIn(registry, "fputn", numberType, args,
-                   (void *)builtin_fputv); // re-use putv
+    pushNewBuiltIn(registry, "fputn", numberType, args, (void *)builtin_fputv,
+                   "builtin_fputv"); // re-use putv
     UNPROTECT(save);
 }
 
@@ -626,8 +622,8 @@ static void registerPutv(BuiltIns *registry) {
     BuiltInArgs *args = newBuiltInArgs();
     int save = PROTECT(args);
     TcType *anyType = pushAnyArg(args);
-    pushNewBuiltIn(registry, "putv", anyType, args,
-                   (void *)builtin_putv); // re-use putv
+    pushNewBuiltIn(registry, "putv", anyType, args, (void *)builtin_putv,
+                   "builtin_putv"); // re-use putv
     UNPROTECT(save);
 }
 
@@ -637,8 +633,8 @@ static void registerFPutv(BuiltIns *registry) {
     int save = PROTECT(args);
     pushFileArg(args);
     TcType *anyType = pushAnyArg(args);
-    pushNewBuiltIn(registry, "fputv", anyType, args,
-                   (void *)builtin_fputv); // re-use putv
+    pushNewBuiltIn(registry, "fputv", anyType, args, (void *)builtin_fputv,
+                   "builtin_fputv"); // re-use putv
     UNPROTECT(save);
 }
 
@@ -647,7 +643,8 @@ static void registerPuts(BuiltIns *registry) {
     BuiltInArgs *args = newBuiltInArgs();
     int save = PROTECT(args);
     TcType *stringType = pushStringArg(args);
-    pushNewBuiltIn(registry, "puts", stringType, args, (void *)builtin_puts);
+    pushNewBuiltIn(registry, "puts", stringType, args, (void *)builtin_puts,
+                   "builtin_puts");
     UNPROTECT(save);
 }
 
@@ -659,7 +656,8 @@ static void registerOpen(BuiltIns *registry) {
     pushIoArg(args);
     TcType *tryFileType = makeTryFileType(stringType);
     PROTECT(tryFileType);
-    pushNewBuiltIn(registry, "open", tryFileType, args, (void *)builtin_open);
+    pushNewBuiltIn(registry, "open", tryFileType, args, (void *)builtin_open,
+                   "builtin_open");
     UNPROTECT(save);
 }
 
@@ -672,7 +670,7 @@ static void registerOpenMemstream(BuiltIns *registry) {
     TcType *tryFileType = makeTryFileType(stringType);
     PROTECT(tryFileType);
     pushNewBuiltIn(registry, "openmem", tryFileType, args,
-                   (void *)builtin_open_memstream);
+                   (void *)builtin_open_memstream, "builtin_open_memstream");
     UNPROTECT(save);
 }
 
@@ -684,7 +682,7 @@ static void registerOpenDir(BuiltIns *registry) {
     TcType *tryDirType = makeTryDirType(stringType);
     PROTECT(tryDirType);
     pushNewBuiltIn(registry, "opendir", tryDirType, args,
-                   (void *)builtin_opendir);
+                   (void *)builtin_opendir, "builtin_opendir");
     UNPROTECT(save);
 }
 
@@ -694,8 +692,8 @@ static void registerFType(BuiltIns *registry) {
     TcType *stringType = pushStringArg(args);
     TcType *tryFTypeType = makeTryFTypeType(stringType);
     PROTECT(tryFTypeType);
-    pushNewBuiltIn(registry, "ftype", tryFTypeType, args,
-                   (void *)builtin_ftype);
+    pushNewBuiltIn(registry, "ftype", tryFTypeType, args, (void *)builtin_ftype,
+                   "builtin_ftype");
     UNPROTECT(save);
 }
 
@@ -706,7 +704,8 @@ static void registerClose(BuiltIns *registry) {
     pushFileArg(args);
     TcType *b = makeBoolean();
     PROTECT(b);
-    pushNewBuiltIn(registry, "close", b, args, (void *)builtin_close);
+    pushNewBuiltIn(registry, "close", b, args, (void *)builtin_close,
+                   "builtin_close");
     UNPROTECT(save);
 }
 
@@ -717,7 +716,8 @@ static void registerCloseDir(BuiltIns *registry) {
     pushDirArg(args);
     TcType *b = makeBoolean();
     PROTECT(b);
-    pushNewBuiltIn(registry, "closedir", b, args, (void *)builtin_closedir);
+    pushNewBuiltIn(registry, "closedir", b, args, (void *)builtin_closedir,
+                   "builtin_closedir");
     UNPROTECT(save);
 }
 
@@ -729,7 +729,7 @@ static void registerReadDir(BuiltIns *registry) {
     TcType *maybeStringType = makeMaybeStringType();
     PROTECT(maybeStringType);
     pushNewBuiltIn(registry, "readdir", maybeStringType, args,
-                   (void *)builtin_readdir);
+                   (void *)builtin_readdir, "builtin_readdir");
     UNPROTECT(save);
 }
 
@@ -739,7 +739,8 @@ static void registerGets(BuiltIns *registry) {
     int save = PROTECT(args);
     TcType *stringType = makeStringType();
     PROTECT(stringType);
-    pushNewBuiltIn(registry, "gets", stringType, args, (void *)builtin_gets);
+    pushNewBuiltIn(registry, "gets", stringType, args, (void *)builtin_gets,
+                   "builtin_gets");
     UNPROTECT(save);
 }
 
@@ -749,7 +750,8 @@ static void registerGetc(BuiltIns *registry) {
     int save = PROTECT(args);
     TcType *charType = newTcType_Character();
     PROTECT(charType);
-    pushNewBuiltIn(registry, "getc", charType, args, (void *)builtin_getc);
+    pushNewBuiltIn(registry, "getc", charType, args, (void *)builtin_getc,
+                   "builtin_getc");
     UNPROTECT(save);
 }
 
@@ -760,7 +762,8 @@ static void registerFGetc(BuiltIns *registry) {
     pushFileArg(args);
     TcType *charType = newTcType_Character();
     PROTECT(charType);
-    pushNewBuiltIn(registry, "fgetc", charType, args, (void *)builtin_fgetc);
+    pushNewBuiltIn(registry, "fgetc", charType, args, (void *)builtin_fgetc,
+                   "builtin_fgetc");
     UNPROTECT(save);
 }
 
@@ -770,7 +773,8 @@ static void registerFPuts(BuiltIns *registry) {
     int save = PROTECT(args);
     pushFileArg(args);
     TcType *stringType = pushStringArg(args);
-    pushNewBuiltIn(registry, "fputs", stringType, args, (void *)builtin_fputs);
+    pushNewBuiltIn(registry, "fputs", stringType, args, (void *)builtin_fputs,
+                   "builtin_fputs");
     UNPROTECT(save);
 }
 
@@ -781,6 +785,7 @@ static void registerFGets(BuiltIns *registry) {
     pushFileArg(args);
     TcType *stringType = makeStringType();
     PROTECT(stringType);
-    pushNewBuiltIn(registry, "fgets", stringType, args, (void *)builtin_fgets);
+    pushNewBuiltIn(registry, "fgets", stringType, args, (void *)builtin_fgets,
+                   "builtin_fgets");
     UNPROTECT(save);
 }

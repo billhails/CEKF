@@ -1,0 +1,81 @@
+#
+# CEKF - VM supporting amb
+# Copyright (C) 2022-2025  Bill Hails
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#
+
+config:
+    name: emit
+    description: Code emission utilities
+    parserInfo: false
+    limited_includes:
+      - builtins.h
+      - utils.h
+      - utils_debug.h
+      - builtins_debug.h
+
+structs:
+    EmitterContext:
+        meta:
+            brief: VisitorContext for emitMinExp
+        data:
+            currentBinding: HashSymbol
+            lambdas: BufferBag
+            body: opaque
+            builtIns: BuiltIns
+            slots: SlotPool
+            activeSlots: int=0 # for debug
+            totalSlots: int=0
+            maxReg: int=0
+            currentDepth: int=0
+            currentReg: int=0
+            needsUnprotect: bool=false
+
+    Slot:
+        meta:
+            description: Represents a register allocation
+        data:
+            isAvailable: bool
+            text: SCharArray
+            index: int
+
+unions:
+    EmitResult:
+        meta:
+            description: >
+                Either a hash symbol representing a temp variable, or an Opaque EmitBuffer containing an immediate expression.
+        data:
+            var: HashSymbol
+            buf: opaque
+
+hashes:
+    BufferBag:
+        data:
+            entries: opaque
+
+    SlotPool:
+        data:
+            entries: Slot
+
+primitives: !include primitives.yaml
+
+arrays:
+    ResultArray:
+        data:
+            entries: EmitResult
+
+external:
+  - !include utils.yaml
+  - !include builtins.yaml

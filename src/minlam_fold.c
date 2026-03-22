@@ -205,6 +205,7 @@ static MinCharCondCases *foldMinCharCondCases(MinCharCondCases *node) {
     if (new_body != node->body || new_next != node->next) {
         MinCharCondCases *result =
             newMinCharCondCases(CPI(node), node->constant, new_body, new_next);
+        result->isDefault = node->isDefault;
         UNPROTECT(save);
         return result;
     }

@@ -311,6 +311,7 @@ static MinCharCondCases *substMinCharCondCases(MinCharCondCases *node,
         // Create new node with modified fields
         MinCharCondCases *result =
             newMinCharCondCases(CPI(node), node->constant, new_body, new_next);
+        result->isDefault = node->isDefault;
         UNPROTECT(save);
         LEAVE(substMinCharCondCases);
         return result;
@@ -570,14 +571,6 @@ MinExp *substMinExp(MinExp *node, MinExpTable *context) {
         }
         break;
     }
-    case MINEXP_TYPE_BACK: {
-        // void_ptr
-        break;
-    }
-    case MINEXP_TYPE_BIGINTEGER: {
-        // MaybeBigInt
-        break;
-    }
     case MINEXP_TYPE_CALLCC: {
         // MinExp
         MinExp *variant = getMinExp_CallCC(node);
@@ -586,10 +579,6 @@ MinExp *substMinExp(MinExp *node, MinExpTable *context) {
             PROTECT(new_variant);
             result = newMinExp_CallCC(CPI(node), new_variant);
         }
-        break;
-    }
-    case MINEXP_TYPE_CHARACTER: {
-        // character
         break;
     }
     case MINEXP_TYPE_COND: {
@@ -672,10 +661,6 @@ MinExp *substMinExp(MinExp *node, MinExpTable *context) {
         }
         break;
     }
-    case MINEXP_TYPE_STDINT: {
-        // int
-        break;
-    }
     case MINEXP_TYPE_VAR: {
         MinExp *res = NULL;
         if (getMinExpTable(context, getMinExp_Var(node), &res)) {
@@ -683,8 +668,14 @@ MinExp *substMinExp(MinExp *node, MinExpTable *context) {
         }
         break;
     }
+    case MINEXP_TYPE_BACK:
+    case MINEXP_TYPE_BIGINTEGER:
+    case MINEXP_TYPE_DONE:
+    case MINEXP_TYPE_CHARACTER:
+    case MINEXP_TYPE_STDINT:
+        break;
     default:
-        cant_happen("unrecognized MinExp type %d", node->type);
+        cant_happen("unrecognized MinExp type %s", minExpTypeName(node->type));
     }
 
     UNPROTECT(save);

@@ -62,6 +62,15 @@ namespace
         ";20. Complex amb with computation",
         "(+ (amb 1 2) (amb 3 4))",
 
+        ";21. Standalone back expression",
+        "(back)",
+
+        ";22. Back inside amb branch",
+        "(amb 1 (begin (back) 2))",
+
+        ";23. Nested back forcing retry",
+        "(+ (amb (begin (back) 10) 20) 3)",
+
         ";21. Nested application",
         "(f (g (h x)))",
 
@@ -190,9 +199,6 @@ namespace
 
         ";70. typedefs with complex body",
         "(typedefs 0 (f (g x)))",
-
-        ";71. typedefs wrapping letrec with env body",
-        "(typedefs 0 (letrec ((x (λ () 1)) (y (λ () 2))) (env)))",
 
         ";72. typeof_expr with atomic argument",
         "(typeof x)",

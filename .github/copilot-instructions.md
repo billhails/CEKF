@@ -36,7 +36,7 @@ The build depends heavily on code generation. Do not manually edit files in `gen
 (via `MODE=` variable):
 
 ```bash
-make                    # default MODE=debug: -g, enables `--stress-gc` flag which will force GC on every malloc
+make                    # default MODE=debug: -g
 make MODE=production    # -O2, all safety checks disabled
 ```
 
@@ -53,11 +53,19 @@ make docs              # Generates Mermaid diagrams from YAML schemas
 
 ### Mark-and-sweep GC with global protection stack
 
-- Use `PROTECT(obj)` macro to shield objects during construction
-- `PROTECT(obj)` pushes `obj` onto protection stack and returns the previous stack pointer
-- `UNPROTECT(save)` restores the stack pointer to `save` (previous result of `PROTECT()`)
-- Pattern: `int save = PROTECT(obj); /* allocating code */ UNPROTECT(save);`
-- Never use literal numbers with UNPROTECT - only values returned by `PROTECT()`
+- Use `PROTECT(obj)` macro to shield objects during construction.
+- `PROTECT(obj)` pushes `obj` onto protection stack and returns the previous stack pointer.
+- `PROTECT(NULL)` returns the current stack pointer.
+- `UNPROTECT(save)` restores the stack pointer to `save` (previous result of `PROTECT()`).
+- `REPLACE_PROTECT(save, newObj)` replaces whatever was at stack position `save` with `newObj`.
+- Pattern: `int save = PROTECT(obj); /* allocating code */ UNPROTECT(save);`.
+- Never use literal numbers with UNPROTECT - only values returned by `PROTECT()`.
+- An invariant you can assume and should always enforce: **CALLER PROECTS**.
+  - The caller must protect memory managed arguments to functions before calling, and protect any memory-managed result of calling.
+  - Even though this may lead to a few extra lines of code, the consistency is well worth it as avoids subtle and hard to track bugs.
+- Assume any call can allocate and trigger GC. If an object is still in use and not protected, it is unsafe even if tests currently pass.
+- Passing tests does not prove protection correctness; it may only mean no GC sweep happened at the vulnerable point.
+- One last subtle gotcha: `PROTECT(NULL)` does not advance the stack pointer, so it is never safe to do a `REPLACE_PROTECT(save, newObj)` if `save` was the result of a call to `PROTECT(NULL)`.
 
 ### HashSymbol objects must never be PROTECT'ed
 
@@ -129,7 +137,7 @@ make docs              # Generates Mermaid diagrams from YAML schemas
 
 - `--dump-ast`, `--dump-lambda`, `--dump-anf`, `--dump-bytecode` etc.
 - `--exec="<snippet>"` to run code snippet directly
-- `--stress-gc` forces GC on every allocation
+- `--stress-gc` forces GC on every allocation (but is very, very slow)
 - `--help` shows all.
 
 ## Common Patterns

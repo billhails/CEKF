@@ -32,6 +32,17 @@
 #endif
 
 static MinExp *etaMinLam(MinExp *node);
+
+static int curryDepth(MinExp *exp) {
+    int depth = 0;
+    while (isMinExp_Lam(exp)) {
+        MinLam *lam = getMinExp_Lam(exp);
+        depth += countSymbolList(lam->args);
+        exp = lam->exp;
+    }
+    return depth;
+}
+
 static MinExprList *etaMinExprList(MinExprList *node);
 static MinPrimApp *etaMinPrimApp(MinPrimApp *node);
 static MinApply *etaMinApply(MinApply *node);
@@ -343,6 +354,7 @@ static MinCharCondCases *etaMinCharCondCases(MinCharCondCases *node) {
     if (changed) {
         MinCharCondCases *result =
             newMinCharCondCases(CPI(node), node->constant, new_body, new_next);
+        result->isDefault = node->isDefault;
         UNPROTECT(save);
         LEAVE(etaMinCharCondCases);
         return result;
@@ -467,7 +479,7 @@ static MinBindings *etaMinBindings(MinBindings *node) {
     if (changed) {
         MinBindings *result =
             newMinBindings(CPI(node), node->var, new_val, new_next);
-        result->arity = node->arity;
+        result->arity = curryDepth(new_val);
         UNPROTECT(save);
         LEAVE(etaMinBindings);
         return result;
@@ -544,12 +556,6 @@ MinExp *etaMinExp(MinExp *node) {
         }
         break;
     }
-    case MINEXP_TYPE_BACK: {
-        break;
-    }
-    case MINEXP_TYPE_BIGINTEGER: {
-        break;
-    }
     case MINEXP_TYPE_BINDINGS: {
         MinBindings *variant = getMinExp_Bindings(node);
         MinBindings *new_variant = etaMinBindings(variant);
@@ -566,9 +572,6 @@ MinExp *etaMinExp(MinExp *node) {
             PROTECT(new_variant);
             result = newMinExp_CallCC(CPI(node), new_variant);
         }
-        break;
-    }
-    case MINEXP_TYPE_CHARACTER: {
         break;
     }
     case MINEXP_TYPE_COND: {
@@ -638,14 +641,15 @@ MinExp *etaMinExp(MinExp *node) {
         }
         break;
     }
-    case MINEXP_TYPE_STDINT: {
+    case MINEXP_TYPE_CHARACTER:
+    case MINEXP_TYPE_BACK:
+    case MINEXP_TYPE_BIGINTEGER:
+    case MINEXP_TYPE_DONE:
+    case MINEXP_TYPE_STDINT:
+    case MINEXP_TYPE_VAR:
         break;
-    }
-    case MINEXP_TYPE_VAR: {
-        break;
-    }
     default:
-        cant_happen("unrecognized MinExp type %d", node->type);
+        cant_happen("unrecognized MinExp type %s", minExpTypeName(node->type));
     }
 
     UNPROTECT(save);

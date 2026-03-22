@@ -250,9 +250,10 @@ static CharacterArray *listToCharArray(Value list) {
 
 static Value charArrayToList(CharacterArray *c) {
     Vec *nullByte = newVec(1);
+    int save = PROTECT(nullByte);
     nullByte->entries[0] = value_Stdint(0); // tag=null
     Value v = value_Vec(nullByte);
-    int save = protectValue(v);
+    protectValue(v);
     for (Index i = c->size; i > 0; --i) {
         Character cc = c->entries[i - 1];
         if (cc) {

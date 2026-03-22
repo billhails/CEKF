@@ -88,6 +88,6 @@ fn reduce {
     (x) {
         M.print_expr(x);
         puts("\n");
-        error("reduce: unsupported expression")
+        error("η-reduce: unsupported expression")
     }
 }

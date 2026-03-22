@@ -362,6 +362,7 @@ static MinCharCondCases *normalize_char_cases(MinCharCondCases *cases) {
     PROTECT(newExp);
     MinCharCondCases *newCases =
         newMinCharCondCases(CPI(cases), cases->constant, newExp, rest);
+    newCases->isDefault = cases->isDefault;
     UNPROTECT(save);
     return newCases;
 }

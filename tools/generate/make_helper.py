@@ -34,6 +34,7 @@ class MakeHelperGenerator:
             has_parser_info: Whether to include ParserInfo parameter
             is_inline: Whether the union is inline (call-by-value)
         """
+
         # Skip if field type doesn't need protection
         if not field_obj.needsProtection(catalog):
             return
@@ -79,6 +80,9 @@ class MakeHelperGenerator:
         new_args = []
         if field_takes_parser_info:
             new_args.append('I')
+            if not catalog.get(union_name).hasParserInfo(catalog):
+                print(f'    struct ParserInfo I = NULLPI; {c}')
+
         
         # Extract just the parameter names (strip types)
         for arg in field_args:

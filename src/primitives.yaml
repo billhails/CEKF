@@ -73,6 +73,12 @@ void_ptr:
         printf: "%p"
         valued: false
 
+ptr:
+    data:
+        cname: "void *"
+        printf: "%p"
+        valued: true
+
 bool:
     data:
         cname: "bool"

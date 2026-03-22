@@ -21,15 +21,16 @@ config:
     description: Common utility structures
     parserInfo: false
     limited_includes:
-    - ast_helper.h
-    - sys/stat.h
+      - ast_helper.h
+      - opaque.h
+      - sys/stat.h
 
 structs:
     FileId:
         meta:
             brief: Unambiguous File Identifier
             eqIgnore:
-            - fileName
+              - fileName
         data:
             stDev: device
             stIno: inode
@@ -67,6 +68,10 @@ hashes:
             brief: Map from Symbol to Symbol
         data:
             entries: HashSymbol
+
+    BoolMap:
+        data:
+            entries: bool
 
 arrays:
     StringArray:

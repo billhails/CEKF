@@ -42,9 +42,9 @@ static bool errors = false;
 void _cant_happen(char *file, int line, const char *message, ...) {
     va_list args;
     va_start(args, message);
-    vfprintf(errout, message, args);
+    vfprintf(stderr, message, args);
     va_end(args);
-    eprintf(" at +%d %s\n", line, file);
+    fprintf(stderr, " at +%d %s\n", line, file);
 #ifdef DEBUG_DUMP_CORE
     abort();
 #else
@@ -62,11 +62,11 @@ void _cant_happen(char *file, int line, const char *message, ...) {
  * @param args the error message arguments as va_list
  */
 void vcan_happen(ParserInfo I, const char *message, va_list args) {
-    vfprintf(errout, message, args);
+    vfprintf(stderr, message, args);
     if (I.lineNo != 0) {
-        eprintf(" at +%d %s", I.lineNo, I.fileName);
+        fprintf(stderr, " at +%d %s", I.lineNo, I.fileName);
     }
-    eprintf("\n");
+    fprintf(stderr, "\n");
     errors = true;
 }
 

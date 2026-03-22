@@ -1,5 +1,1 @@
-let
-    link "four.fn" as four;
-    link "two.fn" as two;
-in
-    1
+factorial(1)

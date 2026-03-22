@@ -23,23 +23,24 @@
 
 #include "minlam.h"
 
-void ppMinExpD(MinExp *exp, int depth);
-void ppMinLam(MinLam *lam);
-void ppMinVarList(SymbolList *varList);
-void ppMinExp(MinExp *exp);
-void ppMinPrimApp(MinPrimApp *primApp);
-void ppMinPrimOp(MinPrimOp type);
-void ppMinSequence(MinExprList *sequence);
-void ppMinMakeVec(MinExprList *args);
-void ppMinApply(MinApply *apply);
-void ppMinIff(MinIff *iff);
-void ppMinCond(MinCond *cond);
-void ppMinCallCC(MinExp *exp);
-void ppMinLetRec(MinLetRec *letRec);
-void ppMinMatch(MinMatch *match);
-void ppMinBindings(MinBindings *bindings);
-void ppMinIntList(MinIntList *list);
-void ppMinMakeTuple(MinExprList *args);
 void ppHashSymbol(HashSymbol *);
+void ppMinApply(MinApply *);
+void ppMinAnnotatedVar(MinAnnotatedVar *);
+void ppMinBindings(MinBindings *);
+void ppMinCallCC(MinExp *);
+void ppMinCond(MinCond *);
+void ppMinExpD(MinExp *, int);
+void ppMinExp(MinExp *);
+void ppMinIff(MinIff *);
+void ppMinIntList(MinIntList *);
+void ppMinLam(MinLam *);
+void ppMinLetRec(MinLetRec *);
+void ppMinMakeTuple(MinExprList *);
+void ppMinMakeVec(MinExprList *);
+void ppMinMatch(MinMatch *);
+void ppMinPrimApp(MinPrimApp *);
+void ppMinPrimOp(MinPrimOp);
+void ppMinSequence(MinExprList *);
+void ppMinVarList(SymbolList *);
 
 #endif

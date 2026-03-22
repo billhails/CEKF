@@ -1,5 +1,5 @@
 #ifndef cekf_builtins_helper_h
-#  define cekf_builtins_helper_h
+#define cekf_builtins_helper_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2023  Bill Hails
@@ -18,8 +18,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#  include "cekfs.h"
-#  include "builtins.h"
+#include "builtins.h"
+#include "cekfs.h"
 
 BuiltIns *registerBuiltIns(int argc, int cargc, char *argv[]);
 struct Value makeTryResult(int code, struct Value val);
@@ -29,9 +29,9 @@ struct Value makeEmptyList(void);
 struct Value makeBasic(struct Value v, int code);
 TcType *pushIntegerArg(BuiltInArgs *args);
 TcType *pushCharacterArg(BuiltInArgs *args);
-void pushNewBuiltIn(BuiltIns *reg, char *name, TcType *ret, BuiltInArgs *args, void *impl);
+void pushNewBuiltIn(BuiltIns *reg, char *name, TcType *ret, BuiltInArgs *args,
+                    void *impl, char *cname);
 TcType *pushStringArg(BuiltInArgs *args);
 TcType *pushAnyArg(BuiltInArgs *args);
-
 
 #endif

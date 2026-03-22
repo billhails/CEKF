@@ -1,0 +1,73 @@
+namespace
+
+link "../listutils.fn" as list;
+link "minexpr.fn" as M;
+link "gensym.fn" as G;
+import list operator "_|>_";
+import list operator "_&&_";
+import list operator "_zip_";
+import list operator "unzip_";
+import list operator "len_";
+
+
+fn amb(e, f) {
+
+    switch (e) {
+        (M.amb_expr(a, b)) {
+            amb(a, M.lambda([], amb(b, f)))
+        }
+
+        (M.back_expr) {
+            M.apply(f, [])
+        }
+
+        (M.apply(x=M.primop(_), args)) {
+            M.apply(x, args |> amb flip f)
+        }
+
+        (M.apply(e, args)) {
+            M.apply(amb(e, f), (args |> (amb flip f)) @@ [f])
+        }
+
+        (M.cond_expr(e, cases)) {
+            M.cond_expr(amb(e, f), cases |> (amb flip f) && (amb flip f))
+        }
+
+        (M.if_expr(e1, e2, e3)) {
+            M.if_expr(amb(e1, f), amb(e2, f), amb(e3, f))
+        }
+
+        (M.lambda(args, body)) {
+            let
+                ff = G.genstring("f$")
+            in
+                M.lambda(args @@ [ff], amb(body, M.var(ff)))
+        }
+
+        (M.letrec_expr(bindings, body)) {
+            M.letrec_expr(
+                bindings |> identity && (amb flip f) && identity,
+                amb(body, f)
+            )
+        }
+
+        (M.make_vec(num, exprs)) {
+            M.make_vec(num, exprs |> (amb flip f))
+        }
+
+        (M.match_cases(e, cases)) {
+            M.match_cases(
+                amb(e, f),
+                cases |> identity && (amb flip f)
+            )
+        }
+
+        (M.sequence(exprs)) {
+            M.sequence(
+                exprs |> (amb flip f)
+            )
+        }
+
+        (x) { x }
+    }
+}

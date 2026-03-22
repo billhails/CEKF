@@ -318,6 +318,7 @@ static MinCharCondCases *visitMinCharCondCases(MinCharCondCases *node,
         // Create new node with modified fields
         MinCharCondCases *result =
             newMinCharCondCases(CPI(node), node->constant, new_body, new_next);
+        result->isDefault = node->isDefault;
         UNPROTECT(save);
         return result;
     }

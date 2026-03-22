@@ -31,11 +31,14 @@ SymbolList *minBindingsToSymbolList(MinBindings *bindings) {
     return this;
 }
 
-MinExp *makeDoneCont(ParserInfo PI) {
+MinExp *makeDoneCont(ParserInfo PI, bool hasArg) {
     MinExp *body = newMinExp_Done(PI);
     int save = PROTECT(body);
-    SymbolList *args = newSymbolList(PI, newSymbol("_"), NULL);
-    PROTECT(args);
+    SymbolList *args = NULL;
+    if (hasArg) {
+        args = newSymbolList(PI, genSymDollar("k"), NULL);
+        PROTECT(args);
+    }
     MinExp *lambda = makeMinExp_Lam(PI, args, body);
     UNPROTECT(save);
     return lambda;

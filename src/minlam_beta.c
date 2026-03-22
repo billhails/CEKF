@@ -25,6 +25,7 @@
 #include "minlam_beta.h"
 #include "minlam_pp.h"
 #include "minlam_subst.h"
+#include "utils_helper.h"
 
 #ifdef DEBUG_MINLAM_BETA
 #include "debugging_on.h"
@@ -33,6 +34,17 @@
 #endif
 
 static MinLam *betaMinLam(MinLam *node);
+
+static int curryDepth(MinExp *exp) {
+    int depth = 0;
+    while (isMinExp_Lam(exp)) {
+        MinLam *lam = getMinExp_Lam(exp);
+        depth += countSymbolList(lam->args);
+        exp = lam->exp;
+    }
+    return depth;
+}
+
 static MinExprList *betaMinExprList(MinExprList *node);
 static MinPrimApp *betaMinPrimApp(MinPrimApp *node);
 static MinExp *betaMinApply(MinExp *node);
@@ -477,6 +489,7 @@ static MinCharCondCases *betaMinCharCondCases(MinCharCondCases *node) {
     if (changed) {
         MinCharCondCases *result =
             newMinCharCondCases(CPI(node), node->constant, new_body, new_next);
+        result->isDefault = node->isDefault;
         UNPROTECT(save);
         LEAVE(betaMinCharCondCases);
         return result;
@@ -614,7 +627,7 @@ static MinBindings *betaMinBindings(MinBindings *node) {
     MinBindings *result = node;
     if (changed) {
         result = newMinBindings(CPI(node), node->var, new_val, new_next);
-        result->arity = node->arity;
+        result->arity = curryDepth(new_val);
     }
 
     if (beta_conversion_function != NULL &&
@@ -710,12 +723,7 @@ MinExp *betaMinExp(MinExp *node) {
         result = betaMinApply(node);
         break;
     }
-    case MINEXP_TYPE_BACK: {
-        break;
-    }
-    case MINEXP_TYPE_BIGINTEGER: {
-        break;
-    }
+
     case MINEXP_TYPE_CALLCC: {
         MinExp *variant = getMinExp_CallCC(node);
         MinExp *new_variant = betaMinExp(variant);
@@ -723,9 +731,6 @@ MinExp *betaMinExp(MinExp *node) {
             PROTECT(new_variant);
             result = newMinExp_CallCC(CPI(node), new_variant);
         }
-        break;
-    }
-    case MINEXP_TYPE_CHARACTER: {
         break;
     }
     case MINEXP_TYPE_COND: {
@@ -800,14 +805,15 @@ MinExp *betaMinExp(MinExp *node) {
         }
         break;
     }
-    case MINEXP_TYPE_STDINT: {
+    case MINEXP_TYPE_BACK:
+    case MINEXP_TYPE_BIGINTEGER:
+    case MINEXP_TYPE_CHARACTER:
+    case MINEXP_TYPE_DONE:
+    case MINEXP_TYPE_STDINT:
+    case MINEXP_TYPE_VAR:
         break;
-    }
-    case MINEXP_TYPE_VAR: {
-        break;
-    }
     default:
-        cant_happen("unrecognized MinExp type %d", node->type);
+        cant_happen("unrecognized MinExp type %s", minExpTypeName(node->type));
     }
 
     UNPROTECT(save);

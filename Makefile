@@ -1,7 +1,7 @@
 .PHONY: all clean realclean deps profile leak-check check-grammar \
 list-cores test indent indent-src indent-generated docs \
 install-sqlite3 coverage extracov view-coverage \
-coverage-target \
+coverage-target test-binary \
 help \
 establish-baseline test-refactoring update-baseline clean-baseline \
 scratch
@@ -132,12 +132,68 @@ ALL_DEP=$(DEP) $(EXTRA_DEP) $(TEST_DEP) $(MAIN_DEP) $(PREAMBLE_DEP)
 
 INCLUDE_PATHS=-I $(GENDIR)/ -I $(SRCDIR)/
 
+COMPILE_TARGET=junk/junk.c
+
 all: $(TARGET) docs
 
 $(TARGET): $(MAIN_OBJ) $(ALL_OBJ) | $(BINDIR)
 	$(CC) -o $@ $(MAIN_OBJ) $(ALL_OBJ) $(LIBS)
 
 docs: $(EXTRA_DOCS)
+
+TEST_FN_DIR=tests/fn
+JUNK_DIR=junk
+TEST_FN_FILES=$(wildcard $(TEST_FN_DIR)/test_*.fn)
+TEST_FN_CFILES=$(patsubst $(TEST_FN_DIR)/%,$(JUNK_DIR)/%,$(patsubst %.fn,%.c,$(TEST_FN_FILES)))
+TEST_FN_SFILES=$(patsubst $(TEST_FN_DIR)/%,$(JUNK_DIR)/%,$(patsubst %.fn,%.scm,$(TEST_FN_FILES)))
+TEST_FN_OFILES=$(patsubst %.c,%.o,$(TEST_FN_CFILES))
+TEST_FN_BINARIES=$(patsubst %.o,%,$(TEST_FN_OFILES))
+
+$(TEST_FN_CFILES): $(JUNK_DIR)/%.c: $(TEST_FN_DIR)/%.fn $(TARGET)
+	$(TARGET) --include=fn --target-c $<  > $@~ && mv $@~ $@
+	indent $@
+
+$(TEST_FN_SFILES): $(JUNK_DIR)/%.scm: $(TEST_FN_DIR)/%.fn $(TARGET)
+	$(TARGET) --include=fn --target-c --dump-ir $<  > $@~ && mv $@~ $@
+
+$(TEST_FN_OFILES): %.o: %.c
+	$(LAXCC) $(INCLUDE_PATHS) -c $< -o $@
+
+$(TEST_FN_BINARIES): %: %.o $(ALL_OBJ)
+	$(LAXCC) -o $@ $< $(ALL_OBJ) $(LIBS)
+
+test-binary: all $(TEST_FN_BINARIES)
+	@for t in $(TEST_FN_BINARIES) ; do echo $$t ; $$t || exit 1 ; done
+	@echo All binary tests pass
+
+irs: $(TEST_FN_SFILES)
+
+test-big-binary: all junk/test_harness
+	junk/test_harness
+
+junk/test_harness: junk/test_harness.o $(ALL_OBJ)
+	$(LAXCC) -o $@ $< $(ALL_OBJ) $(LIBS)
+
+junk/test_harness.o: junk/test_harness.c
+	$(LAXCC) $(INCLUDE_PATHS) -c $< -o $@
+
+junk/test_harness.c: fn/rewrite/test_harness.fn $(TARGET)
+	$(TARGET) --include=fn --target-c $<  > $@~ && mv $@~ $@
+	indent $@
+
+PERF_CASE=fib35
+test-perf-binary: all junk/$(PERF_CASE)
+	time junk/$(PERF_CASE)
+
+junk/$(PERF_CASE): junk/$(PERF_CASE).o $(ALL_OBJ)
+	$(LAXCC) -o $@ $< $(ALL_OBJ) $(LIBS)
+
+junk/$(PERF_CASE).o: junk/$(PERF_CASE).c
+	$(LAXCC) $(INCLUDE_PATHS) -c $< -o $@
+
+junk/$(PERF_CASE).c: fn/$(PERF_CASE).fn $(TARGET)
+	$(TARGET) --include=fn --target-c $<  > $@~ && mv $@~ $@
+	indent $@
 
 EXTRA_TYPES=bigint_word \
 BigInt \
@@ -287,7 +343,7 @@ realclean: clean
 	rm -rf tags xref $(UNIDIR)
 
 clean: deps
-	rm -rf $(BINDIR) $(OBJDIR) callgrind.out.* $(GENDIR) $(TEST_TARGETS) .typedefs $(SRCDIR)/*~ .generated gmon.out *.fnc core.* coverage_html coverage_report.txt gcov_output *.gcda *.gcno coverage.info coverage_filtered.info test_output.log
+	rm -rf $(BINDIR) $(OBJDIR) callgrind.out.* $(GENDIR) $(TEST_TARGETS) .typedefs $(SRCDIR)/*~ .generated gmon.out *.fnc core.* coverage_html coverage_report.txt gcov_output *.gcda *.gcno coverage.info coverage_filtered.info test_output.log $(TEST_FN_CFILES) $(TEST_FN_OFILES) $(TEST_FN_BINARIES) $(TEST_FN_SFILES)
 	$(MAKE) -C scratch clean
 
 deps:

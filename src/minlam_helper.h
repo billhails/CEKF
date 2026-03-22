@@ -22,6 +22,6 @@
 #include "utils.h"
 
 SymbolList *minBindingsToSymbolList(MinBindings *bindings);
-MinExp *makeDoneCont(ParserInfo);
+MinExp *makeDoneCont(ParserInfo, bool);
 
 #endif

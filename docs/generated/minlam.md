@@ -8,6 +8,8 @@ MinExpTable --entries--> MinExp
 MinLam --args--> SymbolList
 MinLam --exp--> MinExp
 MinLam --cc--> bool
+MinAnnotatedVar --var--> HashSymbol
+MinAnnotatedVar --position--> int
 MinExprList --exp--> MinExp
 MinExprList --next--> MinExprList
 MinPrimApp --type--> MinPrimOp
@@ -25,6 +27,7 @@ MinCond --cases--> MinCondCases
 MinIntCondCases --constant--> MaybeBigInt
 MinIntCondCases --body--> MinExp
 MinIntCondCases --next--> MinIntCondCases
+MinCharCondCases --isDefault--> bool
 MinCharCondCases --constant--> character
 MinCharCondCases --body--> MinExp
 MinCharCondCases --next--> MinCharCondCases
@@ -49,6 +52,7 @@ MinAlphaEnv --nameSpaces--> MinAlphaEnvArray
 MinExp --amb--> MinAmb
 MinExp --apply--> MinApply
 MinExp --args--> MinExprList
+MinExp --avar--> MinAnnotatedVar
 MinExp --back--> void_ptr
 MinExp --bigInteger--> MaybeBigInt
 MinExp --bindings--> MinBindings
@@ -69,6 +73,7 @@ MinCondCases --integers--> MinIntCondCases
 MinCondCases --characters--> MinCharCondCases
 MinPrimOp["enum MinPrimOp"]
 MinAlphaEnvArray["MinAlphaEnvArray[]"] --entries--> MinAlphaEnv
+MinBindingsArray["MinBindingsArray[]"] --entries--> MinBindings
 ```
 
 > Generated from src/minlam.yaml by tools/generate.py

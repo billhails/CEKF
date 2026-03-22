@@ -231,6 +231,7 @@ fn fold {
     (x = M.primop(_)) |
     (x = M.bigint(_)) |
     (x = M.character(_)) |
+    (x = M.done_expr) |
     (x = M.var(_)) |
     (x = M.stdint(_)) {
         x

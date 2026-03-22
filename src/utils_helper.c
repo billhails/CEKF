@@ -137,11 +137,12 @@ SymbolSet *symbolListToSet(SymbolList *list) {
  */
 SymbolList *symbolSetToList(ParserInfo PI, SymbolSet *set) {
     SymbolList *list = NULL;
-    int save = PROTECT(list);
+    int save = PROTECT(set);
     Index i = 0;
     HashSymbol *current;
     while ((current = iterateSymbolSet(set, &i)) != NULL) {
         list = newSymbolList(PI, current, list);
+        REPLACE_PROTECT(save, list);
     }
     UNPROTECT(save);
     return list;

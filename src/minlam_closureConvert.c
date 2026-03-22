@@ -184,22 +184,8 @@ static MinExp *closureConvertMinApply(MinApply *node) {
         LEAVE(closureConvertMinApply);
         return newMinExp_Apply(CPI(node), node);
     }
-    MinExp *vec = node->function;
-    MinExprList *args = node->args;
-    MinExp *zero = newMinExp_Stdint(CPI(node), 0);
-    int save = PROTECT(zero);
-    MinExp *function =
-        makeMinExp_Prim(CPI(node), MINPRIMOP_TYPE_VEC, zero, vec);
-    PROTECT(function);
-    MinExp *one = newMinExp_Stdint(CPI(node), 1);
-    PROTECT(one);
-    MinExp *vec_ref = makeMinExp_Prim(CPI(node), MINPRIMOP_TYPE_VEC, one, vec);
-    PROTECT(vec_ref);
-    MinExprList *new_args = newMinExprList(CPI(node), vec_ref, args);
-    PROTECT(new_args);
-    MinExp *result = makeMinExp_Apply(CPI(node), function, new_args);
+    MinExp *result = makeMinExp_Apply(CPI(node), node->function, node->args);
     getMinExp_Apply(result)->cc = true;
-    UNPROTECT(save);
     LEAVE(closureConvertMinApply);
     return result;
 }

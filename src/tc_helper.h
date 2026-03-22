@@ -22,6 +22,8 @@
 #include "tc.h"
 #include "utils.h"
 
+struct SCharArray;
+
 void ppTcType(TcType *type);
 void ppTcFunction(TcFunction *function);
 void ppTcPair(TcPair *pair);
@@ -31,7 +33,7 @@ void ppTcTypeSig(TcTypeSig *typeSig);
 void ppTcTuple(TcTypeArray *tuple);
 void ppTcEnv(TcEnv *env);
 bool getFromTcEnv(TcEnv *env, HashSymbol *symbol, TcType **type);
-SCharArray *tcTypeToSCharArray(TcType *type);
-void appendStringToSCharArray(SCharArray *buffer, char *str);
+struct SCharArray *tcTypeToSCharArray(TcType *type);
+void appendStringToSCharArray(struct SCharArray *buffer, char *str);
 
 #endif
