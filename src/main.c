@@ -228,8 +228,8 @@ static int processArgs(int argc, char *argv[]) {
             {"report", no_argument, &report_flag, 1},
 #ifdef DEBUG_STRESS_GC
             {"stress-gc", no_argument, &forceGcFlag, 1},
-            {"target-c", no_argument, &targetCFlag, 1},
 #endif
+            {"target-c", no_argument, &targetCFlag, 1},
             {"parse-only", no_argument, &parse_only_flag, 1},
             {"dump-ir", no_argument, &dumpIR, 1},
             {"dump-ast", no_argument, &ast_flag, 1},
