@@ -49,6 +49,8 @@
 #include "minlam_annotate.h"
 #include "minlam_beta.h"
 #include "minlam_closureConvert.h"
+#include "minlam_cps.h"
+#include "minlam_cpsTrampoline.h"
 #include "minlam_curry.h"
 #include "minlam_emit.h"
 #include "minlam_eta.h"
@@ -66,11 +68,6 @@
 #include "wrapper_synthesis.h"
 #ifdef UNIT_TESTS
 #include "tests.h"
-#endif
-
-#ifdef TEST_CPS
-#include "minlam_cps.h"
-#include "minlam_cpsTrampoline.h"
 #endif
 
 // temporary test
@@ -642,7 +639,6 @@ int main(int argc, char *argv[]) {
             exit(0);
         }
 
-#ifdef TEST_CPS
         if (targetCFlag) {
             MinExp *done = makeDoneCont(CPI(minExp), true);
             PROTECT(done);
@@ -695,7 +691,6 @@ int main(int argc, char *argv[]) {
             eprintf("\n");
             exit(0);
         }
-#endif
 
         AnfExp *anfExp = anfNormalize(minExp);
         REPLACE_PROTECT(save2, anfExp);

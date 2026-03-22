@@ -71,7 +71,7 @@ static void assertNoLeakedSlots(EmitterContext *, int);
     if (node == NULL || CPI(node).lineNo == 0)                                 \
         fprintf(FH(context), "// %s\n", name);                                 \
     else                                                                       \
-        fprintf(FH(context), "// %s +%d, %s\n", name, CPI(node).lineNo,        \
+        fprintf(FH(context), "// %s +%d %s\n", name, CPI(node).lineNo,         \
                 CPI(node).fileName)
 
 ///////////////////////
@@ -545,19 +545,22 @@ static EmitResult *emitArg(MinExp *arg, EmitterContext *context) {
 }
 
 static EmitResult *emitPrimOp(MinPrimApp *app, EmitterContext *context) {
-    EMITLOC("emitPrimOp", app, context);
     EmitResult *arg1 = emitArg(app->exp1, context);
     int save = PROTECT(arg1);
     EmitResult *arg2 = emitArg(app->exp2, context);
     PROTECT(arg2);
     // deliberate early release of any temps prior to claiming a new one
-    // allows i.e. reg[1] = op(reg[1], reg[2]);
+    // allows i.e. `reg[1] = op(reg[1], reg[2]);` as long as we don't emit
+    // anything that could clobber the released slots before we are done
+    // with them.
     releaseSlot(arg1, context);
     releaseSlot(arg2, context);
     EmitResult *result = claimSlot(context);
     PROTECT(result);
     char *opName = getPrimOpName(app->type);
     int nargs = getPrimOpArity(app->type);
+    // the first thing we emit consumes the released but not yet clobbered
+    // slots.
     if (nargs == 2) {
         fprintf(FH(context), "%s = %s(%s, %s);\n",
                 emitResultText(result, context), opName,
@@ -607,6 +610,7 @@ static void emitMaybeBigInt(MaybeBigInt *mbi, EmitterContext *context) {
             fprintf(FH(context), ", %u", bi.words[i]);
         }
         fprintf(FH(context), "))");
+        // minlam_runtime_BigInt will have done a PROTECT that needs restoring
         context->needsUnprotect = true;
         break;
     }
@@ -702,6 +706,15 @@ static EmitResult *emitSimpleExp(MinExp *exp, EmitterContext *context) {
     }
 }
 
+static EmitResult *emitZeroVec(EmitterContext *context) {
+    EmitResult *target = claimSlot(context);
+    int save = PROTECT(target);
+    fprintf(FH(context), "%s = make_vec(0);\n",
+            emitResultText(target, context));
+    UNPROTECT(save);
+    return target;
+}
+
 static EmitResult *emitMakeVec(MinExprList *vecs, EmitterContext *context) {
     EMITLOC("emitMakeVec", vecs, context);
     ResultArray *results = newResultArray();
@@ -720,13 +733,18 @@ static EmitResult *emitMakeVec(MinExprList *vecs, EmitterContext *context) {
     }
     EmitResult *target = claimSlot(context);
     PROTECT(target);
-    fprintf(FH(context), "%s = make_vec(%d", emitResultText(target, context),
-            count);
-    for (Index i = 0; i < results->size; i++) {
-        EmitResult *result = results->entries[i];
-        fprintf(FH(context), ", %s", emitResultText(result, context));
+    if (count == 0) {
+        fprintf(FH(context), "%s = value_None();",
+                emitResultText(target, context));
+    } else {
+        fprintf(FH(context), "%s = make_vec(%d",
+                emitResultText(target, context), count);
+        for (Index i = 0; i < results->size; i++) {
+            EmitResult *result = results->entries[i];
+            fprintf(FH(context), ", %s", emitResultText(result, context));
+        }
+        fprintf(FH(context), ");\n");
     }
-    fprintf(FH(context), ");\n");
     UNPROTECT(save);
     return target;
 }
@@ -839,7 +857,11 @@ static EmitResult *emitExtractFromClosure(EmitResult *closure, int index,
 
 static EmitResult *emitCallBuiltin(BuiltIn *bi, MinExprList *builtinArgs,
                                    EmitterContext *context) {
-    EmitResult *builtinArg = emitMakeVec(builtinArgs, context);
+    EmitResult *builtinArg = NULL;
+    if (countBuiltInArgs(bi->args) == 0)
+        builtinArg = emitZeroVec(context); // just for builtins
+    else
+        builtinArg = emitMakeVec(builtinArgs, context);
     int save = PROTECT(builtinArg);
     EmitResult *builtinResult = claimSlot(context);
     PROTECT(builtinResult);

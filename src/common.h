@@ -75,8 +75,6 @@
 #define SAFETY_CHECKS
 #endif
 
-#define TEST_CPS
-
 #ifndef __GNUC__
 #define __attribute__(x)
 #endif

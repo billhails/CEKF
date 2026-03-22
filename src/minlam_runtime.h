@@ -68,6 +68,7 @@ static inline Value cmp(Value v1, Value v2) {
 }
 
 Value make_vec(int count, ...);
+static inline Value make_zero_vec(void) { return value_Vec(newVec(0)); }
 
 void minlam_runtime_mark_reg();
 

@@ -164,6 +164,7 @@ $(TEST_FN_BINARIES): %: %.o $(ALL_OBJ)
 
 test-binary: all $(TEST_FN_BINARIES)
 	@for t in $(TEST_FN_BINARIES) ; do echo $$t ; $$t || exit 1 ; done
+	@echo All binary tests pass
 
 irs: $(TEST_FN_SFILES)
 
