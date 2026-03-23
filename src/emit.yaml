@@ -39,7 +39,6 @@ structs:
             activeSlots: int=0 # for debug
             totalSlots: int=0
             maxReg: int=0
-            currentDepth: int=0
             currentReg: int=0
             needsUnprotect: bool=false
 

@@ -14,7 +14,6 @@ EmitterContext --slots--> SlotPool
 EmitterContext --activeSlots--> int
 EmitterContext --totalSlots--> int
 EmitterContext --maxReg--> int
-EmitterContext --currentDepth--> int
 EmitterContext --currentReg--> int
 EmitterContext --needsUnprotect--> bool
 Slot --isAvailable--> bool

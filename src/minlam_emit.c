@@ -162,7 +162,6 @@ static EmitterContext *extendContext(EmitterContext *context, Opaque *body) {
     int save = PROTECT(new);
     new->lambdas = context->lambdas;
     new->slots = context->slots;
-    new->currentDepth = context->currentDepth;
     new->maxReg = context->maxReg;
     new->currentReg = context->currentReg;
     new->totalSlots = context->totalSlots;
@@ -172,17 +171,12 @@ static EmitterContext *extendContext(EmitterContext *context, Opaque *body) {
 }
 
 static inline void setMaxReg(EmitterContext *context) {
-    context->maxReg = MAX(context->maxReg, context->currentDepth);
+    context->maxReg = MAX(context->maxReg, context->totalSlots);
 }
 
 static inline void setProtectionStatus(EmitterContext *to,
                                        EmitterContext *from) {
     to->needsUnprotect = to->needsUnprotect || from->needsUnprotect;
-}
-
-static inline void incrDepth(EmitterContext *context) {
-    context->currentDepth++;
-    setMaxReg(context);
 }
 
 static inline void retrieveMaxReg(EmitterContext *to, EmitterContext *from) {
@@ -232,17 +226,17 @@ static HashSymbol *claimSlotSymbol(EmitterContext *context) {
     SCharArray *text = newSCharArray();
     int save = PROTECT(text);
     char buf[64];
-    sprintf(buf, "reg[%d]", context->currentDepth);
+    sprintf(buf, "reg[%d]", context->totalSlots);
     for (char *c = buf; *c; c++) {
         pushSCharArray(text, *c);
     }
     pushSCharArray(text, '\0');
-    slot = newSlot(false, text, context->currentDepth);
-    incrDepth(context);
+    slot = newSlot(false, text, context->totalSlots);
     PROTECT(slot);
     setSlotPool(context->slots, result, slot);
     context->activeSlots++;
     context->totalSlots++;
+    setMaxReg(context);
     UNPROTECT(save);
     return result;
 }
@@ -294,7 +288,7 @@ static bool slotsAvailableBelow(int N, EmitterContext *context) {
     Index i = 0;
     if (N == 0)
         return false;
-    if (context->currentDepth < N) // we've never allocated them
+    if (context->totalSlots < N) // we've never allocated them
         return true;
     while ((key = iterateSlotPool(context->slots, &i, &slot)) != NULL) {
         if (slot->isAvailable && slot->index < N) {
