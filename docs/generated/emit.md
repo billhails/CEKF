@@ -22,6 +22,7 @@ Slot --text--> SCharArray
 Slot --index--> int
 EmitResult --var--> HashSymbol
 EmitResult --buf--> opaque
+EmitResult --constant--> opaque
 ResultArray["ResultArray[]"] --entries--> EmitResult
 ```
 

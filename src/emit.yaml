@@ -55,10 +55,13 @@ unions:
     EmitResult:
         meta:
             description: >
-                Either a hash symbol representing a temp variable, or an Opaque EmitBuffer containing an immediate expression.
+                Either a hash symbol representing a temp variable, or an Opaque
+                EmitBuffer containing an immediate expression which can be
+                a  constant or text that refers to variables.
         data:
             var: HashSymbol
             buf: opaque
+            constant: opaque
 
 hashes:
     BufferBag:

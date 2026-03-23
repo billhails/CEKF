@@ -102,6 +102,7 @@ static int uncurry_flag = 0;
 static int cps_flag = 0;
 static int amb_flag = 0;
 static int closure_flag = 0;
+static int flat_closures_flag = 0;
 
 /**
  * Report the build mode, i.e. the value of the BUILD_MODE macro when compiled.
@@ -191,6 +192,8 @@ static void usage(char *prog, int status) {
         "state table.\n"
         "    -e<snippet>\n"
         "    --exec=<snippet>         Execute the snippet of code directly\n"
+        "    --flat-closures          Emit flat closures "
+        "(faster but uses more memory)\n"
         "    -i<dir>\n"
         "    --include=<dir>          Add dir to the list of directories to "
         "be searched.\n"
@@ -249,6 +252,7 @@ static int processArgs(int argc, char *argv[]) {
             {"dump-desugared", optional_argument, 0, 'd'},
             {"dump-alpha", optional_argument, 0, 'a'},
             {"dump-beta", optional_argument, 0, 'b'},
+            {"flat-closures", no_argument, &flat_closures_flag, 1},
             {"include", required_argument, 0, 'i'},
             {"binary-out", required_argument, 0, 'O'},
             {"binary-in", required_argument, 0, 'B'},
@@ -670,7 +674,11 @@ int main(int argc, char *argv[]) {
                 exit(0);
             }
 
-            minExp = sharedClosureConvert(minExp);
+            if (flat_closures_flag) {
+                minExp = flatClosureConvert(minExp);
+            } else {
+                minExp = sharedClosureConvert(minExp);
+            }
             REPLACE_PROTECT(save2, minExp);
 
             if (closure_flag) {
