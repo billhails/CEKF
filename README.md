@@ -75,73 +75,81 @@ the $step$ function: one to deal with `amb` and one to deal with `back`.
 ```mermaid
 flowchart TD
 classDef process fill:#aef,color:#123;
+classDef new fill:#8bf,color:#000;
 classDef minlam fill:#456,color:#fea;
 source(Source) -->
 scanner([Scanner]):::process -->
 tokens(Tokens) -->
-parser([Parser]):::process
-parser --> oi([Operator Inlining]):::process
-oi --> scanner
-parser --> ast(AST) -->
-namespace_removal([Namespace Desugaring]):::process -->
-denamespace(Simplified AST) -->
-lc([Lambda Conversion]):::process --> tpmc([Pattern Matching Compiler]):::process
-lc <---> pg([Print Function Generator]):::process
-lc <---> me([Lazy Function Expansion]):::process
-tpmc --> vs([Variable Substitution]):::process
-vs --> lc
-lc <--> des([Desugaring]):::process
-lc --> lambda0(Plain Lambda Form)
-lambda0 --> sim([Simplification]):::process
-sim --> lambda1(Plain Lambda Form)
-lambda1 --> tc([Type Checking]):::process
-tc <--> pc([Print Compiler]):::process
-tc --> lambda2(Plain Lambda Form)
-lambda2 --> ci([Constructor Inlining]):::process
-ci --> lambda3(Inlined Lambda)
+parser([Parser]):::process -->
+oi([Operator Inlining]):::process -->
+scanner
+parser ==>
+ast(AST) ==>
+namespace_removal([Namespace Desugaring]):::process ==>
+denamespace(Simplified AST)
+
+denamespace -.-> tcast([Typecheck AST]):::new
+tcast -.-> tcdast(Typechecked AST)
+tcdast -.-> lconv([Lambda Conversion]):::new
+lconv -.-> lambda_ds
+
+denamespace ==>
+lc([Lambda Conversion]):::process ==> tpmc([Pattern Matching Compiler]):::process
+lc <==> pg([Print Function Generator]):::process
+lc <==> me([Lazy Function Expansion]):::process
+tpmc ==> vs([Variable Substitution]):::process
+vs ==> lc
+lc <==> des([Desugaring]):::process
+lc ==> lambda0(Plain Lambda Form)
+lambda0 ==> sim([Simplification]):::process
+sim ==> lambda1(Plain Lambda Form)
+lambda1 ==> tc([Type Checking]):::process
+tc <==> pc([Print Compiler]):::process
+tc ==> lambda2(Plain Lambda Form)
+lambda2 ==> ci([Constructor Inlining]):::process
+ci ==> lambda3(Inlined Lambda)
 desugaring(["Desugaring"]):::process
-desugaring --> lambda_ds(desugared lambda):::minlam
-lambda_ds --> alpha(["ɑ-Conversion"]):::process
-alpha --> lambda_a(alphatized lambda):::minlam
+desugaring ==> lambda_ds(desugared lambda):::minlam
+lambda_ds ==> alpha(["ɑ-Conversion"]):::process
+alpha ==> lambda_a(alphatized lambda):::minlam
 
-lambda_a --> curry(["Currying"]):::process
-curry --> curried(curried lambda):::minlam
-curried --> beta(["β-conversion"]):::process
-beta --> lambda_beta("β-lambda"):::minlam
-lambda_beta --> eta(["η-conversion"]):::process
-eta --> lambda_eta("η-lambda"):::minlam
-lambda_eta --> folding([Operator Folding]):::process
-folding --> folded(optimized operators):::minlam
-folded --> uncurry(["Un-Currying"]):::process
-uncurry --> uncurried(uncurried lambda):::minlam
+lambda_a ==> curry(["Currying"]):::process
+curry ==> curried(curried lambda):::minlam
+curried ==> beta(["β-conversion"]):::process
+beta ==> eta(["η-conversion"]):::process
+eta ==> folding([Operator Folding]):::process
+folding ==> folded(optimized operators):::minlam
+folded ==> uncurry(["Un-Currying"]):::process
+uncurry ==> uncurried(uncurried lambda):::minlam
 
-uncurried --> anfr([ANF Rewrite]):::process
-anfr --> lambda_b(New ANF)
+uncurried ==> anfr([ANF Rewrite]):::process
+anfr ==> lambda_b(New ANF)
 
-uncurried --> cps([CPS Transform]):::process
-cps --> beta2([Additional β-conversion]):::process -->
+uncurried ==> cps([CPS Transform]):::process
+cps ==> beta2([Additional β-conversion]):::process ==>
 lambda_e("CPS λ"):::minlam
-lambda_e --> cloc([Closure Conversion]):::process
-cloc --> lambda_c(Explicit Closure):::minlam
-lambda_c --> amb_conversion([AMB Conversion]):::process
-amb_conversion --> amb(Pure CPS λ with failllure continuation):::minlam
-amb --> closure_conversion([Closure Lifting]):::process
-closure_conversion --> closures(Explicit Closures):::minlam
-closures --> beta3([Yet another β]):::process --> eta2([And another η]):::process -->
+lambda_e ==> cloc([Closure Conversion]):::process
+cloc ==> lambda_c(Explicit Closure):::minlam
+lambda_c ==> amb_conversion([AMB Conversion]):::process
+amb_conversion ==> amb(Pure CPS λ with failllure continuation):::minlam
+amb ==> closure_conversion([Closure Lifting]):::process
+closure_conversion ==> closures(Explicit Closures):::minlam
+closures ==> beta3([Yet another β]):::process ==>
+eta2([And another η]):::process ==>
 de_bruijn([DeBruijn Indexing]):::process
-de_bruijn --> indexed("Annotated Variables (Final IR)"):::minlam
-indexed --> c_emitter([Emit C]):::process
-c_emitter --> target_c(Pure C code)
+de_bruijn ==> indexed("Annotated Variables (Final IR)"):::minlam
+indexed ==> c_emitter([Emit C]):::process
+c_emitter ==> target_c(Pure C code)
    
-lambda3 --> desugaring
-uncurried --> anfc([A-Normal Form Conversion]):::process
-anfc --> anf(ANF)
-anf --> lexa([Lexical Analysis]):::process
-lexa --> ann(Annotated ANF)
-ann --> bcc([Bytecode Compiler]):::process
-bcc --> bc(Byte Code)
-bc <--> bcf(Bytecode Files)
-bc --> cekf([CEKF Runtime VM]):::process
+lambda3 ==> desugaring
+uncurried ==> anfc([A-Normal Form Conversion]):::process
+anfc ==> anf(ANF)
+anf ==> lexa([Lexical Analysis]):::process
+lexa ==> ann(Annotated ANF)
+ann ==> bcc([Bytecode Compiler]):::process
+bcc ==> bc(Byte Code)
+bc <==> bcf(Bytecode Files)
+bc ==> cekf([CEKF Runtime VM]):::process
 ```
 
 A big driver for the progress made has been arriving at a minimalist

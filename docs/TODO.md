@@ -7,14 +7,8 @@ More of a wish-list than a hard and fast plan.
   * Records should create accessor functions for each tag.
     * if there is only one type variant.
 * Namespaces.
-  * Figure out how to desugar namespaces in the IR.
-    * There should be no special forms.
-    * We can do without the `namespace.(<arbitrary-expression>)` feature as it is very little used.
-    * Namespaces might be normal functions with a dispatch table.
-    * Or a large vec?
-    * Or name mangled (`namespace.val` becomes `namespace_val` essentially).
-    * We also want `import ns function x` and `import ns functions`.
-    * And `import ns typedef x` and `import ns typedefs`.
+  * We want `import <ns> function <x>` and `import <ns> functions`.
+  * And `import <ns> typedef <x>` and `import <ns> typedefs`.
 * Parser.
   * re-elist the now-available `macro` keyword for proper syntactic extensibility:
     * if/then/else => `(fn { (true) {then} (false) {else} }(if))` (we already do this but hard-coded in the parser).
@@ -22,7 +16,7 @@ More of a wish-list than a hard and fast plan.
 * Memory Management.
   * Replace mark and sweep GC with a generational stop and copy.
 * Pipeline.
-  * Port/Implement prototype closure conversion from fn/rewrite.
+  * Re-order Type Checking before TPMC - NEXT!
   * Target LLVM.
 * Generate.
   * Move all signatures into `signature_helper.py`, not just the shared ones.
@@ -43,6 +37,7 @@ More of a wish-list than a hard and fast plan.
     * can't allow arbitrary ops and combinations because i.e. `a * b` can't uniquely determine `a` and `b`, and `a ** 2` would require `a` to be bound to the square root of the actual argument.
   * allow unpacking of the real and imaginary parts of a complex number in patterns.
     * another special case: `a + b`, `b` would be bound to `0i` if the actual argument  is not complex.
+  * `mathutils.fn` for `factorial`, `gcd`, `lcm`, `fib`, `pi` etc.
 * Curried binary operators `(2+)` etc.
 * (internal) have a NEWZ variant of NEW that bzero's its result.
 * Builtins.

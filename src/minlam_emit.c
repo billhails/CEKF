@@ -715,22 +715,24 @@ static EmitResult *emitZeroVec(EmitterContext *context) {
     return target;
 }
 
+static ResultArray *emitRL(MinExprList *vecs, EmitterContext *context) {
+    if (vecs == NULL)
+        return newResultArray();
+    ResultArray *results = emitRL(vecs->next, context);
+    int save = PROTECT(results);
+    EmitResult *result = emitArg(vecs->exp, context);
+    PROTECT(result);
+    pushResultArray(results, result);
+    UNPROTECT(save);
+    return results;
+}
+
 static EmitResult *emitMakeVec(MinExprList *vecs, EmitterContext *context) {
     EMITLOC("emitMakeVec", vecs, context);
-    ResultArray *results = newResultArray();
+    ResultArray *results = emitRL(vecs, context);
     int save = PROTECT(results);
     int count = countMinExprList(vecs);
-    MinExprList *v = vecs;
-    while (v != NULL) {
-        EmitResult *result = emitArg(v->exp, context);
-        int save = PROTECT(result);
-        pushResultArray(results, result);
-        UNPROTECT(save);
-        v = v->next;
-    }
-    for (Index i = 0; i < results->size; i++) {
-        releaseSlot(results->entries[i], context);
-    }
+    releaseSlots(results, context);
     EmitResult *target = claimSlot(context);
     PROTECT(target);
     if (count == 0) {
@@ -739,9 +741,9 @@ static EmitResult *emitMakeVec(MinExprList *vecs, EmitterContext *context) {
     } else {
         fprintf(FH(context), "%s = make_vec(%d",
                 emitResultText(target, context), count);
-        for (Index i = 0; i < results->size; i++) {
-            EmitResult *result = results->entries[i];
-            fprintf(FH(context), ", %s", emitResultText(result, context));
+        for (Index i = results->size; i > 0; i--) {
+            fprintf(FH(context), ", %s",
+                    emitResultText(results->entries[i - 1], context));
         }
         fprintf(FH(context), ");\n");
     }
