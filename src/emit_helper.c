@@ -27,19 +27,20 @@ static inline void swap(Index a, Index b, EmitterContext *context) {
     context->heap->entries[b] = temp;
 }
 
-static Integer value(Index i, EmitterContext *cx) {
+// returns the register number of the slot
+static Integer reg(Index i, EmitterContext *ctx) {
 #ifdef SAFETY_CHECKS
-    if (i < 1 || i >= cx->heap->size)
+    if (i < 1 || i >= ctx->heap->size)
         cant_happen("heap index %u out of range", i);
 #endif
 
-    HashSymbol *key = cx->heap->entries[i];
+    HashSymbol *key = ctx->heap->entries[i];
     Slot *slot = NULL;
 
-    if (getSlotPool(cx->slots, key, &slot)) {
+    if (getSlotPool(ctx->slots, key, &slot)) {
         return slot->index;
     } else {
-        cant_happen("slotIndex given unrecognised slot key %s", key->name);
+        cant_happen("unrecognised %s at index %u", key->name, i);
     }
 }
 
@@ -52,8 +53,8 @@ SymbolArray *emit_createHeap() {
     return result;
 }
 
-void emit_addToHeap(EmitterContext *cx, HashSymbol *key) {
-    SymbolArray *heap = cx->heap;
+void emit_addToHeap(EmitterContext *ctx, HashSymbol *key) {
+    SymbolArray *heap = ctx->heap;
 
 #ifdef SAFETY_CHECKS
     if (heap->size == 0)
@@ -66,8 +67,8 @@ void emit_addToHeap(EmitterContext *cx, HashSymbol *key) {
         Index i = heap->size - 1;
 
         // keep swapping while it's less than its parent
-        while (value(i, cx) < value(parent(i), cx)) {
-            swap(i, parent(i), cx);
+        while (reg(i, ctx) < reg(parent(i), ctx)) {
+            swap(i, parent(i), ctx);
 
             if (parent(i) > 1) {
                 i = parent(i);
@@ -79,8 +80,8 @@ void emit_addToHeap(EmitterContext *cx, HashSymbol *key) {
 }
 
 // can return NULL
-HashSymbol *emit_removeFromHeap(EmitterContext *cx) {
-    SymbolArray *heap = cx->heap;
+HashSymbol *emit_removeFromHeap(EmitterContext *ctx) {
+    SymbolArray *heap = ctx->heap;
 
 #ifdef SAFETY_CHECKS
     if (heap->size == 0)
@@ -100,7 +101,9 @@ HashSymbol *emit_removeFromHeap(EmitterContext *cx) {
         return smallest;
 
     if (heap->size == 3) { // only two left after removal
-        swap(1, 2, cx);    // first must be bigger because it was last
+        if (reg(2, ctx) < reg(1, ctx))
+            swap(1, 2, ctx);
+
         return smallest;
     }
 
@@ -108,17 +111,19 @@ HashSymbol *emit_removeFromHeap(EmitterContext *cx) {
     Index lc = left_child(p);
     Index rc = right_child(p);
 
-    // there are at least 3 nodes jn the heap
-    while (value(p, cx) >= value(lc, cx) || value(p, cx) >= value(rc, cx)) {
-        if (value(lc, cx) < value(rc, cx)) {
-            swap(p, lc, cx);
+    // there are at least 3 nodes in the heap
+    while (reg(p, ctx) >= reg(lc, ctx) || reg(p, ctx) >= reg(rc, ctx)) {
+        if (reg(lc, ctx) < reg(rc, ctx)) {
+            swap(p, lc, ctx);
             p = lc;
         } else {
-            swap(p, rc, cx);
+            swap(p, rc, ctx);
             p = rc;
         }
+
         lc = left_child(p);
         rc = right_child(p);
+
         if (lc >= heap->size || rc >= heap->size)
             break;
     }

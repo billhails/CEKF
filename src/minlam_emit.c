@@ -205,6 +205,24 @@ static BuiltIn *findBuiltIn(MinApply *node, EmitterContext *context) {
 // SlotPool Helpers
 ////////////////////
 
+static void reportUnreleasedSlots(EmitterContext *context) {
+    fprintf(stderr, "%d unreleased slots\n", context->activeSlots);
+}
+
+static Slot *createNewSlot(EmitterContext *context) {
+    SCharArray *text = newSCharArray();
+    int save = PROTECT(text);
+    char buf[64];
+    sprintf(buf, "reg[%d]", context->totalSlots);
+    for (char *c = buf; *c; c++) {
+        pushSCharArray(text, *c);
+    }
+    pushSCharArray(text, '\0');
+    Slot *result = newSlot(false, text, context->totalSlots);
+    UNPROTECT(save);
+    return result;
+}
+
 static HashSymbol *claimSlotSymbol(EmitterContext *context) {
     Slot *resultSlot = NULL;
     HashSymbol *result = emit_removeFromHeap(context);
@@ -219,28 +237,14 @@ static HashSymbol *claimSlotSymbol(EmitterContext *context) {
     }
     // no available slots, create a new one
     result = genSym("tmp_");
-
-    SCharArray *text = newSCharArray();
-    int save = PROTECT(text);
-    char buf[64];
-    sprintf(buf, "reg[%d]", context->totalSlots);
-    for (char *c = buf; *c; c++) {
-        pushSCharArray(text, *c);
-    }
-    pushSCharArray(text, '\0');
-    resultSlot = newSlot(false, text, context->totalSlots);
-    PROTECT(resultSlot);
-
+    resultSlot = createNewSlot(context);
+    int save = PROTECT(resultSlot);
     setSlotPool(context->slots, result, resultSlot);
     context->activeSlots++;
     context->totalSlots++;
     setMaxReg(context);
     UNPROTECT(save);
     return result;
-}
-
-static void reportUnreleasedSlots(EmitterContext *context) {
-    fprintf(stderr, "%d unreleased slots\n", context->activeSlots);
 }
 
 static EmitResult *claimSlot(EmitterContext *context) {
