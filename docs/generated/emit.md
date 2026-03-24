@@ -11,6 +11,7 @@ EmitterContext --lambdas--> BufferBag
 EmitterContext --body--> opaque
 EmitterContext --builtIns--> BuiltIns
 EmitterContext --slots--> SlotPool
+EmitterContext --heap--> SymbolArray
 EmitterContext --activeSlots--> int
 EmitterContext --totalSlots--> int
 EmitterContext --maxReg--> int

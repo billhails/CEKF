@@ -53,7 +53,7 @@ static void emitMinCondCases(MinCondCases *, EmitterContext *);
 static EmitResult *emitMakeVec(MinExprList *, EmitterContext *);
 static EmitResult *emitSimpleExp(MinExp *, EmitterContext *);
 static EmitterContext *extendContext(EmitterContext *, Opaque *);
-static void emitMaybeBigInt(MaybeBigInt *mbi, EmitterContext *context);
+static void emitMaybeBigInt(MaybeBigInt *, EmitterContext *);
 
 /////////////////
 // Debug Helpers
@@ -146,8 +146,10 @@ static EmitterContext *extendContextForLambda(HashSymbol *var,
     int save = PROTECT(body);
     // add it to the global set of lambdas
     setBufferBag(context->lambdas, var, body);
-    EmitterContext *new =
-        newEmitterContext(context->currentBinding, body, context->builtIns);
+    SymbolArray *heap = emit_createHeap();
+    PROTECT(heap);
+    EmitterContext *new = newEmitterContext(context->currentBinding, body,
+                                            context->builtIns, heap);
     PROTECT(new);
     new->lambdas = context->lambdas;
     new->maxReg = context->maxReg;
@@ -157,8 +159,8 @@ static EmitterContext *extendContextForLambda(HashSymbol *var,
 
 // only for atomics: sub-context must not allocate slots
 static EmitterContext *extendContext(EmitterContext *context, Opaque *body) {
-    EmitterContext *new =
-        newEmitterContext(context->currentBinding, body, context->builtIns);
+    EmitterContext *new = newEmitterContext(context->currentBinding, body,
+                                            context->builtIns, context->heap);
     int save = PROTECT(new);
     new->lambdas = context->lambdas;
     new->slots = context->slots;
@@ -204,25 +206,20 @@ static BuiltIn *findBuiltIn(MinApply *node, EmitterContext *context) {
 ////////////////////
 
 static HashSymbol *claimSlotSymbol(EmitterContext *context) {
-    HashSymbol *result = NULL;
-    HashSymbol *key = NULL;
-    Slot *slot = NULL;
     Slot *resultSlot = NULL;
-    Index i = 0;
-    while ((key = iterateSlotPool(context->slots, &i, &slot)) != NULL) {
-        if (slot->isAvailable) {
-            if (resultSlot == NULL || slot->index < resultSlot->index) {
-                resultSlot = slot;
-                result = key;
-            }
+    HashSymbol *result = emit_removeFromHeap(context);
+    if (result != NULL) {
+        if (getSlotPool(context->slots, result, &resultSlot)) {
+            resultSlot->isAvailable = false;
+            context->activeSlots++;
+            return result;
+        } else {
+            cant_happen("key \"%s\" from heap not in pool", result->name);
         }
     }
-    if (resultSlot != NULL) {
-        resultSlot->isAvailable = false;
-        context->activeSlots++;
-        return result;
-    }
+    // no available slots, create a new one
     result = genSym("tmp_");
+
     SCharArray *text = newSCharArray();
     int save = PROTECT(text);
     char buf[64];
@@ -231,9 +228,10 @@ static HashSymbol *claimSlotSymbol(EmitterContext *context) {
         pushSCharArray(text, *c);
     }
     pushSCharArray(text, '\0');
-    slot = newSlot(false, text, context->totalSlots);
-    PROTECT(slot);
-    setSlotPool(context->slots, result, slot);
+    resultSlot = newSlot(false, text, context->totalSlots);
+    PROTECT(resultSlot);
+
+    setSlotPool(context->slots, result, resultSlot);
     context->activeSlots++;
     context->totalSlots++;
     setMaxReg(context);
@@ -256,6 +254,7 @@ static void releaseSlotSymbol(HashSymbol *temp, EmitterContext *context) {
         if (!slot->isAvailable) {
             context->activeSlots--;
             slot->isAvailable = true;
+            emit_addToHeap(context, temp);
         }
     } else {
         cant_happen("slot not found");
@@ -372,8 +371,8 @@ static bool isAtomic(MinExp *exp) {
 }
 
 // assertive retrieval, all letrec bindings are expected to be closures
-static MinLam *extractLambda(MinExp *node) {
-    MinExprList *makeVec = getMinExp_MakeVec(node);
+static MinLam *extractLambda(MinExp *closure) {
+    MinExprList *makeVec = getMinExp_MakeVec(closure);
 #ifdef SAFETY_CHECKS
     if (makeVec == NULL)
         cant_happen("letrec binding must be a 2-vec");
@@ -381,8 +380,8 @@ static MinLam *extractLambda(MinExp *node) {
     return getMinExp_Lam(makeVec->exp);
 }
 
-static MinExprList *extractEnv(MinExp *node) {
-    MinExprList *makeVec = getMinExp_MakeVec(node);
+static MinExprList *extractEnv(MinExp *closure) {
+    MinExprList *makeVec = getMinExp_MakeVec(closure);
 #ifdef SAFETY_CHECKS
     if (makeVec == NULL)
         cant_happen("letrec binding must be a 2-vec");
@@ -404,7 +403,7 @@ static int getPrimOpArity(MinPrimOp type) {
     }
 }
 
-static char *getPrimOpName(MinPrimOp type) {
+static char *getPrimOpCName(MinPrimOp type) {
     switch (type) {
     case MINPRIMOP_TYPE_VEC:
         return "vec";
@@ -544,7 +543,7 @@ static EmitResult *emitPrimOp(MinPrimApp *app, EmitterContext *context) {
     releaseSlot(arg2, context);
     EmitResult *target = claimSlot(context);
     PROTECT(target);
-    char *opName = getPrimOpName(app->type);
+    char *opName = getPrimOpCName(app->type);
     int nargs = getPrimOpArity(app->type);
     // the first thing we emit consumes the released but not yet clobbered
     // slots.
@@ -1242,7 +1241,9 @@ void emitProgram(MinExp *node, BuiltIns *builtIns, FILE *out) {
     Opaque *body = newOpaque_EmitBuffer();
     int save = PROTECT(body);
     HashSymbol *main = newSymbol("main");
-    EmitterContext *context = newEmitterContext(main, body, builtIns);
+    SymbolArray *heap = emit_createHeap();
+    PROTECT(heap);
+    EmitterContext *context = newEmitterContext(main, body, builtIns, heap);
     REPLACE_PROTECT(save, context);
     fprintf(out, "// GENERATED CODE DO NOT EDIT\n");
     fprintf(out, "#include \"minlam_runtime.h\"\n");

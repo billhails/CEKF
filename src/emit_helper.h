@@ -19,5 +19,10 @@
  */
 
 #include "emit.h"
+#include "symbol.h"
+
+void emit_addToHeap(EmitterContext *, HashSymbol *);
+HashSymbol *emit_removeFromHeap(EmitterContext *); // can return NULL
+SymbolArray *emit_createHeap();
 
 #endif

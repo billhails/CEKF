@@ -36,7 +36,8 @@ structs:
             body: opaque
             builtIns: BuiltIns
             slots: SlotPool
-            activeSlots: int=0 # for debug
+            heap: SymbolArray # minheap
+            activeSlots: int=0
             totalSlots: int=0
             maxReg: int=0
             currentReg: int=0
