@@ -11,10 +11,10 @@ EmitterContext --lambdas--> BufferBag
 EmitterContext --body--> opaque
 EmitterContext --builtIns--> BuiltIns
 EmitterContext --slots--> SlotPool
+EmitterContext --heap--> SymbolArray
 EmitterContext --activeSlots--> int
 EmitterContext --totalSlots--> int
 EmitterContext --maxReg--> int
-EmitterContext --currentDepth--> int
 EmitterContext --currentReg--> int
 EmitterContext --needsUnprotect--> bool
 Slot --isAvailable--> bool
@@ -22,6 +22,7 @@ Slot --text--> SCharArray
 Slot --index--> int
 EmitResult --var--> HashSymbol
 EmitResult --buf--> opaque
+EmitResult --constant--> opaque
 ResultArray["ResultArray[]"] --entries--> EmitResult
 ```
 

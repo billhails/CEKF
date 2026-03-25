@@ -841,3 +841,25 @@ For this to work, we need to be careful to release all temps between
 sections. It makes sense to have an assertion available to catch those
 bugs early. We can count in-use slots and assert that is equal to
 `currentReg`.
+
+### More Efficient Claim and Release
+
+I'd like to improve the efficiency of the slot management code. Rather
+than iterating over an entire hash table looking for the lowest available,
+we can keep an additional SymbolArray to act as a MinHeap.
+
+We use a SymbolArray rather than a direct SlotArray because HashSymbols
+identify Slots in the SlotPool, so we can maintain the existing claimSlot
+and releaseSlot API.
+
+#### claimSlot
+
+If the heap is not empty, remove the top element from the heap, mark it
+unavailable and return it.
+
+If the heap is empty create a new slot, mark it unavailable, add it to
+the slot pool and return it.
+
+#### releaseSlot
+
+Mark the slot available and add it to the heap.
