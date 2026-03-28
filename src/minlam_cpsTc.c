@@ -538,8 +538,15 @@ CpsWork *TcCallCCKont(MinExp *sf, TcCallCCKontEnv *env) {
 }
 
 static MinExp *cpsTcMinExp(MinExp *node, MinExp *c) {
-    if (node == NULL)
-        return NULL;
+    if (node == NULL) {
+        MinExp *none = newMinExp_MakeVec(CPI(c), NULL);
+        int save = PROTECT(none);
+        MinExprList *arglist = newMinExprList(CPI(c), none, NULL);
+        PROTECT(arglist);
+        MinExp *result = makeMinExp_Apply(CPI(c), c, arglist);
+        UNPROTECT(save);
+        return result;
+    }
 
     if (isAexpr(node)) {
         MinExp *exp = cpsM(node);
@@ -637,7 +644,15 @@ CpsWork *cpsStepTc(CpsWork *work) {
         MinExp *c = tc->cont;
 
         if (node == NULL) {
-            return newCpsWork_Result(NULL);
+            MinExp *none = newMinExp_MakeVec(CPI(c), NULL);
+            int save = PROTECT(none);
+            MinExprList *arglist = newMinExprList(CPI(c), none, NULL);
+            PROTECT(arglist);
+            MinExp *result = makeMinExp_Apply(CPI(c), c, arglist);
+            PROTECT(result);
+            CpsWork *next = newCpsWork_Result(result);
+            UNPROTECT(save);
+            return next;
         }
 
         if (isAexpr(node)) {

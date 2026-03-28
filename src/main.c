@@ -563,6 +563,7 @@ int main(int argc, char *argv[]) {
             PROTECT(dest);
             ppAstProg(dest, prog);
             printf("%s\n", dest->entries);
+            exit(0);
         }
 
         // forceGcFlag = true;

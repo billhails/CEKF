@@ -1118,6 +1118,8 @@ static void emitMakeClosure(HashSymbol *var, Integer depth,
 
 static void emitBackpatchClosure(MinExprList *exprs, int depth,
                                  ResultArray *slots, EmitterContext *context) {
+    if (exprs == NULL)
+        return; // emitMakeClosure has already assigned the appropriate value
     fprintf(FH(context), "// emitBackpatchClosure %d\n", depth);
     EmitResult *tmp = emitMakeVec(exprs, context);
     int save = PROTECT(tmp);
