@@ -149,12 +149,13 @@ TEST_FN_SFILES=$(patsubst $(TEST_FN_DIR)/%,$(JUNK_DIR)/%,$(patsubst %.fn,%.scm,$
 TEST_FN_OFILES=$(patsubst %.c,%.o,$(TEST_FN_CFILES))
 TEST_FN_BINARIES=$(patsubst %.o,%,$(TEST_FN_OFILES))
 
+TARGET_CG=--include=fn --target-c --flat-closures
 $(TEST_FN_CFILES): $(JUNK_DIR)/%.c: $(TEST_FN_DIR)/%.fn $(TARGET)
-	$(TARGET) --include=fn --target-c $<  > $@~ && mv $@~ $@
+	$(TARGET) $(TARGET_CG) $<  > $@~ && mv $@~ $@
 	indent $@
 
 $(TEST_FN_SFILES): $(JUNK_DIR)/%.scm: $(TEST_FN_DIR)/%.fn $(TARGET)
-	$(TARGET) --include=fn --target-c --dump-ir $<  > $@~ && mv $@~ $@
+	$(TARGET) $(TARGET_CG) --dump-ir $<  > $@~ && mv $@~ $@
 
 $(TEST_FN_OFILES): %.o: %.c
 	$(LAXCC) $(INCLUDE_PATHS) -c $< -o $@
@@ -178,7 +179,7 @@ junk/test_harness.o: junk/test_harness.c
 	$(LAXCC) $(INCLUDE_PATHS) -c $< -o $@
 
 junk/test_harness.c: fn/rewrite/test_harness.fn $(TARGET)
-	$(TARGET) --include=fn --target-c $<  > $@~ && mv $@~ $@
+	$(TARGET) $(TARGET_CG) $<  > $@~ && mv $@~ $@
 	indent $@
 
 PERF_CASE=fib35
