@@ -39,12 +39,11 @@ Value make_vec(int count, ...) {
     va_list ap;
     va_start(ap, count);
     Vec *v = newVec(count);
-    int save = PROTECT(v);
+    // no PROTECT, we're just copying scalars
     for (int j = 0; j < count; j++) {
         v->entries[j] = va_arg(ap, Value);
     }
     va_end(ap);
-    UNPROTECT(save);
     return value_Vec(v);
 }
 

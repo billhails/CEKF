@@ -44,6 +44,16 @@ static Integer reg(Index i, EmitterContext *ctx) {
     }
 }
 
+Integer emit_peekHeap(EmitterContext *ctx) {
+    SymbolArray *heap = ctx->heap;
+
+    if (heap->size < 2) {
+        return 1 << (sizeof(Integer) * 8 - 2);
+    }
+
+    return reg(1, ctx);
+}
+
 // hide implementation details
 SymbolArray *emit_createHeap() {
     SymbolArray *result = newSymbolArray();

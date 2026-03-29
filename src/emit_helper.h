@@ -24,5 +24,6 @@
 void emit_addToHeap(EmitterContext *, HashSymbol *);
 HashSymbol *emit_removeFromHeap(EmitterContext *); // can return NULL
 SymbolArray *emit_createHeap();
+Integer emit_peekHeap(EmitterContext *);
 
 #endif

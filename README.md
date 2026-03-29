@@ -110,6 +110,7 @@ lambda2 ==> ci([Constructor Inlining]):::process
 ci ==> lambda3(Inlined Lambda)
 desugaring(["Desugaring"]):::process
 desugaring ==> lambda_ds(desugared lambda):::minlam
+
 lambda_ds ==> alpha(["ɑ-Conversion"]):::process
 alpha ==> lambda_a(alphatized lambda):::minlam
 

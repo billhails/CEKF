@@ -9,4 +9,4 @@ let
         ([]) { [] }
     }
 in
-    print sieve (2::1000)
+    print sieve (2::10000)

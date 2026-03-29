@@ -175,17 +175,19 @@ The generated C links against the runtime, which provides:
 
 ## Building and Testing
 
-```bash
-# Most targets in junk/ can be built directly by giving them as a make argument:
-make junk/test_foo        # Build binary (generates C, compiles, links)
-make junk/test_foo.c      # Generate C only
-make junk/test_foo.scm    # Dump final IR
+Generated `.c` and `.o` files, and binaries, are written to a local `tmp/` folder by `make`.
 
-# Run all binary tests
+```bash
+# Most targets in tmp/ can be built directly by giving them as a make argument:
+make tmp/test_foo        # Build binary (generates C, compiles, links)
+make tmp/test_foo.c      # Generate C only
+make tmp/test_foo.scm    # Dump final IR
+
+# Run all binary tests (can take minutes)
 make test-binary
 
 # Or invoke the compiler directly:
-bin/fn --target-c --flat-closures --include=fn tests/fn/test_foo.fn > junk/test_foo.c
+bin/fn --target-c --flat-closures --include=fn tests/fn/test_foo.fn > tmp/test_foo.c
 ```
 
 The Makefile variable `TARGET_CG` controls the default flags for test

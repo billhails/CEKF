@@ -5,6 +5,7 @@ generated/
 !docs/generated/
 junk/
 tmp/
+lib/
 out_scm/
 tmp_scm/
 cekf

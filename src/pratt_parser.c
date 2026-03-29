@@ -4403,5 +4403,3 @@ static AstExpression *expressionPrecedence(PrattParser *parser,
     UNPROTECT(save);
     return lhs;
 }
-
-void initLocale(char *locale) { setlocale(LC_ALL, locale); }

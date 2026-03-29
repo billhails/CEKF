@@ -1,0 +1,1075 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html><head>
+<title>Demystifying Type Classes</title>
+<meta name="description" content="Describing three strategies of implementing  type classes, aiming to clarify their behavior">
+<meta name="Author" content="oleg-at-okmij.org">
+<meta name="Date-Revision-yyyymmdd" content="20210503">
+<meta name="Date-Creation-yyyymmdd" content="20140131">
+<meta http-equiv="Content-type" content="text/html; charset=UTF-8">
+<link rel="start" href="https://okmij.org/ftp/Computation/index.html">
+<link rel="prev" href="https://okmij.org/ftp/Computation/types.html">
+<link rel="next" href="https://okmij.org/ftp/ML/canonical.html">
+<link rel="contents" href="http://okmij.org/ftp/">
+<style type="text/css">BODY { background-color: white; color: black } #navbar, h1 { text-align: center; } .small  { font-size: x-small;} LI.separator { list-style-type: none;} LI.header    { list-style-type: none; padding: 1em 0px 2px; margin-left: -1em;}</style></head>
+<body>
+<div id="navbar"><a href="https://okmij.org/ftp/Computation/types.html">previous</a>&nbsp;&nbsp;&nbsp;<a href="https://okmij.org/ftp/ML/canonical.html">next</a>&nbsp;&nbsp;&nbsp;<a href="https://okmij.org/ftp/Computation/index.html">start</a>&nbsp;&nbsp;&nbsp;<a href="http://okmij.org/ftp/">top</a>
+<hr></div>
+<h1>Implementing, and Understanding Type Classes</h1>
+<div>&nbsp;</div>
+<ul>
+<li><a href="#introduction">Introduction</a>
+</li>
+<li><a href="#dict">Dictionary passing</a>
+</li>
+<li><a href="#inlining">Type classes as macros</a>
+</li>
+<li><a href="#intensional">Intensional type analysis</a>
+</li>
+<li><a href="#Kaes">The pioneering work of Stefan Kaes</a>
+</li>
+<li><a href="#References">Brief bibliography</a>
+</li>
+<li class="separator">&nbsp;</li>
+<li><a href="https://okmij.org/ftp/ML/canonical.html">Canonical structures:</a>
+(type-class) overloading resolution as logic programming
+</li>
+<li><a href="https://okmij.org/ftp/Haskell/TypeClass.html">Stretching Type Classes:</a>
+Unusual applications and arguments about type classes in Haskell
+</li></ul>
+<hr>
+
+<p>&nbsp;</p>
+<h2><a name="introduction">Introduction</a></h2>
+<dl>
+<dd>Computational abstractions -- higher-order functions, continuations,
+modules, processes, automatic memory management -- have made programs
+faster to write, easier to show correct and to reuse.  And yet
+there is, often subconscious, resistance to abstractions: they appear
+ritualistic, formal -- too abstract.  One may feel getting
+lost.  To overcome the mistrust for an abstraction it may help to look
+at its realization, to see what is being abstracted away.  The
+awareness of low-level implementation details brings the appreciation
+of an abstraction and the intuitive explanation for it.
+<p>This page looks behind the scenes of the abstraction of
+<em>parametric overloading</em>, also known as bounded polymorphism, or
+just `type classes'. Seeing the implementation makes type classes
+appear simpler, friendlier, more comfortable to use. 
+Type-class declarations and type-class constraints
+are no longer incantations to memorize: they
+suddenly make sense. Knowing the tedious job a Haskell compiler (GHC) 
+is doing for us
+helps us appreciate more the convenience of type classes.
+</p><p>Dictionary passing, although best known, is not the only implementation
+of type classes. Historically first were static
+specialization and run-time resolution (intensional type analysis),
+both introduced in the pioneering work by Stefan Kaes, the father of
+parametric overloading. He presented the type system and proved its
+soundness, described the type inference algorithm, and proved the
+soundness and consistency of the two implementations of what is now
+known as type classes. It is shameful that his name is almost
+forgotten; his strategies are still in wide use however.  Local type
+classes and instances introduced in his paper still await recognition.
+</p><p>Dictionary passing makes it easier, in retrospect, to understand the
+other two implementation strategies. Therefore, we describe it first
+and in detail. We explain by example, juxtaposing Haskell code with
+the corresponding code in a language with no type classes (OCaml).
+The implementation language could be any other higher-order language,
+including GHC Core.  For the sake of explanation, we restrict
+ourselves to single-parameter, non-constructor type classes, such as
+<code>Num</code>, <code>Eq</code>, <code>Show</code>. The other two implementation strategies are
+presented next, illustrating the algorithms from the Kaes' paper, in
+modern terms.  We conclude with the brief bibliography on implementing
+and understanding type classes. Finally, we point out the insightful
+further development: user-programmable overloading
+inference, aka canonical structures.
+</p><p>The first version of this article has been posted on the Caml mailing list
+on Thu Mar  8 22:36:58 2007.</p></dd></dl>
+
+<p>&nbsp;</p>
+<h2><a name="dict">Dictionary passing</a></h2>
+<dl>
+<dd>The most well-known technique of implementing type classes is
+so-called dictionary passing. Although historically the second, it is
+the first to study as it helps understand the others.
+We explain the dictionary passing by a progression of examples that
+cover the most common patterns of Haskell98-like type classes,
+instances and polymorphic functions: from simple <code>Show</code> to polymorphic
+recursion.  The examples are inspired by the numeric hierarchy of
+Haskell.  They contrast Haskell98 code with its `translation' into
+OCaml, a sample higher-order language without type classes. Our simple
+subset of OCaml may be regarded as a friendlier dialect of GHC Core,
+an intermediate type-class--free language of GHC.  This translation
+exposes the compilation strategy, explaining what happens with type
+classes as GHC translates the source code to Core.  We can use the
+translation to bring type classes to any functional language --
+although the lack of the syntactic sugar bestowed by the type class
+abstraction is jarring.
+<p>We start with the simplest overloaded function to show values
+of various types as a string: the <code>Show</code> type class. (The Haskell
+standard Prelude class <code>Show</code> is a bit more complex and optimized than
+ours; the main idea is the same.) Below is the declaration of our
+simple <code>Show</code> and two of its instances&nbsp;-- and the corresponding OCaml
+code.  We always write type signatures, even though they are inferred,
+except for the very last example of polymorphic recursion.
+
+</p><dl>
+<dt></dt>
+<dd>Haskell
+
+<pre>    class Show a where
+      show :: a -&gt; String
+    
+    instance Show Bool where
+      show True  = "True"
+      show False = "False"
+    
+    instance Show Int where
+      show x = Prelude.show x  -- internal
+</pre>OCaml
+
+<pre>    type 'a show = {show: 'a -&gt; string}
+    
+    let show_bool : bool show = 
+      {show = function
+        | true  -&gt; "True"
+        | false -&gt; "False"}
+    
+    let show_int : int show =
+      {show = string_of_int}
+</pre></dd></dl>The type-class declaration <code>Show a</code> in Haskell translates to
+the data type declaration for the record <code>'a show</code>: the dictionary.
+The type-class method name becomes the label in the dictionary.
+<p>As an example of using the just introduced <code>show</code>, we define an overloaded
+function to print values of various types, and instantiate it to print a
+boolean.
+
+</p><dl>
+<dt></dt>
+<dd>Haskell
+
+<pre>    print :: Show a =&gt; a -&gt; IO ()
+    print x = putStrLn $ show x
+    
+    test_print :: IO ()
+    test_print = print True
+</pre>OCaml
+
+<pre>    let print : 'a show -&gt; 'a -&gt; unit =
+      fun {show=show} x -&gt; print_endline (show x)
+    
+    let test_print : unit =
+      print show_bool true
+</pre></dd></dl>Let's compare the inferred types of the
+<code>print</code> function, in Haskell and OCaml. They are, respectively:
+
+<pre>    print :: Show a =&gt;  a -&gt; IO ()
+    print : 'a show -&gt; 'a -&gt; unit
+</pre>Both in Haskell and OCaml, <code>print</code> is a polymorphic function. However, its
+polymorphism is restricted, or bounded: <code>print</code> applies to values of
+only those types that are showable, that is, are members of the <code>Show</code>
+class&nbsp;-- and we have the evidence for their membership. This is
+(painfully) explicit in OCaml's <code>print</code>: the evidence of being
+showable, the dictionary, is the explicit argument. It is the
+programmer's responsibility to find this evidence and pass it to
+<code>print</code>: see <code>test_print</code>'s code. In Haskell, the
+polymorphism restriction takes the form of a so-called type-class
+constraint <code>Show a</code>. It, too, may be regarded as the argument carrying
+the membership evidence. However, it is the Haskell compiler that
+finds and passes the evidence. The <code>Show a</code> argument is therefore
+implicit, which is indicated by the double-arrow in <code>print</code>'s type.
+<p>The OCaml type of <code>print</code> reveals the nature of bounded polymorphism. An
+unbounded polymorphic function such as <code>id : 'a -&gt; 'a</code>
+corresponds to the universally quantified proposition 
+<code>forall a. a -&gt; a</code>. The function <code>print</code>
+witnesses the proposition <code>a -&gt; unit</code> quantified
+only over a part of the domain of discourse. The predicate
+<code>show</code> decides the membership in that part: we assert
+<code>a -&gt; unit</code> only when <code>show(a)</code>. The
+proposition thus reads <code>forall a. show(a) -&gt; (a -&gt; unit)</code> --
+which is the type of <code>print</code> modulo stylistic differences.
+</p><p>Next is the (simplified) <code>Num</code> type class,
+whose methods have a different pattern of overloading:
+the method <code>fromInt</code> is overloaded on the result type,
+and the method <code>(+)</code> is binary.
+
+</p><dl>
+<dt></dt>
+<dd>Haskell
+
+<pre>    class Num a where
+      fromInt :: Int -&gt; a
+      (+)     :: a -&gt; a -&gt; a
+    
+    sum :: Num a =&gt; [a] -&gt; a  -- sample function
+    sum ls = foldr (+) (fromInt 0) ls
+</pre>OCaml
+
+<pre>    type 'a num = 
+        {fromInt: int -&gt; 'a;
+         add:     'a -&gt; 'a -&gt; 'a}
+    
+    let sum : 'a num -&gt; 'a list -&gt; 'a = 
+      fun {fromInt = fromInt; add = add} -&gt;
+      fun ls -&gt; List.fold_right add ls (fromInt 0)
+</pre></dd></dl>The <code>Num</code> type class has two methods; therefore, the corresponding
+dictionary record <code>num</code> has two fields. The instances
+for <code>Bool</code> and <code>Int</code>, and their translations, are straightforward. We
+show only the <code>Int</code> instance:
+
+<dl>
+<dt></dt>
+<dd>Haskell
+
+<pre>    instance Num Int where
+      fromInt x = x
+      (+)       = (Prelude.+)
+</pre>OCaml
+
+<pre>    let num_int : int num = 
+      {fromInt = (fun x -&gt; x);
+       add     = Stdlib.(+)}
+</pre></dd></dl>
+<p>The polymorphic function <code>print_incr</code>, below,
+to print an incremented value, depends on two constraints:
+
+</p><dl>
+<dt></dt>
+<dd>Haskell
+
+<pre>    print_incr :: (Show a, Num a) =&gt; a -&gt; IO ()
+    print_incr x = print $ x + fromInt 1
+    
+    print_incr_int :: Int -&gt; IO () -- A sample instantiation
+    print_incr_int x = print_incr x
+</pre>OCaml
+
+<pre>    let print_incr : ('a show * 'a num) -&gt; 'a -&gt; unit =
+      fun (show_dict, {fromInt=fromInt;add=(+)}) -&gt;
+      fun x -&gt; print show_dict (x + fromInt 1)
+    
+    let print_incr_int : int -&gt; unit = fun x -&gt;
+      print_incr (show_int,num_int) x
+</pre></dd></dl>The inferred type of Haskell's <code>print_incr</code> has the pair of constraints
+<code>(Show a,Num a)</code>. In the translation, it
+becomes the pair of dictionaries, <code>'a show</code> and <code>'a num</code>, passed to
+<code>print_incr</code> as the explicit argument. OCaml's <code>print_incr</code> needs
+<code>show_dict</code> to pass it to the parametrically overloaded <code>print</code> (talked
+about earlier). The numeric operations extracted from <code>num_dict</code> are used when
+incrementing. 
+All this boilerplate of dictionary passing and extraction 
+is explicit in OCaml, but implicit in Haskell. A Haskell compiler
+handles this boilerplate for us.
+<p>To instantiate a bound-polymorphic function in Haskell we merely have
+to use it in a specific type context or give a specific type, see Haskell's
+<code>print_incr_int</code>.  The type checker
+will verify that the specific type, <code>Int</code> in our case, is the member
+of <code>Show</code> and <code>Num</code>. These constraints of <code>print_incr</code> become resolved
+and no longer appear in the type of <code>print_incr_int</code>. On the OCaml
+side, we don't just make the type variable <code>'a</code> to be <code>int</code> and let
+the type checker verify the constraint satisfaction. It is the
+programmer who has to prove that the constraints are indeed satisfied:
+the programmer has to find and explicitly pass the dictionaries <code>show_int</code> and
+<code>num_int</code>, as the proof that <code>int</code> is indeed a member of <code>Show</code> and
+<code>Num</code>.  The type class abstraction does such proofs for us, searching
+for dictionaries and combining them in the complete evidence to pass
+to a parametrically overloaded function.
+</p><p>The next common pattern is an instance with a constraint: a <code>Show</code>
+instance for all list types <code>[a]</code> where the element type <code>a</code> is
+also restricted to be a member of <code>Show</code>.
+
+</p><dl>
+<dt></dt>
+<dd>Haskell
+
+<pre>    instance Show a =&gt; Show [a] where
+      show xs = "[" ++ go True xs
+       where
+         go _ []    = "]"
+         go first (h:t) = (if first then "" else ", ") ++ show h ++ go False t
+    
+    testls :: String
+    testls = show [1::Int,2,3]
+</pre>OCaml
+
+<pre>    let show_list : 'a show -&gt; 'a list show = fun {show=show} -&gt;
+      {show = fun xs -&gt;
+       let rec go first = function
+         | []   -&gt; "]"
+         | h::t -&gt; (if first then "" else ", ") ^ show h ^ go false t
+       in "[" ^ go true xs}
+    
+    let testls : string = 
+      (show_list show_int).show [1;2;3]
+</pre></dd></dl>
+<p>The <code>instance Show a =&gt; Show [a]</code> now translates to a function, which
+receives the <code>'a show</code> dictionary, the evidence that <code>'a</code> is a member
+of <code>Show</code>, and produces the evidence that <code>'a list</code> is also a
+member. As before <code>`=&gt;'</code> becomes <code>`-&gt;'</code> in the translation. The
+occurrence <code>show h</code> in the Haskell code is not a recursive reference to
+the list show being defined.  Rather, it refers to the <code>show</code> at a
+different type, the type of list elements.  The OCaml code makes this
+reference clear. The specialization, <code>testls</code>, again involves more
+work on the OCaml side: we have to build the proof that <code>int list</code> is
+showable, by finding the evidence that <code>int</code> is showable and passing it to
+<code>show_list</code> to obtain the desired proof, that is, the function for
+showing integer lists.
+</p><p>For the final examples we need a class of comparable types:
+
+</p><pre>    class Eq a where
+      (==) :: a -&gt; a -&gt; Bool
+</pre>Its <code>Bool</code> and <code>Int</code> instances, and the corresponding dictionary
+<code>type 'a eq = {eq: 'a -&gt; 'a -&gt; bool}</code>  are straightforward
+and elided. More interesting is 
+the type class with a super-class and a default method:
+
+<dl>
+<dt></dt>
+<dd>Haskell
+
+<pre>    class (Eq a, Num a) =&gt; Mul a where
+      (*) :: a -&gt; a -&gt; a
+      x * _ | x == fromInt 0 = fromInt 0
+      x * y | x == fromInt 1 = y
+      x * y = y + (x + (fromInt (-1))) * y
+    
+    instance Mul Bool where
+      -- default
+    
+    instance Mul Int where
+      x * y = (Prelude.*) x y  -- internal
+</pre>OCaml
+
+<pre>    type 'a mul = {mul_super: 'a eq * 'a num;
+                   mul: 'a -&gt; 'a -&gt; 'a}
+    
+    let mul_default : 'a eq * 'a num -&gt; 'a mul =
+      fun (({eq=eq},{fromInt=fromInt;add=(+)}) as super) -&gt;
+      {mul_super = super;
+       mul = let rec loop x y = match () with
+      | () when eq x (fromInt 0) -&gt; fromInt 0
+      | () when eq x (fromInt 1) -&gt; y
+      | () -&gt; y + loop (x + (fromInt (-1))) y
+      in loop}
+    
+    let mul_bool : bool mul = mul_default (eq_bool,num_bool)
+    
+    let mul_int : int mul =
+      {mul_super=(eq_int,num_int); mul=Stdlib.( * )}
+</pre></dd></dl>The default code for the multiplication recursively refers to the
+multiplication being defined. This reference happens at the same type:
+the recursion is ordinary, not polymorphic. Again this is apparent in
+the translation. 
+<p>The constraint <code>(Eq a, Num a)</code> in the class <code>Mul</code> declaration has a
+subtlety, revealed in the OCaml translation.
+Recall the earlier <code>instance Show a =&gt; Show [a]</code>. One may read it as a
+conditional (qualified) declaration: the type <code>[a]</code> is a member of the
+<code>Show</code> class provided <code>a</code> is a member. The OCaml translation made the 
+qualification clear: <code>show_list</code> is a function that takes an
+<code>'a show</code> dictionary (the evidence of the <code>Show a</code>
+membership) and returns <code>'a list show</code>: the evidence that the list
+type is also showable. One may be tempted to regard 
+<code>class (Eq a, Num a) =&gt; Mul a</code> similarly, as a qualified
+declaration. It is not&nbsp;-- and the OCaml translation makes it clear.
+We see that <code>mul_bool</code> and <code>mul_int</code> are not functions: they are
+dictionaries, which include  the pair of dictionaries <code>'a eq</code> and <code>'a num</code>. The two are hence <em>provided</em> by the <code>'a mul</code>
+dictionary.
+</p><p>The fact that <code>Mul a</code> provides, rather than requires, the <code>Num a</code> and <code>Eq a</code> membership evidence is clear from the type of a sample function:
+computing dot-product. 
+
+</p><dl>
+<dt></dt>
+<dd>Haskell
+
+<pre>    dot :: Mul a =&gt; [a] -&gt; [a] -&gt; a
+    dot xs ys = sum $ zipWith (*) xs ys
+    
+    test_dot :: Int
+    test_dot = dot [1,2,3] [4,5,6]
+</pre>OCaml
+
+<pre>    let dot : 'a mul -&gt; 'a list -&gt; 'a list -&gt; 'a =
+      fun {mul_super=(eq,num);mul=mul} -&gt;
+      fun xs ys -&gt; sum num @@ List.map2 mul xs ys
+    
+    let test_dot : int = 
+      dot mul_int [1;2;3] [4;5;6]
+</pre></dd></dl>The OCaml translation <code>dot</code> receives only <code>'a mul</code> but does
+not only multiplication but also addition. One may feel that the
+constraint in the class declaration should have been written as <code>class (Eq a, Num a) &lt;= Mul a</code>. In fact, such a syntax has been
+suggested. The different interpretation of constraints in instance and
+class declarations is known, but not well, and can be confusing.
+<p>The final example deals with polymorphic recursion.  Type
+signatures become mandatory.
+
+</p><dl>
+<dt></dt>
+<dd>Haskell
+
+<pre>    print_nested :: Show a =&gt; Int -&gt; a -&gt; IO ()
+    print_nested 0 x = print x
+    print_nested n x = print_nested (n-1) (replicate n x)
+    
+    test_nested = do
+      n &lt;- getLine
+      print_nested (read n) (5::Int)
+</pre>OCaml
+
+<pre>    let rec print_nested : 'a. 'a show -&gt; int -&gt; 'a -&gt; unit =
+      fun show_dict -&gt; function 
+        | 0 -&gt; fun x -&gt; print show_dict x
+        | n -&gt; fun x -&gt; print_nested (show_list show_dict) (n-1) (replicate n x)
+    
+    let test_nested =
+      let n = read_int () in
+      print_nested show_int n 5
+</pre></dd></dl>At first blush, the code is straightforward.
+After seeing the output one realizes
+that the type of the printed value, the deeply nested list <code>[[...[Int]...]]</code>,
+is not statically known. It depends on the value of <code>n</code> received from
+the user at run-time. Since we do not know the exact type of <code>x</code> at compile
+time, we cannot statically build the evidence that it is showable. The compiler
+must arrange for building such evidence dynamically. The OCaml code
+illustrates such an arrangement: as we add one more <code>list</code> to the type,
+we transform the current <code>show_dict</code> with one more <code>show_list</code>.
+<p>The explicit construction, deconstruction and passing of dictionaries
+in the OCaml code is annoying. What makes type classes popular in
+Haskell is the hiding of all this plumbing. The convenience increases
+when two type classes are involved, e.g., <code>(Show a, Num a)</code> in
+<code>print_incr</code>. In Haskell <code>(Show a, Num a)</code> and <code>(Num a, Show a)</code> are
+the same constraints -- but the corresponding types in OCaml <code>('a show * 'a num)</code> and <code>('a num * 'a show)</code> are different. Actually, OCaml has
+extensible records, in which the order of fields does not matter.
+These records are more appropriate for modeling dictionaries.
+</p><p>In conclusion, we have described the dictionary passing implementation
+of type classes by the way of a translation to OCaml, a sample
+higher-order language. The double-arrow is translated to the ordinary
+arrow: the type class constraint becomes the explicit dictionary
+argument, the evidence of the constraint satisfaction. Therefore, in OCaml we
+have to explicitly pass the dictionary argument to all bounded
+polymorphic functions. In Haskell, the dictionary is an
+implicit argument and the Haskell compiler does a great job of filling
+it in where needed, hiding the argument from the user.  Overloading
+over type constructor (e.g., <code>Monad</code> class) is conceptually similar,
+but requires type constructor polymorphism in the language.  Haskell
+constructor classes hence need OCaml functors.  Conversely, OCaml and
+SML modules (including sealing, generative and applicative functors
+and recursive structures) can be emulated as Haskell constructor
+type classes, see
+the bibliography at the end.
+</p><p>We now look at the other two implementations of type classes and
+contrast them with the dictionary passing implementation, using the
+examples from the present section.</p></dd>
+<dt><strong>References</strong></dt>
+<dd><a href="https://okmij.org/ftp/Computation/typeclass_code.hs">typeclass_code.hs</a>&nbsp;[3K]<br>
+
+<a href="https://okmij.org/ftp/Computation/typeclass_code.ml">typeclass_code.ml</a>&nbsp;[5K]<br>
+
+The complete code for the series of examples, in Haskell 
+(using type classes)
+and OCaml (implementing type classes with dictionary passing)
+
+<p><a href="https://okmij.org/ftp/tagless-final/course/final_dic.ml">final_dic.ml</a>&nbsp;[3K]<br>
+
+Using extensible records for overloading
+</p></dd></dl>
+
+<p>&nbsp;</p>
+<h2><a name="inlining">Type classes as macros</a></h2>
+<dl>
+<dd>Historically the first implementation strategies for parametric overloading were
+static monomorphization and dynamic intensional type analysis. They
+were introduced in the Kaes 1988 paper, in a (overly) concise and
+formal way with no examples and in a slightly foreign, by now,
+terminology. We present these techniques in modern terms and
+illustrate on concrete examples, relating them to dictionary passing,
+compilation of unbounded polymorphism, and partial
+evaluation. We will see the similarity with C++ templates and generic
+functions (both of which appeared after Kaes work).  Static
+monomorphization is presented here, as an elaboration of the
+algorithm from Section 4.2 of Kaes' 1988 paper.
+The intensional type analysis is in the next section.
+<p>Monomorphization takes the type-checked code with type classes
+and re-writes it into the code with no type classes and no bounded
+polymorphism. All overloading is resolved. It is a type directed
+program transformation; it assumes that all identifiers in the
+source program are annotated with their types -- which they will be
+after the type inference and type checking passes of the compiler.
+We explain the monomorphization on the <code>Show</code> example from the
+previous section. It is repeated below, with type annotations
+on relevant identifiers. This is the input to monomorphization.
+
+</p><pre>    class Show a where
+      show :: a -&gt; String
+    
+    instance Show Bool where
+      show::Bool-&gt;String = bool_to_string
+    
+    instance Show Int where
+      show::Int-&gt;String = int_to_string
+    
+    instance Show a =&gt; Show [a] where
+      show::([a]-&gt;String) xs =
+        strings_to_string $ map (show::a-&gt;String) xs
+    
+    test_show :: String
+    test_show = (show::Bool-&gt;String) True
+    
+    print :: forall a. Show a =&gt; a -&gt; IO ()
+    print x = putStrLn $ (show::a-&gt;String) x
+    
+    print_ints :: IO ()
+    print_ints = (print::[Int]-&gt;IO ()) [(1::Int),2,3]
+</pre>To avoid clutter, we have assumed the primitives 
+<code>bool_to_string :: Bool -&gt; String</code>, <code>int_to_string :: Int -&gt; String</code> and
+<code>strings_to_string :: [String] -&gt; String</code>.
+<p>Monomorphization takes the source program and the resolution environment,
+initially empty. The resolution environment
+
+</p><pre>    type REnv = Map TypedId Exp
+    type TypedId = (Id,Typ)
+</pre>is essentially a set of definitions. <code>REnv</code> relates a globally or
+locally defined identifier, along with its type, to a source
+expression: the right-hand-side of its definition. Monomorphization works
+definition-by-definition, expression-by-expression, re-writing
+source expressions into the target expression and possibly
+updating the <code>REnv</code>. It recursively replaces all overloaded
+identifiers with whatever they resolve to in the <code>REnv</code>, until no
+overloading is left.  Let us illustrate monomorphization by tracing it
+through the example source program above.
+<p>The first in the source program is the class declaration for <code>Show</code>.
+It is re-written to nothing and <code>REnv</code> remains empty. The class
+declaration is used only for type checking and can be erased
+afterwards. Next comes <code>instance Show Bool</code>. We also output nothing,
+but now extend <code>REnv</code> with the mapping of <code>(show,Bool-&gt;String)</code> to
+<code>bool_to_string</code>. After processing the other instances of <code>Show</code>, the
+output program is empty but the <code>REnv</code> contains three mappings:
+
+</p><pre>    (show,Bool-&gt;String) --&gt; bool_to_string
+    (show,Int-&gt;String)  --&gt; int_to_string
+    (show,[a]-&gt;String)  --&gt; \xs -&gt; strings_to_string $ map (show::a-&gt;String) xs
+</pre>Parametrically overloaded definitions (including type class methods)
+thus become mappings in <code>REnv</code>. Next we see <code>test_show</code>, which is not
+parametrically overloaded: its type has no constraints.  We re-write
+this definition, scanning through its body looking for the
+identifiers mentioned in <code>REnv</code>, to be replaced. The first seen identifier
+<code>show::Bool-&gt;String</code> occurs in the <code>REnv</code> with the same
+<code>Bool-&gt;String</code> type. It is replaced with its mapping,
+<code>bool_to_string</code>, and the replacement is re-scanned.  The result of
+the re-writing is:
+
+<pre>    test_show :: String
+    test_show = bool_to_string True
+</pre>
+<p>The next definition in the source program is of <code>print</code>. Its type has
+a constraint, <code>Show</code>. Therefore, we output nothing and add the mapping
+to the <code>REnv</code>:
+
+</p><pre>    (print,a-&gt;IO ()) --&gt; \x -&gt; putStrLn $ (show::a-&gt;String) x
+</pre>
+<p>The final definition is <code>print_ints :: IO ()</code>. It is not overloaded,
+so we re-write its body. As we scan it we encounter
+<code>print::[Int]-&gt;IO ()</code>. The environment <code>REnv</code> has <code>print</code>, but
+with a more general type <code>a-&gt;IO()</code>. We hence replace
+<code>print::[Int]-&gt;IO ()</code> with whatever <code>print</code> is mapped in the environment,
+substituting <code>[Int]</code> for <code>a</code>. The result is
+<code>\x -&gt; putStrLn $ (show::[Int]-&gt;String) x</code>, which is to be recursively
+re-written. We encounter <code>show::[Int]-&gt;String</code>, which is defined
+in <code>REnv</code> with a more general type, and repeat the substitution and
+rewriting, etc. The final, re-written program has two definitions:
+
+</p><pre>    test_show :: String
+    test_show = bool_to_string True
+    
+    print_ints :: IO ()
+    print_ints =
+      (\x -&gt; putStrLn $
+              (\xs -&gt; strings_to_string $ map int_to_string xs) x)
+      [(1::Int),2,3]
+</pre>There are no type classes, no instances, no constraints, no overloaded
+identifiers. Overloading has been resolved and the bounded polymorphism
+eliminated -- monomorphized. Blindly replacing identifiers by
+expressions tends to bloat the code. Therefore, in practice one
+introduces auxiliary definitions for the specialized <code>show</code> and <code>print</code>.
+<p>The monomorphization process looks a lot like macro expansion. In
+fact, Kaes wrote: ``This corresponds to the view, that overloaded
+function definitions are not functions in the usual sense, but macros
+which are expanded according to an implicit type parameter.''  The
+similarity with C++ template instantiation is also clear. We stress
+however a critical difference of monomorphization from macro expansion
+or template instantiation: monomorphization rewrites the code <em>after</em>
+the type checking. The result of monomorphization shall always be
+well-typed, because each overloaded identifier is replaced with the
+expression of the same type. In contrast, C++ template instantiation may
+produce ill-typed code, and gigabyte-long error messages.
+</p><p>We have illustrated monomorphization that was formally presented in
+the Kaes 1988 paper. There is a different way to the same result.
+Let's look at the result of the
+dictionary passing translation of our source program
+(in OCaml syntax), quoted from from the previous section.
+
+</p><pre>    type 'a show = {show: 'a -&gt; string} (* Translated class declaration *)
+    
+                                        (* Translated instances *)
+    let show_bool : bool show = {show=bool_to_string}
+    let show_int  : int show = {show=int_to_string}
+    let show_list : 'a show -&gt; 'a list show =
+     fun{show=show} -&gt; {show=fun xs -&gt;strings_to_string (List.map show xs)}
+    
+    let test_show : string = show_bool.show true
+    
+    let print : 'a show -&gt; 'a -&gt; unit =  (* Translated overloaded function *)
+      fun {show=show} x -&gt; print_endline (show x)
+    
+    let print_ints : unit =              (* and its instantiation *)
+     print (show_list show_int) [1;2;3]
+</pre>
+<p>Let us inline the dictionaries and the bound-polymorphic functions and
+do the standard constant propagation, performing dictionary function
+applications and record field references. The result is
+
+</p><pre>    let test_show : string =  bool_to_string true
+    
+    let print_ints : unit = 
+      (fun x -&gt; 
+        print_endline ((fun xs -&gt; strings_to_string (List.map int_to_string xs)) x))
+      [1;2;3]
+</pre>which is exactly the output of monomorphization (but written in OCaml syntax).
+Thus monomorphization is a partial evaluation of the result of
+the dictionary-passing translation.
+<p>Monomorphization for compiling parametric overloading is
+similar to compiling polymorphic functions by specializing
+them to the types they are used at within the program. MLton, for
+instance, compiles polymorphic functions in this way. Both techniques
+treat polymorphic functions, fully or bound polymorphic, as
+second class, as macros. Both techniques share the same advantages and
+disadvantages.  Since they specialize away polymorphic functions,
+there is no longer a need for the uniform data representation. Unboxed
+integers and floats greatly improve performance. The specialization
+enables further optimizations. Thus both monomorphization techniques
+compile polymorphism with no run-time overhead. On the downside,
+monomorphization is a whole program transformation, incompatible with
+separate compilation. Furthermore, monomorphization cannot be done for
+polymorphically recursive or higher-rank (first-class polymorphic)
+functions.
+</p><p>We have described monomorphization, the way of compiling type classes
+by transforming the source program into the type-class-free and
+overloading-free program. We have thus explained the algorithm from
+Section 4.2 of Kaes 1988 paper and illustrated it on the concrete
+example.  Monomorphization turns out related to the dictionary passing
+translation and partial evaluation: monomorphization is the
+dictionary-passing translation followed by specialization of all
+bound-polymorphic functions and the inlining of dictionaries. In Haskell,
+monomorphization alone is not sufficient to compile all programs with
+type classes. It can be used however on the case-by-case basis; GHC does
+exactly that. GHC first compiles away type classes with
+the dictionary-passing translation, and then does partial
+evaluation where it is obvious and feasible, trying to fully eliminate
+the passing of dictionaries at run-time. It is the monomorphization that is
+responsible for the efficiency of programs with the State or IO monads,
+for example.</p></dd></dl>
+
+<p>&nbsp;</p>
+<h2><a name="intensional">Intensional type analysis</a></h2>
+<dl>
+<dd>Intensional type analysis is the other method of compiling type
+classes, complementary to monomorphization. Whereas the latter
+resolves all overloading at compile time, with the intensional type
+analysis the appropriate overloading operation is chosen
+at run-time. On the other hand, the intensional type analysis is
+modular, and compatible with separate compilation and first-class
+polymorphism.  Whereas monomorphization evokes partial evaluation or
+C++ template instantiation, the intensional type analysis reminds one of
+generic functions or run-time type identification. The intensional type
+analysis for type classes was also introduced in the Kaes 1988 paper, in
+Section 4.3, in a terse formal way with no examples. This section
+illustrates and elaborates a simpler version of Kaes' algorithm, and relates
+it with dictionary passing.
+<p>The intensional type analysis for type classes, like monomorphization,
+is a program transformation that eliminates all mentioning of type
+classes. Its input is again the program
+after type inference and type checking, when all identifiers are
+annotated with their types. It is quite simpler than monomorphization.
+We explain the intensional type analysis on the
+example from the previous section. First we discuss the technique
+presented in the Kaes 1988 paper; we then improve it, as Kaes
+himself suggested at the end of his paper.
+</p><p>We explain the intensional type analysis by presenting the source&nbsp;--
+type-annotated Haskell program&nbsp;-- side-by-side with its translation into
+OCaml. As before, OCaml is a stand-in for a higher-order
+(intermediate) language, including GHC Core. Just for a moment we
+assume the existence of primitives <code>is_bool: 'a -&gt; bool option</code>,
+<code>is_int: 'a -&gt; int option</code> and <code>is_list: 'a -&gt; 'a list option</code>. They
+are <em>non-parametrically</em> polymorphic functions that examine the
+run-time representation of their argument and, when of the right type, 
+cast it to a boolean, integer, etc. Later on we will do without them.
+</p><dl>
+<dt></dt>
+<dd>Haskell
+
+<pre>    class Show a where
+      show :: a -&gt; String
+    
+    instance Show Bool where
+      show::Bool-&gt;String = bool_to_string
+    
+    instance Show Int where
+      show::Int-&gt;String = int_to_string
+    
+    instance Show a =&gt; Show [a] where
+      show::([a]-&gt;String) xs =
+        strings_to_string $ map (show::a-&gt;String) xs
+</pre>OCaml
+
+<pre>    let show : 'a -&gt; string = fun x -&gt;
+      failwith "failed overloading resolution"
+    
+    let show : 'a -&gt; string = fun x -&gt;
+      match is_bool x with
+      | Some x -&gt; bool_to_string x 
+      | _      -&gt; show x
+    
+    let show : 'a -&gt; string = fun x -&gt;
+      match is_int x with
+      | Some x -&gt; int_to_string x 
+      | _      -&gt; show x
+    
+    let show : 'a -&gt; string = fun x -&gt;
+      match is_list x with
+      | Some x -&gt; strings_to_string (List.map show x)
+      | _      -&gt; show x
+</pre></dd></dl>
+<p>Each type class instance, <code>Show</code> in our example, is translated to a
+definition that extends the previous definition of the method, <code>show</code>,
+by adding a new dispatch alternative. We essentially turn a collection
+of methods from type-class instances into one large <code>switch</code> statement,
+which dispatches on the type of the argument determined from its
+run-time representation.  The translation of the rest of the source
+program is essentially the identity:
+
+</p><dl>
+<dt></dt>
+<dd>Haskell
+
+<pre>    test_show :: String
+    test_show = (show::Bool-&gt;String) True
+    
+    print :: forall a. Show a =&gt; a -&gt; IO ()
+    print x = putStrLn $ (show::a-&gt;String) x
+    
+    print_ints :: IO ()
+    print_ints = (print::[Int]-&gt;IO ()) [(1::Int),2,3]
+</pre>OCaml
+
+<pre>    let test_show : string =
+          show true
+    
+    let print : 'a -&gt; unit =
+      fun x -&gt; print_endline (show x)
+    
+    let print_ints : unit = 
+      print [1;2;3]
+</pre></dd></dl>When the hard work of overloading resolution is shifted to run-time,
+it is no wonder the compilation of type class programs is trivial:
+erasing type class constraints and leaving the code as it was. A
+bounded polymorphic function becomes ordinary polymorphic.
+There is a price to pay for this simplicity: the loss of
+parametricity, of the representation-independence abstraction and of
+free theorems. The function <code>print : 'a -&gt; unit</code> may look from its
+type like parametrically polymorphic, but it isn't.  Furthermore, it may be
+impossible to accurately determine the type of a value from its
+run-time representation. Although one can tell in OCaml a non-empty integer list
+from an integer by examining the run-time value -- the empty
+list, <code>false</code> and <code>0</code> are represented identically at run-time. The
+intensional type analysis above cannot dispatch on the result type.
+There is yet another drawback, specific to Haskell: to tell the type of a
+Haskell value from its run-time representation, it has to be evaluated
+first, at least up to the head constructor. Therefore, an overloaded
+function is necessarily strict. Kaes was aware of these
+problems, and suggested, at the end of his paper, adding an
+argument to overloaded functions to describe the type on which to
+resolve the overloading.
+<p>We now elaborate Kaes' suggestion. We define a data type, GADT, that represents
+a type at run-time.
+
+</p><pre>    type _ trepr =
+      | Int  : int trepr
+      | Bool : bool trepr
+      | List : 'a trepr -&gt; 'a list trepr
+</pre>The new translation becomes:
+
+<dl>
+<dt></dt>
+<dd>Haskell
+
+<pre>    class Show a where
+      show :: a -&gt; String
+    
+    instance Show Bool where
+      show::Bool-&gt;String = bool_to_string
+    
+    instance Show Int where
+      show::Int-&gt;String = int_to_string
+    
+    instance Show a =&gt; Show [a] where
+      show::([a]-&gt;String) xs =
+        strings_to_string $ map (show::a-&gt;String) xs
+</pre>OCaml
+
+<pre>    let show : type a. a trepr -&gt; a -&gt; string = fun _ x -&gt;
+      failwith "failed overloading resolution"
+    
+    let show : type a. a trepr -&gt; a -&gt; string = function
+      | Bool  -&gt; bool_to_string
+      | trepr -&gt; show trepr
+    
+    let show : type a. a trepr -&gt; a -&gt; string = function
+      | Int   -&gt; int_to_string
+      | trepr -&gt; show trepr
+    
+    let show : type a. a trepr -&gt; a -&gt; string = function
+      | List trepr -&gt; fun x -&gt; strings_to_string (List.map (show trepr) x)
+      | trepr -&gt; show trepr
+</pre></dd>
+<dt>For the rest of the program,</dt>
+<dd>Haskell
+
+<pre>    test_show :: String
+    test_show = (show::Bool-&gt;String) True
+    
+    print :: forall a. Show a =&gt; a -&gt; IO ()
+    print x = putStrLn $ (show::a-&gt;String) x
+    
+    print_ints :: IO ()
+    print_ints = (print::[Int]-&gt;IO ()) [(1::Int),2,3]
+</pre>OCaml
+
+<pre>    let test_show : string =
+          show Bool true
+    
+    let print : 'a trepr -&gt; 'a -&gt; unit =
+      fun trepr x -&gt; print_endline (show trepr x)
+    
+    let print_ints : unit = 
+      print (List Int) [1;2;3]
+</pre></dd></dl>
+<p>Comparing the translation result with that of
+the dictionary passing translation
+shows uncanny similarity. In either case, parametrically overloaded
+functions take an extra argument.  It is the compiler which has to
+provide this argument and pass it around.  The
+two translations also differ: for example, the intensional type analysis
+may raise a run-time overloading resolution exception (at least in
+principle); no such errors may occur with dictionary passing.
+The explicit passing of the run-time type representation
+likens the intensional type analysis with
+generic programming libraries, especially LIGD (Lightweight implementation
+of generics and dynamics, Cheney and Hinze, 2002), although the
+idea of a type/shape descriptor is common to many other libraries.
+</p><p>There are at least two Haskell systems that implement type classes via
+the intensional type analysis: JHC and Chameleon.  And so does Scala,
+a non-Haskell system. In Scala, the <code>'a trepr</code> argument may be
+declared implicit -- in which case the compiler will construct the appropriate
+value automatically. The programmer does not need to explicitly pass
+these <code>trepr</code> values around, but still has to specify them in
+signatures. These ideas culminate in canonical structures (see the
+bibliography).
+</p><p>We have presented the intensional type analysis, the third way of
+compiling type classes. Whereas monomorphization is akin to C++
+template instantiation and dictionary passing is similar to <code>vtable</code>,
+the intensional type analysis reminds one of resolving overloading by
+a large <code>switch</code> statement.</p></dd></dl>
+
+<p>&nbsp;</p>
+<h2><a name="Kaes">The pioneering work of Stefan Kaes</a></h2>
+<dl>
+<dd>Stefan Kaes is the pioneer of type classes. His ESOP 1988 paper was
+first to make ad hoc overloading systematic. Here's the abstract of
+the paper:
+
+<blockquote>
+<div>The introduction of unrestricted overloading in languages with type
+systems based on implicit parametric polymorphism generally destroys
+the principal type property: namely that the type of every expression
+can uniformly be represented by a single type expression over some set
+of type variables. As a consequence, type inference in the presence of
+unrestricted overloading can become a NP-complete problem. In this
+paper we define the concept of parametric overloading as a restricted
+form of overloading which is easily combined with parametric
+polymorphism. Parametric overloading preserves the principal type
+property, thereby allowing the design of efficient type inference
+algorithms. We present sound type deduction systems, both for
+predefined and programmer defined overloading. Finally we state that
+parametric overloading can be resolved either statically, at compile
+time, or dynamically, during program execution.
+</div></blockquote>
+<p>The contributions of the barely 14-page paper are hard to overstate:
+
+</p><ul>
+<li>the superb introduction to the problem of overloading
+and the insight of combining it with parametric polymorphism,
+resulting in restricted (bounded) polymorphism;
+</li>
+<li>the type system of parametric overloading and the proof
+of its soundness: `well-typed programs with overloading don't go wrong';
+</li>
+<li>the proof of principal types and the presentation of the
+type inference algorithm, based on modified unification;
+</li>
+<li>the design of user-defined parametric overloading: in modern terms,
+local type classes and instances; extending the previous proofs
+of soundness and inference from built-in to user-defined, locally
+overloaded functions;
+</li>
+<li>static and dynamic overloading resolution algorithms --
+monomorphization and intensional type analysis --
+and the proofs of their correctness and consistency;
+</li>
+<li>brief mentioning of implemented extensions: constructor classes and
+combining parametric overloading with subtyping;
+</li>
+<li>the presented type systems, inference algorithms and compilation methods
+were implemented in a functional programming language SAMPLE, which
+has been used in Kaes group for a year.
+</li></ul>
+<p>In modern terms, Kaes' parametrically overloaded functions are
+single-parameter type classes with a single method. Therefore, he identifies
+the name of the type class with the name of the method, the overloaded
+identifier. He imposes restrictions similar to Haskell'98 restrictions
+on type classes: no overlapping instances; the type in the instance head
+is either a zero-arity type constant <code>T</code> or an n-ary constant <code>Tn</code> applied
+to n distinct type variables. The overloading is hence
+resolved by looking only at the outermost type constructor. The types
+of overloaded functions are further restricted so that the overloading can
+be resolved only from the argument types. This restriction seems to come
+from one of the compilation strategies: dynamic resolution. The paper briefly
+mentions a more general strategy, which should not impose such restrictions.
+An `overloading assumption' used throughout the paper is, in modern
+terms, a set of type classes and the types of their instances. For example,
+the Haskell type class <code>Eq</code> and its instances
+
+</p><pre>    class Eq a where eq :: a -&gt; a -&gt; Bool
+    instance Eq Int where ...
+    instance Eq Bool where ...
+    instance Eq a =&gt; Eq [a] where...
+</pre>in Kaes' terms take the form of the following overloading assumption:
+
+<pre>    {eq: &lt;$-&gt;$-&gt;Bool, {Int, Bool, [a_(eq)]}}
+</pre>Here, <code>a_(eq)</code> is a peculiar way to specify that the type variable <code>a</code>
+is restricted to be a member of the type class <code>Eq</code>. The overloading
+type schema <code>$-&gt;$-&gt;Bool</code> is in modern terms the method signature,
+with <code>$</code> being the dedicated type variable of the
+(implicit) class declaration. Granted, the syntax of Kaes' calculus
+takes some time to get used to. The indisputable advantage of Haskell is
+its syntax for type classes.
+<p>The two parametric overloading compilation techniques from the
+Kaes paper have been explained above. We have illustrated a simpler version
+of the techniques, for globally defined parameterically overloaded
+functions, such as Haskell type classes. In the Kaes paper parameterically
+overloaded functions have local scope. Here is an example, in an imagined
+Haskell-like syntax.
+
+</p><pre>    let class Show a where
+         show :: a -&gt; String
+    in
+    let f =
+         let instance Show () where
+              show _ = "unit 1"
+         in \x -&gt; "result " ++ show x
+    in
+    let instance Show () where
+           show _ = "unit 2"
+    in f ()
+</pre>
+<p>The example is meant to show a subtlety brought by local
+instances: the coherence problem. If we infer the polymorphic type for
+<code>f :: Show a =&gt; a -&gt; String</code>, then the program may plausibly return
+<code>"result unit 2"</code>. However, if the compiler decides to optimistically
+specialize <code>f</code> to the concrete type <code>() -&gt; String</code>,
+<code>show</code> will be resolved to the first instance and the result will
+be <code>"result unit 1"</code>. The
+compilation strategies of the Kaes paper are so designed that the
+result is always <code>"result unit 1"</code>, regardless of the strategy and of
+possible optimistic specialization of <code>f</code>.  The closure bound to <code>f</code>
+captures with it the overloading environment. When a polymorphic
+closure is instantiated and applied, it uses the local instance
+environment at its creation site rather than the instances
+in effect at the call site.
+</p><p>It is such a shame that the outstanding pioneering work of Kaes has
+been entirely forgotten.</p></dd>
+<dt><strong>References</strong></dt>
+<dd>Stefan Kaes:
+Parametric overloading in polymorphic programming languages<br>
+
+Proc. ESOP 1988, Springer's LNCS 300, pp. 131-144<br>
+
+&lt;<a href="http://link.springer.com/chapter/10.1007%2F3-540-19027-9_9">http://link.springer.com/chapter/10.1007%2F3-540-19027-9_9</a>&gt;
+
+<p>Stefan Kaes:
+Parametrischer Polymorphismus, Ueberladungen und Konversionen<br>
+
+Dissertation: TU Darmstadt, Fachbereich Informatik, 2005<br>
+
+&lt;<a href="http://tuprints.ulb.tu-darmstadt.de/epda/000544/">http://tuprints.ulb.tu-darmstadt.de/epda/000544/</a>&gt;<br>
+
+In this dissertation defended many years after the original papers,
+Stefan Kaes systematizes his approach, describes the relationship with
+Haskell type classes, and generalizes to a constraint-based inference
+along the lines of HM(X).<br>
+
+I thank Johannes Emerich for pointing out this dissertation.
+</p></dd></dl>
+
+<p>&nbsp;</p>
+<h2><a name="References">Brief bibliography</a></h2>
+<dl>
+<dd>Stefan Kaes.
+Parametric overloading in polymorphic programming languages<br>
+
+Proc. ESOP 1988, Springer's LNCS 300, pp. 131-144<br>
+
+Stefan Kaes.
+Type Inference in the Presence of Overloading,
+Subtyping and Recursive Types<br>
+
+Proc. 1992 ACM Conference on LISP and Functional Programming,
+ACM LISP Pointers, 1992, v5, N1, pp. 193-204<br>
+
+The two pioneering papers by Kaes.
+<p>Philip L. Wadler and Stephen Blott.
+How to Make Ad-Hoc Polymorphism Less Ad Hoc<br>
+
+Proc. POPL 1989, pp. 60-76
+</p><p>Cordelia V. Hall, Kevin Hammond, Simon L. Peyton Jones, 
+Philip L. Wadler.
+Type Classes in Haskell<br>
+
+ACM Transactions on Programming Languages and Systems (TOPLAS), 
+1996, v18, N2, pp. 109-138
+</p><p>Derek Dreyer, Robert Harper, Manuel M. T. Chakravarty and Gabriele Keller. 
+Modular type classes<br>
+
+Proc. POPL 2007, pp. 63-70
+</p><p>Stefan Wehr and Manuel M. T. Chakravarty.
+ML Modules and Haskell Type Classes: Constructive Comparison<br>
+
+Proc. APLAS 2008, LNCS 5356, pp. 188-204
+</p><p>P. J. Stuckey and M. Sulzmann. A theory of overloading<br>
+
+ACM Transactions on Programming Languages and Systems (TOPLAS),
+27(6):1-54, 2005
+</p><p>Assia Mahboubi, Enrico Tassi.
+Canonical Structures for the working Coq user<br>
+
+<a href="http://doi.org/10.1007/978-3-642-39634-2_5">doi:10.1007/978-3-642-39634-2_5</a><br>
+
+See also: <a href="https://okmij.org/ftp/ML/canonical.html">Canonical structures for a working ML programmer,</a> or: implicits for
+the masses
+</p><p><a href="https://okmij.org/ftp/Haskell/types.html#translucent-functor">Translucent applicative functors in Haskell:</a>
+contrasting the module system of OCaml with Haskell type classes.</p></dd></dl>
+<div id="footer">
+<div>&nbsp;</div>
+<hr>
+<h3>Last updated May 3, 2021</h3>This site's top page is <a href="http://okmij.org/ftp/"><strong>http://okmij.org/ftp/</strong></a><br>
+
+<div><cite>oleg-at-okmij.org</cite><br>
+Your comments, problem reports, questions are very welcome!</div>
+<div class="small">Generated by MarXere</div></div></body></html>

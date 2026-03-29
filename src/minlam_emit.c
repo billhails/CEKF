@@ -286,22 +286,17 @@ static void releaseSlots(ResultArray *slots, EmitterContext *context) {
 }
 
 static bool slotsAvailableBelow(int N, EmitterContext *context) {
-    HashSymbol *key = NULL;
-    Slot *slot = NULL;
-    Index i = 0;
     if (N == 0)
         return false;
     if (context->totalSlots < N) // we've never allocated them
         return true;
-    while ((key = iterateSlotPool(context->slots, &i, &slot)) != NULL) {
-        if (slot->isAvailable && slot->index < N) {
-            return true;
-        }
-    }
+    if (emit_peekHeap(context) < N)
+        return true;
     return false;
 }
 
 static ResultArray *claimSlotsBelow(int N, EmitterContext *context) {
+    fprintf(FH(context), "// ensuring reg[0..%d]\n", N - 1);
     ResultArray *slots = newResultArray();
     int save = PROTECT(slots);
     while (slotsAvailableBelow(N, context)) {
@@ -571,7 +566,8 @@ static EmitResult *emitAnonymousLambda(MinLam *lambda,
     int save = PROTECT(lamContext);
     SCharArray *containing_label = makeLambdaLabel(context->currentBinding);
     PROTECT(containing_label);
-    fprintf(FH(lamContext), "// inside %s\n", containing_label->entries);
+    fprintf(FH(lamContext), "// inside %s, %d args\n",
+            containing_label->entries, countSymbolList(lambda->args));
     emitMinLam(lambda, lamContext);
     retrieveMaxReg(context, lamContext);
     SCharArray *label = makeLambdaLabel(name);
@@ -746,12 +742,12 @@ static EmitResult *emitMakeVec(MinExprList *vecs, EmitterContext *context) {
 }
 
 static void emitMinLam(MinLam *node, EmitterContext *context) {
-    EMITLOC("emitMinLam", node, context);
 #ifdef SAFETY_CHECKS
     if (node == NULL)
         cant_happen("NULL MinLam");
 #endif
     int nargs = countSymbolList(node->args);
+    fprintf(FH(context), "// emitMinLam reserving %d incoming slots\n", nargs);
     ResultArray *slots = claimSlots(nargs, context);
     int save = PROTECT(slots);
     context->currentReg += nargs;
@@ -781,7 +777,7 @@ static inline void emitAssignReg(Index i, EmitResult *value,
 
 static void emitGoto(EmitResult *target, ResultArray *args,
                      EmitterContext *context) {
-    fprintf(FH(context), "// emitGoto\n");
+    fprintf(FH(context), "// emitGoto - %u outgoing slots\n", args->size);
     ResultArray *sourceSlots = newResultArray();
     int save = PROTECT(sourceSlots);
     ResultArray *claimedSlots = newResultArray();
@@ -867,7 +863,8 @@ static EmitResult *emitCallBuiltin(BuiltIn *bi, MinExprList *builtinArgs,
 static void emitApplyBuiltin(MinApply *node, EmitterContext *context) {
     EMITLOC("emitApplyBuiltin", node, context);
 
-    ResultArray *contArgSlots = claimSlotsBelow(3, context); // (env result f)
+    ResultArray *contArgSlots =
+        claimSlotsBelow(3, context); // (3 args: env, result, f)
     int save = PROTECT(contArgSlots);
 
     BuiltIn *bi = findBuiltIn(node, context);
@@ -1178,7 +1175,6 @@ static void emitMinLetRec(MinLetRec *node, EmitterContext *context) {
 }
 
 static void emitMinExp(MinExp *node, EmitterContext *context) {
-    EMITLOC("emitMinExp", node, context);
     switch (node->type) {
     case MINEXP_TYPE_APPLY: {
         MinApply *variant = getMinExp_Apply(node);
@@ -1271,6 +1267,7 @@ void emitProgram(MinExp *node, BuiltIns *builtIns, FILE *out) {
     fprintf(out, "reg[i] = value_None();\n");
     fprintf(out, "}\n");
     fprintf(out, "minlam_runtime_init(reg, MAX_REG, argc, argv);\n");
+    fprintf(out, "// forceGcFlag = 1;\n");
     fprintf(out, "goto ENTRY;\n");
     Index i = 0;
     HashSymbol *label = NULL;
