@@ -556,8 +556,7 @@ md5sum generated/ast.h >> test_baseline/checksums.txt
 # Ensure generated code still compiles cleanly
 make clean
 make
-make MODE=production
-make MODE=unit
+make test
 
 # All should complete without warnings/errors
 ```

@@ -36,8 +36,8 @@ The build depends heavily on code generation. Do not manually edit files in `gen
 (via `MODE=` variable):
 
 ```bash
-make                    # default MODE=debug: -g
-make MODE=production    # -O2, all safety checks disabled
+make              # default MODE=dev: -g
+make MODE=prod    # -O2, all safety checks disabled
 ```
 
 ### Key Make Targets

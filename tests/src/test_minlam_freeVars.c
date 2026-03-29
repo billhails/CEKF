@@ -26,7 +26,7 @@
 #include "symbol.h"
 #include "utils.h"
 
-#ifdef DEBUG_STRESS_GC
+#ifdef SAFETY_CHECKS
 extern int forceGcFlag;
 #endif
 
@@ -441,7 +441,7 @@ static void test_non_variable_forms_do_not_add_free_vars(void) {
 int main(int argc __attribute__((unused)),
          char *argv[] __attribute__((unused))) {
     initAll();
-#ifdef DEBUG_STRESS_GC
+#ifdef SAFETY_CHECKS
     forceGcFlag = 1;
 #endif
 

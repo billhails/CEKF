@@ -61,9 +61,6 @@
 // #    define DEBUG_SQLITE
 // #    define DEBUG_STACK
 // #define DEBUG_STEP
-#ifndef NO_DEBUG_STRESS_GC
-#define DEBUG_STRESS_GC
-#endif
 // #    define DEBUG_TC
 // #    define DEBUG_TIN_INSTANTIATION
 // #    define DEBUG_TIN_SUBSTITUTION

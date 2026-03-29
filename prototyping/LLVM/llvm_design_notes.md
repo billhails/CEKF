@@ -363,7 +363,7 @@ make
 ### Release Build
 
 ```bash
-make MODE=production
+make MODE=prod
 ./bin/fn --use-llvm program.fn
 ```
 
