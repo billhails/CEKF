@@ -481,40 +481,6 @@ static LamTypeSig *convertTypeSig(AstTypeSig *typeSig) {
 }
 
 /**
- * @brief Converts an AST LookUp Symbol to a lambda lookUp symbol.
- *
- * @param ls The AST LookUp Symbol to convert.
- * @return The resulting lambda lookUp symbol.
- */
-static LamLookUpSymbol *convertAstLookUpSymbol(AstLookUpSymbol *ls) {
-    return newLamLookUpSymbol(CPI(ls), ls->nsId, ls->nsSymbol, ls->symbol);
-}
-
-/**
- * @brief Converts an AST LookUpOrSymbol to a lambda LookUpOrSymbol.
- *
- * @param los The AST LookUpOrSymbol to convert.
- * @return The resulting lambda LookUpOrSymbol.
- */
-static LamLookUpOrSymbol *convertAstLookUpOrSymbol(AstLookUpOrSymbol *los) {
-    switch (los->type) {
-    case AST_LOOKUPORSYMBOL_TYPE_SYMBOL:
-        return newLamLookUpOrSymbol_Symbol(CPI(los),
-                                           getAstLookUpOrSymbol_Symbol(los));
-    case AST_LOOKUPORSYMBOL_TYPE_LOOKUP: {
-        LamLookUpSymbol *ls =
-            convertAstLookUpSymbol(getAstLookUpOrSymbol_LookUp(los));
-        int save = PROTECT(ls);
-        LamLookUpOrSymbol *llos = newLamLookUpOrSymbol_LookUp(CPI(los), ls);
-        UNPROTECT(save);
-        return llos;
-    }
-    default:
-        cant_happen("unrecognized %s", astLookUpOrSymbolTypeName(los->type));
-    }
-}
-
-/**
  * @brief Checks to see if a symbol is an alias for a type constructor
  * invocation.
  *
@@ -525,15 +491,10 @@ static LamLookUpOrSymbol *convertAstLookUpOrSymbol(AstLookUpOrSymbol *los) {
 static LamTypeConstructorType *expandSymbolAlias(AstLookUpOrSymbol *los,
                                                  LamContext *env) {
     switch (los->type) {
-    case LAMLOOKUPORSYMBOL_TYPE_SYMBOL: {
-        LamTypeConstructorType *found = lookUpConstructorTypeInLamContext(
+    case AST_LOOKUPORSYMBOL_TYPE_SYMBOL:
+        return lookUpConstructorTypeInLamContext(
             env, getAstLookUpOrSymbol_Symbol(los));
-        if (found != NULL) {
-            return found;
-        }
-        return NULL;
-    }
-    case LAMLOOKUPORSYMBOL_TYPE_LOOKUP:
+    case AST_LOOKUPORSYMBOL_TYPE_LOOKUP:
         return NULL;
     default:
         cant_happen("unrecognized %s", astLookUpOrSymbolTypeName(los->type));
@@ -567,10 +528,9 @@ static LamTypeFunction *convertAstTypeFunction(AstTypeFunction *astTypeFunction,
     LamTypeConstructorArgs *lamTypeConstructorArgs =
         convertAstTypeList(astTypeFunction->typeList, env);
     int save = PROTECT(lamTypeConstructorArgs);
-    LamLookUpOrSymbol *los = convertAstLookUpOrSymbol(astTypeFunction->symbol);
-    PROTECT(los);
+    HashSymbol *name = getAstLookUpOrSymbol_Symbol(astTypeFunction->symbol);
     LamTypeFunction *this =
-        newLamTypeFunction(CPI(los), los, lamTypeConstructorArgs);
+        newLamTypeFunction(CPI(astTypeFunction), name, lamTypeConstructorArgs);
     UNPROTECT(save);
     return this;
 }
@@ -638,10 +598,7 @@ static LamTypeFunction *makeArrow(LamTypeConstructorType *lhs,
     LamTypeConstructorArgs *argss =
         newLamTypeConstructorArgs(CPI(lhs), lhs, rhsArg);
     PROTECT(argss);
-    LamLookUpOrSymbol *los =
-        newLamLookUpOrSymbol_Symbol(CPI(lhs), arrowSymbol());
-    PROTECT(los);
-    LamTypeFunction *res = newLamTypeFunction(CPI(lhs), los, argss);
+    LamTypeFunction *res = newLamTypeFunction(CPI(lhs), arrowSymbol(), argss);
     UNPROTECT(save);
     return res;
 }

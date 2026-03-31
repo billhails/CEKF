@@ -1191,24 +1191,13 @@ static TcTypeSigArgs *makeTypeSigArgs(LamTypeConstructorArgs *args,
     return this;
 }
 
-static HashSymbol *getUnderlyingFunction(LamLookUpOrSymbol *los) {
-    switch (los->type) {
-    case LAMLOOKUPORSYMBOL_TYPE_LOOKUP:
-        return getLamLookUpOrSymbol_LookUp(los)->symbol;
-    case LAMLOOKUPORSYMBOL_TYPE_SYMBOL:
-        return getLamLookUpOrSymbol_Symbol(los);
-    default:
-        cant_happen("unrecognized %s", lamLookUpOrSymbolTypeName(los->type));
-    }
-}
-
 static TcType *makeTypeConstructorApplication(LamTypeFunction *func,
                                               TcTypeTable *map, TcEnv *env) {
     // this code is building the inner application of a type, i.e.
     // list(t) in the context of t -> list(t) -> list(t)
     TcTypeSigArgs *args = makeTypeSigArgs(func->args, map, env);
     int save = PROTECT(args);
-    TcType *res = makeTypeSig(getUnderlyingFunction(func->name), args);
+    TcType *res = makeTypeSig(func->name, args);
     UNPROTECT(save);
     return res;
 }

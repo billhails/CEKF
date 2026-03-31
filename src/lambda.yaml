@@ -71,14 +71,6 @@ structs:
             args: LamArgs
             isBuiltin: bool=false
 
-    LamLookUpSymbol:
-        meta:
-            brief: A lookUp of a symbol (constructor) in a nameSpace.
-        data:
-            nsId: int
-            nsSymbol: HashSymbol
-            symbol: HashSymbol
-
     LamConstant:
         meta:
             brief: A constant type constructor with no arguments.
@@ -338,7 +330,7 @@ structs:
         meta:
             brief: A type function as a formal argument to a type constructor
         data:
-            name: LamLookUpOrSymbol
+            name: HashSymbol
             args: LamTypeConstructorArgs
 
     LamTypeConstructorInfo:
@@ -413,16 +405,6 @@ unions:
             typeDefs: LamTypeDefs
             typeOf: LamTypeOf
             var: HashSymbol
-
-    LamLookUpOrSymbol:
-        meta:
-            brief: A lookUp or symbol in a nameSpace
-            description: >-
-                Represents either a lookUp of a symbol in a nameSpace or a
-                symbol in the current nameSpace.
-        data:
-            symbol: HashSymbol
-            lookUp: LamLookUpSymbol
 
     LamCondCases:
         meta:

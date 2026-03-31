@@ -32,7 +32,8 @@ void printLambdaSymbol(HashSymbol *x, int depth) {
     eprintf("AstSymbol[\"%s\"]", x->name);
 }
 
-LamTypeConstructorType *lookUpConstructorTypeInLamContext(LamContext *context, HashSymbol *var) {
+LamTypeConstructorType *lookUpConstructorTypeInLamContext(LamContext *context,
+                                                          HashSymbol *var) {
     if (context == NULL)
         return NULL; // not an error
     LamTypeConstructorType *result = NULL;
@@ -42,39 +43,45 @@ LamTypeConstructorType *lookUpConstructorTypeInLamContext(LamContext *context, H
     return lookUpConstructorTypeInLamContext(context->parent, var);
 }
 
-LamTypeConstructorInfo *lookUpConstructorInLamContext(LamContext *context, HashSymbol *var) {
+LamTypeConstructorInfo *lookUpConstructorInLamContext(LamContext *context,
+                                                      HashSymbol *var) {
     if (context == NULL)
         return NULL; // not an error
     LamInfo *result;
     if (getLamInfoTable(context->frame, var, &result)) {
         switch (result->type) {
-            case LAMINFO_TYPE_TYPECONSTRUCTORINFO:
-                return result->val.typeConstructorInfo;
-            case LAMINFO_TYPE_NAMESPACEINFO:
-                cant_happen("expected type constructor found nameSpace called %s", var->name);
-            case LAMINFO_TYPE_NSID:
-                cant_happen("expected type constructor found nameSpace %d", result->val.nsId);
-            default:
-                cant_happen("unrecognized type %s", lamInfoTypeName(result->type));
+        case LAMINFO_TYPE_TYPECONSTRUCTORINFO:
+            return result->val.typeConstructorInfo;
+        case LAMINFO_TYPE_NAMESPACEINFO:
+            cant_happen("expected type constructor found nameSpace called %s",
+                        var->name);
+        case LAMINFO_TYPE_NSID:
+            cant_happen("expected type constructor found nameSpace %d",
+                        result->val.nsId);
+        default:
+            cant_happen("unrecognized type %s", lamInfoTypeName(result->type));
         }
     }
     return lookUpConstructorInLamContext(context->parent, var);
 }
 
-static LamContext *_lookUpNameSpaceInLamContext(LamContext *context, HashSymbol *var) {
+static LamContext *_lookUpNameSpaceInLamContext(LamContext *context,
+                                                HashSymbol *var) {
     if (context == NULL)
         cant_happen("cannot find nameSpace %s", var->name); // always an error
     LamInfo *result;
     if (getLamInfoTable(context->frame, var, &result)) {
         switch (result->type) {
-            case LAMINFO_TYPE_TYPECONSTRUCTORINFO:
-                cant_happen("expected nameSpace found typeconstructor called %s", var->name);
-            case LAMINFO_TYPE_NAMESPACEINFO:
-                return result->val.nameSpaceInfo;
-            case LAMINFO_TYPE_NSID:
-                cant_happen("expected nameSpace info found nameSpace %d", result->val.nsId);
-            default:
-                cant_happen("unrecognized type %s", lamInfoTypeName(result->type));
+        case LAMINFO_TYPE_TYPECONSTRUCTORINFO:
+            cant_happen("expected nameSpace found typeconstructor called %s",
+                        var->name);
+        case LAMINFO_TYPE_NAMESPACEINFO:
+            return result->val.nameSpaceInfo;
+        case LAMINFO_TYPE_NSID:
+            cant_happen("expected nameSpace info found nameSpace %d",
+                        result->val.nsId);
+        default:
+            cant_happen("unrecognized type %s", lamInfoTypeName(result->type));
         }
     }
     return _lookUpNameSpaceInLamContext(context->parent, var);
@@ -87,39 +94,28 @@ LamContext *lookUpNameSpaceInLamContext(LamContext *context, Index index) {
     return _lookUpNameSpaceInLamContext(context, var);
 }
 
-LamTypeConstructorInfo *lookUpScopedAstConstructorInLamContext(LamContext *context, AstLookUpOrSymbol *scoped) {
+LamTypeConstructorInfo *
+lookUpScopedAstConstructorInLamContext(LamContext *context,
+                                       AstLookUpOrSymbol *scoped) {
     switch (scoped->type) {
-        case AST_LOOKUPORSYMBOL_TYPE_SYMBOL:
-            return lookUpConstructorInLamContext(context, scoped->val.symbol);
-        case AST_LOOKUPORSYMBOL_TYPE_LOOKUP:{
-            LamContext *nameSpace = lookUpNameSpaceInLamContext(context, scoped->val.lookUp->nsId);
-            return lookUpConstructorInLamContext(nameSpace, scoped->val.lookUp->symbol);
-        }
-        default:
-            cant_happen("unrecognized %s", astLookUpOrSymbolTypeName(scoped->type));
+    case AST_LOOKUPORSYMBOL_TYPE_SYMBOL:
+        return lookUpConstructorInLamContext(context, scoped->val.symbol);
+    case AST_LOOKUPORSYMBOL_TYPE_LOOKUP: {
+        LamContext *nameSpace =
+            lookUpNameSpaceInLamContext(context, scoped->val.lookUp->nsId);
+        return lookUpConstructorInLamContext(nameSpace,
+                                             scoped->val.lookUp->symbol);
+    }
+    default:
+        cant_happen("unrecognized %s", astLookUpOrSymbolTypeName(scoped->type));
     }
 }
 
-LamTypeConstructorInfo *lookUpScopedLamSymbolInLamContext(LamContext *context, LamLookUpSymbol *lookUp) {
+LamTypeConstructorInfo *
+lookUpScopedAstSymbolInLamContext(LamContext *context,
+                                  AstLookUpSymbol *lookUp) {
     LamContext *nameSpace = lookUpNameSpaceInLamContext(context, lookUp->nsId);
     return lookUpConstructorInLamContext(nameSpace, lookUp->symbol);
-}
-
-LamTypeConstructorInfo *lookUpScopedAstSymbolInLamContext(LamContext *context, AstLookUpSymbol *lookUp) {
-    LamContext *nameSpace = lookUpNameSpaceInLamContext(context, lookUp->nsId);
-    return lookUpConstructorInLamContext(nameSpace, lookUp->symbol);
-}
-
-LamTypeConstructorInfo *lookUpScopedLamConstructorInLamContext(LamContext *context, LamLookUpOrSymbol *scoped) {
-    switch (scoped->type) {
-        case LAMLOOKUPORSYMBOL_TYPE_SYMBOL:
-            return lookUpConstructorInLamContext(context, scoped->val.symbol);
-        case LAMLOOKUPORSYMBOL_TYPE_LOOKUP:{
-            return lookUpScopedLamSymbolInLamContext(context, scoped->val.lookUp);
-        }
-        default:
-            cant_happen("unrecognized %s", lamLookUpOrSymbolTypeName(scoped->type));
-    }
 }
 
 int lookUpCurrentNameSpaceInLamContext(LamContext *context) {
@@ -128,14 +124,14 @@ int lookUpCurrentNameSpaceInLamContext(LamContext *context) {
     LamInfo *result;
     if (getLamInfoTable(context->frame, nameSpaceSymbol(), &result)) {
         switch (result->type) {
-            case LAMINFO_TYPE_TYPECONSTRUCTORINFO:
-                cant_happen("expected nameSpace id found typeconstructor");
-            case LAMINFO_TYPE_NAMESPACEINFO:
-                cant_happen("expected nameSpace id found nameSpace info");
-            case LAMINFO_TYPE_NSID:
-                return result->val.nsId;
-            default:
-                cant_happen("unrecognized type %s", lamInfoTypeName(result->type));
+        case LAMINFO_TYPE_TYPECONSTRUCTORINFO:
+            cant_happen("expected nameSpace id found typeconstructor");
+        case LAMINFO_TYPE_NAMESPACEINFO:
+            cant_happen("expected nameSpace id found nameSpace info");
+        case LAMINFO_TYPE_NSID:
+            return result->val.nsId;
+        default:
+            cant_happen("unrecognized type %s", lamInfoTypeName(result->type));
         }
     }
     return lookUpCurrentNameSpaceInLamContext(context->parent);

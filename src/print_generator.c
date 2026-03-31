@@ -355,35 +355,17 @@ static LamArgs *makeAargs(ParserInfo I, LamTypeConstructorArgs *args) {
 
 /**
  * @brief Checks if a function is a list constructor.
- * @param los The lookUp or symbol to check.
+ * @param name The symbol to check.
  * @return True if the function is a list constructor, false otherwise.
  */
-static bool functionIsList(LamLookUpOrSymbol *los) {
-    switch (los->type) {
-    case LAMLOOKUPORSYMBOL_TYPE_SYMBOL:
-        return los->val.symbol == listSymbol();
-    case LAMLOOKUPORSYMBOL_TYPE_LOOKUP:
-        return false;
-    default:
-        cant_happen("unrecognized %s", lamLookUpOrSymbolTypeName(los->type));
-    }
-}
+static bool functionIsList(HashSymbol *name) { return name == listSymbol(); }
 
 /**
- * @brief Gets the underlying function name from a lookUp or symbol.
- * @param los The lookUp or symbol to get the name from.
+ * @brief Gets the underlying function name from a symbol.
+ * @param name The symbol to get the name from.
  * @return The underlying function name.
  */
-static char *getUnderlyingFunctionName(LamLookUpOrSymbol *los) {
-    switch (los->type) {
-    case LAMLOOKUPORSYMBOL_TYPE_SYMBOL:
-        return los->val.symbol->name;
-    case LAMLOOKUPORSYMBOL_TYPE_LOOKUP:
-        return los->val.lookUp->symbol->name;
-    default:
-        cant_happen("unrecognized %s", lamLookUpOrSymbolTypeName(los->type));
-    }
-}
+static char *getUnderlyingFunctionName(HashSymbol *name) { return name->name; }
 
 /**
  * @brief Wraps a print function in a lookUp expression if necessary.
@@ -397,9 +379,7 @@ static char *getUnderlyingFunctionName(LamLookUpOrSymbol *los) {
  * @param los The lookUp or symbol of the thing being printed.
  */
 static LamExp *lookUpPrintFunction(ParserInfo I __attribute__((unused)),
-                                   LamExp *printer,
-                                   LamLookUpOrSymbol *toPrint
-                                   __attribute__((unused))) {
+                                   LamExp *printer) {
     return printer;
 }
 
@@ -421,7 +401,7 @@ static LamExp *makePrintTypeFunction(ParserInfo I, LamTypeFunction *function) {
         makePrintName("print$", getUnderlyingFunctionName(function->name));
     LamExp *exp = newLamExp_Var(I, name);
     int save = PROTECT(exp);
-    exp = lookUpPrintFunction(I, exp, function->name);
+    exp = lookUpPrintFunction(I, exp);
     REPLACE_PROTECT(save, exp);
     LamArgs *args = makeAargs(I, function->args);
     PROTECT(args);

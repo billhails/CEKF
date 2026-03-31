@@ -529,29 +529,11 @@ static void _ppLamTypeSig(LamTypeSig *type) {
     eprintf(")");
 }
 
-static void ppLookUpSymbol(LamLookUpSymbol *ls) {
-    eprintf("(lookUp %s:%d %s)", ls->nsSymbol->name, ls->nsId,
-            ls->symbol->name);
-}
-
-static void ppLookUpOrSymbol(LamLookUpOrSymbol *los) {
-    switch (los->type) {
-    case LAMLOOKUPORSYMBOL_TYPE_SYMBOL:
-        ppHashSymbol(getLamLookUpOrSymbol_Symbol(los));
-        break;
-    case LAMLOOKUPORSYMBOL_TYPE_LOOKUP:
-        ppLookUpSymbol(getLamLookUpOrSymbol_LookUp(los));
-        break;
-    default:
-        cant_happen("unrecognised %s", lamLookUpOrSymbolTypeName(los->type));
-    }
-}
-
 static void _ppLamTypeConstructorArgs(LamTypeConstructorArgs *args);
 
 static void _ppLamTypeFunction(LamTypeFunction *function) {
     eprintf("(");
-    ppLookUpOrSymbol(function->name);
+    ppHashSymbol(function->name);
     _ppLamTypeConstructorArgs(function->args);
     eprintf(")");
 }
