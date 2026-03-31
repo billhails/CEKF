@@ -24,8 +24,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define NS_GLOBAL -1
-
 #ifndef USE_STAGED_ARITHMETIC
 #define USE_STAGED_ARITHMETIC 1
 #endif
@@ -61,9 +59,6 @@
 // #    define DEBUG_SQLITE
 // #    define DEBUG_STACK
 // #define DEBUG_STEP
-#ifndef NO_DEBUG_STRESS_GC
-#define DEBUG_STRESS_GC
-#endif
 // #    define DEBUG_TC
 // #    define DEBUG_TIN_INSTANTIATION
 // #    define DEBUG_TIN_SUBSTITUTION

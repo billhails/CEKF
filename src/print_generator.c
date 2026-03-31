@@ -283,7 +283,7 @@ static LamExp *makeIndexedDeconstruct(ParserInfo I, int index,
     LamExp *printArg = thingName(I);
     int save = PROTECT(printArg);
     LamDeconstruct *dec =
-        newLamDeconstruct(I, info->type->name, info->nsId, index, printArg);
+        newLamDeconstruct(I, info->type->name, index, printArg);
     PROTECT(dec);
     LamExp *res = newLamExp_Deconstruct(I, dec);
     UNPROTECT(save);
@@ -355,35 +355,17 @@ static LamArgs *makeAargs(ParserInfo I, LamTypeConstructorArgs *args) {
 
 /**
  * @brief Checks if a function is a list constructor.
- * @param los The lookUp or symbol to check.
+ * @param name The symbol to check.
  * @return True if the function is a list constructor, false otherwise.
  */
-static bool functionIsList(LamLookUpOrSymbol *los) {
-    switch (los->type) {
-    case LAMLOOKUPORSYMBOL_TYPE_SYMBOL:
-        return los->val.symbol == listSymbol();
-    case LAMLOOKUPORSYMBOL_TYPE_LOOKUP:
-        return false;
-    default:
-        cant_happen("unrecognized %s", lamLookUpOrSymbolTypeName(los->type));
-    }
-}
+static bool functionIsList(HashSymbol *name) { return name == listSymbol(); }
 
 /**
- * @brief Gets the underlying function name from a lookUp or symbol.
- * @param los The lookUp or symbol to get the name from.
+ * @brief Gets the underlying function name from a symbol.
+ * @param name The symbol to get the name from.
  * @return The underlying function name.
  */
-static char *getUnderlyingFunctionName(LamLookUpOrSymbol *los) {
-    switch (los->type) {
-    case LAMLOOKUPORSYMBOL_TYPE_SYMBOL:
-        return los->val.symbol->name;
-    case LAMLOOKUPORSYMBOL_TYPE_LOOKUP:
-        return los->val.lookUp->symbol->name;
-    default:
-        cant_happen("unrecognized %s", lamLookUpOrSymbolTypeName(los->type));
-    }
-}
+static char *getUnderlyingFunctionName(HashSymbol *name) { return name->name; }
 
 /**
  * @brief Wraps a print function in a lookUp expression if necessary.
@@ -396,15 +378,8 @@ static char *getUnderlyingFunctionName(LamLookUpOrSymbol *los) {
  * @param printer The print function to wrap.
  * @param los The lookUp or symbol of the thing being printed.
  */
-static LamExp *lookUpPrintFunction(ParserInfo I, LamExp *printer,
-                                   LamLookUpOrSymbol *toPrint) {
-    if (toPrint->type == LAMLOOKUPORSYMBOL_TYPE_LOOKUP) {
-        LamLookUpSymbol *ls = toPrint->val.lookUp;
-        LamLookUp *llu = newLamLookUp(I, ls->nsId, ls->nsSymbol, printer);
-        int save = PROTECT(llu);
-        printer = newLamExp_LookUp(I, llu);
-        UNPROTECT(save);
-    }
+static LamExp *lookUpPrintFunction(ParserInfo I __attribute__((unused)),
+                                   LamExp *printer) {
     return printer;
 }
 
@@ -426,7 +401,7 @@ static LamExp *makePrintTypeFunction(ParserInfo I, LamTypeFunction *function) {
         makePrintName("print$", getUnderlyingFunctionName(function->name));
     LamExp *exp = newLamExp_Var(I, name);
     int save = PROTECT(exp);
-    exp = lookUpPrintFunction(I, exp, function->name);
+    exp = lookUpPrintFunction(I, exp);
     REPLACE_PROTECT(save, exp);
     LamArgs *args = makeAargs(I, function->args);
     PROTECT(args);
@@ -645,8 +620,7 @@ static LamMatchList *makeScalarMatchList(ParserInfo I,
             "cannot find info for type constructor %s in makeScalarMatchList",
             constructors->constructor->name->name);
     }
-    LamIntList *matches =
-        newLamIntList(I, info->index, info->type->name, info->nsId, NULL);
+    LamIntList *matches = newLamIntList(I, info->index, info->type->name, NULL);
     PROTECT(matches);
     LamExp *body = makePutsConstructorName(I, constructors->constructor);
     PROTECT(body);
@@ -705,8 +679,7 @@ static LamMatchList *makeVectorMatchList(ParserInfo I,
             "cannot find info for type constructor %s in makeVectorMatchList",
             constructors->constructor->name->name);
     }
-    LamIntList *matches =
-        newLamIntList(I, info->index, info->type->name, info->nsId, NULL);
+    LamIntList *matches = newLamIntList(I, info->index, info->type->name, NULL);
     PROTECT(matches);
     LamExp *body = NULL;
     if (info->arity > 0) {

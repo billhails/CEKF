@@ -304,37 +304,6 @@ void dumpByteCode(ByteCodeArray *b, LocationArray *l) {
             eprintf("ERROR");
             loc(ii, &li, l);
         } break;
-        case BYTECODES_TYPE_NS_START: {
-            int count = readWord(b, &i);
-            eprintf("NS_START [%d]", count);
-            loc(ii, &li, l);
-        } break;
-        case BYTECODES_TYPE_NS_END: {
-            int numLambdas = readWord(b, &i);
-            int stackOffset = readWord(b, &i);
-            eprintf("NS_END [%d][%d]", numLambdas, stackOffset);
-            loc(ii, &li, l);
-        } break;
-        case BYTECODES_TYPE_NS_FINISH: {
-            int count = readWord(b, &i);
-            eprintf("NS_FINISH [%d]", count);
-            loc(ii, &li, l);
-        } break;
-        case BYTECODES_TYPE_NS_PUSHSTACK: {
-            int offset = readWord(b, &i);
-            eprintf("NS_PUSHSTACK [%d]", offset);
-            loc(ii, &li, l);
-        } break;
-        case BYTECODES_TYPE_NS_PUSHENV: {
-            int frame = readWord(b, &i);
-            int offset = readWord(b, &i);
-            eprintf("NS_PUSHENV [%d][%d]", frame, offset);
-            loc(ii, &li, l);
-        } break;
-        case BYTECODES_TYPE_NS_POP: {
-            eprintf("NS_POP");
-            loc(ii, &li, l);
-        } break;
         default:
             cant_happen("unrecognised bytecode %s in dumpByteCode",
                         byteCodesName(thisByte));

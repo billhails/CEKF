@@ -522,8 +522,7 @@ replacePatternComponentsWithWildCards(TpmcPattern *pattern) {
                 replaceComponentsWithWildCards(constructor->components);
             int save = PROTECT(components);
             TpmcConstructorPattern *newCons = newTpmcConstructorPattern(
-                constructor->tag, constructor->nameSpace, constructor->info,
-                components);
+                constructor->tag, constructor->info, components);
             PROTECT(newCons);
             TpmcPatternValue *patternValue =
                 newTpmcPatternValue_Constructor(newCons);

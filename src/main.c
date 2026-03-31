@@ -72,7 +72,7 @@
 
 // temporary test
 LamExp *anfNormalize2(LamExp *exp);
-#ifdef DEBUG_STRESS_GC
+#ifdef SAFETY_CHECKS
 extern int forceGcFlag;
 #endif
 
@@ -114,15 +114,12 @@ static void report_build_mode(char *prog) {
 #ifdef BUILD_MODE
     switch (BUILD_MODE) {
     case 0:
-        printf("debug build\n");
+        printf("dev build\n");
         break;
     case 1:
-        printf("test build\n");
-        break;
-    case 2:
         printf("production build\n");
         break;
-    case 3:
+    case 2:
         printf("coverage build\n");
         break;
     default:
@@ -202,7 +199,7 @@ static void usage(char *prog, int status) {
         "    --parse-only             Stop after parsing to enable "
         "parser-only profiling.\n"
         "    --report                 Report statistics.\n"
-#ifdef DEBUG_STRESS_GC
+#ifdef SAFETY_CHECKS
         "    --stress-gc              Stress the garbage collector.\n"
 #endif
         "    --target-c               Output C code instead.\n"
@@ -229,7 +226,7 @@ static int processArgs(int argc, char *argv[]) {
             {"test", no_argument, &test_flag, 1},
 #endif
             {"report", no_argument, &report_flag, 1},
-#ifdef DEBUG_STRESS_GC
+#ifdef SAFETY_CHECKS
             {"stress-gc", no_argument, &forceGcFlag, 1},
 #endif
             {"target-c", no_argument, &targetCFlag, 1},
@@ -392,6 +389,7 @@ static LamExp *convertProg(AstProg *prog) {
     if (lambda_flag) {
         ppLamExp(exp);
         eprintf("\n");
+        exit(0);
     }
     UNPROTECT(save);
     return exp;
@@ -411,6 +409,7 @@ static LamExp *inlineExp(LamExp *exp) {
     if (inline_flag) {
         ppLamExp(exp);
         eprintf("\n");
+        exit(0);
     }
     UNPROTECT(save);
     return exp;

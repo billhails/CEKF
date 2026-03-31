@@ -18,7 +18,6 @@ TcPair --second--> TcType
 TcThunk --type--> TcType
 TcTypeSig --name--> HashSymbol
 TcTypeSig --args--> TcTypeSigArgs
-TcTypeSig --ns--> int
 TcTypeSigArgs --type--> TcType
 TcTypeSigArgs --next--> TcTypeSigArgs
 TcVar --name--> HashSymbol
@@ -35,11 +34,7 @@ TcType --unknown--> HashSymbol
 TcType --opaque--> HashSymbol
 TcType --typeSig--> TcTypeSig
 TcType --tuple--> TcTypeArray
-TcType --nameSpaces--> TcNameSpaceArray
-TcType --env--> TcEnv
-TcType --nsId--> int
 TcTypeArray["TcTypeArray[]"] --entries--> TcType
-TcNameSpaceArray["TcNameSpaceArray[]"] --entries--> TcType
 ```
 
 > Generated from src/tc.yaml by tools/generate.py

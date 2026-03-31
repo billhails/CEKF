@@ -91,8 +91,8 @@ Result:
 1. Reconfirm focused correctness baseline.
 
   ```bash
-  make MODE=testing tests/test_arithmetic_next >/dev/null && ./tests/test_arithmetic_next
-  make MODE=testing tests/test_arithmetic_dispatch >/dev/null && ./tests/test_arithmetic_dispatch
+  make tests/test_arithmetic_next >/dev/null && ./tests/test_arithmetic_next
+  make tests/test_arithmetic_dispatch >/dev/null && ./tests/test_arithmetic_dispatch
   ```
 
   Expected: both tests exit cleanly with no error output.

@@ -22,7 +22,6 @@
 
 static LamExp *inlineExp(LamExp *x);
 static LamTypeDefs *inlineTypeDefs(LamTypeDefs *x);
-static LamNameSpaceArray *inlineNameSpaces(LamNameSpaceArray *x);
 static LamLam *inlineLam(LamLam *x);
 static LamPrimApp *inlinePrim(LamPrimApp *x);
 static LamSequence *inlineSequence(LamSequence *x);
@@ -35,7 +34,6 @@ static LamBindings *inlineBindings(LamBindings *x);
 static LamLet *inlineLet(LamLet *x);
 static LamLetStar *inlineLetStar(LamLetStar *x);
 static LamAmb *inlineAmb(LamAmb *x);
-static LamLookUp *inlineLookUp(LamLookUp *x);
 static LamTupleIndex *inlineTupleIndex(LamTupleIndex *x);
 static LamMatch *inlineMatch(LamMatch *x);
 static LamCond *inlineCond(LamCond *x);
@@ -43,13 +41,6 @@ static LamCondCases *inlineCondCases(LamCondCases *x);
 static LamCharCondCases *inlineCharCondCases(LamCharCondCases *x);
 static LamIntCondCases *inlineIntCondCases(LamIntCondCases *x);
 static LamTypeConstructorInfo *resolveTypeConstructor(LamExp *x);
-
-static LamNameSpaceArray *inlineNameSpaces(LamNameSpaceArray *x) {
-    for (Index i = 0; i < x->size; ++i) {
-        x->entries[i] = inlineExp(x->entries[i]);
-    }
-    return x;
-}
 
 static LamMatchList *inlineMatchList(LamMatchList *x) {
     if (x != NULL) {
@@ -115,8 +106,6 @@ static LamTypeConstructorInfo *resolveTypeConstructor(LamExp *x) {
     switch (x->type) {
     case LAMEXP_TYPE_CONSTRUCTOR:
         return getLamExp_Constructor(x);
-    case LAMEXP_TYPE_LOOKUP:
-        return resolveTypeConstructor(getLamExp_LookUp(x)->exp);
     default:
         return NULL;
     }
@@ -188,11 +177,6 @@ static LamAmb *inlineAmb(LamAmb *x) {
     return x;
 }
 
-static LamLookUp *inlineLookUp(LamLookUp *x) {
-    x->exp = inlineExp(x->exp);
-    return x;
-}
-
 static LamTupleIndex *inlineTupleIndex(LamTupleIndex *x) {
     x->exp = inlineExp(x->exp);
     return x;
@@ -254,9 +238,6 @@ static LamExp *inlineExp(LamExp *x) {
     case LAMEXP_TYPE_TYPEDEFS:
         setLamExp_TypeDefs(x, inlineTypeDefs(getLamExp_TypeDefs(x)));
         break;
-    case LAMEXP_TYPE_NAMESPACES:
-        setLamExp_NameSpaces(x, inlineNameSpaces(getLamExp_NameSpaces(x)));
-        break;
     case LAMEXP_TYPE_LAM:
         setLamExp_Lam(x, inlineLam(getLamExp_Lam(x)));
         break;
@@ -289,9 +270,6 @@ static LamExp *inlineExp(LamExp *x) {
         break;
     case LAMEXP_TYPE_AMB:
         setLamExp_Amb(x, inlineAmb(getLamExp_Amb(x)));
-        break;
-    case LAMEXP_TYPE_LOOKUP:
-        setLamExp_LookUp(x, inlineLookUp(getLamExp_LookUp(x)));
         break;
     case LAMEXP_TYPE_TUPLEINDEX:
         setLamExp_TupleIndex(x, inlineTupleIndex(getLamExp_TupleIndex(x)));

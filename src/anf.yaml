@@ -21,13 +21,12 @@ config:
     description: A-Normal Form (ANF) structures to be converted to bytecode.
     parserInfo: true
     includes:
-    - utils.h
+      - utils.h
     limited_includes:
-    - bigint.h
-    - ast_helper.h
-    - tc.h
-    - tc_debug.h
-
+      - bigint.h
+      - ast_helper.h
+      - tc.h
+      - tc_debug.h
 
 structs:
     AnfEnv:
@@ -36,10 +35,8 @@ structs:
             description: lookUp for the run-time locations of variables.
         data:
             isLocal: bool
-            isNameSpace: bool = false
             isCapturing: bool = false
             nBindings: int = 0
-            nsEnvs: AnfEnvArray = NULL
             table: IntMap
             next: AnfEnv
 
@@ -105,23 +102,6 @@ structs:
             nArgs: int
             args: AexpList
 
-    AexpNameSpace:
-        meta:
-            brief: ANF Aexp NameSpace
-            description: >-
-                A nameSpace in ANF, containing the body of the nameSpace.
-        data:
-            nBindings: int = 0
-            body: AnfExp
-
-    AexpNameSpaces:
-        meta:
-            brief: ANF Aexp NameSpaces
-            description: An array of nameSpaces in ANF.
-        data:
-            nameSpaces: AexpNameSpaceArray
-            body: AnfExp
-
     CexpApply:
         meta:
             brief: ANF Cexp Apply
@@ -152,8 +132,8 @@ structs:
         meta:
             brief: ANF Cexp Integer Conditional Cases
             description: >-
-                Sub-class of CexpCondCases for big integer
-                dispatch tables in ANF.
+                Sub-class of CexpCondCases for big integer dispatch tables in
+                ANF.
         data:
             option: MaybeBigInt
             body: AnfExp
@@ -163,8 +143,8 @@ structs:
         meta:
             brief: ANF Cexp Character Conditional Cases
             description: >-
-                Sub-class of CexpCondCases for UTF-32 character
-                dispatch tables in ANF.
+                Sub-class of CexpCondCases for UTF-32 character dispatch tables
+                in ANF.
         data:
             option: character
             body: AnfExp
@@ -208,12 +188,6 @@ structs:
             val: AnfExp
             body: AnfExp
 
-    AnfExpLookUp:
-        data:
-            nameSpace: index
-            annotatedVar: AexpAnnotatedVar = NULL
-            body: AnfExp
-
     AnfMatchList:
         meta:
             brief: ANF Match List
@@ -236,7 +210,8 @@ unions:
     CexpCondCases:
         meta:
             brief: ANF Cexp Conditional Cases
-            description: A union of conditional cases for CexpCond, either character or integer.
+            description: A union of conditional cases for CexpCond, either character or
+                integer.
         data:
             charCases: CexpCharCondCases
             intCases: CexpIntCondCases
@@ -254,7 +229,6 @@ unions:
             character: character
             prim: AexpPrimApp
             makeVec: AexpMakeVec
-            nameSpaces: AexpNameSpaces
 
     Cexp:
         meta:
@@ -277,12 +251,10 @@ unions:
             brief: ANF Exp
             description: A union of all expression types (atomic or complex) in ANF.
         data:
-            env: void_ptr
             done: void_ptr
             aexp: Aexp
             cexp: Cexp
             let: AnfExpLet
-            lookUp: AnfExpLookUp
 
 enums:
     AexpAnnotatedVarType:
@@ -290,40 +262,33 @@ enums:
             brief: ANF Aexp Annotated Variable Type
             description: The type (i.e. location) of an annotated variable in ANF.
         data:
-        - STACK
-        - ENV
+          - STACK
+          - ENV
 
     AexpPrimOp:
         meta:
             brief: ANF Aexp Primitive Operation types.
             description: The type of all primitive operations in ANF.
         data:
-        - ADD
-        - SUB
-        - MUL
-        - DIV
-        - GCD
-        - LCM
-        - CANON
-        - POW
-        - EQ
-        - NE
-        - LT
-        - GT
-        - LE
-        - GE
-        - VEC
-        - MOD
-        - CMP
+          - ADD
+          - SUB
+          - MUL
+          - DIV
+          - GCD
+          - LCM
+          - CANON
+          - POW
+          - EQ
+          - NE
+          - LT
+          - GT
+          - LE
+          - GE
+          - VEC
+          - MOD
+          - CMP
 
 arrays:
-    AexpNameSpaceArray:
-        meta:
-            brief: ANF Aexp NameSpace Array
-            description: An array of nameSpaces in ANF. 
-        data:
-            entries: AexpNameSpace
-
     AnfEnvArray:
         meta:
             brief: ANF Compile Time Environment Array
@@ -334,5 +299,5 @@ arrays:
 primitives: !include primitives.yaml
 
 external:
-- !include utils.yaml
-- !include tc.yaml
+  - !include utils.yaml
+  - !include tc.yaml

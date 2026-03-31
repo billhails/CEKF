@@ -49,7 +49,6 @@ Value --pclo--> Clo
 Value --kont--> Kont
 Value --vec--> Vec
 Value --builtIn--> BuiltInImplementation
-Value --nameSpace--> Vec
 Value --opaque--> opaque
 Value --addr--> ptr
 ByteCodeArray["ByteCodeArray[]"] --entries--> byte

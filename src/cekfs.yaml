@@ -120,7 +120,6 @@ inline:
                 kont: Kont
                 vec: Vec
                 builtIn: BuiltInImplementation
-                nameSpace: Vec
                 opaque: opaque
                 addr: ptr
 
@@ -239,12 +238,6 @@ enums:
           - STDINT_IMAG
           - BIGINT_IMAG
           - IRRATIONAL_IMAG
-          - NS_START
-          - NS_END
-          - NS_FINISH
-          - NS_PUSHSTACK
-          - NS_PUSHENV
-          - NS_POP
 
 primitives: !include primitives.yaml
 

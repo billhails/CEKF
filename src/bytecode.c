@@ -322,33 +322,6 @@ void writeAexpMakeVec(AexpMakeVec *x, ByteCodeArray *b, LocationArray *L) {
     LEAVE(writeAexpMakeVec);
 }
 
-void writeAexpNameSpaceArray(AexpNameSpaceArray *x, ByteCodeArray *b,
-                             LocationArray *L) {
-    if (x->size > 0) {
-        writeLocation(CPI(x->entries[0]->body), b, L);
-        addByte(b, BYTECODES_TYPE_NS_START);
-        addWord(b, x->size);
-        for (Index i = 0; i < x->size; i++) {
-            writeAnfExp(x->entries[i]->body, b, L);
-            writeLocation(CPI(x->entries[i]->body), b, L);
-            addByte(b, BYTECODES_TYPE_NS_END);
-            addWord(b, x->entries[i]->nBindings);
-            addWord(b, x->size - i);
-        }
-        writeLocation(CPI(x->entries[x->size - 1]->body), b, L);
-        addByte(b, BYTECODES_TYPE_NS_FINISH);
-        addWord(b, x->size);
-    }
-}
-
-void writeAexpNameSpaces(AexpNameSpaces *x, ByteCodeArray *b,
-                         LocationArray *L) {
-    ENTER(writeAexpNameSpaces);
-    writeAexpNameSpaceArray(x->nameSpaces, b, L);
-    writeAnfExp(x->body, b, L);
-    LEAVE(writeAexpNameSpaces);
-}
-
 void writeCexpApply(CexpApply *x, ByteCodeArray *b, LocationArray *L) {
     ENTER(writeCexpApply);
     // Preserve existing evaluation order: evaluate args left-to-right, then the
@@ -710,31 +683,6 @@ void writeAnfExpLet(AnfExpLet *x, ByteCodeArray *b, LocationArray *L) {
     LEAVE(writeAnfExpLet);
 }
 
-void writeLookUp(AnfExpLookUp *x, ByteCodeArray *b, LocationArray *L) {
-#ifdef SAFETY_CHECKS
-    if (x->annotatedVar == NULL) {
-        cant_happen("annotated var missing from lookUp");
-    }
-#endif
-    writeLocation(CPI(x), b, L);
-    switch (x->annotatedVar->type) {
-    case AEXPANNOTATEDVARTYPE_TYPE_STACK:
-        addByte(b, BYTECODES_TYPE_NS_PUSHSTACK);
-        addWord(b, x->annotatedVar->offset);
-        break;
-    case AEXPANNOTATEDVARTYPE_TYPE_ENV:
-        addByte(b, BYTECODES_TYPE_NS_PUSHENV);
-        addWord(b, x->annotatedVar->frame);
-        addWord(b, x->annotatedVar->offset);
-        break;
-    default:
-        cant_happen("unrecognised annotation type %d", x->annotatedVar->type);
-    }
-    writeAnfExp(x->body, b, L);
-    writeLocation(CPI(x->body), b, L);
-    addByte(b, BYTECODES_TYPE_NS_POP);
-}
-
 void writeAexp(Aexp *x, ByteCodeArray *b, LocationArray *L) {
     ENTER(writeAexp);
     writeLocation(CPI(x), b, L);
@@ -784,9 +732,6 @@ void writeAexp(Aexp *x, ByteCodeArray *b, LocationArray *L) {
     } break;
     case AEXP_TYPE_MAKEVEC: {
         writeAexpMakeVec(x->val.makeVec, b, L);
-    } break;
-    case AEXP_TYPE_NAMESPACES: {
-        writeAexpNameSpaces(x->val.nameSpaces, b, L);
     } break;
     default:
         cant_happen("unrecognized Aexp type %s", aexpTypeName(x->type));
@@ -855,11 +800,6 @@ void writeAnfExp(AnfExp *x, ByteCodeArray *b, LocationArray *L) {
         writeLocation(CPI(x), b, L);
         addByte(b, BYTECODES_TYPE_DONE);
     } break;
-    case ANFEXP_TYPE_LOOKUP: {
-        writeLookUp(x->val.lookUp, b, L);
-    } break;
-    case ANFEXP_TYPE_ENV:
-        break;
     default:
         cant_happen("unrecognized Exp type %s", anfExpTypeName(x->type));
     }

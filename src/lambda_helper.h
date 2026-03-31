@@ -1,5 +1,5 @@
 #ifndef cekf_lambda_helper_h
-#  define cekf_lambda_helper_h
+#define cekf_lambda_helper_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2023  Bill Hails
@@ -18,20 +18,17 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#  include "lambda.h"
-#  include "lambda_debug.h"
-#  include "hash.h"
-#  include "memory.h"
-
-#define NS_FORMAT "ns$%u"
+#include "hash.h"
+#include "lambda.h"
+#include "lambda_debug.h"
+#include "memory.h"
 
 void printLambdaSymbol(HashSymbol *x, int depth);
-LamTypeConstructorInfo *lookUpConstructorInLamContext(LamContext *context, HashSymbol *var);
-LamContext *lookUpNameSpaceInLamContext(LamContext *context, Index index);
-LamTypeConstructorInfo *lookUpScopedAstConstructorInLamContext(LamContext *context, AstLookUpOrSymbol *scoped);
-LamTypeConstructorInfo *lookUpScopedLamConstructorInLamContext(LamContext *context, LamLookUpOrSymbol *scoped);
-LamTypeConstructorInfo *lookUpScopedLamSymbolInLamContext(LamContext *context, LamLookUpSymbol *lookUp);
-LamTypeConstructorInfo *lookUpScopedAstSymbolInLamContext(LamContext *context, AstLookUpSymbol *lookUp);
-int lookUpCurrentNameSpaceInLamContext(LamContext *context);
-LamTypeConstructorType *lookUpConstructorTypeInLamContext(LamContext *context, HashSymbol *var);
+LamTypeConstructorInfo *lookUpConstructorInLamContext(LamContext *context,
+                                                      HashSymbol *var);
+LamTypeConstructorInfo *
+lookUpScopedAstConstructorInLamContext(LamContext *context,
+                                       AstLookUpOrSymbol *scoped);
+LamTypeConstructorType *lookUpConstructorTypeInLamContext(LamContext *context,
+                                                          HashSymbol *var);
 #endif

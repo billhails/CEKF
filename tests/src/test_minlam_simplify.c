@@ -28,7 +28,7 @@
 #include "symbol.h"
 #include "term_helper.h"
 
-#ifdef DEBUG_STRESS_GC
+#ifdef SAFETY_CHECKS
 extern int forceGcFlag;
 #endif
 
@@ -848,7 +848,7 @@ static void test_dsl_combinatorial_add_sub_matrix(void) {
 int main(int argc __attribute__((unused)),
          char *argv[] __attribute__((unused))) {
     initAll();
-#ifdef DEBUG_STRESS_GC
+#ifdef SAFETY_CHECKS
     forceGcFlag = 1;
 #endif
 

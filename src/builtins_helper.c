@@ -238,7 +238,7 @@ static void registerUnicodeCategory(BuiltIns *registry) {
     BuiltInArgs *args = newBuiltInArgs();
     int save = PROTECT(args);
     TcType *resultType =
-        makeTypeSig(newSymbol("unicode_general_category_type"), NULL, -1);
+        makeTypeSig(newSymbol("unicode_general_category_type"), NULL);
     PROTECT(resultType);
     pushCharacterArg(args);
     pushNewBuiltIn(registry, "unicode_category", resultType, args,

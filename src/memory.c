@@ -45,7 +45,7 @@ static int numGc = 0;
 
 static Header *lastAlloc = NULL;
 
-#ifdef DEBUG_STRESS_GC
+#ifdef SAFETY_CHECKS
 int forceGcFlag = 0;
 #endif
 
@@ -264,7 +264,7 @@ void *reallocate(void *pointer, size_t oldSize, size_t newSize) {
     }
 
     if (newSize > oldSize) {
-#ifdef DEBUG_STRESS_GC
+#ifdef SAFETY_CHECKS
         if (forceGcFlag || bytesAllocated > nextGC) {
             collectGarbage();
         }
@@ -276,7 +276,7 @@ void *reallocate(void *pointer, size_t oldSize, size_t newSize) {
     }
 
     if (newSize == 0) {
-#ifdef DEBUG_STRESS_GC
+#ifdef SAFETY_CHECKS
         if (forceGcFlag) {
             char *zerop = (char *)pointer;
             for (size_t i = 0; i < oldSize; i++) {

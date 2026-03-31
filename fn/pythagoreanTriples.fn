@@ -15,5 +15,5 @@ in {
     let triple = pythagorean_triples();
     in
         print(triple);
-        !: <triple > 500;
+        !: <triple > 300;
 }

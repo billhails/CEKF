@@ -1,20 +1,17 @@
 .PHONY: all clean realclean deps profile leak-check check-grammar \
 list-cores test indent indent-src indent-generated docs \
 install-sqlite3 coverage extracov view-coverage \
-coverage-target test-binary \
-help \
+coverage-target test-binary test-big-binary help \
 establish-baseline test-refactoring update-baseline clean-baseline \
 scratch
 
-# pass on the command line, i.e. `make test MODE=production`
+# pass on the command line, i.e. `make test MODE=prod`
 #
-# debugging:  -g, and turns on DEBUG_STRESS_GC which forces a garbage collection on every malloc
-# testing:    -g, but no DEBUG_STRESS_GC
-# unit:       like debugging but compiles with -DUNIT_TESTS
-# production: -O2, no DEBUG_STRESS_GC and disables all safety checks
-# coverage:   -g with --coverage flags for gcov/lcov analysis
+# dev:        -g, -DSAFETY_CHECKS (indirectly via common.h)
+# prod:       -O2
+# coverage:   -g -DSAFETY_CHECKS -lgcov
 ifndef MODE
-MODE:=debugging
+MODE:=dev
 endif
 
 BINDIR=bin
@@ -23,37 +20,24 @@ DOCDIR=docs/generated
 GENDIR=generated
 OBJDIR=obj
 SRCDIR=src
+FNDIR=fn
 TSTDIR=tests
 UNIDIR=unicode
 
 TARGET=$(BINDIR)/fn
 
-ifeq ($(MODE),debugging)
+ifeq ($(MODE),dev)
 	CCMODE:= -g
 	EXTRA_DEFINES:= -DBUILD_MODE=0
-else
-ifeq ($(MODE),testing)
-	CCMODE:= -g
-	EXTRA_DEFINES:= -DNO_DEBUG_STRESS_GC -DBUILD_MODE=1
-else
-ifeq ($(MODE),unit)
-	CCMODE:= -g
-	EXTRA_DEFINES:= -DUNIT_TESTS -DBUILD_MODE=0
-else
-ifeq ($(MODE),coverage)
+else ifeq ($(MODE),prod)
+	CCMODE:= -O2
+	EXTRA_DEFINES:= -DPRODUCTION_BUILD -DBUILD_MODE=1
+else ifeq ($(MODE),coverage)
 	CCMODE:= -g --coverage
-	EXTRA_DEFINES:= -DNO_DEBUG_STRESS_GC -DBUILD_MODE=3
+	EXTRA_DEFINES:= -DBUILD_MODE=2
 	LIBS+= -lgcov
 else
-ifeq ($(MODE),production)
-	CCMODE:= -O2
-	EXTRA_DEFINES:= -DPRODUCTION_BUILD -DBUILD_MODE=2
-else
-$(error invalid MODE=$(MODE), allowed values: debugging, testing, unit, coverage or production)
-endif
-endif
-endif
-endif
+$(error invalid MODE=$(MODE), allowed values: dev, coverage or prod)
 endif
 
 ifndef CCC
@@ -132,8 +116,6 @@ ALL_DEP=$(DEP) $(EXTRA_DEP) $(TEST_DEP) $(MAIN_DEP) $(PREAMBLE_DEP)
 
 INCLUDE_PATHS=-I $(GENDIR)/ -I $(SRCDIR)/
 
-COMPILE_TARGET=junk/junk.c
-
 all: $(TARGET) docs
 
 $(TARGET): $(MAIN_OBJ) $(ALL_OBJ) | $(BINDIR)
@@ -142,25 +124,50 @@ $(TARGET): $(MAIN_OBJ) $(ALL_OBJ) | $(BINDIR)
 docs: $(EXTRA_DOCS)
 
 TEST_FN_DIR=tests/fn
-JUNK_DIR=junk
+FNDIR=fn
+TMPDIR=tmp
 TEST_FN_FILES=$(wildcard $(TEST_FN_DIR)/test_*.fn)
-TEST_FN_CFILES=$(patsubst $(TEST_FN_DIR)/%,$(JUNK_DIR)/%,$(patsubst %.fn,%.c,$(TEST_FN_FILES)))
-TEST_FN_SFILES=$(patsubst $(TEST_FN_DIR)/%,$(JUNK_DIR)/%,$(patsubst %.fn,%.scm,$(TEST_FN_FILES)))
+TEST_FN_CFILES=$(patsubst $(TEST_FN_DIR)/%,$(TMPDIR)/%,$(patsubst %.fn,%.c,$(TEST_FN_FILES)))
+TEST_FN_SFILES=$(patsubst $(TEST_FN_DIR)/%,$(TMPDIR)/%,$(patsubst %.fn,%.scm,$(TEST_FN_FILES)))
+TEST_FN_BFILES=$(patsubst $(TEST_FN_DIR)/%,$(TMPDIR)/%,$(patsubst %.fn,%.fnc,$(TEST_FN_FILES)))
 TEST_FN_OFILES=$(patsubst %.c,%.o,$(TEST_FN_CFILES))
 TEST_FN_BINARIES=$(patsubst %.o,%,$(TEST_FN_OFILES))
 
-TARGET_CG=--include=fn --target-c --flat-closures
-$(TEST_FN_CFILES): $(JUNK_DIR)/%.c: $(TEST_FN_DIR)/%.fn $(TARGET)
-	$(TARGET) $(TARGET_CG) $<  > $@~ && mv $@~ $@
+FN_FILES=$(wildcard $(FNDIR)/*.fn)
+FN_CFILES=$(patsubst $(FNDIR)/%,$(TMPDIR)/%,$(patsubst %.fn,%.c,$(FN_FILES)))
+FN_SFILES=$(patsubst $(FNDIR)/%,$(TMPDIR)/%,$(patsubst %.fn,%.scm,$(FN_FILES)))
+FN_BFILES=$(patsubst $(FNDIR)/%,$(TMPDIR)/%,$(patsubst %.fn,%.fnc,$(FN_FILES)))
+FN_OFILES=$(patsubst %.c,%.o,$(FN_CFILES))
+FN_BINARIES=$(patsubst %.o,%,$(FN_OFILES))
+
+TARGET_ARGS=--include=fn --target-c --flat-closure
+
+$(TEST_FN_CFILES): $(TMPDIR)/%.c: $(TEST_FN_DIR)/%.fn $(TARGET) | $(TMPDIR)
+	$(TARGET) $(TARGET_ARGS) $<  > $@~ && mv $@~ $@
 	indent $@
+	rm -f $@~
 
-$(TEST_FN_SFILES): $(JUNK_DIR)/%.scm: $(TEST_FN_DIR)/%.fn $(TARGET)
-	$(TARGET) $(TARGET_CG) --dump-ir $<  > $@~ && mv $@~ $@
+$(FN_CFILES): $(TMPDIR)/%.c: $(FNDIR)/%.fn $(TARGET) | $(TMPDIR)
+	$(TARGET) $(TARGET_ARGS) $<  > $@~ && mv $@~ $@
+	indent $@
+	rm -f $@~
 
-$(TEST_FN_OFILES): %.o: %.c
+$(TEST_FN_BFILES): $(TMPDIR)/%.fnc: $(TEST_FN_DIR)/%.fn $(TARGET) | $(TMPDIR)
+	$(TARGET) --binary-out=$@~ $<  && mv $@~ $@
+
+$(FN_BFILES): $(TMPDIR)/%.fnc: $(FNDIR)/%.fn $(TARGET) | $(TMPDIR)
+	$(TARGET) --binary-out=$@~ $<  && mv $@~ $@
+
+$(TEST_FN_SFILES): $(TMPDIR)/%.scm: $(TEST_FN_DIR)/%.fn $(TARGET) | $(TMPDIR)
+	$(TARGET) $(TARGET_ARGS) --dump-ir $<  > $@~ && mv $@~ $@
+
+$(FN_SFILES): $(TMPDIR)/%.scm: $(FNDIR)/%.fn $(TARGET) | $(TMPDIR)
+	$(TARGET) $(TARGET_ARGS) --dump-ir $<  > $@~ && mv $@~ $@
+
+$(FN_OFILES) $(TEST_FN_OFILES): %.o: %.c
 	$(LAXCC) $(INCLUDE_PATHS) -c $< -o $@
 
-$(TEST_FN_BINARIES): %: %.o $(ALL_OBJ)
+$(FN_BINARIES) $(TEST_FN_BINARIES): %: %.o $(ALL_OBJ)
 	$(LAXCC) -o $@ $< $(ALL_OBJ) $(LIBS)
 
 test-binary: all $(TEST_FN_BINARIES)
@@ -169,32 +176,26 @@ test-binary: all $(TEST_FN_BINARIES)
 
 irs: $(TEST_FN_SFILES)
 
-test-big-binary: all junk/test_harness
-	junk/test_harness
+test-big-binary: all tmp/test_harness
+	tmp/test_harness
 
-junk/test_harness: junk/test_harness.o $(ALL_OBJ)
+tmp/test_harness: tmp/test_harness.o $(ALL_OBJ)
 	$(LAXCC) -o $@ $< $(ALL_OBJ) $(LIBS)
 
-junk/test_harness.o: junk/test_harness.c
+tmp/test_harness.o: tmp/test_harness.c
 	$(LAXCC) $(INCLUDE_PATHS) -c $< -o $@
 
-junk/test_harness.c: fn/rewrite/test_harness.fn $(TARGET)
-	$(TARGET) $(TARGET_CG) $<  > $@~ && mv $@~ $@
+tmp/test_harness.c: $(FNDIR)/rewrite/test_harness.fn $(TARGET)
+	$(TARGET) --target-c $<  > $@~ && mv $@~ $@
 	indent $@
+	rm -f $@~
+
+tmp/test_harness.fnc: $(FNDIR)/rewrite/test_harness.fn $(TARGET)
+	$(TARGET) --binary-out=$@~ $<  && mv $@~ $@
 
 PERF_CASE=fib35
-test-perf-binary: all junk/$(PERF_CASE)
-	time junk/$(PERF_CASE)
-
-junk/$(PERF_CASE): junk/$(PERF_CASE).o $(ALL_OBJ)
-	$(LAXCC) -o $@ $< $(ALL_OBJ) $(LIBS)
-
-junk/$(PERF_CASE).o: junk/$(PERF_CASE).c
-	$(LAXCC) $(INCLUDE_PATHS) -c $< -o $@
-
-junk/$(PERF_CASE).c: fn/$(PERF_CASE).fn $(TARGET)
-	$(TARGET) --include=fn --target-c $<  > $@~ && mv $@~ $@
-	indent $@
+test-perf-binary: $(TMPDIR)/$(PERF_CASE)
+	time $(TMPDIR)/$(PERF_CASE)
 
 EXTRA_TYPES=bigint_word \
 BigInt \
@@ -238,46 +239,33 @@ $(EXTRA_DEBUG_H_TARGETS): $(GENDIR)/%_debug.h: $(SRCDIR)/%.yaml $(GENDEPS) $(SRC
 $(EXTRA_DEBUG_C_TARGETS): $(GENDIR)/%_debug.c: $(SRCDIR)/%.yaml $(GENDEPS) $(SRCDIR)/primitives.yaml | $(GENDIR)
 	$(MAKE_AST) $< debug_c > $@~ && mv $@~ $@
 
-# ANF continuation scaffolding generation (from tools/anf_continuations.yaml)
-$(GENDIR)/anf_kont.h: tools/anf_continuations.yaml $(GENDEPS) $(SRCDIR)/primitives.yaml $(SRCDIR)/minlam.yaml | $(GENDIR)
+# generic continuation scaffolding generation (from tools/*_continuations.yaml)
+$(GENDIR)/%_kont.h: tools/%_continuations.yaml $(GENDEPS) $(SRCDIR)/primitives.yaml $(SRCDIR)/minlam.yaml | $(GENDIR)
 	$(MAKE_AST) $< h > $@~ && mv $@~ $@
 
-$(GENDIR)/anf_kont.c: tools/anf_continuations.yaml $(GENDEPS) $(SRCDIR)/primitives.yaml $(SRCDIR)/minlam.yaml | $(GENDIR)
+$(GENDIR)/%_kont.c: tools/%_continuations.yaml $(GENDEPS) $(SRCDIR)/primitives.yaml $(SRCDIR)/minlam.yaml | $(GENDIR)
 	$(MAKE_AST) $< c > $@~ && mv $@~ $@
 
-$(GENDIR)/anf_kont_objtypes.h: tools/anf_continuations.yaml $(GENDEPS) $(SRCDIR)/primitives.yaml $(SRCDIR)/minlam.yaml | $(GENDIR)
+$(GENDIR)/%_kont_objtypes.h: tools/%_continuations.yaml $(GENDEPS) $(SRCDIR)/primitives.yaml $(SRCDIR)/minlam.yaml | $(GENDIR)
 	$(MAKE_AST) $< objtypes_h > $@~ && mv $@~ $@
 
-$(GENDIR)/anf_kont_debug.h: tools/anf_continuations.yaml $(GENDEPS) $(SRCDIR)/primitives.yaml $(SRCDIR)/minlam.yaml | $(GENDIR)
+$(GENDIR)/%_kont_debug.h: tools/%_continuations.yaml $(GENDEPS) $(SRCDIR)/primitives.yaml $(SRCDIR)/minlam.yaml | $(GENDIR)
 	$(MAKE_AST) $< debug_h > $@~ && mv $@~ $@
 
-$(GENDIR)/anf_kont_debug.c: tools/anf_continuations.yaml $(GENDEPS) $(SRCDIR)/primitives.yaml $(SRCDIR)/minlam.yaml | $(GENDIR)
+$(GENDIR)/%_kont_debug.c: tools/%_continuations.yaml $(GENDEPS) $(SRCDIR)/primitives.yaml $(SRCDIR)/minlam.yaml | $(GENDIR)
 	$(MAKE_AST) $< debug_c > $@~ && mv $@~ $@
 
+# ANF-specific continuation scaffolding generation (from tools/anf_continuations.yaml)
 $(GENDIR)/anf_kont_impl.inc: tools/anf_continuations.yaml $(GENDEPS) $(SRCDIR)/primitives.yaml $(SRCDIR)/minlam.yaml | $(GENDIR)
 	$(MAKE_AST) $< kont_impl_inc > $@~ && mv $@~ $@
 
-# CPS continuation scaffolding generation (from tools/cps_continuations.yaml)
-$(GENDIR)/cps_kont.h: tools/cps_continuations.yaml $(GENDEPS) $(SRCDIR)/primitives.yaml $(SRCDIR)/minlam.yaml | $(GENDIR)
-	$(MAKE_AST) $< h > $@~ && mv $@~ $@
-
-$(GENDIR)/cps_kont.c: tools/cps_continuations.yaml $(GENDEPS) $(SRCDIR)/primitives.yaml $(SRCDIR)/minlam.yaml | $(GENDIR)
-	$(MAKE_AST) $< c > $@~ && mv $@~ $@
-
-$(GENDIR)/cps_kont_objtypes.h: tools/cps_continuations.yaml $(GENDEPS) $(SRCDIR)/primitives.yaml $(SRCDIR)/minlam.yaml | $(GENDIR)
-	$(MAKE_AST) $< objtypes_h > $@~ && mv $@~ $@
-
-$(GENDIR)/cps_kont_debug.h: tools/cps_continuations.yaml $(GENDEPS) $(SRCDIR)/primitives.yaml $(SRCDIR)/minlam.yaml | $(GENDIR)
-	$(MAKE_AST) $< debug_h > $@~ && mv $@~ $@
-
-$(GENDIR)/cps_kont_debug.c: tools/cps_continuations.yaml $(GENDEPS) $(SRCDIR)/primitives.yaml $(SRCDIR)/minlam.yaml | $(GENDIR)
-	$(MAKE_AST) $< debug_c > $@~ && mv $@~ $@
-
+# CPS-specific continuation scaffolding generation (from tools/cps_continuations.yaml)
 $(GENDIR)/cps_kont_impl.h: tools/cps_continuations.yaml $(GENDEPS) $(SRCDIR)/primitives.yaml $(SRCDIR)/minlam.yaml | $(GENDIR)
 	$(MAKE_AST) $< kont_impl_h > $@~ && mv $@~ $@
 
 $(GENDIR)/cps_kont_impl.c: tools/cps_continuations.yaml $(GENDEPS) $(SRCDIR)/primitives.yaml $(SRCDIR)/minlam.yaml | $(GENDIR)
 	$(MAKE_AST) $< kont_impl_c > $@~ && mv $@~ $@
+
 
 $(EXTRA_DOCS): $(DOCDIR)/%.md: $(SRCDIR)/%.yaml $(GENDEPS) $(SRCDIR)/primitives.yaml | $(DOCDIR)
 	$(MAKE_AST) $< md > $@~ && mv $@~ $@
@@ -318,7 +306,7 @@ test: $(TEST_TARGETS) $(TARGET) $(UNIDIR)/unicode.db
 $(TEST_TARGETS): $(TSTDIR)/%: $(OBJDIR)/%.o $(ALL_OBJ)
 	$(CC) -o $@ $< $(ALL_OBJ) $(LIBS)
 
-$(DEPDIR) $(OBJDIR) $(BINDIR) $(GENDIR) $(DOCDIR) $(UNIDIR):
+$(DEPDIR) $(OBJDIR) $(BINDIR) $(GENDIR) $(DOCDIR) $(UNIDIR) $(TMPDIR) :
 	mkdir -p $@
 
 install-sqlite3:
@@ -344,7 +332,7 @@ realclean: clean
 	rm -rf tags xref $(UNIDIR)
 
 clean: deps
-	rm -rf $(BINDIR) $(OBJDIR) callgrind.out.* $(GENDIR) $(TEST_TARGETS) .typedefs $(SRCDIR)/*~ .generated gmon.out *.fnc core.* coverage_html coverage_report.txt gcov_output *.gcda *.gcno coverage.info coverage_filtered.info test_output.log $(TEST_FN_CFILES) $(TEST_FN_OFILES) $(TEST_FN_BINARIES) $(TEST_FN_SFILES)
+	rm -rf $(BINDIR) $(OBJDIR) callgrind.out.* $(GENDIR) $(TEST_TARGETS) .typedefs $(SRCDIR)/*~ .generated gmon.out *.fnc core.* coverage_html coverage_report.txt gcov_output *.gcda *.gcno coverage.info coverage_filtered.info test_output.log $(TEST_FN_CFILES) $(TEST_FN_OFILES) $(TEST_FN_BINARIES) $(TEST_FN_SFILES) $(TMPDIR)
 	$(MAKE) -C scratch clean
 
 deps:
@@ -354,13 +342,18 @@ PROF_SRC=fib20
 
 profile: all
 	rm -f callgrind.out.*
-	./$(TARGET) --binary-out=$(PROF_SRC).fnc fn/$(PROF_SRC).fn
+	./$(TARGET) --binary-out=$(PROF_SRC).fnc $(FNDIR)/$(PROF_SRC).fn
 	valgrind --tool=callgrind ./$(TARGET) --binary-in=$(PROF_SRC).fnc
 
 # Profile the compiler pipeline (scanner/parser → typechecker → bytecode), no VM run
 profile-compile: all
 	rm -f callgrind.out.*
-	valgrind --tool=callgrind ./$(TARGET) --binary-out=/dev/null fn/$(PROF_SRC).fn
+	valgrind --tool=callgrind ./$(TARGET) --binary-out=/dev/null $(FNDIR)/$(PROF_SRC).fn
+
+# Profile a compiled C target
+profile-compiled: all tmp/test_harness
+	rm -f callgrind.out.*
+	valgrind --tool=callgrind ./tmp/test_harness
 
 # Convenience: annotate the most recent callgrind output
 profile-annotate:
@@ -369,10 +362,10 @@ profile-annotate:
 # Profile parser-only (stop after AST parse)
 profile-parse: all
 	rm -f callgrind.out.*
-	valgrind --tool=callgrind ./$(TARGET) --parse-only fn/$(PROF_SRC).fn
+	valgrind --tool=callgrind ./$(TARGET) --parse-only $(FNDIR)/$(PROF_SRC).fn
 
 leak-check: all
-	valgrind --leak-check=full ./$(TARGET) fn/$(PROF_SRC).fn
+	valgrind --leak-check=full ./$(TARGET) $(FNDIR)/$(PROF_SRC).fn
 
 indent: indent-src indent-generated
 

@@ -16,13 +16,13 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "test.h"
-#include "symbol.h"
 #include "builtins_helper.h"
-#include "tc_analyze.h"
+#include "init.h"
 #include "pratt_parser.h"
 #include "pratt_scanner.h"
-#include "init.h"
+#include "symbol.h"
+#include "tc_analyze.h"
+#include "test.h"
 #include "wrapper_synthesis.h"
 static BuiltIns *builtIns = NULL;
 
@@ -58,9 +58,9 @@ static TcType *makeVar(char *name) {
     return var;
 }
 
-static TcType *_makeTypeSig(char *name, TcTypeSigArgs *args, int nsId) {
+static TcType *_makeTypeSig(char *name, TcTypeSigArgs *args) {
     HashSymbol *sym = newSymbol(name);
-    TcTypeSig *typeDef = newTcTypeSig(sym, args, nsId);
+    TcTypeSig *typeDef = newTcTypeSig(sym, args);
     int save = PROTECT(typeDef);
     TcType *td = newTcType(TCTYPE_TYPE_TYPESIG, TCTYPE_VAL_TYPESIG(typeDef));
     UNPROTECT(save);
@@ -70,7 +70,7 @@ static TcType *_makeTypeSig(char *name, TcTypeSigArgs *args, int nsId) {
 static TcType *listOf(TcType *type) {
     TcTypeSigArgs *args = newTcTypeSigArgs(type, NULL);
     int save = PROTECT(args);
-    TcType *td = _makeTypeSig("list", args, NS_GLOBAL);
+    TcType *td = _makeTypeSig("list", args);
     UNPROTECT(save);
     return td;
 }
@@ -126,7 +126,7 @@ static void test_cdr() {
     TcType *f = makeFunction2(td, td);
     PROTECT(f);
     assert(compareTcTypes(f, res));
-	UNPROTECT(save);
+    UNPROTECT(save);
 }
 
 static void test_car() {
@@ -142,7 +142,7 @@ static void test_car() {
     TcType *f = makeFunction2(td, var);
     PROTECT(f);
     assert(compareTcTypes(f, res));
-	UNPROTECT(save);
+    UNPROTECT(save);
 }
 
 static void test_car_of() {
@@ -154,7 +154,7 @@ static void test_car_of() {
     TcType *expected = makeBigInteger();
     PROTECT(expected);
     assert(compareTcTypes(res, expected));
-	UNPROTECT(save);
+    UNPROTECT(save);
 }
 
 static void test_adder() {
@@ -172,12 +172,13 @@ static void test_adder() {
     ppTcType(res);
     eprintf(" -- res\n");
     assert(compareTcTypes(res, expected));
-	UNPROTECT(save);
+    UNPROTECT(save);
 }
 
 static void test_fact() {
     printf("test_fact\n");
-    AstProg *result = parseWrapped("let fn fact {(0) {1} (n) {n * fact(n - 1)} } in fact", "test_fact");
+    AstProg *result = parseWrapped(
+        "let fn fact {(0) {1} (n) {n * fact(n - 1)} } in fact", "test_fact");
     int save = PROTECT(result);
     TcType *res = analyze(result);
     PROTECT(res);
@@ -186,114 +187,115 @@ static void test_fact() {
     TcType *expected = makeFunction2(bigInt, bigInt);
     PROTECT(expected);
     assert(compareTcTypes(res, expected));
-	UNPROTECT(save);
+    UNPROTECT(save);
 }
 
 static void test_add1() {
     printf("test_add1\n");
-    AstProg *result = parseWrapped("let fn add1(x) { 1 + x } in add1(2)", "test_add1");
+    AstProg *result =
+        parseWrapped("let fn add1(x) { 1 + x } in add1(2)", "test_add1");
     int save = PROTECT(result);
     TcType *res = analyze(result);
     PROTECT(res);
     TcType *expected = makeBigInteger();
     PROTECT(expected);
     assert(compareTcTypes(res, expected));
-	UNPROTECT(save);
+    UNPROTECT(save);
 }
 
 static void test_caddr() {
     printf("test_caddr\n");
-    AstProg *result = parseWrapped("let x = [1, 2, 3, 4]; in <>>x", "test_caddr");
+    AstProg *result =
+        parseWrapped("let x = [1, 2, 3, 4]; in <>>x", "test_caddr");
     int save = PROTECT(result);
     TcType *res = analyze(result);
     PROTECT(res);
     TcType *expected = makeBigInteger();
     PROTECT(expected);
     assert(compareTcTypes(res, expected));
-	UNPROTECT(save);
+    UNPROTECT(save);
 }
 
 static void test_curry() {
     printf("test_curry\n");
-    AstProg *result = parseWrapped("let fn add3(a, b, c) { a + b + c } in add3(1)(2)(3)", "test_curry");
+    AstProg *result = parseWrapped(
+        "let fn add3(a, b, c) { a + b + c } in add3(1)(2)(3)", "test_curry");
     int save = PROTECT(result);
     TcType *res = analyze(result);
     PROTECT(res);
     TcType *expected = makeBigInteger();
     PROTECT(expected);
     assert(compareTcTypes(res, expected));
-	UNPROTECT(save);
+    UNPROTECT(save);
 }
 
 static void test_here() {
     printf("test_here\n");
-    AstProg *result = parseWrapped(
-"let"
-"    fn funky(k) { k(1) }"
-"in"
-"    4 + here fn (k) {"
-"        if (funky(k)) {"
-"            2"
-"        } else {"
-"            3"
-"        }"
-"    }",
-        "test_here"
-    );
+    AstProg *result = parseWrapped("let"
+                                   "    fn funky(k) { k(1) }"
+                                   "in"
+                                   "    4 + here fn (k) {"
+                                   "        if (funky(k)) {"
+                                   "            2"
+                                   "        } else {"
+                                   "            3"
+                                   "        }"
+                                   "    }",
+                                   "test_here");
     int save = PROTECT(result);
     TcType *res = analyze(result);
     PROTECT(res);
     TcType *expected = makeBigInteger();
     PROTECT(expected);
     assert(compareTcTypes(res, expected));
-	UNPROTECT(save);
+    UNPROTECT(save);
 }
 
 static void test_if() {
     printf("test_if\n");
-    AstProg *result = parseWrapped("if (true and true) { 10 } else { 20 }", "test_if");
+    AstProg *result =
+        parseWrapped("if (true and true) { 10 } else { 20 }", "test_if");
     int save = PROTECT(result);
     TcType *res = analyze(result);
     PROTECT(res);
     TcType *expected = makeBigInteger();
     PROTECT(expected);
     assert(compareTcTypes(res, expected));
-	UNPROTECT(save);
+    UNPROTECT(save);
 }
 
 static void test_id() {
     printf("test_id\n");
-    AstProg *result = parseWrapped(
-"let"
-"    fn id (x) { x }"
-""
-"    fn length {"
-"        ([]) { 0 }"
-"        (_ @ t) { 1 + length(t) }"
-"    }"
-""
-"    fn even(n) { n % 2 == 0 }"
-""
-"    fn checkId(x) {"
-"        id(even(id(length(id(x)))))"
-"    }"
-""
-"in"
-"    checkId(\"hello\")",
-        "test_id"
-    );
+    AstProg *result = parseWrapped("let"
+                                   "    fn id (x) { x }"
+                                   ""
+                                   "    fn length {"
+                                   "        ([]) { 0 }"
+                                   "        (_ @ t) { 1 + length(t) }"
+                                   "    }"
+                                   ""
+                                   "    fn even(n) { n % 2 == 0 }"
+                                   ""
+                                   "    fn checkId(x) {"
+                                   "        id(even(id(length(id(x)))))"
+                                   "    }"
+                                   ""
+                                   "in"
+                                   "    checkId(\"hello\")",
+                                   "test_id");
     int save = PROTECT(result);
     TcType *res = analyze(result);
     PROTECT(res);
-    TcType *expected = _makeTypeSig("bool", NULL, NS_GLOBAL);
+    TcType *expected = _makeTypeSig("bool", NULL);
     PROTECT(expected);
     assert(compareTcTypes(res, expected));
-	UNPROTECT(save);
+    UNPROTECT(save);
 }
 
 static void test_either_1() {
     printf("test_either_1\n");
-    AstProg *result = parseWrapped("let typedef either(#a, #b) { a(#a) | b(#b) } in a(1)", "test_either");
+    AstProg *result = parseWrapped(
+        "let typedef either(#a, #b) { a(#a) | b(#b) } in a(1)", "test_either");
     int save = PROTECT(result);
     TcType *res = analyze(result);
     PROTECT(res);
@@ -305,25 +307,24 @@ static void test_either_1() {
     PROTECT(args);
     args = newTcTypeSigArgs(big, args);
     PROTECT(args);
-    TcType *expected = _makeTypeSig("either", args, NS_GLOBAL);
+    TcType *expected = _makeTypeSig("either", args);
     PROTECT(expected);
     assert(compareTcTypes(res, expected));
-	UNPROTECT(save);
+    UNPROTECT(save);
 }
 
 static void test_tostr() {
     printf("test_tostr\n");
-    AstProg *result = parseWrapped(
-"let"
-"    typedef colour { red | green | blue }"
-"    fn tostr {"
-"        (red) { \"red\" }"
-"        (green) { \"green\" }"
-"        (blue) { \"blue\" }"
-"    }"
-"in"
-"    tostr(red)", "test_tostr"
-    );
+    AstProg *result = parseWrapped("let"
+                                   "    typedef colour { red | green | blue }"
+                                   "    fn tostr {"
+                                   "        (red) { \"red\" }"
+                                   "        (green) { \"green\" }"
+                                   "        (blue) { \"blue\" }"
+                                   "    }"
+                                   "in"
+                                   "    tostr(red)",
+                                   "test_tostr");
     int save = PROTECT(result);
     TcType *res = analyze(result);
     PROTECT(res);
@@ -332,7 +333,7 @@ static void test_tostr() {
     TcType *expected = listOf(character);
     PROTECT(expected);
     assert(compareTcTypes(res, expected));
-	UNPROTECT(save);
+    UNPROTECT(save);
 }
 
 static void test_lol() {
@@ -348,20 +349,19 @@ static void test_lol() {
     TcType *expected = listOf(loi);
     PROTECT(expected);
     assert(compareTcTypes(res, expected));
-	UNPROTECT(save);
+    UNPROTECT(save);
 }
 
 static void test_map() {
     printf("test_map\n");
-    AstProg *result = parseWrapped(
-"let"
-"    fn map {"
-"        (_, []) { [] }"
-"        (f, h @ t) { f(h) @ map(f, t) }"
-"    }"
-"in"
-"    map", "test_map"
-    );
+    AstProg *result = parseWrapped("let"
+                                   "    fn map {"
+                                   "        (_, []) { [] }"
+                                   "        (f, h @ t) { f(h) @ map(f, t) }"
+                                   "    }"
+                                   "in"
+                                   "    map",
+                                   "test_map");
     int save = PROTECT(result);
     TcType *res = analyze(result);
     PROTECT(res);
@@ -378,15 +378,16 @@ static void test_map() {
     TcType *expected = makeFunction3(f, listT1, listT2);
     PROTECT(expected);
     assert(compareTcTypes(res, expected));
-	UNPROTECT(save);
+    UNPROTECT(save);
 }
 
-
-int main(int argc __attribute__((unused)), char *argv[] __attribute__((unused))) {
+int main(int argc __attribute__((unused)),
+         char *argv[] __attribute__((unused))) {
     disableGC();
     initAll();
     builtIns = registerBuiltIns(0, 0, NULL);
-    // Synthesize wrappers so external builtin names are ordinary curriable functions
+    // Synthesize wrappers so external builtin names are ordinary curriable
+    // functions
     generateBuiltinWrappers(builtIns);
     test_car();
     test_cdr();
@@ -405,4 +406,3 @@ int main(int argc __attribute__((unused)), char *argv[] __attribute__((unused)))
     test_map();
     assert(!hadErrors());
 }
-

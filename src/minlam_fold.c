@@ -65,8 +65,12 @@ static MinLam *foldMinLam(MinLam *node) {
         return NULL;
 
     MinExp *new_exp = foldMinExp(node->exp);
-    if (new_exp != node->exp)
-        return newMinLam(CPI(node), node->args, new_exp);
+    if (new_exp != node->exp) {
+        int save = PROTECT(new_exp);
+        MinLam *result = newMinLam(CPI(node), node->args, new_exp);
+        UNPROTECT(save);
+        return result;
+    }
 
     return node;
 }
@@ -261,8 +265,12 @@ static MinIntList *foldMinIntList(MinIntList *node) {
         return NULL;
 
     MinIntList *new_next = foldMinIntList(node->next);
-    if (new_next != node->next)
-        return newMinIntList(CPI(node), node->item, new_next);
+    if (new_next != node->next) {
+        int save = PROTECT(new_next);
+        MinIntList *result = newMinIntList(CPI(node), node->item, new_next);
+        UNPROTECT(save);
+        return result;
+    }
 
     return node;
 }
