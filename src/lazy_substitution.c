@@ -189,18 +189,6 @@ static LamPrint *performPrintSubstitutions(LamPrint *print,
     return print;
 }
 
-/**
- * @brief Performs substitutions on a lookUp expression.
- * @param lookUp The lookUp expression to modify.
- * @param symbols The current set of arguments.
- * @return The modified lookUp expression.
- */
-static LamLookUp *performLookUpSubstitutions(LamLookUp *lookUp,
-                                             SymbolSet *symbols) {
-    lookUp->exp = lamPerformLazySubstitutions(lookUp->exp, symbols);
-    return lookUp;
-}
-
 #ifdef NOTDEF
 /**
  * @brief Performs substitutions on a make vector expression.
@@ -662,10 +650,6 @@ LamExp *lamPerformLazySubstitutions(LamExp *exp, SymbolSet *symbols) {
         case LAMEXP_TYPE_PRINT:
             setLamExp_Print(
                 exp, performPrintSubstitutions(getLamExp_Print(exp), symbols));
-            break;
-        case LAMEXP_TYPE_LOOKUP:
-            setLamExp_LookUp(exp, performLookUpSubstitutions(
-                                      getLamExp_LookUp(exp), symbols));
             break;
         default:
             cant_happen("unrecognized %s", lamExpTypeName(exp->type));

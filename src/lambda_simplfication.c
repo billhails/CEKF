@@ -121,11 +121,6 @@ static LamTypeOf *performTypeOfSimplifications(LamTypeOf *typeOf) {
     return typeOf;
 }
 
-static LamLookUp *performLookUpSimplifications(LamLookUp *lookUp) {
-    lookUp->exp = lamPerformSimplifications(lookUp->exp);
-    return lookUp;
-}
-
 static LamMakeVec *performMakeVecSimplifications(LamMakeVec *makeVec) {
     ENTER(performMakeVecSimplifications);
     makeVec->args = performArgsSimplifications(makeVec->args);
@@ -334,15 +329,6 @@ static LamCond *performCondSimplifications(LamCond *cond) {
     return cond;
 }
 
-static LamNameSpaceArray *
-performNameSpacesSimplifications(LamNameSpaceArray *nameSpaces) {
-    for (Index i = 0; i < nameSpaces->size; i++) {
-        nameSpaces->entries[i] =
-            lamPerformSimplifications(nameSpaces->entries[i]);
-    }
-    return nameSpaces;
-}
-
 LamExp *lamPerformSimplifications(LamExp *exp) {
     ENTER(lamPerformSimplifications);
     // ppLamExp(exp);
@@ -438,14 +424,6 @@ LamExp *lamPerformSimplifications(LamExp *exp) {
         case LAMEXP_TYPE_TYPEOF:
             setLamExp_TypeOf(
                 exp, performTypeOfSimplifications(getLamExp_TypeOf(exp)));
-            break;
-        case LAMEXP_TYPE_LOOKUP:
-            setLamExp_LookUp(
-                exp, performLookUpSimplifications(getLamExp_LookUp(exp)));
-            break;
-        case LAMEXP_TYPE_NAMESPACES:
-            setLamExp_NameSpaces(exp, performNameSpacesSimplifications(
-                                          getLamExp_NameSpaces(exp)));
             break;
         default:
             cant_happen("unrecognized %s", lamExpTypeName(exp->type));

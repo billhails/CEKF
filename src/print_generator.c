@@ -396,15 +396,10 @@ static char *getUnderlyingFunctionName(LamLookUpOrSymbol *los) {
  * @param printer The print function to wrap.
  * @param los The lookUp or symbol of the thing being printed.
  */
-static LamExp *lookUpPrintFunction(ParserInfo I, LamExp *printer,
-                                   LamLookUpOrSymbol *toPrint) {
-    if (toPrint->type == LAMLOOKUPORSYMBOL_TYPE_LOOKUP) {
-        LamLookUpSymbol *ls = toPrint->val.lookUp;
-        LamLookUp *llu = newLamLookUp(I, ls->nsId, ls->nsSymbol, printer);
-        int save = PROTECT(llu);
-        printer = newLamExp_LookUp(I, llu);
-        UNPROTECT(save);
-    }
+static LamExp *lookUpPrintFunction(ParserInfo I __attribute__((unused)),
+                                   LamExp *printer,
+                                   LamLookUpOrSymbol *toPrint
+                                   __attribute__((unused))) {
     return printer;
 }
 

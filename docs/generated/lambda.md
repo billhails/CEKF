@@ -21,9 +21,6 @@ LamArgs --next--> LamArgs
 LamApply --function--> LamExp
 LamApply --args--> LamArgs
 LamApply --isBuiltin--> bool
-LamLookUp --nsId--> int
-LamLookUp --nsSymbol--> HashSymbol
-LamLookUp --exp--> LamExp
 LamLookUpSymbol --nsId--> int
 LamLookUpSymbol --nsSymbol--> HashSymbol
 LamLookUpSymbol --symbol--> HashSymbol
@@ -130,11 +127,9 @@ LamExp --lam--> LamLam
 LamExp --let--> LamLet
 LamExp --letRec--> LamLetRec
 LamExp --letStar--> LamLetStar
-LamExp --lookUp--> LamLookUp
 LamExp --makeTuple--> LamArgs
 LamExp --makeVec--> LamMakeVec
 LamExp --match--> LamMatch
-LamExp --nameSpaces--> LamNameSpaceArray
 LamExp --prim--> LamPrimApp
 LamExp --print--> LamPrint
 LamExp --sequence--> LamSequence
@@ -157,7 +152,6 @@ LamInfo --typeConstructorInfo--> LamTypeConstructorInfo
 LamInfo --nameSpaceInfo--> LamContext
 LamInfo --nsId--> int
 LamPrimOp["enum LamPrimOp"]
-LamNameSpaceArray["LamNameSpaceArray[]"] --entries--> LamExp
 ```
 
 > Generated from src/lambda.yaml by tools/generate.py

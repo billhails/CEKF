@@ -49,8 +49,6 @@ void ppLamTupleIndex(LamTupleIndex *index);
 void ppLamBindings(LamBindings *bindings);
 void ppLamIntList(LamIntList *list);
 void ppLamMakeTuple(LamArgs *args);
-void ppLamNameSpaces(LamNameSpaceArray *arr);
-void ppLamLookUp(LamLookUp *lookUp);
 void ppLamContext(LamContext *env);
 
 #endif

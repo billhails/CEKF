@@ -169,39 +169,15 @@ void ppLamExp(LamExp *exp) {
     case LAMEXP_TYPE_MAKETUPLE:
         ppLamMakeTuple(getLamExp_MakeTuple(exp));
         break;
-    case LAMEXP_TYPE_NAMESPACES:
-        ppLamNameSpaces(getLamExp_NameSpaces(exp));
-        break;
     case LAMEXP_TYPE_ENV:
         eprintf("env");
         break;
     case LAMEXP_TYPE_CONSTRUCTOR:
         eprintf("constructor:%s", getLamExp_Constructor(exp)->name->name);
         break;
-    case LAMEXP_TYPE_LOOKUP:
-        ppLamLookUp(getLamExp_LookUp(exp));
-        break;
     default:
         cant_happen("unrecognized type %s", lamExpTypeName(exp->type));
     }
-}
-
-void ppLamLookUp(LamLookUp *lookUp) {
-    eprintf("(lookUp %s:%d ",
-            lookUp->nsSymbol == NULL ? "" : lookUp->nsSymbol->name,
-            lookUp->nsId);
-    ppLamExp(lookUp->exp);
-    eprintf(")");
-}
-
-void ppLamNameSpaces(LamNameSpaceArray *arr) {
-    eprintf("(nameSpaces");
-    for (Index i = 0; i < arr->size; ++i) {
-        eprintf(" [");
-        ppLamExp(arr->entries[i]);
-        eprintf("]");
-    }
-    eprintf(")");
 }
 
 void ppHashSymbol(HashSymbol *symbol) {

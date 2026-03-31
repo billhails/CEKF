@@ -119,12 +119,6 @@ static LamPrint *performPrintSubstitutions(LamPrint *print,
     return print;
 }
 
-static LamLookUp *performLookUpSubstitutions(LamLookUp *lookUp,
-                                             SymbolMap *substitutions) {
-    lookUp->exp = lamPerformSubstitutions(lookUp->exp, substitutions);
-    return lookUp;
-}
-
 static LamTypeOf *performTypeOfSubstitutions(LamTypeOf *typeOf,
                                              SymbolMap *substitutions) {
     typeOf->exp = lamPerformSubstitutions(typeOf->exp, substitutions);
@@ -435,10 +429,6 @@ LamExp *lamPerformSubstitutions(LamExp *exp, SymbolMap *substitutions) {
         case LAMEXP_TYPE_PRINT:
             setLamExp_Print(exp, performPrintSubstitutions(getLamExp_Print(exp),
                                                            substitutions));
-            break;
-        case LAMEXP_TYPE_LOOKUP:
-            setLamExp_LookUp(exp, performLookUpSubstitutions(
-                                      getLamExp_LookUp(exp), substitutions));
             break;
         case LAMEXP_TYPE_TYPEOF:
             setLamExp_TypeOf(exp, performTypeOfSubstitutions(

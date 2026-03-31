@@ -276,9 +276,7 @@ static TcType *analyzeExp(LamExp *exp, TcEnv *env, TcNg *ng) {
         return prune(analyzeTupleIndex(getLamExp_TupleIndex(exp), env, ng));
     case LAMEXP_TYPE_MAKETUPLE:
         return prune(analyzeMakeTuple(getLamExp_MakeTuple(exp), env, ng));
-    case LAMEXP_TYPE_NAMESPACES:
     case LAMEXP_TYPE_ENV:
-    case LAMEXP_TYPE_LOOKUP:
         cant_happen("unexpected %s", lamExpTypeName(exp->type));
     case LAMEXP_TYPE_CONSTRUCTOR:
         return prune(
