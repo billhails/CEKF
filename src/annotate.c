@@ -427,8 +427,6 @@ static AnfEnv *annotateExp(AnfExp *x, AnfEnv *env) {
         return annotateCexp(x->val.cexp, env);
     case ANFEXP_TYPE_LET:
         return annotateAnfExpLet(x->val.let, env);
-    case ANFEXP_TYPE_ENV:
-        cant_happen("unexpected ANFEXP_TYPE_ENV");
     case ANFEXP_TYPE_DONE:
         return env;
     default:

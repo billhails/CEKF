@@ -800,8 +800,6 @@ void writeAnfExp(AnfExp *x, ByteCodeArray *b, LocationArray *L) {
         writeLocation(CPI(x), b, L);
         addByte(b, BYTECODES_TYPE_DONE);
     } break;
-    case ANFEXP_TYPE_ENV:
-        break;
     default:
         cant_happen("unrecognized Exp type %s", anfExpTypeName(x->type));
     }

@@ -418,9 +418,6 @@ void ppAnfExp(AnfExp *x) {
     case ANFEXP_TYPE_DONE:
         eprintf("<DONE>");
         break;
-    case ANFEXP_TYPE_ENV:
-        eprintf("ENV");
-        break;
     default:
         eprintf("<unrecognised exp %s>", anfExpTypeName(x->type));
         exit(1);

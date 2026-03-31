@@ -251,7 +251,6 @@ unions:
             brief: ANF Exp
             description: A union of all expression types (atomic or complex) in ANF.
         data:
-            env: void_ptr
             done: void_ptr
             aexp: Aexp
             cexp: Cexp

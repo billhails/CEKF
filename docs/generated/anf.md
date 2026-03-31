@@ -79,7 +79,6 @@ Cexp --letRec--> CexpLetRec
 Cexp --amb--> CexpAmb
 Cexp --cut--> CexpCut
 Cexp --match--> CexpMatch
-AnfExp --env--> void_ptr
 AnfExp --done--> void_ptr
 AnfExp --aexp--> Aexp
 AnfExp --cexp--> Cexp
