@@ -426,12 +426,6 @@ unions:
             function: LamTypeFunction
             tuple: LamTypeConstructorArgs
 
-    LamInfo:
-        meta:
-            brief: Information about a symbol
-        data:
-            typeConstructorInfo: LamTypeConstructorInfo
-
 hashes:
     LamInfoTable:
         meta:
@@ -440,7 +434,7 @@ hashes:
                 This table holds information about symbols in the current
                 context.
         data:
-            entries: LamInfo
+            entries: LamTypeConstructorInfo
 
     LamAliasTable:
         meta:

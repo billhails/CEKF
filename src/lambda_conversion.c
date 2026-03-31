@@ -186,10 +186,7 @@ static LamExp *convertNest(AstNest *nest, LamContext *env) {
 static void addConstructorInfoToLamContext(LamContext *context,
                                            HashSymbol *symbol,
                                            LamTypeConstructorInfo *info) {
-    LamInfo *lamInfo = newLamInfo_TypeConstructorInfo(CPI(context), info);
-    int save = PROTECT(lamInfo);
-    setLamInfoTable(context->frame, symbol, lamInfo);
-    UNPROTECT(save);
+    setLamInfoTable(context->frame, symbol, info);
 }
 
 static void separateLambdas(LamBindings *funcDefs, LamBindings **lambdas,

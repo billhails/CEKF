@@ -47,9 +47,9 @@ LamTypeConstructorInfo *lookUpConstructorInLamContext(LamContext *context,
                                                       HashSymbol *var) {
     if (context == NULL)
         return NULL; // not an error
-    LamInfo *result;
+    LamTypeConstructorInfo *result;
     if (getLamInfoTable(context->frame, var, &result)) {
-        return result->val.typeConstructorInfo;
+        return result;
     }
     return lookUpConstructorInLamContext(context->parent, var);
 }

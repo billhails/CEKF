@@ -669,10 +669,10 @@ static void _ppLamContext(LamContext *env, int depth) {
     eprintf("{\n");
     HashSymbol *name;
     Index i = 0;
-    LamInfo *value;
+    LamTypeConstructorInfo *value;
     while ((name = iterateLamInfoTable(env->frame, &i, &value)) != NULL) {
         pad(depth);
-        eprintf(" %s => %s\n", name->name, lamInfoTypeName(value->type));
+        eprintf(" %s => typeConstructorInfo\n", name->name);
     }
     _ppLamContext(env->parent, depth + 1);
     pad(depth);
