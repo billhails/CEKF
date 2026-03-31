@@ -5,10 +5,8 @@ A-Normal Form (ANF) structures to be converted to bytecode.
 ```mermaid
 flowchart LR
 AnfEnv --isLocal--> bool
-AnfEnv --isNameSpace--> bool
 AnfEnv --isCapturing--> bool
 AnfEnv --nBindings--> int
-AnfEnv --nsEnvs--> AnfEnvArray
 AnfEnv --table--> IntMap
 AnfEnv --next--> AnfEnv
 AexpLam --nArgs--> int
@@ -30,10 +28,6 @@ AexpIntList --integer--> int
 AexpIntList --next--> AexpIntList
 AexpMakeVec --nArgs--> int
 AexpMakeVec --args--> AexpList
-AexpNameSpace --nBindings--> int
-AexpNameSpace --body--> AnfExp
-AexpNameSpaces --nameSpaces--> AexpNameSpaceArray
-AexpNameSpaces --body--> AnfExp
 CexpApply --function--> Aexp
 CexpApply --nArgs--> int
 CexpApply --args--> AexpList
@@ -59,9 +53,6 @@ CexpCut --exp--> AnfExp
 AnfExpLet --var--> HashSymbol
 AnfExpLet --val--> AnfExp
 AnfExpLet --body--> AnfExp
-AnfExpLookUp --nameSpace--> index
-AnfExpLookUp --annotatedVar--> AexpAnnotatedVar
-AnfExpLookUp --body--> AnfExp
 AnfMatchList --matches--> AexpIntList
 AnfMatchList --body--> AnfExp
 AnfMatchList --next--> AnfMatchList
@@ -78,7 +69,6 @@ Aexp --littleInteger--> int
 Aexp --character--> character
 Aexp --prim--> AexpPrimApp
 Aexp --makeVec--> AexpMakeVec
-Aexp --nameSpaces--> AexpNameSpaces
 Cexp --back--> void_ptr
 Cexp --error--> void_ptr
 Cexp --apply--> CexpApply
@@ -94,10 +84,8 @@ AnfExp --done--> void_ptr
 AnfExp --aexp--> Aexp
 AnfExp --cexp--> Cexp
 AnfExp --let--> AnfExpLet
-AnfExp --lookUp--> AnfExpLookUp
 AexpAnnotatedVarType["enum AexpAnnotatedVarType"]
 AexpPrimOp["enum AexpPrimOp"]
-AexpNameSpaceArray["AexpNameSpaceArray[]"] --entries--> AexpNameSpace
 AnfEnvArray["AnfEnvArray[]"] --entries--> AnfEnv
 ```
 

@@ -56,7 +56,6 @@ static AnfEnv *annotateCexpCut(CexpCut *x, AnfEnv *env);
 static AnfEnv *annotateAnfExpLet(AnfExpLet *x, AnfEnv *env);
 static AnfEnv *annotateAexp(Aexp *x, AnfEnv *env);
 static AnfEnv *annotateCexp(Cexp *x, AnfEnv *env);
-static AnfEnvArray *getNsEnvs(AnfEnv *env);
 
 static void hashAddCTVar(IntMap *table, HashSymbol *var) {
     int count = countIntMap(table);
@@ -305,50 +304,6 @@ static AnfEnv *annotateAnfExpLet(AnfExpLet *x, AnfEnv *env) {
     return env;
 }
 
-static AnfEnvArray *getNsEnvs(AnfEnv *env) {
-    while (env->next != NULL) {
-        env = env->next; // should be at the root
-    }
-#ifdef SAFETY_CHECKS
-    if (env->nsEnvs == NULL) {
-        cant_happen("nameSpaces not registered");
-    }
-#endif
-    return env->nsEnvs;
-}
-
-static HashSymbol *makeNsName(Index index) {
-    char buf[80];
-    sprintf(buf, NS_FORMAT, index);
-    return newSymbol(buf);
-}
-
-static AnfEnv *annotateAexpNameSpaceArray(AexpNameSpaceArray *nsa,
-                                          AnfEnv *env) {
-    for (Index i = 0; i < nsa->size; ++i) {
-        HashSymbol *nsName = makeNsName(i);
-        populateAnfEnv(env, nsName);
-    }
-    AnfEnvArray *nsEnvs = getNsEnvs(env);
-    for (Index i = 0; i < nsa->size; ++i) {
-        AnfEnv *env2 = newAnfEnv(CPI(nsa->entries[i]->body), true, env);
-        int save = PROTECT(env2);
-        env2->isNameSpace = true;
-        AnfEnv *env3 = annotateExp(nsa->entries[i]->body, env2);
-        PROTECT(env3);
-        nsa->entries[i]->nBindings = env2->nBindings;
-        pushAnfEnvArray(nsEnvs, env3);
-        UNPROTECT(save);
-    }
-    return env;
-}
-
-static AnfEnv *annotateAexpNameSpaces(AexpNameSpaces *x, AnfEnv *env) {
-    annotateAexpNameSpaceArray(x->nameSpaces, env);
-    annotateExp(x->body, env);
-    return env;
-}
-
 static AnfEnv *annotateAexpMakeVec(AexpMakeVec *x, AnfEnv *env) {
 #ifdef DEBUG_ANNOTATE2
     eprintf("annotateAexpMakeVec ");
@@ -387,8 +342,6 @@ static AnfEnv *annotateAexp(Aexp *x, AnfEnv *env) {
         return annotateAexpPrimApp(x->val.prim, env);
     case AEXP_TYPE_MAKEVEC:
         return annotateAexpMakeVec(x->val.makeVec, env);
-    case AEXP_TYPE_NAMESPACES:
-        return annotateAexpNameSpaces(x->val.nameSpaces, env);
     default:
         cant_happen("unrecognized type %s in annotateAexp",
                     aexpTypeName(x->type));
@@ -456,39 +409,6 @@ static AnfEnv *annotateCexp(Cexp *x, AnfEnv *env) {
     }
 }
 
-static AnfEnv *annotateExpEnv(AnfEnv *env) {
-    int nBindings = 0;
-    AnfEnv *orig = env;
-    orig->isCapturing = true;
-    while (env != NULL) {
-        nBindings += countIntMap(env->table);
-        if (env->isNameSpace) {
-            env->nBindings = nBindings;
-            return orig;
-        }
-        env = env->next;
-    }
-    cant_happen("failed to find nameSpace env");
-}
-
-static AexpAnnotatedVar *lookUpNameSpaceInEnv(ParserInfo I, Index index,
-                                              AnfEnv *env) {
-    HashSymbol *name = makeNsName(index);
-    return annotateAexpVar(I, name, env);
-}
-
-static AnfEnv *annotateAnfExpLookUp(AnfExpLookUp *lookUp, AnfEnv *env) {
-    AnfEnvArray *envs = getNsEnvs(env);
-#ifdef SAFETY_chECKS
-    if (lookUp->nameSpace >= envs->size) {
-        cant_happen("nameSpace index %u out of range", lookUp->nameSpace);
-    }
-#endif
-    lookUp->annotatedVar =
-        lookUpNameSpaceInEnv(CPI(lookUp), lookUp->nameSpace, env);
-    return annotateExp(lookUp->body, envs->entries[lookUp->nameSpace]);
-}
-
 static AnfEnv *annotateExp(AnfExp *x, AnfEnv *env) {
     if (x == NULL) {
         return env;
@@ -508,11 +428,9 @@ static AnfEnv *annotateExp(AnfExp *x, AnfEnv *env) {
     case ANFEXP_TYPE_LET:
         return annotateAnfExpLet(x->val.let, env);
     case ANFEXP_TYPE_ENV:
-        return annotateExpEnv(env);
+        cant_happen("unexpected ANFEXP_TYPE_ENV");
     case ANFEXP_TYPE_DONE:
         return env;
-    case ANFEXP_TYPE_LOOKUP:
-        return annotateAnfExpLookUp(x->val.lookUp, env);
     default:
         cant_happen("unrecognized type %s", anfExpTypeName(x->type));
     }
@@ -528,7 +446,6 @@ static void addBuiltInsToAnfEnv(AnfEnv *env, BuiltIns *b) {
 void annotateAnf(AnfExp *x, BuiltIns *b) {
     AnfEnv *env = newAnfEnv(CPI(x), false, NULL);
     int save = PROTECT(env);
-    env->nsEnvs = newAnfEnvArray();
     addBuiltInsToAnfEnv(env, b);
     env = newAnfEnv(CPI(x), false, env);
     REPLACE_PROTECT(save, env);

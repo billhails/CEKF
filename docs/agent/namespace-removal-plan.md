@@ -260,3 +260,10 @@ Files: `common.h`, `symbols.c`, `symbols.h`, any remaining references
 - The AST-level namespace constructs (`AstNameSpace`, `AstLookUp`,
   `AstNameSpaceArray`, etc. in `ast.yaml`) are **not** part of this plan —
   they are used by `ast_ns.c` itself and the parser, and are still needed.
+- **Follow-up: `AnfExp.env` cleanup.** During Phase B, the `ANFEXP_TYPE_ENV`
+  case in `annotate.c` was changed to `cant_happen()` because the only code
+  path that created `AnfExp.env` values depended on namespace constructs.
+  The `env: void_ptr` variant still exists in `anf.yaml` but is never
+  instantiated. Come back after the main removal is complete and remove the
+  `env` variant from the `AnfExp` union entirely, along with the
+  `cant_happen` case in `annotate.c` and any remaining dispatch cases.

@@ -197,25 +197,6 @@ void ppAexpMakeVec(AexpMakeVec *x) {
     eprintf(")");
 }
 
-void ppAexpNameSpaceArray(AexpNameSpaceArray *x) {
-    for (Index i = 0; i < x->size; i++) {
-        eprintf("[");
-        ppAnfExp(x->entries[i]->body);
-        eprintf("]");
-        if (i + 1 < x->size) {
-            eprintf(" ");
-        }
-    }
-}
-
-void ppAexpNameSpaces(AexpNameSpaces *x) {
-    eprintf("(nameSpaces ");
-    ppAexpNameSpaceArray(x->nameSpaces);
-    eprintf(" ");
-    ppAnfExp(x->body);
-    eprintf(")");
-}
-
 void ppBareAexpList(AexpList *x) {
     while (x != NULL) {
         ppAexp(x->exp);
@@ -353,12 +334,6 @@ void ppCexpMatch(CexpMatch *x) {
     eprintf(")");
 }
 
-void ppAnfExpLookUp(AnfExpLookUp *x) {
-    eprintf("(lookUp %d ", x->nameSpace);
-    ppAnfExp(x->body);
-    eprintf(")");
-}
-
 void ppAexp(Aexp *x) {
     switch (x->type) {
     case AEXP_TYPE_LAM:
@@ -384,9 +359,6 @@ void ppAexp(Aexp *x) {
         break;
     case AEXP_TYPE_MAKEVEC:
         ppAexpMakeVec(x->val.makeVec);
-        break;
-    case AEXP_TYPE_NAMESPACES:
-        ppAexpNameSpaces(x->val.nameSpaces);
         break;
     default:
         cant_happen("unrecognised aexp %s", aexpTypeName(x->type));
@@ -448,9 +420,6 @@ void ppAnfExp(AnfExp *x) {
         break;
     case ANFEXP_TYPE_ENV:
         eprintf("ENV");
-        break;
-    case ANFEXP_TYPE_LOOKUP:
-        ppAnfExpLookUp(x->val.lookUp);
         break;
     default:
         eprintf("<unrecognised exp %s>", anfExpTypeName(x->type));
