@@ -16,7 +16,6 @@ TpmcComparisonPattern --requiredPath--> HashSymbol
 TpmcAssignmentPattern --name--> HashSymbol
 TpmcAssignmentPattern --value--> TpmcPattern
 TpmcConstructorPattern --tag--> HashSymbol
-TpmcConstructorPattern --nameSpace--> int
 TpmcConstructorPattern --info--> LamTypeConstructorInfo
 TpmcConstructorPattern --components--> TpmcPatternArray
 TpmcPattern --path--> HashSymbol

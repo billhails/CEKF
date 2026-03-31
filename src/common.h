@@ -24,8 +24,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define NS_GLOBAL -1
-
 #ifndef USE_STAGED_ARITHMETIC
 #define USE_STAGED_ARITHMETIC 1
 #endif

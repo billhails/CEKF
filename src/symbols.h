@@ -55,8 +55,6 @@ HashSymbol *ltSymbol(void);
 HashSymbol *lcmSymbol(void);
 HashSymbol *modSymbol(void);
 HashSymbol *mulSymbol(void);
-HashSymbol *nameSpacesSymbol(void);
-HashSymbol *nameSpaceSymbol(void);
 HashSymbol *negSymbol(void);
 HashSymbol *neSymbol(void);
 HashSymbol *nilSymbol(void);

@@ -101,9 +101,8 @@ static TpmcPattern *makeVarPattern(HashSymbol *symbol, LamContext *env) {
     } else {
         TpmcPatternArray *args = newTpmcPatternArray("makeVarPattern");
         int save = PROTECT(args);
-        int nameSpace = NS_GLOBAL;
         TpmcConstructorPattern *constructor =
-            newTpmcConstructorPattern(symbol, nameSpace, info, args);
+            newTpmcConstructorPattern(symbol, info, args);
         PROTECT(constructor);
         TpmcPatternValue *val = newTpmcPatternValue_Constructor(constructor);
         PROTECT(val);
@@ -126,18 +125,12 @@ static TpmcPattern *makeAssignmentPattern(AstNamedArg *named, LamContext *env) {
     return pattern;
 }
 
-static void getSymbolAndNameSpace(AstLookUpOrSymbol *los,
-                                  LamContext *env __attribute__((unused)),
-                                  HashSymbol **name, int *nameSpace) {
+static HashSymbol *getConstructorSymbol(AstLookUpOrSymbol *los) {
     switch (los->type) {
     case AST_LOOKUPORSYMBOL_TYPE_LOOKUP:
-        *name = los->val.lookUp->symbol;
-        *nameSpace = los->val.lookUp->nsId;
-        break;
-    case AST_LOOKUPORSYMBOL_TYPE_SYMBOL: {
-        *nameSpace = NS_GLOBAL;
-        *name = los->val.symbol;
-    } break;
+        return los->val.lookUp->symbol;
+    case AST_LOOKUPORSYMBOL_TYPE_SYMBOL:
+        return los->val.symbol;
     default:
         cant_happen("unrecognized %s", astLookUpOrSymbolTypeName(los->type));
     }
@@ -165,11 +158,9 @@ static TpmcPattern *makeConstructorPattern(AstUnpack *unpack, LamContext *env) {
     }
     TpmcPatternArray *patterns = convertArgList(unpack->argList, env);
     int save = PROTECT(patterns);
-    HashSymbol *symbol = NULL;
-    int nameSpace = 0;
-    getSymbolAndNameSpace(unpack->symbol, env, &symbol, &nameSpace);
+    HashSymbol *symbol = getConstructorSymbol(unpack->symbol);
     TpmcConstructorPattern *constructor =
-        newTpmcConstructorPattern(symbol, nameSpace, info, patterns);
+        newTpmcConstructorPattern(symbol, info, patterns);
     PROTECT(constructor);
     TpmcPatternValue *val = newTpmcPatternValue_Constructor(constructor);
     PROTECT(val);

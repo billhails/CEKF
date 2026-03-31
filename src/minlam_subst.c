@@ -49,12 +49,8 @@ static MinIntList *substMinIntList(MinIntList *node, MinExpTable *context);
 static MinLetRec *substMinLetRec(MinLetRec *node, MinExpTable *context);
 static MinBindings *substMinBindings(MinBindings *node, MinExpTable *context);
 static MinAmb *substMinAmb(MinAmb *node, MinExpTable *context);
-static MinAlphaEnv *substMinAlphaEnv(MinAlphaEnv *node, MinExpTable *context);
 static MinCondCases *substMinCondCases(MinCondCases *node,
                                        MinExpTable *context);
-static SymbolMap *substSymbolMap(SymbolMap *node, MinExpTable *context);
-static MinAlphaEnvArray *substMinAlphaEnvArray(MinAlphaEnvArray *node,
-                                               MinExpTable *context);
 
 static MinExpTable *excludeBoundVars(MinExpTable *context, SymbolList *vars) {
     MinExpTable *new = newMinExpTable();
@@ -501,40 +497,6 @@ static MinAmb *substMinAmb(MinAmb *node, MinExpTable *context) {
     return node;
 }
 
-static MinAlphaEnv *substMinAlphaEnv(MinAlphaEnv *node, MinExpTable *context) {
-    ENTER(substMinAlphaEnv);
-    if (node == NULL) {
-        LEAVE(substMinAlphaEnv);
-        return NULL;
-    }
-
-    bool changed = false;
-    SymbolMap *new_alphaTable = substSymbolMap(node->alphaTable, context);
-    int save = PROTECT(new_alphaTable);
-    changed = changed || (new_alphaTable != node->alphaTable);
-    MinAlphaEnv *new_next = substMinAlphaEnv(node->next, context);
-    PROTECT(new_next);
-    changed = changed || (new_next != node->next);
-    MinAlphaEnvArray *new_nameSpaces =
-        substMinAlphaEnvArray(node->nameSpaces, context);
-    PROTECT(new_nameSpaces);
-    changed = changed || (new_nameSpaces != node->nameSpaces);
-
-    if (changed) {
-        // Create new node with modified fields
-        MinAlphaEnv *result = newMinAlphaEnv(new_next);
-        result->alphaTable = new_alphaTable;
-        result->nameSpaces = new_nameSpaces;
-        UNPROTECT(save);
-        LEAVE(substMinAlphaEnv);
-        return result;
-    }
-
-    UNPROTECT(save);
-    LEAVE(substMinAlphaEnv);
-    return node;
-}
-
 MinExp *substMinExp(MinExp *node, MinExpTable *context) {
     ENTER(substMinExp);
     if (node == NULL) {
@@ -722,57 +684,4 @@ static MinCondCases *substMinCondCases(MinCondCases *node,
     UNPROTECT(save);
     LEAVE(substMinCondCases);
     return result;
-}
-
-static SymbolMap *substSymbolMap(SymbolMap *node, MinExpTable *context) {
-    ENTER(substSymbolMap);
-    if (node == NULL) {
-        LEAVE(substSymbolMap);
-        return NULL;
-    }
-
-    (void)context; // Values are HashSymbol (not memory-managed)
-#ifdef NOTDEF
-    // Iterate over all entries for inspection/logging
-    Index i = 0;
-    struct HashSymbol *value;
-    HashSymbol *key;
-    while ((key = iterateSymbolMap(node, &i, &value)) != NULL) {
-        // Inspect/log key and value here
-    }
-#endif
-    LEAVE(substSymbolMap);
-    return node;
-}
-
-static MinAlphaEnvArray *substMinAlphaEnvArray(MinAlphaEnvArray *node,
-                                               MinExpTable *context) {
-    ENTER(substMinAlphaEnvArray);
-    if (node == NULL) {
-        LEAVE(substMinAlphaEnvArray);
-        return NULL;
-    }
-
-    bool changed = false;
-    MinAlphaEnvArray *result = newMinAlphaEnvArray();
-    int save = PROTECT(result);
-
-    // Iterate over all elements
-    for (Index i = 0; i < node->size; i++) {
-        struct MinAlphaEnv *element = peeknMinAlphaEnvArray(node, i);
-        struct MinAlphaEnv *new_element = substMinAlphaEnv(element, context);
-        PROTECT(new_element);
-        changed = changed || (new_element != element);
-        pushMinAlphaEnvArray(result, new_element);
-    }
-
-    if (changed) {
-        UNPROTECT(save);
-        LEAVE(substMinAlphaEnvArray);
-        return result;
-    }
-
-    UNPROTECT(save);
-    LEAVE(substMinAlphaEnvArray);
-    return node;
 }

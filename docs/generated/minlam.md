@@ -48,7 +48,6 @@ MinAmb --left--> MinExp
 MinAmb --right--> MinExp
 MinAlphaEnv --alphaTable--> SymbolMap
 MinAlphaEnv --next--> MinAlphaEnv
-MinAlphaEnv --nameSpaces--> MinAlphaEnvArray
 MinExp --amb--> MinAmb
 MinExp --apply--> MinApply
 MinExp --args--> MinExprList

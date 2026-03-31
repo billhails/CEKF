@@ -58,11 +58,8 @@ static MinIntList *betaMinIntList(MinIntList *node);
 static MinLetRec *betaMinLetRec(MinLetRec *node);
 static MinBindings *betaMinBindings(MinBindings *node);
 static MinAmb *betaMinAmb(MinAmb *node);
-static MinAlphaEnv *betaMinAlphaEnv(MinAlphaEnv *node);
 static MinCondCases *betaMinCondCases(MinCondCases *node);
-static SymbolMap *betaSymbolMap(SymbolMap *node);
 static SymbolList *betaSymbolList(SymbolList *node);
-static MinAlphaEnvArray *betaMinAlphaEnvArray(MinAlphaEnvArray *node);
 static bool isAexp(MinExp *exp);
 static bool areAexpList(MinExprList *args);
 static bool isIdentityLam(MinLam *lam);
@@ -667,38 +664,6 @@ static MinAmb *betaMinAmb(MinAmb *node) {
     return node;
 }
 
-static MinAlphaEnv *betaMinAlphaEnv(MinAlphaEnv *node) {
-    ENTER(betaMinAlphaEnv);
-    if (node == NULL) {
-        LEAVE(betaMinAlphaEnv);
-        return NULL;
-    }
-
-    bool changed = false;
-    SymbolMap *new_alphaTable = betaSymbolMap(node->alphaTable);
-    int save = PROTECT(new_alphaTable);
-    changed = changed || (new_alphaTable != node->alphaTable);
-    MinAlphaEnv *new_next = betaMinAlphaEnv(node->next);
-    PROTECT(new_next);
-    changed = changed || (new_next != node->next);
-    MinAlphaEnvArray *new_nameSpaces = betaMinAlphaEnvArray(node->nameSpaces);
-    PROTECT(new_nameSpaces);
-    changed = changed || (new_nameSpaces != node->nameSpaces);
-
-    if (changed) {
-        MinAlphaEnv *result = newMinAlphaEnv(new_next);
-        result->alphaTable = new_alphaTable;
-        result->nameSpaces = new_nameSpaces;
-        UNPROTECT(save);
-        LEAVE(betaMinAlphaEnv);
-        return result;
-    }
-
-    UNPROTECT(save);
-    LEAVE(betaMinAlphaEnv);
-    return node;
-}
-
 MinExp *betaMinExp(MinExp *node) {
     ENTER(betaMinExp);
     if (node == NULL) {
@@ -859,25 +824,6 @@ static MinCondCases *betaMinCondCases(MinCondCases *node) {
     return result;
 }
 
-static SymbolMap *betaSymbolMap(SymbolMap *node) {
-    ENTER(betaSymbolMap);
-    if (node == NULL) {
-        LEAVE(betaSymbolMap);
-        return NULL;
-    }
-
-#ifdef NOTDEF
-    Index i = 0;
-    struct HashSymbol *value;
-    HashSymbol *key;
-    while ((key = iterateSymbolMap(node, &i, &value)) != NULL) {
-        // Inspect/log key and value here
-    }
-#endif
-    LEAVE(betaSymbolMap);
-    return node;
-}
-
 static SymbolList *betaSymbolList(SymbolList *node) {
     ENTER(betaSymbolList);
     if (node == NULL) {
@@ -899,35 +845,5 @@ static SymbolList *betaSymbolList(SymbolList *node) {
 
     UNPROTECT(save);
     LEAVE(betaSymbolList);
-    return node;
-}
-
-static MinAlphaEnvArray *betaMinAlphaEnvArray(MinAlphaEnvArray *node) {
-    ENTER(betaMinAlphaEnvArray);
-    if (node == NULL) {
-        LEAVE(betaMinAlphaEnvArray);
-        return NULL;
-    }
-
-    bool changed = false;
-    MinAlphaEnvArray *result = newMinAlphaEnvArray();
-    int save = PROTECT(result);
-
-    for (Index i = 0; i < node->size; i++) {
-        struct MinAlphaEnv *element = peeknMinAlphaEnvArray(node, i);
-        struct MinAlphaEnv *new_element = betaMinAlphaEnv(element);
-        PROTECT(new_element);
-        changed = changed || (new_element != element);
-        pushMinAlphaEnvArray(result, new_element);
-    }
-
-    if (changed) {
-        UNPROTECT(save);
-        LEAVE(betaMinAlphaEnvArray);
-        return result;
-    }
-
-    UNPROTECT(save);
-    LEAVE(betaMinAlphaEnvArray);
     return node;
 }

@@ -120,7 +120,6 @@ inline:
                 kont: Kont
                 vec: Vec
                 builtIn: BuiltInImplementation
-                nameSpace: Vec
                 opaque: opaque
                 addr: ptr
 
