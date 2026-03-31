@@ -204,24 +204,6 @@ static LamExp *compilePrinterForString(ParserInfo I) {
     return newLamExp_Var(I, name);
 }
 
-static TcEnv *getNsEnv(int index, TcEnv *env) {
-    if (index == NS_GLOBAL) {
-        return env;
-    }
-    TcType *currentNs = NULL;
-    getFromTcEnv(env, nameSpaceSymbol(), &currentNs);
-#ifdef SAFETY_CHECKS
-    if (currentNs == NULL) {
-        cant_happen("cannot find current nameSpace");
-    }
-#endif
-    if (currentNs->val.nsId == index) {
-        return env;
-    }
-    TcType *res = lookUpNsRef(index, env);
-    return res->val.env;
-}
-
 static LamExp *compilePrinterForTypeSig(ParserInfo I, TcTypeSig *typeSig,
                                         TcEnv *env) {
     IFDEBUG(printTcTypeSig(typeSig, 0));
@@ -232,18 +214,11 @@ static LamExp *compilePrinterForTypeSig(ParserInfo I, TcTypeSig *typeSig,
         }
     }
     HashSymbol *name = makePrintName("print$", typeSig->name->name);
-    TcEnv *nsEnv = getNsEnv(typeSig->ns, env);
-    if (!getFromTcEnv(nsEnv, name, NULL)) {
+    if (!getFromTcEnv(env, name, NULL)) {
         return makeVarExpr(I, "__print__");
     }
     LamExp *exp = newLamExp_Var(I, name);
     int save = PROTECT(exp);
-    if (env != nsEnv) {
-        LamLookUp *lookUp = newLamLookUp(I, typeSig->ns, NULL, exp);
-        PROTECT(lookUp);
-        exp = newLamExp_LookUp(I, lookUp);
-        PROTECT(exp);
-    }
     LamArgs *args = compilePrinterForTypeSigArgs(I, typeSig->args, env);
     PROTECT(args);
     int nArgs = countLamArgs(args);

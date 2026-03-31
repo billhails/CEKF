@@ -20,20 +20,20 @@ config:
     name: tc
     description: Structures to support type inference
 
-
 cmp:
     extraArgs:
         map: HashTable
     bespokeImplementation:
-    - TcVar
+      - TcVar
 
 structs:
     TcEnv:
         meta:
             brief: Type-checker Environment
             description: >-
-                The environment contains a table of types, a table of type signatures,
-                and a reference to the next environment in the chain.
+                The environment contains a table of types, a table of type
+                signatures, and a reference to the next environment in the
+                chain.
         data:
             table: TcTypeTable
             typeSigs: TcTypeSigTable
@@ -43,8 +43,8 @@ structs:
         meta:
             brief: Non-generic variables
             description: >-
-                Variables bound as function arguments while in the body of
-                a function definition. These are not generic variables.
+                Variables bound as function arguments while in the body of a
+                function definition. These are not generic variables.
         data:
             table: TcTypeTable
             next: TcNg
@@ -53,9 +53,9 @@ structs:
         meta:
             brief: Function type
             description: >-
-                Represents a function type `a -> b` with an argument type
-                and a result type. Laziness is now expressed via explicit
-                thunk types in the argument.
+                Represents a function type `a -> b` with an argument type and a
+                result type. Laziness is now expressed via explicit thunk types
+                in the argument.
         data:
             arg: TcType
             result: TcType
@@ -64,8 +64,8 @@ structs:
         meta:
             brief: Pair type
             description: >-
-                Represents a pair of types, used for tuples and other
-                pair-like structures.
+                Represents a pair of types, used for tuples and other pair-like
+                structures.
         data:
             first: TcType
             second: TcType
@@ -85,9 +85,8 @@ structs:
         meta:
             brief: Type signature
             description: >-
-                Represents a type signature with a name, arguments,
-                and a nameSpace.  It is used to define types in the
-                type-checker.
+                Represents a type signature with a name, arguments, and a
+                nameSpace.  It is used to define types in the type-checker.
         data:
             name: HashSymbol
             args: TcTypeSigArgs
@@ -97,8 +96,8 @@ structs:
         meta:
             brief: Type signature arguments
             description: >-
-                Represents the arguments of a type signature, which can be
-                any length.
+                Represents the arguments of a type signature, which can be any
+                length.
         data:
             type: TcType
             next: TcTypeSigArgs
@@ -108,8 +107,8 @@ structs:
             brief: Type variable
             description: >-
                 Represents a type variable, which can be used in type signatures
-                and type inference. It has a name, an ID, and an optional instance
-                if it is bound to a type.
+                and type inference. It has a name, an ID, and an optional
+                instance if it is bound to a type.
         data:
             name: HashSymbol
             id: int
@@ -141,22 +140,14 @@ arrays:
         data:
             entries: TcType
 
-    TcNameSpaceArray:
-        meta:
-            brief: Array of nameSpaces
-            description: >-
-                An array of nameSpaces used in type inference.
-        data:
-            entries: TcType
-
 unions:
     TcType:
         meta:
             brief: Type union
             description: >-
                 Represents a type in the type-checker, which can be a function,
-                pair, thunk, variable, small integer, big integer, character, unknown,
-                opaque type, type signature, tuple, or an array of nameSpaces.
+                pair, thunk, variable, small integer, big integer, character,
+                unknown, opaque type, type signature, or tuple.
         data:
             function: TcFunction
             pair: TcPair
@@ -169,8 +160,5 @@ unions:
             opaque: HashSymbol
             typeSig: TcTypeSig
             tuple: TcTypeArray
-            nameSpaces: TcNameSpaceArray
-            env: TcEnv
-            nsId: int
 
 primitives: !include primitives.yaml

@@ -60,9 +60,6 @@ void ppTcType(TcType *type) {
     case TCTYPE_TYPE_TUPLE:
         ppTcTuple(type->val.tuple);
         break;
-    case TCTYPE_TYPE_ENV:
-        eprintf("<env>");
-        break;
     case TCTYPE_TYPE_OPAQUE:
         eprintf("opaque:%s", type->val.opaque->name);
         break;
@@ -161,23 +158,7 @@ bool eqTcVar(struct TcVar *a, struct TcVar *b, HashTable *map) {
 
 static inline void pad(int depth) { eprintf("%*s", depth * 2, ""); }
 
-static void _ppTcEnv(TcEnv *env, int depth, bool done_nameSpaces);
-
-static void _ppTcNameSpaces(TcNameSpaceArray *nameSpaces, int depth) {
-    if (nameSpaces == NULL)
-        return;
-    for (Index i = 0; i < nameSpaces->size; i++) {
-        pad(depth);
-        eprintf("[%u]:\n", i);
-        if (nameSpaces->entries[i]->type == TCTYPE_TYPE_ENV) {
-            _ppTcEnv(nameSpaces->entries[i]->val.env, depth + 1, true);
-        } else {
-            eprintf("%s\n", tcTypeTypeName(nameSpaces->entries[i]->type));
-        }
-    }
-}
-
-static void _ppTcEnv(TcEnv *env, int depth, bool done_nameSpaces) {
+static void _ppTcEnv(TcEnv *env, int depth) {
     if (env == NULL) {
         pad(depth);
         eprintf("<NULL> env\n");
@@ -190,30 +171,14 @@ static void _ppTcEnv(TcEnv *env, int depth, bool done_nameSpaces) {
     TcType *value;
     while ((name = iterateTcTypeTable(env->table, &i, &value)) != NULL) {
         pad(depth);
-        if (value->type == TCTYPE_TYPE_NSID) {
-            eprintf("  %s => %s [%d]\n", name->name,
-                    tcTypeTypeName(value->type), value->val.nsId);
-        } else if (value->type == TCTYPE_TYPE_NAMESPACES) {
-            if (done_nameSpaces) {
-                eprintf("  %s => %s\n", name->name,
-                        tcTypeTypeName(value->type));
-            } else {
-                eprintf("  %s => %s [\n", name->name,
-                        tcTypeTypeName(value->type));
-                _ppTcNameSpaces(value->val.nameSpaces, depth + 1);
-                pad(depth);
-                eprintf("  ]\n");
-            }
-        } else {
-            eprintf("  %s => %s\n", name->name, tcTypeTypeName(value->type));
-        }
+        eprintf("  %s => %s\n", name->name, tcTypeTypeName(value->type));
     }
-    _ppTcEnv(env->next, depth + 1, done_nameSpaces);
+    _ppTcEnv(env->next, depth + 1);
     pad(depth);
     eprintf("}\n");
 }
 
-void ppTcEnv(TcEnv *env) { _ppTcEnv(env, 0, false); }
+void ppTcEnv(TcEnv *env) { _ppTcEnv(env, 0); }
 
 // Forward declarations for string conversion
 static void tcTypeToStringHelper(TcType *type, SCharArray *buffer);
@@ -261,9 +226,6 @@ static void tcTypeToStringHelper(TcType *type, SCharArray *buffer) {
         break;
     case TCTYPE_TYPE_TUPLE:
         tcTupleToString(type->val.tuple, buffer);
-        break;
-    case TCTYPE_TYPE_ENV:
-        appendStringToSCharArray(buffer, "<env>");
         break;
     case TCTYPE_TYPE_OPAQUE:
         appendStringToSCharArray(buffer, "opaque:");

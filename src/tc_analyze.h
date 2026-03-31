@@ -1,5 +1,5 @@
 #ifndef cekf_tc_analyze_h
-#  define cekf_tc_analyze_h
+#define cekf_tc_analyze_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2023  Bill Hails
@@ -18,18 +18,17 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#  include "tc.h"
-#  include "lambda.h"
-#  include "builtins.h"
+#include "builtins.h"
+#include "lambda.h"
+#include "tc.h"
 
-#  define BASIC_TYPE_NULL 0
-#  define BASIC_TYPE_NUMBER 1
-#  define BASIC_TYPE_STRING 2
-#  define BASIC_TYPE_CHAR 3
+#define BASIC_TYPE_NULL 0
+#define BASIC_TYPE_NUMBER 1
+#define BASIC_TYPE_STRING 2
+#define BASIC_TYPE_CHAR 3
 
 TcEnv *tc_init(BuiltIns *);
 TcType *tc_analyze(LamExp *exp, TcEnv *env);
-TcType *lookUpNsRef(int index, TcEnv *env);
 bool getFromTcEnv(TcEnv *env, HashSymbol *symbol, TcType **type);
 TcType *makeBoolean(void);
 TcType *makeSmallInteger(void);
