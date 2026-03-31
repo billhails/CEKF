@@ -82,23 +82,6 @@ static LamExp *lamExpError(ParserInfo I) {
 }
 
 /**
- * @brief Adds the current nameSpace to the lambda context.
- *
- * Adds the `$nameSpace` symbol to the current context, bound to the
- * current nameSpace id.
- *
- * @param context The lambda context to modify.
- * @param nameSpaceId The ID of the current nameSpace.
- * @return void
- */
-static void addCurrentNameSpaceToContext(LamContext *context, int nameSpaceId) {
-    LamInfo *lamInfo = newLamInfo_NsId(CPI(context), nameSpaceId);
-    int save = PROTECT(lamInfo);
-    setLamInfoTable(context->frame, nameSpaceSymbol(), lamInfo);
-    UNPROTECT(save);
-}
-
-/**
  * @brief Creates an AstDefinitions node for currentFile with the given
  * fileName.
  *
@@ -162,7 +145,6 @@ LamExp *lamConvertProg(AstProg *prog) {
     ENTER(lamConvertProg);
     LamContext *env = newLamContext(CPI(prog), NULL);
     int save = PROTECT(env);
-    addCurrentNameSpaceToContext(env, NS_GLOBAL);
 
     // Prepend currentFile definition to preamble
     AstDefinitions *preambleWithCurrentFile = makeCurrentFileDefinition(
@@ -1701,15 +1683,11 @@ static LamExp *makeStructureApplication(LamExp *constructor,
 static LamTypeConstructorInfo *findConstructor(AstLookUpOrSymbol *los,
                                                LamContext *env) {
     switch (los->type) {
-    case AST_LOOKUPORSYMBOL_TYPE_SYMBOL: {
+    case AST_LOOKUPORSYMBOL_TYPE_SYMBOL:
         return lookUpConstructorInLamContext(env,
                                              getAstLookUpOrSymbol_Symbol(los));
-    } break;
-    case AST_LOOKUPORSYMBOL_TYPE_LOOKUP: {
-        AstLookUpSymbol *lookUp = getAstLookUpOrSymbol_LookUp(los);
-        LamContext *nsEnv = lookUpNameSpaceInLamContext(env, lookUp->nsId);
-        return lookUpConstructorInLamContext(nsEnv, lookUp->symbol);
-    } break;
+    case AST_LOOKUPORSYMBOL_TYPE_LOOKUP:
+        cant_happen("unexpected lookUp in findConstructor");
     default:
         cant_happen("unrecognized %s", astLookUpOrSymbolTypeName(los->type));
     }

@@ -659,7 +659,7 @@ void ppLamDeconstruct(LamDeconstruct *deconstruct) {
 
 static inline void pad(int depth) { eprintf("%*s", depth, ""); }
 
-static void _ppLamContext(LamContext *env, int depth, bool done_nameSpaces) {
+static void _ppLamContext(LamContext *env, int depth) {
     if (env == NULL) {
         pad(depth);
         eprintf("<NULL> env\n");
@@ -672,27 +672,11 @@ static void _ppLamContext(LamContext *env, int depth, bool done_nameSpaces) {
     LamInfo *value;
     while ((name = iterateLamInfoTable(env->frame, &i, &value)) != NULL) {
         pad(depth);
-        if (value->type == LAMINFO_TYPE_NAMESPACEINFO) {
-            if (done_nameSpaces) {
-                eprintf(" %s => %s\n", name->name,
-                        lamInfoTypeName(value->type));
-            } else {
-                eprintf(" %s => %s [\n", name->name,
-                        lamInfoTypeName(value->type));
-                _ppLamContext(getLamInfo_NameSpaceInfo(value), depth + 1, true);
-                pad(depth);
-                eprintf(" ]\n");
-            }
-        } else if (value->type == LAMINFO_TYPE_NSID) {
-            eprintf(" %s => %s [%d]\n", name->name,
-                    lamInfoTypeName(value->type), getLamInfo_NsId(value));
-        } else {
-            eprintf(" %s => %s\n", name->name, lamInfoTypeName(value->type));
-        }
+        eprintf(" %s => %s\n", name->name, lamInfoTypeName(value->type));
     }
-    _ppLamContext(env->parent, depth + 1, done_nameSpaces);
+    _ppLamContext(env->parent, depth + 1);
     pad(depth);
     eprintf("}\n");
 }
 
-void ppLamContext(LamContext *env) { _ppLamContext(env, 0, false); }
+void ppLamContext(LamContext *env) { _ppLamContext(env, 0); }

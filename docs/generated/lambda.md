@@ -141,8 +141,6 @@ LamTypeConstructorType --var--> HashSymbol
 LamTypeConstructorType --function--> LamTypeFunction
 LamTypeConstructorType --tuple--> LamTypeConstructorArgs
 LamInfo --typeConstructorInfo--> LamTypeConstructorInfo
-LamInfo --nameSpaceInfo--> LamContext
-LamInfo --nsId--> int
 LamPrimOp["enum LamPrimOp"]
 ```
 

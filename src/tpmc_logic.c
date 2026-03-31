@@ -84,23 +84,10 @@ static TpmcPattern *makeWildCardPattern() {
     return pattern;
 }
 
-static TpmcPattern *makeLookUpPattern(AstLookUpSymbol *lookUp,
-                                      LamContext *env) {
-    LamTypeConstructorInfo *info =
-        lookUpScopedAstSymbolInLamContext(env, lookUp);
-    if (info == NULL) {
-        cant_happen("makeLookUpPattern() passed invalid constructor");
-    }
-    TpmcPatternArray *args = newTpmcPatternArray("makeLookUpPattern");
-    int save = PROTECT(args);
-    TpmcConstructorPattern *constructor =
-        newTpmcConstructorPattern(lookUp->symbol, lookUp->nsId, info, args);
-    PROTECT(constructor);
-    TpmcPatternValue *val = newTpmcPatternValue_Constructor(constructor);
-    PROTECT(val);
-    TpmcPattern *pattern = newTpmcPattern(val);
-    UNPROTECT(save);
-    return pattern;
+static TpmcPattern *makeLookUpPattern(AstLookUpSymbol *lookUp
+                                      __attribute__((unused)),
+                                      LamContext *env __attribute__((unused))) {
+    cant_happen("unexpected lookUp pattern post-desugaring");
 }
 
 static TpmcPattern *makeVarPattern(HashSymbol *symbol, LamContext *env) {
@@ -114,7 +101,7 @@ static TpmcPattern *makeVarPattern(HashSymbol *symbol, LamContext *env) {
     } else {
         TpmcPatternArray *args = newTpmcPatternArray("makeVarPattern");
         int save = PROTECT(args);
-        int nameSpace = lookUpCurrentNameSpaceInLamContext(env);
+        int nameSpace = NS_GLOBAL;
         TpmcConstructorPattern *constructor =
             newTpmcConstructorPattern(symbol, nameSpace, info, args);
         PROTECT(constructor);
@@ -139,7 +126,8 @@ static TpmcPattern *makeAssignmentPattern(AstNamedArg *named, LamContext *env) {
     return pattern;
 }
 
-static void getSymbolAndNameSpace(AstLookUpOrSymbol *los, LamContext *env,
+static void getSymbolAndNameSpace(AstLookUpOrSymbol *los,
+                                  LamContext *env __attribute__((unused)),
                                   HashSymbol **name, int *nameSpace) {
     switch (los->type) {
     case AST_LOOKUPORSYMBOL_TYPE_LOOKUP:
@@ -147,7 +135,7 @@ static void getSymbolAndNameSpace(AstLookUpOrSymbol *los, LamContext *env,
         *nameSpace = los->val.lookUp->nsId;
         break;
     case AST_LOOKUPORSYMBOL_TYPE_SYMBOL: {
-        *nameSpace = lookUpCurrentNameSpaceInLamContext(env);
+        *nameSpace = NS_GLOBAL;
         *name = los->val.symbol;
     } break;
     default:

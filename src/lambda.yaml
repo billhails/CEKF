@@ -431,8 +431,6 @@ unions:
             brief: Information about a symbol
         data:
             typeConstructorInfo: LamTypeConstructorInfo
-            nameSpaceInfo: LamContext
-            nsId: int
 
 hashes:
     LamInfoTable:

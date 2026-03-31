@@ -23,18 +23,12 @@
 #include "lambda_debug.h"
 #include "memory.h"
 
-#define NS_FORMAT "ns$%u"
-
 void printLambdaSymbol(HashSymbol *x, int depth);
 LamTypeConstructorInfo *lookUpConstructorInLamContext(LamContext *context,
                                                       HashSymbol *var);
-LamContext *lookUpNameSpaceInLamContext(LamContext *context, Index index);
 LamTypeConstructorInfo *
 lookUpScopedAstConstructorInLamContext(LamContext *context,
                                        AstLookUpOrSymbol *scoped);
-LamTypeConstructorInfo *
-lookUpScopedAstSymbolInLamContext(LamContext *context, AstLookUpSymbol *lookUp);
-int lookUpCurrentNameSpaceInLamContext(LamContext *context);
 LamTypeConstructorType *lookUpConstructorTypeInLamContext(LamContext *context,
                                                           HashSymbol *var);
 #endif
