@@ -18,7 +18,6 @@ TcPair --second--> TcType
 TcThunk --type--> TcType
 TcTypeSig --name--> HashSymbol
 TcTypeSig --args--> TcTypeSigArgs
-TcTypeSig --ns--> int
 TcTypeSigArgs --type--> TcType
 TcTypeSigArgs --next--> TcTypeSigArgs
 TcVar --name--> HashSymbol

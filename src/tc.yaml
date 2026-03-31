@@ -85,12 +85,11 @@ structs:
         meta:
             brief: Type signature
             description: >-
-                Represents a type signature with a name, arguments, and a
-                nameSpace.  It is used to define types in the type-checker.
+                Represents a type signature with a name and arguments. It is
+                used to define types in the type-checker.
         data:
             name: HashSymbol
             args: TcTypeSigArgs
-            ns: int
 
     TcTypeSigArgs:
         meta:

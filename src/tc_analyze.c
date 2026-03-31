@@ -150,7 +150,7 @@ TcType *tc_analyze(LamExp *exp, TcEnv *env) {
 TcType *makeListType(TcType *content) {
     TcTypeSigArgs *args = newTcTypeSigArgs(content, NULL);
     int save = PROTECT(args);
-    TcType *res = makeTcType_TypeSig(newSymbol("list"), args, -1);
+    TcType *res = makeTcType_TypeSig(newSymbol("list"), args);
     UNPROTECT(save);
     return res;
 }
@@ -158,7 +158,7 @@ TcType *makeListType(TcType *content) {
 TcType *makeMaybeType(TcType *content) {
     TcTypeSigArgs *args = newTcTypeSigArgs(content, NULL);
     int save = PROTECT(args);
-    TcType *res = makeTcType_TypeSig(newSymbol("maybe"), args, -1);
+    TcType *res = makeTcType_TypeSig(newSymbol("maybe"), args);
     UNPROTECT(save);
     return res;
 }
@@ -177,7 +177,7 @@ TcType *makeTryType(TcType *failure, TcType *success) {
     int save = PROTECT(args);
     args = newTcTypeSigArgs(failure, args);
     PROTECT(args);
-    TcType *res = makeTcType_TypeSig(newSymbol("try"), args, -1);
+    TcType *res = makeTcType_TypeSig(newSymbol("try"), args);
     UNPROTECT(save);
     return res;
 }
@@ -191,7 +191,7 @@ TcType *makeStringType(void) {
 }
 
 static TcType *makeNamedType(char *name) {
-    return makeTcType_TypeSig(newSymbol(name), NULL, -1);
+    return makeTcType_TypeSig(newSymbol(name), NULL);
 }
 
 TcType *makeBasicType(void) { return makeNamedType("basic_type"); }
@@ -1135,17 +1135,14 @@ static TcTypeSigArgs *makeTcTypeSigArgs(LamTypeSigArgs *lamTypeArgs,
     return this;
 }
 
-TcType *makeTypeSig(HashSymbol *name, TcTypeSigArgs *args, int nsId) {
-    if (strcmp(name->name, "list") == 0 && nsId != -1) {
-        cant_happen("list in ns %d", nsId);
-    }
-    return makeTcType_TypeSig(name, args, nsId);
+TcType *makeTypeSig(HashSymbol *name, TcTypeSigArgs *args) {
+    return makeTcType_TypeSig(name, args);
 }
 
-static TcType *makeTcTypeSig(LamTypeSig *lamType, TcTypeTable *map, int nsId) {
+static TcType *makeTcTypeSig(LamTypeSig *lamType, TcTypeTable *map) {
     TcTypeSigArgs *args = makeTcTypeSigArgs(lamType->args, map);
     int save = PROTECT(args);
-    TcType *res = makeTypeSig(lamType->name, args, nsId);
+    TcType *res = makeTypeSig(lamType->name, args);
     UNPROTECT(save);
     return res;
 }
@@ -1213,8 +1210,7 @@ static TcType *makeTypeConstructorApplication(LamTypeFunction *func,
     // list(t) in the context of t -> list(t) -> list(t)
     TcTypeSigArgs *args = makeTypeSigArgs(func->args, map, env);
     int save = PROTECT(args);
-    TcType *res =
-        makeTypeSig(getUnderlyingFunction(func->name), args, NS_GLOBAL);
+    TcType *res = makeTypeSig(getUnderlyingFunction(func->name), args);
     UNPROTECT(save);
     return res;
 }
@@ -1291,7 +1287,7 @@ static void collectTypeDef(LamTypeDef *lamTypeDef, TcEnv *env) {
     TcTypeTable *map = newTcTypeTable();
     int save = PROTECT(map);
     LamTypeSig *lamType = lamTypeDef->type;
-    TcType *tcType = makeTcTypeSig(lamType, map, NS_GLOBAL);
+    TcType *tcType = makeTcTypeSig(lamType, map);
     PROTECT(tcType);
     addTypeSigToEnv(env, getTcType_TypeSig(tcType)->name,
                     getTcType_TypeSig(tcType));
@@ -1688,7 +1684,7 @@ static TcTypeSigArgs *freshTypeSigArgs(TcTypeSigArgs *args, TcNg *ng,
 static TcType *freshTypeSig(TcTypeSig *typeSig, TcNg *ng, TcTypeTable *map) {
     TcTypeSigArgs *args = freshTypeSigArgs(typeSig->args, ng, map);
     int save = PROTECT(args);
-    TcType *res = makeTypeSig(typeSig->name, args, typeSig->ns);
+    TcType *res = makeTypeSig(typeSig->name, args);
     UNPROTECT(save);
     return res;
 }
@@ -1809,12 +1805,12 @@ static void addToNg(TcNg *ng, TcType *type) {
 }
 
 TcType *makeBoolean() {
-    TcType *res = makeTypeSig(boolSymbol(), NULL, NS_GLOBAL);
+    TcType *res = makeTypeSig(boolSymbol(), NULL);
     return res;
 }
 
 static TcType *makeSpaceship() {
-    TcType *res = makeTypeSig(spaceshipSymbol(), NULL, NS_GLOBAL);
+    TcType *res = makeTypeSig(spaceshipSymbol(), NULL);
     return res;
 }
 
@@ -2048,10 +2044,6 @@ static bool unifyTypeSigs(TcTypeSig *a, TcTypeSig *b) {
     if (a->name != b->name) {
         return failUnifyTypeSigs(a, b, "usertype name mismatch");
     }
-    if (a->ns != b->ns) {
-        return failUnifyTypeSigs(a, b, "usertype nameSpace mismatch");
-    }
-
     TcTypeSigArgs *aArgs = a->args;
     TcTypeSigArgs *bArgs = b->args;
     while (aArgs != NULL && bArgs != NULL) {

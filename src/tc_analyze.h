@@ -33,7 +33,7 @@ bool getFromTcEnv(TcEnv *env, HashSymbol *symbol, TcType **type);
 TcType *makeBoolean(void);
 TcType *makeSmallInteger(void);
 TcType *makeNumber(void);
-TcType *makeTypeSig(HashSymbol *name, TcTypeSigArgs *args, int nsId);
+TcType *makeTypeSig(HashSymbol *name, TcTypeSigArgs *args);
 TcType *makeStringType(void);
 TcType *makeListType(TcType *content);
 TcType *makeMaybeType(TcType *content);
