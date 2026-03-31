@@ -30,7 +30,6 @@ LamConstruct --name--> HashSymbol
 LamConstruct --tag--> int
 LamConstruct --args--> LamArgs
 LamDeconstruct --name--> HashSymbol
-LamDeconstruct --nsId--> int
 LamDeconstruct --vec--> int
 LamDeconstruct --exp--> LamExp
 LamTupleIndex --vec--> int
@@ -57,7 +56,6 @@ LamMatchList --body--> LamExp
 LamMatchList --next--> LamMatchList
 LamIntList --item--> int
 LamIntList --name--> HashSymbol
-LamIntList --nsId--> int
 LamIntList --next--> LamIntList
 LamLet --bindings--> LamBindings
 LamLet --body--> LamExp
@@ -100,7 +98,6 @@ LamTypeConstructorArgs --next--> LamTypeConstructorArgs
 LamTypeFunction --name--> LamLookUpOrSymbol
 LamTypeFunction --args--> LamTypeConstructorArgs
 LamTypeConstructorInfo --name--> HashSymbol
-LamTypeConstructorInfo --nsId--> int
 LamTypeConstructorInfo --type--> LamTypeConstructor
 LamTypeConstructorInfo --tags--> LamTypeTags
 LamTypeConstructorInfo --needsVec--> bool

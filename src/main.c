@@ -389,6 +389,7 @@ static LamExp *convertProg(AstProg *prog) {
     if (lambda_flag) {
         ppLamExp(exp);
         eprintf("\n");
+        exit(0);
     }
     UNPROTECT(save);
     return exp;
@@ -408,6 +409,7 @@ static LamExp *inlineExp(LamExp *exp) {
     if (inline_flag) {
         ppLamExp(exp);
         eprintf("\n");
+        exit(0);
     }
     UNPROTECT(save);
     return exp;

@@ -796,12 +796,10 @@ static void collectTypeInfo(HashSymbol *symbol, AstTypeConstructorArgs *args,
                             int enumCount, int index, int arity,
                             LamContext *env) {
     ENTER(collectTypeInfo);
-    int nameSpace = lookUpCurrentNameSpaceInLamContext(env);
     LamTypeTags *tags = makeLamTypeTags(args);
     int save = PROTECT(tags);
-    LamTypeConstructorInfo *info =
-        newLamTypeConstructorInfo(CPI(type), symbol, nameSpace, type, tags,
-                                  needsVec, arity, enumCount, index);
+    LamTypeConstructorInfo *info = newLamTypeConstructorInfo(
+        CPI(type), symbol, type, tags, needsVec, arity, enumCount, index);
     PROTECT(info);
     addConstructorInfoToLamContext(env, symbol, info);
     UNPROTECT(save);

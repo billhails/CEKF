@@ -101,7 +101,6 @@ structs:
                 Used to extract fields from a constructed value.
         data:
             name: HashSymbol # name of the constructor being deconstructed
-            nsId: int # nameSpace of the constructor being deconstructed
             vec: int # offset of the field in the vector
             exp: LamExp # expression being deconstructed
 
@@ -191,12 +190,10 @@ structs:
         meta:
             brief: A list of integers
             description: >-
-                The list of integers in a LamMatchList. Includes a namespace id
-                and name (why?).
+                The list of integers in a LamMatchList.
         data:
             item: int
             name: HashSymbol
-            nsId: int
             next: LamIntList
 
     LamLet:
@@ -349,7 +346,6 @@ structs:
             brief: Information about a type constructor
         data:
             name: HashSymbol
-            nsId: int
             type: LamTypeConstructor
             tags: LamTypeTags
             needsVec: bool # does this need to be a vector?

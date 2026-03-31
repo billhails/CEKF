@@ -283,7 +283,7 @@ static LamExp *makeIndexedDeconstruct(ParserInfo I, int index,
     LamExp *printArg = thingName(I);
     int save = PROTECT(printArg);
     LamDeconstruct *dec =
-        newLamDeconstruct(I, info->type->name, info->nsId, index, printArg);
+        newLamDeconstruct(I, info->type->name, index, printArg);
     PROTECT(dec);
     LamExp *res = newLamExp_Deconstruct(I, dec);
     UNPROTECT(save);
@@ -640,8 +640,7 @@ static LamMatchList *makeScalarMatchList(ParserInfo I,
             "cannot find info for type constructor %s in makeScalarMatchList",
             constructors->constructor->name->name);
     }
-    LamIntList *matches =
-        newLamIntList(I, info->index, info->type->name, info->nsId, NULL);
+    LamIntList *matches = newLamIntList(I, info->index, info->type->name, NULL);
     PROTECT(matches);
     LamExp *body = makePutsConstructorName(I, constructors->constructor);
     PROTECT(body);
@@ -700,8 +699,7 @@ static LamMatchList *makeVectorMatchList(ParserInfo I,
             "cannot find info for type constructor %s in makeVectorMatchList",
             constructors->constructor->name->name);
     }
-    LamIntList *matches =
-        newLamIntList(I, info->index, info->type->name, info->nsId, NULL);
+    LamIntList *matches = newLamIntList(I, info->index, info->type->name, NULL);
     PROTECT(matches);
     LamExp *body = NULL;
     if (info->arity > 0) {
