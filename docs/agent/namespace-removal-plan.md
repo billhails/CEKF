@@ -102,23 +102,57 @@ No namespace constructs — already clean. (`MinIntList` has no `nsId` field;
 
 ## Staged removal plan
 
+Bottom-up ordering: start at the furthest downstream point (runtime/bytecode)
+and work back upstream. This guarantees that at every step, everything below
+is already clean, avoiding unexpected cascading compile errors.
+
 Each step produces a buildable, testable state (`make && make test`).
 Each step should be a separate commit for easy bisect/revert.
 
-### Phase A — Type checker (downstream first)
+### Phase A — Bytecode and runtime
 
-#### Step A1: Remove dead TcType variants and TcNameSpaceArray
+#### Step A1: Remove NS bytecodes from cekfs.yaml and step.c
+
+Files: `cekfs.yaml`, `step.c`
+
+- cekfs.yaml: remove `NS_START`, `NS_END`, `NS_FINISH`, `NS_PUSHSTACK`,
+  `NS_PUSHENV`, `NS_POP` from ByteCodes enum
+- step.c: remove the corresponding case handlers
+
+#### Step A2: Remove namespace emission code from bytecode.c
+
+Files: `bytecode.c`
+
+- Remove `writeAexpNameSpaceArray()`, `writeAexpNameSpaces()`,
+  `writeLookUp()` and their switch cases / forward declarations
+
+### Phase B — ANF
+
+#### Step B1: Remove ANF namespace constructs
+
+Files: `anf.yaml`, `annotate.c`, `anf_pp.c`
+
+- anf.yaml: remove `AexpNameSpaces`, `AexpNameSpace`, `AnfExpLookUp`,
+  `AexpNameSpaceArray`
+- annotate.c: remove `annotateAexpNameSpaceArray()`,
+  `annotateAexpNameSpaces()`, `annotateAnfExpLookUp()` and switch cases
+- anf_pp.c: remove namespace pretty-printing
+
+### Phase C — Type checker
+
+#### Step C1: Remove dead TcType variants and TcNameSpaceArray
 
 Files: `tc.yaml`, `tc_analyze.c`, `tc_helper.c`
 
 - tc.yaml: remove `TcType.nameSpaces`, `TcType.nsId`, `TcType.env` variants
   and the `TcNameSpaceArray` type
 - tc_analyze.c: remove `analyzeNameSpaces()`, `analyzeLookUp()`,
-  `lookUpNsRef()`, the branch in `addNameSpacesToEnv()` that creates
-  `TcNameSpaceArray`, and all switch cases dispatching to them
-- tc_helper.c: remove namespace pretty-printer
+  `lookUpNsRef()`, `addNameSpacesToEnv()`, `getNsEnv()`, and all switch
+  cases dispatching to them; remove `TcType_NsId` creation in `tc_analyze()`
+  and `nameSpaceSymbol()`/`nameSpacesSymbol()` usage
+- tc_helper.c: remove namespace pretty-printer code
 
-#### Step A2: Simplify lookUpConstructorType — stop branching on nsId
+#### Step C2: Simplify lookUpConstructorType — stop branching on nsId
 
 Files: `tc_analyze.c`
 
@@ -127,16 +161,16 @@ Files: `tc_analyze.c`
 - Remove `findNameSpace()` (maps `LamLookUpOrSymbol` to `nsId`)
 - Still accept `nsId` parameter for now (lambda structs still carry it)
 
-#### Step A3: Remove TcTypeSig.ns field
+#### Step C3: Remove TcTypeSig.ns field
 
 Files: `tc.yaml`, `tc_analyze.c`
 
 - tc.yaml: remove `ns: int` from `TcTypeSig`
 - Fix all creation sites and usages
 
-### Phase B — Lambda IR
+### Phase D — Lambda IR
 
-#### Step B1: Remove dead LamExp namespace variants
+#### Step D1: Remove dead LamExp namespace variants
 
 Files: `lambda.yaml`, `lambda_conversion.c`, `inline.c`,
 `lambda_simplfication.c`, `lambda_substitution.c`, `lazy_substitution.c`,
@@ -146,7 +180,7 @@ Files: `lambda.yaml`, `lambda_conversion.c`, `inline.c`,
   `LamNameSpaceArray`, `LamLookUp`
 - Remove/fix switch cases in all consumer files
 
-#### Step B2: Remove nsId from lambda structs
+#### Step D2: Remove nsId from lambda structs
 
 Files: `lambda.yaml`, `lambda_conversion.c`, `tpmc_translate.c`,
 `print_generator.c`, `tc_analyze.c`
@@ -156,9 +190,9 @@ Files: `lambda.yaml`, `lambda_conversion.c`, `tpmc_translate.c`,
 - Fix creation sites in `lambda_conversion.c`, `tpmc_translate.c`,
   `print_generator.c`
 - Remove `nsId` parameter from `lookUpConstructorType()` in `tc_analyze.c`
-  (now always ignored since A2)
+  (now always ignored since C2)
 
-#### Step B3: Collapse LamLookUpOrSymbol to HashSymbol*
+#### Step D3: Collapse LamLookUpOrSymbol to HashSymbol*
 
 Files: `lambda.yaml`, `tc_analyze.c`, `lambda_conversion.c`, `lambda_pp.c`,
 `lambda_helper.c`, `print_generator.c`, `tpmc_translate.c`
@@ -166,19 +200,18 @@ Files: `lambda.yaml`, `tc_analyze.c`, `lambda_conversion.c`, `lambda_pp.c`,
 - lambda.yaml: remove `LamLookUpOrSymbol` union and `LamLookUpSymbol` struct
 - Replace all usages (~42 sites across 7 files) with direct `HashSymbol*`
 
-#### Step B4: Remove LamInfo namespace variants + context helpers
+#### Step D4: Remove LamInfo namespace variants + context helpers
 
 Files: `lambda.yaml`, `lambda_conversion.c`, `lambda_helper.c`
 
 - lambda.yaml: remove `LamInfo.nameSpaceInfo` and `LamInfo.nsId` variants
-  (leaving only `LamInfo.typeConstructorInfo` — consider collapsing union to
-  plain struct)
+  (leaving only `LamInfo.typeConstructorInfo`)
 - lambda_conversion.c: remove `addCurrentNameSpaceToContext()`,
   `addNameSpaceInfoToLamContext()`
 - lambda_helper.c: remove `lookUpNameSpaceInLamContext()`,
   `lookUpCurrentNameSpaceInLamContext()`
 
-#### Step B5: Collapse LamInfo to LamTypeConstructorInfo
+#### Step D5: Collapse LamInfo to LamTypeConstructorInfo
 
 Files: `lambda.yaml`, `lambda_conversion.c`, `lambda_helper.c`
 
@@ -188,42 +221,32 @@ Files: `lambda.yaml`, `lambda_conversion.c`, `lambda_helper.c`
   (`getLamInfo_TypeConstructorInfo` → direct use)
 - `LamInfoTable` becomes a `HashSymbol* → LamTypeConstructorInfo*` map
 
-### Phase C — ANF and bytecode
+### Phase E — Final cleanup
 
-#### Step C1: Remove ANF namespace constructs + NS bytecodes
+#### Step E1: Remove NS_GLOBAL and remaining traces
 
-Files: `anf.yaml`, `cekfs.yaml`, `annotate.c`, `bytecode.c`, `anf_pp.c`,
-`step.c`
-
-- anf.yaml: remove `AexpNameSpaces`, `AexpNameSpace`, `AnfExpLookUp`
-- cekfs.yaml: remove `NS_START`, `NS_END`, `NS_FINISH`, `NS_PUSHSTACK`,
-  `NS_PUSHENV`, `NS_POP`
-- Fix switch cases and dead functions in `annotate.c`, `bytecode.c`,
-  `anf_pp.c`, `step.c`
-
-### Phase D — Final cleanup
-
-#### Step D1: Remove NS_GLOBAL and remaining traces
-
-Files: `common.h`, any remaining references
+Files: `common.h`, `symbols.c`, `symbols.h`, any remaining references
 
 - common.h: remove `NS_GLOBAL` definition
+- symbols.c/h: remove `nameSpaceSymbol()` and `nameSpacesSymbol()`
 - Grep for any remaining `nsId`, `nameSpace`, `NS_` references and clean up
 
 ## Risk assessment
 
 | Step | Risk | Rationale |
 |------|------|-----------|
-| A1 | Low | Dead code — variants never instantiated |
-| A2 | Low | Simplifying always-true branch |
-| A3 | Low | Small field removal |
-| B1 | Low | Dead code — variants never created |
-| B2 | Medium | Touches multiple files, changes struct layouts |
-| B3 | Medium | Replaces union type with raw pointer across ~42 sites |
-| B4 | Medium | Removes context-building helpers, needs care |
-| B5 | Medium | Replaces union with plain struct in hash table |
-| C1 | Low-Medium | Dead code, but touches runtime VM |
-| D1 | Low | Final cleanup |
+| A1 | Low | Dead bytecodes — never emitted |
+| A2 | Low | Dead emission functions |
+| B1 | Low | Dead ANF constructs — never created |
+| C1 | Low | Dead TC variants — never instantiated |
+| C2 | Low | Simplifying always-true branch |
+| C3 | Low | Small field removal |
+| D1 | Low | Dead lambda variants — never created |
+| D2 | Medium | Touches multiple files, changes struct layouts |
+| D3 | Medium | Replaces union type with raw pointer across ~42 sites |
+| D4 | Medium | Removes context-building helpers, needs care |
+| D5 | Medium | Replaces union with plain struct in hash table |
+| E1 | Low | Final cleanup |
 
 ## Notes
 
