@@ -239,12 +239,6 @@ enums:
           - STDINT_IMAG
           - BIGINT_IMAG
           - IRRATIONAL_IMAG
-          - NS_START
-          - NS_END
-          - NS_FINISH
-          - NS_PUSHSTACK
-          - NS_PUSHENV
-          - NS_POP
 
 primitives: !include primitives.yaml
 

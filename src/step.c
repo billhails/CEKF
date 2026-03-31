@@ -126,13 +126,8 @@ static inline void assert_stack_has_args(int naargs) {
 
 // --- Basic stack convenience wrappers (moved earlier so helpers can use them)
 // ---
-static inline void patch(Value v, int num) {
-    patchVec(v.val.nameSpace, state.S, num);
-}
-static inline void poke(int offset, Value v) { pokeStack(state.S, offset, v); }
 static inline void push(Value v) { pushStackEntry(state.S, v); }
 static inline void extend(int i) { pushnStack(state.S, i, vVoid); }
-static inline void discard(int num) { popnStack(state.S, num); }
 static inline Value pop() { return popStackEntry(state.S); }
 static inline void popn(int n) { popnStack(state.S, n); }
 static inline Value peek(int index) { return peeknStack(state.S, index); }
@@ -1237,84 +1232,6 @@ static void step() {
                     peekOverApplyStack(overApplyStack)->ready = true;
                 }
             }
-        } break;
-
-        case BYTECODES_TYPE_NS_START: {
-            int num = readCurrentWord();
-            DEBUG("NS_START [%d]", num);
-            extend(num);
-        } break;
-
-        case BYTECODES_TYPE_NS_END: {
-            int numLambdas = readCurrentWord();
-            int stackOffset = readCurrentWord();
-            DEBUG("NS_END [%d] [%d]", numLambdas, stackOffset);
-            Vec *snapshot = snapshotNameSpace(state.S);
-            int save = PROTECT(snapshot);
-            Value ns = value_NameSpace(snapshot);
-            poke(0 - (numLambdas + stackOffset), ns);
-            discard(numLambdas);
-            UNPROTECT(save);
-        } break;
-
-        case BYTECODES_TYPE_NS_FINISH: {
-            int num = readCurrentWord();
-            DEBUG("NS_FINISH [%d]", num);
-            // at this point we need to patch each of the nameSpaces with the
-            // final block of populated nameSpaces, size num, and at TOS
-            for (int i = 1; i <= num; i++) {
-                Value ns = peek(-i);
-#ifdef SAFETY_CHECKS
-                if (ns.type != VALUE_TYPE_NAMESPACE) {
-                    cant_happen("expected VALUE_TYPE_NAMESPACE, got %s",
-                                valueTypeName(ns.type));
-                }
-#endif
-                patch(ns, num);
-            }
-        } break;
-
-        case BYTECODES_TYPE_NS_PUSHSTACK: {
-            int offset = readCurrentWord();
-            DEBUG("NS_PUSHSTACK [%d]", offset);
-            Value v = peek(offset);
-#ifdef SAFETY_CHECKS
-            if (v.type != VALUE_TYPE_NAMESPACE) {
-                cant_happen("expected VALUE_TYPE_NAMESPACE, got %s",
-                            valueTypeName(v.type));
-            }
-#endif
-            // new empty stack frame
-            pushStackFrame(state.S);
-            // copy the nameSpace contents to the top of the stack
-            restoreNameSpace(state.S, v.val.nameSpace);
-        } break;
-
-        case BYTECODES_TYPE_NS_PUSHENV: {
-            int frame = readCurrentWord();
-            int offset = readCurrentWord();
-            DEBUG("NS_PUSHENV [%d][%d]", frame, offset);
-            Value v = lookUp(frame, offset);
-#ifdef SAFETY_CHECKS
-            if (v.type != VALUE_TYPE_NAMESPACE) {
-                cant_happen("expected VALUE_TYPE_NAMESPACE, got %s",
-                            valueTypeName(v.type));
-            }
-#endif
-            // new empty stack frame
-            pushStackFrame(state.S);
-            // copy the nameSpace contents to the top of the stack
-            restoreNameSpace(state.S, v.val.nameSpace);
-        } break;
-
-        case BYTECODES_TYPE_NS_POP: {
-            DEBUG("NS_POP");
-            Value result = pop();
-            int save = protectValue(result);
-            // remove the top stack frame
-            popStackFrame(state.S);
-            push(result);
-            UNPROTECT(save);
         } break;
 
         case BYTECODES_TYPE_DONE: {
