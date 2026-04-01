@@ -24,8 +24,6 @@ config:
       - utils.h
     limited_includes:
       - bigint.h
-      - tc.h
-      - tc_debug.h
       - minlam_functions.h
 
 structs:
