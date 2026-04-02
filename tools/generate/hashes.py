@@ -289,6 +289,11 @@ class SimpleHash(Base):
         a = AccessorHelper.accessor(isInline)
         print(f"markHashTable((HashTable *)_x{a}{prefix}{field}); {c}")
 
+    def printMarkHashField(self, depth):
+        c = self.comment('printMarkHashField')
+        pad(depth)
+        print(f"markHashTable(*(HashTable **)ptr); {c}")
+
     def printProtectField(self, isInline, field, depth, prefix=''):
         c = self.comment('printProtectField')
         pad(depth)

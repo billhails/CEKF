@@ -7,6 +7,7 @@ flowchart LR
 SymbolSet --entries--> NULL
 IntMap --entries--> int
 SymbolMap --entries--> HashSymbol
+SymbolSetMap --entries--> SymbolSet
 BoolMap --entries--> bool
 FileId --stDev--> device
 FileId --stIno--> inode

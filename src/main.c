@@ -56,6 +56,7 @@
 #include "minlam_eta.h"
 #include "minlam_fold.h"
 #include "minlam_pp.h"
+#include "minlam_shake.h"
 #include "minlam_uncurry.h"
 #include "pratt.h"
 #include "pratt_parser.h"
@@ -673,6 +674,10 @@ int main(int argc, char *argv[]) {
                 eprintf("\n");
                 exit(0);
             }
+
+            // forceGcFlag = 1;
+            minExp = shakeMinExp(minExp);
+            REPLACE_PROTECT(save2, minExp);
 
             if (flat_closures_flag) {
                 minExp = flatClosureConvert(minExp);

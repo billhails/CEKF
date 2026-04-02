@@ -349,12 +349,9 @@ class SimpleVector(Base):
         output = []
         
         output.append(f"static {myName} *{target}{myName}({myName} *node, VisitorContext *context) {{\n")
-        output.append(f"    ENTER({target}{myName});\n")
-        output.append(f"    if (node == NULL) {{\n")
-        output.append(f"        LEAVE({target}{myName});\n")
+        output.append(f"    if (node == NULL)\n")
         output.append(f"        return NULL;\n")
-        output.append(f"    }}\n")
-        output.append(f"\n")
+        output.append(f"    ENTER({target}{myName});\n")
         
         entryType = self.entries.getTypeDeclaration(catalog)
         
@@ -387,8 +384,6 @@ class SimpleVector(Base):
             output.append(f"    bool changed = false;\n")
             output.append(f"    {myName} *result = new{myName}(node->size);\n")
             output.append(f"    int save = PROTECT(result);\n")
-            output.append(f"\n")
-            output.append(f"    // Iterate over all elements\n")
             output.append(f"    for (Index i = 0; i < node->size; i++) {{\n")
             output.append(f"        {entryType} element = node->entries[i];\n")
             output.append(f"        {entryType} new_element = {target}{self.entries.typeName}(element, context);\n")
@@ -396,13 +391,11 @@ class SimpleVector(Base):
             output.append(f"        changed = changed || (new_element != element);\n")
             output.append(f"        result->entries[i] = new_element;\n")
             output.append(f"    }}\n")
-            output.append(f"\n")
             output.append(f"    if (changed) {{\n")
             output.append(f"        UNPROTECT(save);\n")
             output.append(f"        LEAVE({target}{myName});\n")
             output.append(f"        return result;\n")
             output.append(f"    }}\n")
-            output.append(f"\n")
             output.append(f"    UNPROTECT(save);\n")
             output.append(f"    LEAVE({target}{myName});\n")
             output.append(f"    return node;\n")

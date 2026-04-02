@@ -359,6 +359,9 @@ bool eqSymbolSet(SymbolSet *a, SymbolSet *b) {
     return true;
 }
 
+/**
+ * @brief Copy a SymbolMap
+ */
 SymbolMap *copySymbolMap(SymbolMap *orig) {
     SymbolMap *new = newSymbolMap();
     int save = PROTECT(new);
@@ -370,4 +373,19 @@ SymbolMap *copySymbolMap(SymbolMap *orig) {
     }
     UNPROTECT(save);
     return new;
+}
+
+/**
+ * @brief convert a SymbolSet to an array
+ */
+SymbolArray *symbolSetToArray(SymbolSet *set) {
+    SymbolArray *array = newSymbolArray();
+    int save = PROTECT(array);
+    HashSymbol *symbol = NULL;
+    Index i = 0;
+    while ((symbol = iterateSymbolSet(set, &i)) != NULL) {
+        pushSymbolArray(array, symbol);
+    }
+    UNPROTECT(save);
+    return array;
 }

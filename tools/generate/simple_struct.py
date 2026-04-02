@@ -522,12 +522,9 @@ class SimpleStruct(Base):
         output = []
         
         output.append(f"static {myName} *{target}{myName}({myName} *node, VisitorContext *context) {{\n")
-        output.append(f"    ENTER({target}{myName});\n")
-        output.append(f"    if (node == NULL) {{\n")
-        output.append(f"        LEAVE({target}{myName});\n")
+        output.append(f"    if (node == NULL)\n")
         output.append(f"        return NULL;\n")
-        output.append(f"    }}\n")
-        output.append(f"\n")
+        output.append(f"    ENTER({target}{myName});\n")
         
         # Track which fields need visiting
         # All fields should be visited, including auto-initialized ones (they can be modified later)
@@ -591,11 +588,9 @@ class SimpleStruct(Base):
                 # Assume it's a primitive/external type that doesn't need visiting
                 output.append(f"    // Pass through {fieldName} (type: {fieldType}, not in catalog)\n")
         
-        output.append(f"\n")
-        
+        output.append(f"    {myName} *result = node;\n")
         # Check if anything changed
         if visitedFields:
-            output.append(f"    {myName} *result = node;\n")
             output.append(f"    if (changed) {{\n")
             
             # Build constructor call
@@ -625,7 +620,6 @@ class SimpleStruct(Base):
                         output.append(f"        result->{fieldName} = node->{fieldName};\n")
             
             output.append(f"    }}\n")
-            output.append(f"\n")
         else:
             # No fields were actually visited (all pass-through)
             output.append(f"    (void)context;  // Unused parameter - all fields are pass-through\n")
