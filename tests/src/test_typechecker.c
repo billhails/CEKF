@@ -22,6 +22,7 @@
 #include "pratt_scanner.h"
 #include "symbol.h"
 #include "tc_analyze.h"
+#include "tc_pp.h"
 #include "test.h"
 #include "wrapper_synthesis.h"
 static BuiltIns *builtIns = NULL;

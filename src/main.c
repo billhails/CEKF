@@ -65,6 +65,7 @@
 #include "step.h"
 #include "tc_analyze.h"
 #include "tc_debug.h"
+#include "tc_pp.h"
 #include "tpmc_mermaid.h"
 #include "utils.h"
 #include "wrapper_synthesis.h"
