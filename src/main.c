@@ -508,16 +508,7 @@ int main(int argc, char *argv[]) {
         argc, binary_input_file ? nextargc : nextargc + 1, argv);
     PROTECT(builtIns);
 
-#ifdef UNIT_TESTS
-    if (test_flag) {
-        if (run_unit_tests()) {
-            exit(0);
-        } else {
-            exit(1);
-        }
-    } else
-#endif
-        if (binary_input_file) {
+    if (binary_input_file) {
         ByteCodeArray byteCodes;
         initByteCodeArray(&byteCodes, 8);
         switch (readBinaryInputFile(&byteCodes, binary_input_file)) {
@@ -578,6 +569,15 @@ int main(int argc, char *argv[]) {
         exp = inlineExp(exp);
         REPLACE_PROTECT(save2, exp);
 
+#if 0
+        // forceGcFlag = true;
+        LamExp *anfLam = anfNormalize2(exp);
+        REPLACE_PROTECT(save2, anfLam);
+        ppLamExp(anfLam);
+        eprintf("\n");
+        exit(0);
+#endif
+
         MinExp *minExp = desugarLamExp(exp);
         REPLACE_PROTECT(save2, minExp);
 
@@ -587,14 +587,6 @@ int main(int argc, char *argv[]) {
             exit(0);
         }
 
-#if 0
-        // forceGcFlag = true;
-        LamExp *anfLam = anfNormalize2(exp);
-        REPLACE_PROTECT(save2, anfLam);
-        ppLamExp(anfLam);
-        eprintf("\n");
-        exit(0);
-#endif
         minExp = alphaConvertMinExp(minExp, builtIns);
         REPLACE_PROTECT(save2, minExp);
 
@@ -648,12 +640,17 @@ int main(int argc, char *argv[]) {
         }
 
         if (targetCFlag) {
+            ///////
+            // CPS
+            ///////
             MinExp *done = makeDoneCont(CPI(minExp), 0, true);
             PROTECT(done);
-            // forceGcFlag = true;
             minExp = runCpsTrampolineTc(minExp, done);
-            // forceGcFlag = false;
             REPLACE_PROTECT(save2, minExp);
+
+            /////
+            // β
+            /////
             minExp = betaMinExp(minExp); // necessary for the amb transform
             REPLACE_PROTECT(save2, minExp);
 
@@ -663,12 +660,23 @@ int main(int argc, char *argv[]) {
                 exit(0);
             }
 
+            ///////
+            // AMB
+            ///////
             MinExp *fail = makeDoneCont(CPI(minExp), 1, false);
             PROTECT(fail);
             minExp = ambMinExp(minExp, fail);
             REPLACE_PROTECT(save2, minExp);
+
+            /////
+            // β
+            /////
             minExp = betaMinExp(minExp);
             REPLACE_PROTECT(save2, minExp);
+
+            /////
+            // η
+            /////
             minExp = etaMinExp(minExp);
             REPLACE_PROTECT(save2, minExp);
 
@@ -678,6 +686,9 @@ int main(int argc, char *argv[]) {
                 exit(0);
             }
 
+            /////////
+            // Shake
+            /////////
             // forceGcFlag = 1;
             minExp = shakeMinExp(minExp);
             REPLACE_PROTECT(save2, minExp);
@@ -688,6 +699,9 @@ int main(int argc, char *argv[]) {
                 exit(0);
             }
 
+            ///////////////////
+            // Closure Convert
+            ///////////////////
             if (flat_closures_flag) {
                 minExp = flatClosureConvert(minExp);
             } else {
@@ -701,6 +715,9 @@ int main(int argc, char *argv[]) {
                 exit(0);
             }
 
+            ////////////
+            // DeBruijn
+            ////////////
             minExp = indexMinExp(minExp);
             REPLACE_PROTECT(save2, minExp);
 
@@ -709,8 +726,10 @@ int main(int argc, char *argv[]) {
                 exit(0);
             }
 
+            //////////
+            // Emit C
+            //////////
             emitProgram(minExp, builtIns, stdout);
-            eprintf("\n");
             exit(0);
         }
 
