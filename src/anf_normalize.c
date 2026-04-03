@@ -82,7 +82,7 @@ static AnfExp *normalize(MinExp *minExp, AnfExp *tail) {
         return NULL;
     }
     ENTER(normalize);
-    IFDEBUG(ppMinExp(minExp));
+    IFDEBUG(ppMinExp(stderr, minExp));
     switch (minExp->type) {
     case MINEXP_TYPE_LAM:
         return normalizeMin(getMinExp_Lam(minExp), tail);
@@ -188,7 +188,7 @@ static AnfMatchList *normalizeMatchList(MinMatchList *matchList) {
 
 static AnfExp *normalizeLetRec(MinLetRec *minLetRec, AnfExp *tail) {
     ENTER(normalizeLetRec);
-    IFDEBUG(ppMinLetRec(minLetRec));
+    IFDEBUG(ppMinLetRec(stderr, minLetRec));
     AnfExp *body = normalize(minLetRec->body, tail);
     int save = PROTECT(body);
     CexpLetRec *cexpLetRec = newCexpLetRec(CPI(body), 0, NULL, body);

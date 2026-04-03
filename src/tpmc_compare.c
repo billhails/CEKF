@@ -89,7 +89,7 @@ bool tpmcArcEq(TpmcArc *a, TpmcArc *b) {
 
 bool tpmcArcInArray(TpmcArc *arc, TpmcArcArray *arcArray) {
     DEBUGN("tpmcArcInArray: ");
-    IFDEBUGN(ppTpmcPattern(arc->test));
+    IFDEBUGN(ppTpmcPattern(stderr, arc->test));
     for (Index i = 0; i < arcArray->size; i++) {
         if (tpmcArcEq(arcArray->entries[i], arc)) {
             DEBUG("tpmcArcInArray returning true");

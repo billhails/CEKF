@@ -554,8 +554,6 @@ static LamCond *performCondSubstitutions(LamCond *cond, SymbolSet *symbols) {
  */
 LamExp *lamPerformLazySubstitutions(LamExp *exp, SymbolSet *symbols) {
     ENTER(lamPerformLazySubstitutions);
-    // ppLamExp(exp);
-    // eprintf("\n");
     if (exp != NULL) {
         switch (exp->type) {
         case LAMEXP_TYPE_BIGINTEGER:

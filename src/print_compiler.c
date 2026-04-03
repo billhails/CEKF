@@ -247,7 +247,7 @@ static LamExp *compilePrinterForTuple(ParserInfo I, TcTypeArray *tuple,
         PROTECT(args);
         LamExp *res = makeLamExp_Apply(I, exp, args);
         UNPROTECT(save);
-        IFDEBUG(ppLamExp(res));
+        IFDEBUG(ppLamExp(stderr, res));
         LEAVE(compilePrinterForTuple);
         return res;
     } else {

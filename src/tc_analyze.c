@@ -339,7 +339,6 @@ static TcType *analyzeVar(ParserInfo I, HashSymbol *var, TcEnv *env, TcNg *ng) {
     // ENTER(analyzeVar);
     TcType *res = lookUp(env, var, ng);
     if (res == NULL) {
-        // ppTcEnv(env);
         can_happen(I, "undefined variable %s", var->name);
         return makeUnknown(var);
     }
@@ -569,17 +568,12 @@ static TcType *findResultType(TcType *fn) {
 
 static TcType *analyzeDeconstruct(LamDeconstruct *deconstruct, TcEnv *env,
                                   TcNg *ng) {
-    // ENTER(analyzeDeconstruct);
-    // eprintf("analyze deconstruct %s\n", deconstruct->name->name);
-    // ppTcEnv(env);
     TcType *constructor = lookUpConstructorType(deconstruct->name, env, ng);
     int save = PROTECT(constructor);
-    // ppTcType(stderr, constructor); eprintf("\n");
     if (constructor == NULL) {
         can_happen(CPI(deconstruct), "undefined type deconstructor %s",
                    deconstruct->name->name);
         TcType *res = makeFreshVar(deconstruct->name->name);
-        // LEAVE(analyzeDeconstruct);
         return res;
     }
     TcType *fieldType = findNthArg(deconstruct->vec - 1, constructor);

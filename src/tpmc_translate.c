@@ -177,7 +177,7 @@ static LamExp *prependLetBindings(TpmcPattern *test, SymbolSet *freeVariables,
         TpmcPatternArray *components = constructor->components;
         HashSymbol *name = constructor->info->type->name;
         DEBUG("constructor %s has size %d", name->name, components->size);
-        IFDEBUG(ppTpmcConstructorPattern(constructor));
+        IFDEBUG(ppTpmcConstructorPattern(stderr, constructor));
         for (Index i = 0; i < components->size; i++) {
             HashSymbol *path = components->entries[i]->path;
             DEBUG("considering variable %s", path->name);
@@ -749,7 +749,7 @@ LamExp *tpmcTranslate(ParserInfo PI, TpmcState *dfa) {
     // IFDEBUG(system("clear"));
     ENTER(tpmcTranslate);
     I = PI;
-    IFDEBUG(ppTpmcState(dfa));
+    IFDEBUG(ppTpmcState(stderr, dfa));
     LamExpTable *lambdaCache = newLamExpTable();
     int save = PROTECT(lambdaCache);
     recalculateRefCounts(dfa);

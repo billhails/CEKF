@@ -435,7 +435,7 @@ static void typeCheck(LamExp *exp, BuiltIns *builtIns) {
         exit(1);
     }
 #ifdef DEBUG_TC
-    ppTcType(res);
+    ppTcType(stderr, res);
     eprintf("\n");
 #endif
     UNPROTECT(save);

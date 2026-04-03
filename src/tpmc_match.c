@@ -1080,8 +1080,6 @@ static TpmcState *match(TpmcMatrix *matrix, TpmcStateArray *finalStates,
                         TpmcStateTable *stateTable, bool *unsafe,
                         SymbolSet *testedPaths, ParserInfo I) {
     ENTER(match);
-    // IFDEBUG(ppTpmcMatrix(matrix));
-    // IFDEBUG(ppTpmcStateArray(finalStates));
     if (matrix->height == 0) {
         cant_happen("zero-height matrix passed to match");
     }
@@ -1092,7 +1090,7 @@ static TpmcState *match(TpmcMatrix *matrix, TpmcStateArray *finalStates,
         res = mixture(matrix, finalStates, errorState, knownStates, stateTable,
                       unsafe, testedPaths, I);
     }
-    IFDEBUG(ppTpmcState(res));
+    IFDEBUG(ppTpmcState(stderr, res));
     LEAVE(match);
     return res;
 }

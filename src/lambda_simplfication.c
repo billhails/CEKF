@@ -331,8 +331,6 @@ static LamCond *performCondSimplifications(LamCond *cond) {
 
 LamExp *lamPerformSimplifications(LamExp *exp) {
     ENTER(lamPerformSimplifications);
-    // ppLamExp(exp);
-    // eprintf("\n");
     if (exp != NULL) {
         switch (exp->type) {
         case LAMEXP_TYPE_BIGINTEGER:
