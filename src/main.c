@@ -449,7 +449,7 @@ static void typeCheck(LamExp *exp, BuiltIns *builtIns) {
 static void annotate(AnfExp *anfExp, BuiltIns *builtIns) {
     annotateAnf(anfExp, builtIns);
 #ifdef DEBUG_ANF
-    ppExp(anfExp);
+    ppAnfExp(stderr, anfExp);
     eprintf("\n");
 #endif
 }
