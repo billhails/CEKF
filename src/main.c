@@ -391,8 +391,8 @@ static LamExp *convertProg(AstProg *prog) {
     exp = lamPerformSimplifications(exp);
     REPLACE_PROTECT(save, exp);
     if (lambda_flag) {
-        ppLamExp(exp);
-        eprintf("\n");
+        ppLamExp(stdout, exp);
+        printf("\n");
         exit(0);
     }
     UNPROTECT(save);
@@ -411,8 +411,8 @@ static LamExp *inlineExp(LamExp *exp) {
     exp = inlineLamExp(exp);
     int save = PROTECT(exp);
     if (inline_flag) {
-        ppLamExp(exp);
-        eprintf("\n");
+        ppLamExp(stdout, exp);
+        printf("\n");
         exit(0);
     }
     UNPROTECT(save);
@@ -573,8 +573,8 @@ int main(int argc, char *argv[]) {
         // forceGcFlag = true;
         LamExp *anfLam = anfNormalize2(exp);
         REPLACE_PROTECT(save2, anfLam);
-        ppLamExp(anfLam);
-        eprintf("\n");
+        ppLamExp(stdout, anfLam);
+        printf("\n");
         exit(0);
 #endif
 

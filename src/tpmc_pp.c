@@ -21,12 +21,12 @@
 
 void ppTpmcComparisonPattern(TpmcComparisonPattern *comparisonPattern) {
     ppTpmcPattern(comparisonPattern->previous);
-    eprintf("==");
+    printf("==");
     ppTpmcPattern(comparisonPattern->current);
 }
 
 void ppTpmcAssignmentPattern(TpmcAssignmentPattern *assignmentPattern) {
-    eprintf("%s<-", assignmentPattern->name->name);
+    printf("%s<-", assignmentPattern->name->name);
     ppTpmcPattern(assignmentPattern->value);
 }
 
@@ -36,27 +36,27 @@ void ppTpmcConstructorPattern(TpmcConstructorPattern *constructorPattern) {
 }
 
 void ppTpmcTuplePattern(TpmcPatternArray *tuple) {
-    eprintf("#");
+    printf("#");
     ppTpmcPatternArray(tuple);
 }
 
 void ppTpmcPatternArray(TpmcPatternArray *patternArray) {
-    eprintf("(");
+    printf("(");
     Index i = 0;
     TpmcPattern *pattern = NULL;
     bool more = false;
     while (iterateTpmcPatternArray(patternArray, &i, &pattern, &more)) {
         ppTpmcPattern(pattern);
         if (more) {
-            eprintf(", ");
+            printf(", ");
         }
     }
-    eprintf(")");
+    printf(")");
 }
 
 void ppTpmcPatternValue(TpmcPatternValue *patternValue) {
     if (patternValue == NULL) {
-        eprintf("<NULL pattern value>");
+        printf("<NULL pattern value>");
         return;
     }
     switch (patternValue->type) {
@@ -70,10 +70,10 @@ void ppTpmcPatternValue(TpmcPatternValue *patternValue) {
         ppTpmcAssignmentPattern(patternValue->val.assignment);
         break;
     case TPMCPATTERNVALUE_TYPE_WILDCARD:
-        eprintf("_");
+        printf("_");
         break;
     case TPMCPATTERNVALUE_TYPE_CHARACTER:
-        eprintf("'%c'", patternValue->val.character);
+        printf("'%c'", patternValue->val.character);
         break;
     case TPMCPATTERNVALUE_TYPE_BIGINTEGER:
         fprintMaybeBigInt(errout, patternValue->val.bigInteger);
@@ -89,37 +89,37 @@ void ppTpmcPatternValue(TpmcPatternValue *patternValue) {
 
 void ppTpmcPattern(TpmcPattern *pattern) {
     if (pattern == NULL) {
-        eprintf("<NULL pattern>");
+        printf("<NULL pattern>");
         return;
     }
     if (pattern->path == NULL) {
-        eprintf("<NULL path>");
+        printf("<NULL path>");
     } else {
-        eprintf("%s", pattern->path->name);
+        printf("%s", pattern->path->name);
     }
     if (pattern->pattern->type != TPMCPATTERNVALUE_TYPE_WILDCARD) {
-        eprintf("=(");
+        printf("=(");
         ppTpmcPatternValue(pattern->pattern);
-        eprintf(")");
+        printf(")");
     }
 }
 
 void ppTpmcMatrix(TpmcMatrix *matrix) {
     if (matrix == NULL) {
-        eprintf("<NULL matrix>\n");
+        printf("<NULL matrix>\n");
         return;
     }
-    eprintf("TpmcMatrix[\n");
+    printf("TpmcMatrix[\n");
     for (Index height = 0; height < matrix->height; height++) {
-        eprintf("  (");
+        printf("  (");
         for (Index width = 0; width < matrix->width; width++) {
             ppTpmcPattern(getTpmcMatrixIndex(matrix, width, height));
             if (width + 1 < matrix->width)
-                eprintf(", ");
+                printf(", ");
         }
-        eprintf(")\n");
+        printf(")\n");
     }
-    eprintf("]\n");
+    printf("]\n");
 }
 
 static char getTpmcStateType(TpmcState *state) {
@@ -136,15 +136,14 @@ static char getTpmcStateType(TpmcState *state) {
 }
 
 void ppTpmcState(TpmcState *state) {
-    eprintf("%c%d(%d) ", getTpmcStateType(state), state->stamp,
-            state->refCount);
+    printf("%c%d(%d) ", getTpmcStateType(state), state->stamp, state->refCount);
     ppTpmcVariableTable(state->freeVariables);
-    eprintf(" ");
+    printf(" ");
     ppTpmcStateValue(state->state);
 }
 
 void ppTpmcVariableTable(SymbolSet *table) {
-    eprintf("[");
+    printf("[");
     if (table != NULL) {
         Index i = 0;
         Index count = 0;
@@ -153,14 +152,14 @@ void ppTpmcVariableTable(SymbolSet *table) {
             ppTpmcSymbol(symbol);
             count++;
             if (count < countSymbolSet(table)) {
-                eprintf(", ");
+                printf(", ");
             }
         }
     }
-    eprintf("]");
+    printf("]");
 }
 
-void ppTpmcSymbol(HashSymbol *symbol) { eprintf("%s", symbol->name); }
+void ppTpmcSymbol(HashSymbol *symbol) { printf("%s", symbol->name); }
 
 void ppTpmcStateValue(TpmcStateValue *value) {
     switch (value->type) {
@@ -171,63 +170,65 @@ void ppTpmcStateValue(TpmcStateValue *value) {
         ppTpmcFinalState(value->val.final);
         break;
     case TPMCSTATEVALUE_TYPE_ERROR:
-        eprintf("ERROR");
+        printf("ERROR");
         break;
     }
 }
 
 void ppTpmcTestState(TpmcTestState *test) {
     ppTpmcSymbol(test->path);
-    eprintf(":");
+    printf(":");
     ppTpmcArcArray(test->arcs);
 }
 
 void ppTpmcArcArray(TpmcArcArray *arcs) {
-    eprintf("{");
+    printf("{");
     Index i = 0;
     TpmcArc *arc;
     bool more;
     while (iterateTpmcArcArray(arcs, &i, &arc, &more)) {
         ppTpmcArc(arc);
         if (more)
-            eprintf(", ");
+            printf(", ");
     }
-    eprintf("}");
+    printf("}");
 }
 
 void ppTpmcArc(TpmcArc *arc) {
-    eprintf("ARC(");
+    printf("ARC(");
     ppTpmcVariableTable(arc->freeVariables);
-    eprintf("::");
+    printf("::");
     ppTpmcPattern(arc->test);
-    eprintf("=>");
+    printf("=>");
     ppTpmcState(arc->state);
-    eprintf(")");
+    printf(")");
 }
 
-void ppTpmcFinalState(TpmcFinalState *final) { ppLamExp(final->action); }
+void ppTpmcFinalState(TpmcFinalState *final) {
+    ppLamExp(stdout, final->action);
+}
 
 void ppTpmcIntArray(IntArray *array) {
-    eprintf("[");
+    printf("[");
     Index i = 0;
     int entry;
     bool more;
     while (iterateIntArray(array, &i, &entry, &more)) {
-        eprintf("%d%s", entry, more ? ", " : "");
+        printf("%d%s", entry, more ? ", " : "");
     }
-    eprintf("]");
+    printf("]");
 }
 
 void ppTpmcStateArray(TpmcStateArray *array) {
-    eprintf("[\n");
+    printf("[\n");
     Index i = 0;
     TpmcState *state;
     bool more;
     while (iterateTpmcStateArray(array, &i, &state, &more)) {
-        eprintf("  ");
+        printf("  ");
         ppTpmcState(state);
         if (more)
-            eprintf(",\n");
+            printf(",\n");
     }
-    eprintf("\n]");
+    printf("\n]");
 }

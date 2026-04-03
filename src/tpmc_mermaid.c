@@ -69,7 +69,7 @@ static SCharVec *mermaidStateName(TpmcState *state, SymbolSet *seen) {
         sprintf(buf, "F%d", state->stamp);
         if (!seenName(buf, seen)) {
             printf("%s(\"", buf);
-            ppLamExp(state->state->val.final->action);
+            ppLamExp(stdout, state->state->val.final->action);
             printf("<br/>");
             mermaidFreeVariables(state->freeVariables);
             printf("\")\n");
