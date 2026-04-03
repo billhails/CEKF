@@ -12,12 +12,13 @@ applies its own transforms and emits C directly.
 
 ```text
 MinExp (from desugaring)
-  ↓ runCpsTrampolineTc()   — CPS transform
+  ↓ runCpsTrampolineTc()    — CPS transform
   ↓ betaMinExp()            — beta reduction
   ↓ ambMinExp()             — amb (backtracking) transform
   ↓ betaMinExp()            — beta reduction (2nd pass)
   ↓ etaMinExp()             — eta reduction
   ↓ betaMinExp()            — beta reduction (3rd pass)
+  ↓ shakeMinExp()           — dead binding elimination (tree shaking)
   ↓ flatClosureConvert()    — closure conversion (or sharedClosureConvert)
   ↓ indexMinExp()           — lexical addressing (De Bruijn indices)
   ↓ emitProgram()           — C code generation

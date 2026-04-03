@@ -103,6 +103,7 @@ static int uncurry_flag = 0;
 static int cps_flag = 0;
 static int amb_flag = 0;
 static int closure_flag = 0;
+static int shake_flag = 0;
 static int flat_closures_flag = 0;
 
 /**
@@ -196,6 +197,7 @@ static void usage(char *prog, int status) {
         "    --include=<dir>          Add dir to the list of directories to "
         "be searched.\n"
         "    --dump-amb               Display the IR after the amb transform.\n"
+        "    --dump-shake             Display the IR after tree shaking.\n"
         "    --dump-uncurry           Display the IR after uncurrying.\n"
         "    --parse-only             Stop after parsing to enable "
         "parser-only profiling.\n"
@@ -244,6 +246,7 @@ static int processArgs(int argc, char *argv[]) {
             {"dump-cps", no_argument, &cps_flag, 1},
             {"dump-amb", no_argument, &amb_flag, 1},
             {"dump-closure", no_argument, &closure_flag, 1},
+            {"dump-shake", no_argument, &shake_flag, 1},
             {"assertions-accumulate", no_argument, &assertions_accumulate, 1},
             {"dump-tpmc", required_argument, 0, 'm'},
             {"dump-lambda", optional_argument, 0, 'l'},
@@ -678,6 +681,12 @@ int main(int argc, char *argv[]) {
             // forceGcFlag = 1;
             minExp = shakeMinExp(minExp);
             REPLACE_PROTECT(save2, minExp);
+
+            if (shake_flag) {
+                ppMinExp(minExp);
+                eprintf("\n");
+                exit(0);
+            }
 
             if (flat_closures_flag) {
                 minExp = flatClosureConvert(minExp);

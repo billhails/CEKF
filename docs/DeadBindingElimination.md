@@ -25,7 +25,7 @@ At this point all reductions have simplified the IR, variable references
 are still symbolic names, and closure conversion has not yet obscured the
 reference structure.
 
-## Key Building Block
+## Existing Building Block
 
 `freeVarsMinExp()` in `src/minlam_freeVars.c` computes the free variables
 of a MinExp subtree into a `SymbolSet`. The algorithm relies on this

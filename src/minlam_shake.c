@@ -51,6 +51,15 @@ static MinCondCases *shakeMinCondCases(MinCondCases *);
 // Support Code for shakeMinLetRec
 ///////////////////////////////////
 
+static SymbolSet *computeRoots(SymbolSet *keys, MinExp *exp) {
+    SymbolSet *free = newSymbolSet();
+    int save = PROTECT(free);
+    freeVarsMinExp(exp, free, NULL);
+    free = intersectSymbolSet(free, keys);
+    UNPROTECT(save);
+    return free;
+}
+
 static SymbolSet *getAllKeys(MinBindings *bindings) {
     if (bindings == NULL)
         return newSymbolSet();
@@ -68,23 +77,11 @@ static SymbolSetMap *buildDependencyGraph(MinBindings *bindings,
     }
     SymbolSetMap *map = buildDependencyGraph(bindings->next, keys);
     int save = PROTECT(map);
-    SymbolSet *free = newSymbolSet();
-    PROTECT(free);
-    freeVarsMinExp(bindings->val, free, NULL);
-    free = intersectSymbolSet(free, keys);
+    SymbolSet *free = computeRoots(keys, bindings->val);
     PROTECT(free);
     setSymbolSetMap(map, bindings->var, free);
     UNPROTECT(save);
     return map;
-}
-
-static SymbolSet *computeRoots(SymbolSet *keys, MinExp *body) {
-    SymbolSet *free = newSymbolSet();
-    int save = PROTECT(free);
-    freeVarsMinExp(body, free, NULL);
-    free = intersectSymbolSet(free, keys);
-    UNPROTECT(save);
-    return free;
 }
 
 static SymbolSet *computeLiveBindings(SymbolSetMap *deps, SymbolSet *rootSet) {
@@ -348,12 +345,15 @@ static MinLetRec *shakeMinLetRec(MinLetRec *node) {
         return NULL;
     ENTER(shakeMinLetRec);
     bool changed = false;
+    // post-traversal processing, recurse into the body
+    // and the bindings first.
     MinExp *new_body = shakeMinExp(node->body);
     int save = PROTECT(new_body);
     changed = changed || (new_body != node->body);
     MinBindings *new_bindings = shakeMinBindings(node->bindings);
     PROTECT(new_bindings);
 
+    // main algorithm
     SymbolSet *keys = getAllKeys(node->bindings);
     PROTECT(keys);
     SymbolSetMap *deps = buildDependencyGraph(node->bindings, keys);
