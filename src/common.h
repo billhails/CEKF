@@ -58,14 +58,14 @@
 // #    define DEBUG_SLOW_STEP
 // #    define DEBUG_SQLITE
 // #    define DEBUG_STACK
-// #define DEBUG_STEP
+// #    define DEBUG_STEP
 // #    define DEBUG_TC
 // #    define DEBUG_TIN_INSTANTIATION
 // #    define DEBUG_TIN_SUBSTITUTION
 // #    define DEBUG_TIN_UNIFICATION
 // #    define DEBUG_TPMC_COMPARE
 // #    define DEBUG_TPMC_LOGIC
-// #define DEBUG_TPMC_MATCH
+// #    define DEBUG_TPMC_MATCH
 // #    define DEBUG_TPMC_TRANSLATE
 #define SAFETY_CHECKS
 #endif
