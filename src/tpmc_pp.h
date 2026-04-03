@@ -19,23 +19,27 @@
  */
 
 #include "tpmc.h"
+#include <stdio.h>
 
-void ppTpmcMatrix(TpmcMatrix *matrix);
-void ppTpmcPattern(TpmcPattern *pattern);
-void ppTpmcPatternValue(TpmcPatternValue *patternValue);
-void ppTpmcComparisonPattern(TpmcComparisonPattern *comparisonPattern);
-void ppTpmcAssignmentPattern(TpmcAssignmentPattern *assignmentPattern);
-void ppTpmcConstructorPattern(TpmcConstructorPattern *constructorPattern);
-void ppTpmcPatternArray(TpmcPatternArray *patternArray);
-void ppTpmcState(TpmcState *state);
-void ppTpmcVariableTable(SymbolSet *table);
-void ppTpmcSymbol(HashSymbol *symbol);
-void ppTpmcStateValue(TpmcStateValue *value);
-void ppTpmcTestState(TpmcTestState *test);
-void ppTpmcArcArray(TpmcArcArray *arcs);
-void ppTpmcArc(TpmcArc *arc);
-void ppTpmcFinalState(TpmcFinalState *final);
-void ppTpmcIntArray(IntArray *array);
-void ppTpmcStateArray(TpmcStateArray *array);
+void ppTpmcMatrix(FILE *out, TpmcMatrix *matrix);
+void ppTpmcPattern(FILE *out, TpmcPattern *pattern);
+void ppTpmcPatternValue(FILE *out, TpmcPatternValue *patternValue);
+void ppTpmcComparisonPattern(FILE *out,
+                             TpmcComparisonPattern *comparisonPattern);
+void ppTpmcAssignmentPattern(FILE *out,
+                             TpmcAssignmentPattern *assignmentPattern);
+void ppTpmcConstructorPattern(FILE *out,
+                              TpmcConstructorPattern *constructorPattern);
+void ppTpmcPatternArray(FILE *out, TpmcPatternArray *patternArray);
+void ppTpmcState(FILE *out, TpmcState *state);
+void ppTpmcVariableTable(FILE *out, SymbolSet *table);
+void ppTpmcSymbol(FILE *out, HashSymbol *symbol);
+void ppTpmcStateValue(FILE *out, TpmcStateValue *value);
+void ppTpmcTestState(FILE *out, TpmcTestState *test);
+void ppTpmcArcArray(FILE *out, TpmcArcArray *arcs);
+void ppTpmcArc(FILE *out, TpmcArc *arc);
+void ppTpmcFinalState(FILE *out, TpmcFinalState *final);
+void ppTpmcIntArray(FILE *out, IntArray *array);
+void ppTpmcStateArray(FILE *out, TpmcStateArray *array);
 
 #endif

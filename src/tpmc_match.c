@@ -423,7 +423,7 @@ static void populateSubPatternMatrixRowWithConstructor(TpmcMatrix *matrix,
                                                        TpmcPattern *pattern,
                                                        ParserInfo I) {
     if (arity != pattern->pattern->val.constructor->components->size) {
-        ppTpmcPattern(pattern);
+        ppTpmcPattern(stderr, pattern);
         can_happen(I, "\narity %d does not match constructor \"%s\" arity %d",
                    arity, pattern->pattern->val.constructor->info->name->name,
                    pattern->pattern->val.constructor->components->size);
@@ -441,7 +441,7 @@ static void populateSubPatternMatrixRowWithTuple(TpmcMatrix *matrix, int y,
                                                  TpmcPattern *pattern,
                                                  ParserInfo I) {
     if (arity != countTpmcPatternArray(pattern->pattern->val.tuple)) {
-        ppTpmcPattern(pattern);
+        ppTpmcPattern(stderr, pattern);
         can_happen(I, "arity %d does not match tuple arity %d", arity,
                    countTpmcPatternArray(pattern->pattern->val.tuple));
         exit(1);
