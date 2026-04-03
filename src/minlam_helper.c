@@ -31,8 +31,8 @@ SymbolList *minBindingsToSymbolList(MinBindings *bindings) {
     return this;
 }
 
-MinExp *makeDoneCont(ParserInfo PI, bool hasArg) {
-    MinExp *body = newMinExp_Done(PI);
+MinExp *makeDoneCont(ParserInfo PI, int status, bool hasArg) {
+    MinExp *body = newMinExp_Done(PI, status);
     int save = PROTECT(body);
     SymbolList *args = NULL;
     if (hasArg) {

@@ -198,7 +198,7 @@ unions:
             callCC: MinExp
             character: character
             cond: MinCond
-            done: void_ptr
+            done: int # exit status
             iff: MinIff
             lam: MinLam
             letRec: MinLetRec

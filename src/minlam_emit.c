@@ -1193,7 +1193,7 @@ static void emitMinExp(MinExp *node, EmitterContext *ctx) {
         break;
     }
     case MINEXP_TYPE_DONE: {
-        fprintf(FH(ctx), "exit(0);");
+        fprintf(FH(ctx), "exit(%d);", getMinExp_Done(node));
         break;
     }
     case MINEXP_TYPE_IFF: {

@@ -648,7 +648,7 @@ int main(int argc, char *argv[]) {
         }
 
         if (targetCFlag) {
-            MinExp *done = makeDoneCont(CPI(minExp), true);
+            MinExp *done = makeDoneCont(CPI(minExp), 0, true);
             PROTECT(done);
             // forceGcFlag = true;
             minExp = runCpsTrampolineTc(minExp, done);
@@ -663,7 +663,7 @@ int main(int argc, char *argv[]) {
                 exit(0);
             }
 
-            MinExp *fail = makeDoneCont(CPI(minExp), false);
+            MinExp *fail = makeDoneCont(CPI(minExp), 1, false);
             PROTECT(fail);
             minExp = ambMinExp(minExp, fail);
             REPLACE_PROTECT(save2, minExp);
