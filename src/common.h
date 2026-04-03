@@ -74,8 +74,6 @@
 #define __attribute__(x)
 #endif
 
-#define errout stdout
-
 // Forward declaration to avoid circular dependency with parser_info.h
 struct ParserInfo;
 typedef struct ParserInfo ParserInfo;

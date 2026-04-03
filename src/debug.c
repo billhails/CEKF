@@ -197,7 +197,7 @@ void dumpByteCode(ByteCodeArray *b, LocationArray *l) {
                 case BYTECODES_TYPE_BIGINT: {
                     bigint bi = readBigint(b, &i);
                     eprintf(" [bigint]");
-                    bigint_fprint(errout, &bi);
+                    bigint_fprint(stderr, &bi);
                     bigint_free(&bi);
                 } break;
                 case BYTECODES_TYPE_STDINT: {
@@ -264,7 +264,7 @@ void dumpByteCode(ByteCodeArray *b, LocationArray *l) {
         case BYTECODES_TYPE_BIGINT: {
             eprintf("BIGINT [");
             bigint bi = readBigint(b, &i);
-            bigint_fprint(errout, &bi);
+            bigint_fprint(stderr, &bi);
             eprintf("]");
             bigint_free(&bi);
             loc(ii, &li, l);
@@ -272,7 +272,7 @@ void dumpByteCode(ByteCodeArray *b, LocationArray *l) {
         case BYTECODES_TYPE_BIGINT_IMAG: {
             eprintf("BIGINT_IMAG [");
             bigint bi = readBigint(b, &i);
-            bigint_fprint(errout, &bi);
+            bigint_fprint(stderr, &bi);
             eprintf("]");
             loc(ii, &li, l);
             bigint_free(&bi);

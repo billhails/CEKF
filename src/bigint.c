@@ -3,21 +3,19 @@
 
 #include <assert.h>
 #include <math.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdio.h>
 #ifdef DEBUG_BIGINT
-#  include "debugging_on.h"
+#include "debugging_on.h"
 #else
-#  include "debugging_off.h"
+#include "debugging_off.h"
 #endif
 
-#define BIGINT_ASSERT(a, op, b) assert((a) op (b));
+#define BIGINT_ASSERT(a, op, b) assert((a)op(b));
 
 /* low bits of a * b */
-bigint_word bigint_word_mul_lo(bigint_word a, bigint_word b) {
-    return a * b;
-}
+bigint_word bigint_word_mul_lo(bigint_word a, bigint_word b) { return a * b; }
 
 /* high bits of a * b */
 bigint_word bigint_word_mul_hi(bigint_word a, bigint_word b) {
@@ -49,106 +47,106 @@ bigint_word bigint_word_sub_get_carry(bigint_word *dst, bigint_word a,
 
 bigint_word bigint_word_from_char(char c) {
     switch (c) {
-        case '0':
-            return 0;
-        case '1':
-            return 1;
-        case '2':
-            return 2;
-        case '3':
-            return 3;
-        case '4':
-            return 4;
-        case '5':
-            return 5;
-        case '6':
-            return 6;
-        case '7':
-            return 7;
-        case '8':
-            return 8;
-        case '9':
-            return 9;
-        case 'a':
-        case 'A':
-            return 10;
-        case 'b':
-        case 'B':
-            return 11;
-        case 'c':
-        case 'C':
-            return 12;
-        case 'd':
-        case 'D':
-            return 13;
-        case 'e':
-        case 'E':
-            return 14;
-        case 'f':
-        case 'F':
-            return 15;
-        case 'g':
-        case 'G':
-            return 16;
-        case 'h':
-        case 'H':
-            return 17;
-        case 'i':
-        case 'I':
-            return 18;
-        case 'j':
-        case 'J':
-            return 19;
-        case 'k':
-        case 'K':
-            return 20;
-        case 'l':
-        case 'L':
-            return 21;
-        case 'm':
-        case 'M':
-            return 22;
-        case 'n':
-        case 'N':
-            return 23;
-        case 'o':
-        case 'O':
-            return 24;
-        case 'p':
-        case 'P':
-            return 25;
-        case 'q':
-        case 'Q':
-            return 26;
-        case 'r':
-        case 'R':
-            return 27;
-        case 's':
-        case 'S':
-            return 28;
-        case 't':
-        case 'T':
-            return 29;
-        case 'u':
-        case 'U':
-            return 30;
-        case 'v':
-        case 'V':
-            return 31;
-        case 'w':
-        case 'W':
-            return 32;
-        case 'x':
-        case 'X':
-            return 33;
-        case 'y':
-        case 'Y':
-            return 34;
-        case 'z':
-        case 'Z':
-            return 35;
-        default:
-            return BIGINT_WORD_MAX;
+    case '0':
+        return 0;
+    case '1':
+        return 1;
+    case '2':
+        return 2;
+    case '3':
+        return 3;
+    case '4':
+        return 4;
+    case '5':
+        return 5;
+    case '6':
+        return 6;
+    case '7':
+        return 7;
+    case '8':
+        return 8;
+    case '9':
+        return 9;
+    case 'a':
+    case 'A':
+        return 10;
+    case 'b':
+    case 'B':
+        return 11;
+    case 'c':
+    case 'C':
+        return 12;
+    case 'd':
+    case 'D':
+        return 13;
+    case 'e':
+    case 'E':
+        return 14;
+    case 'f':
+    case 'F':
+        return 15;
+    case 'g':
+    case 'G':
+        return 16;
+    case 'h':
+    case 'H':
+        return 17;
+    case 'i':
+    case 'I':
+        return 18;
+    case 'j':
+    case 'J':
+        return 19;
+    case 'k':
+    case 'K':
+        return 20;
+    case 'l':
+    case 'L':
+        return 21;
+    case 'm':
+    case 'M':
+        return 22;
+    case 'n':
+    case 'N':
+        return 23;
+    case 'o':
+    case 'O':
+        return 24;
+    case 'p':
+    case 'P':
+        return 25;
+    case 'q':
+    case 'Q':
+        return 26;
+    case 'r':
+    case 'R':
+        return 27;
+    case 's':
+    case 'S':
+        return 28;
+    case 't':
+    case 'T':
+        return 29;
+    case 'u':
+    case 'U':
+        return 30;
+    case 'v':
+    case 'V':
+        return 31;
+    case 'w':
+    case 'W':
+        return 32;
+    case 'x':
+    case 'X':
+        return 33;
+    case 'y':
+    case 'Y':
+        return 34;
+    case 'z':
+    case 'Z':
+        return 35;
+    default:
+        return BIGINT_WORD_MAX;
     }
 }
 
@@ -162,7 +160,7 @@ int bigint_word_bitlength(bigint_word a) {
 
 int bigint_word_count_trailing_zeros(bigint_word a) {
     int i;
-    for (i = 0; i < (int) BIGINT_WORD_BITS; i++)
+    for (i = 0; i < (int)BIGINT_WORD_BITS; i++)
         if ((a >> i) & 1)
             return i;
     return BIGINT_WORD_BITS;
@@ -194,13 +192,13 @@ int bigint_int_gcd(int a, int b) {
     return bigint_uint_gcd(BIGINT_INT_ABS(a), BIGINT_INT_ABS(b));
 }
 
-bigint *bigint_init(bigint * dst) {
+bigint *bigint_init(bigint *dst) {
     dst->words = NULL;
     dst->neg = dst->size = dst->capacity = 0;
     return dst;
 }
 
-bigint *bigint_reserve(bigint * dst, int capacity) {
+bigint *bigint_reserve(bigint *dst, int capacity) {
     if (dst->capacity >= capacity)
         return dst;
     dst->words = GROW_ARRAY(bigint_word, dst->words, dst->capacity, capacity);
@@ -209,7 +207,7 @@ bigint *bigint_reserve(bigint * dst, int capacity) {
     return dst;
 }
 
-void bigint_free(bigint * dst) {
+void bigint_free(bigint *dst) {
     FREE_ARRAY(bigint_word, dst->words, dst->capacity);
     bigint_init(dst);
 }
@@ -234,7 +232,7 @@ int bigint_raw_cmp_abs(const bigint_word *a, int na, const bigint_word *b,
     return 0;
 }
 
-int bigint_cmp_abs(const bigint * a, const bigint * b) {
+int bigint_cmp_abs(const bigint *a, const bigint *b) {
     return bigint_raw_cmp_abs(a->words, a->size, b->words, b->size);
 }
 
@@ -251,12 +249,11 @@ int bigint_raw_cmp(const bigint_word *a, int na, int a_neg,
     return (!a_neg && b_neg) ? +1 : -1;
 }
 
-int bigint_cmp(const bigint * a, const bigint * b) {
-    return bigint_raw_cmp(a->words, a->size, a->neg, b->words, b->size,
-                          b->neg);
+int bigint_cmp(const bigint *a, const bigint *b) {
+    return bigint_raw_cmp(a->words, a->size, a->neg, b->words, b->size, b->neg);
 }
 
-int bigint_cmp_abs_word(const bigint * a, bigint_word b) {
+int bigint_cmp_abs_word(const bigint *a, bigint_word b) {
     if (b == 0) {
         if (a->size == 0)
             return 0;
@@ -271,21 +268,19 @@ void bigint_raw_zero(bigint_word *dst, int from, int to) {
     memset(dst + from, 0, (to - from) * sizeof(*dst));
 }
 
-bigint *bigint_set_neg(bigint * dst, int neg) {
+bigint *bigint_set_neg(bigint *dst, int neg) {
     dst->neg = neg;
     return dst;
 }
 
-bigint *bigint_negate(bigint * dst) {
-    return bigint_set_neg(dst, !dst->neg);
-}
+bigint *bigint_negate(bigint *dst) { return bigint_set_neg(dst, !dst->neg); }
 
 int bigint_raw_cpy(bigint_word *dst, const bigint_word *src, int n) {
     memcpy(dst, src, n * sizeof(*src));
     return n;
 }
 
-bigint *bigint_cpy(bigint * dst, const bigint * src) {
+bigint *bigint_cpy(bigint *dst, const bigint *src) {
     if (src == dst)
         return dst;
     bigint_reserve(dst, src->size);
@@ -303,29 +298,28 @@ int bigint_raw_truncate(const bigint_word *a, int n) {
 void bigint_raw_clr_bit(bigint_word *dst, unsigned bit_index) {
     unsigned word_index = bit_index / BIGINT_WORD_BITS;
     bit_index %= BIGINT_WORD_BITS;
-    dst[word_index] &= BIGINT_WORD_MAX ^ (((bigint_word) 1) << bit_index);
+    dst[word_index] &= BIGINT_WORD_MAX ^ (((bigint_word)1) << bit_index);
 }
 
-bigint *bigint_clr_bit(bigint * dst, unsigned bit_index) {
+bigint *bigint_clr_bit(bigint *dst, unsigned bit_index) {
     bigint_raw_clr_bit(dst->words, bit_index);
     dst->size = bigint_raw_truncate(dst->words, dst->size);
     return dst;
 }
 
-bigint *bigint_set_bit(bigint * dst, unsigned bit_index) {
+bigint *bigint_set_bit(bigint *dst, unsigned bit_index) {
     int word_index = bit_index / BIGINT_WORD_BITS;
     int n = word_index + 1;
 
     bigint_reserve(dst, n);
     bigint_raw_zero(dst->words, dst->size, n);
     dst->size = BIGINT_MAX(dst->size, n);
-    dst->words[word_index] |=
-        ((bigint_word) 1) << bit_index % BIGINT_WORD_BITS;
+    dst->words[word_index] |= ((bigint_word)1) << bit_index % BIGINT_WORD_BITS;
 
     return dst;
 }
 
-bigint_word bigint_get_bit(const bigint * src, unsigned bit_index) {
+bigint_word bigint_get_bit(const bigint *src, unsigned bit_index) {
     int i = bit_index / BIGINT_WORD_BITS;
 
     if (src->size <= i)
@@ -486,8 +480,8 @@ int bigint_raw_mul_karatsuba(bigint_word *dst, const bigint_word *a, int na,
     bigint_word *lo1hi1, *lo2hi2, *z0, *z1, *z2;
     int nlo1hi1, nlo2hi2, nz0, nz1, nz2;
 
-    if (na < BIGINT_KARATSUBA_WORD_THRESHOLD
-        && nb < BIGINT_KARATSUBA_WORD_THRESHOLD) {
+    if (na < BIGINT_KARATSUBA_WORD_THRESHOLD &&
+        nb < BIGINT_KARATSUBA_WORD_THRESHOLD) {
         bigint_raw_zero(dst, 0, na + nb);
         return bigint_raw_mul_add(dst, a, na, b, nb);
     }
@@ -540,7 +534,7 @@ int bigint_raw_mul_karatsuba(bigint_word *dst, const bigint_word *a, int na,
     return bigint_raw_truncate(dst, n + m2 * 2);
 }
 
-bigint *bigint_mul(bigint * dst, const bigint * a, const bigint * b) {
+bigint *bigint_mul(bigint *dst, const bigint *a, const bigint *b) {
     int na = a->size;
     int nb = b->size;
     int n = na + nb;
@@ -550,18 +544,16 @@ bigint *bigint_mul(bigint * dst, const bigint * a, const bigint * b) {
 
     /* bigint_raw_mul_karatsuba already has this fastpath */
     /* but this way we avoid allocating tmp */
-    if (dst != a && dst != b && na < BIGINT_KARATSUBA_WORD_THRESHOLD
-        && nb < BIGINT_KARATSUBA_WORD_THRESHOLD) {
+    if (dst != a && dst != b && na < BIGINT_KARATSUBA_WORD_THRESHOLD &&
+        nb < BIGINT_KARATSUBA_WORD_THRESHOLD) {
         bigint_raw_zero(dst->words, 0, na + nb);
-        dst->size =
-            bigint_raw_mul_add(dst->words, a->words, na, b->words, nb);
+        dst->size = bigint_raw_mul_add(dst->words, a->words, na, b->words, nb);
     } else {
         int magical_upper_bound = BIGINT_MAX(na, nb) * 11 + 180 + n;
         tmp = NEW_ARRAY(bigint_word, magical_upper_bound);
 
         dst->size =
-            bigint_raw_mul_karatsuba(tmp, a->words, na, b->words, nb,
-                                     tmp + n);
+            bigint_raw_mul_karatsuba(tmp, a->words, na, b->words, nb, tmp + n);
         bigint_raw_cpy(dst->words, tmp, dst->size);
         FREE_ARRAY(bigint_word, tmp, magical_upper_bound);
     }
@@ -574,13 +566,13 @@ int bigint_digits_bound(int n_digits_src, double src_base, double dst_base) {
     return ceil(n_digits_src * log(src_base) / log(dst_base)) + 1;
 }
 
-int bigint_write_size(const bigint * a, double dst_base) {
+int bigint_write_size(const bigint *a, double dst_base) {
     double src_base = pow(2, BIGINT_WORD_BITS);
-    return bigint_digits_bound(a->size, src_base, dst_base)
-        + sizeof('-') + sizeof('\0');
+    return bigint_digits_bound(a->size, src_base, dst_base) + sizeof('-') +
+           sizeof('\0');
 }
 
-bigint *bigint_from_str_base(bigint * dst, const char *src, int src_base) {
+bigint *bigint_from_str_base(bigint *dst, const char *src, int src_base) {
     int n_digits_src, n_digits_dst;
     double dst_base = pow(2.0, BIGINT_WORD_BITS);
 
@@ -595,11 +587,11 @@ bigint *bigint_from_str_base(bigint * dst, const char *src, int src_base) {
     return bigint_set_neg(dst, *src == '-');
 }
 
-bigint *bigint_from_str(bigint * dst, const char *src) {
+bigint *bigint_from_str(bigint *dst, const char *src) {
     return bigint_from_str_base(dst, src, 10);
 }
 
-bigint *bigint_from_int(bigint * dst, int src) {
+bigint *bigint_from_int(bigint *dst, int src) {
     unsigned int x = BIGINT_INT_ABS(src);
     int n = BIGINT_MAX(1, sizeof(x) / sizeof(bigint_word));
     bigint_reserve(dst, n);
@@ -609,16 +601,16 @@ bigint *bigint_from_int(bigint * dst, int src) {
     return bigint_set_neg(dst, src < 0);
 }
 
-bigint *bigint_from_word(bigint * dst, bigint_word a) {
+bigint *bigint_from_word(bigint *dst, bigint_word a) {
     bigint_reserve(dst, 1);
     dst->words[0] = a;
     dst->size = bigint_raw_truncate(dst->words, 1);
     return bigint_set_neg(dst, 0);
 }
 
-int bigint_raw_add_signed(bigint_word *dst, int *dst_neg,
-                          const bigint_word *a, int na, int a_neg,
-                          const bigint_word *b, int nb, int b_neg) {
+int bigint_raw_add_signed(bigint_word *dst, int *dst_neg, const bigint_word *a,
+                          int na, int a_neg, const bigint_word *b, int nb,
+                          int b_neg) {
     if (a_neg) {
         if (b_neg) {
             if (na >= nb) {
@@ -658,47 +650,45 @@ int bigint_raw_add_signed(bigint_word *dst, int *dst_neg,
     }
 }
 
-bigint *bigint_add_signed(bigint * dst, const bigint * a, int a_neg,
-                          const bigint * b, int b_neg) {
+bigint *bigint_add_signed(bigint *dst, const bigint *a, int a_neg,
+                          const bigint *b, int b_neg) {
     int na = a->size;
     int nb = b->size;
     int n = BIGINT_MAX(na, nb) + 1;
 
     bigint_reserve(dst, n);
 
-    dst->size =
-        bigint_raw_add_signed(dst->words, &dst->neg, a->words, na, a_neg,
-                              b->words, nb, b_neg);
+    dst->size = bigint_raw_add_signed(dst->words, &dst->neg, a->words, na,
+                                      a_neg, b->words, nb, b_neg);
 
     return dst;
 }
 
-bigint *bigint_add(bigint * dst, const bigint * a, const bigint * b) {
+bigint *bigint_add(bigint *dst, const bigint *a, const bigint *b) {
     return bigint_add_signed(dst, a, a->neg, b, b->neg);
 }
 
-bigint *bigint_sub(bigint * dst, const bigint * a, const bigint * b) {
+bigint *bigint_sub(bigint *dst, const bigint *a, const bigint *b) {
     return bigint_add_signed(dst, a, a->neg, b, !b->neg);
 }
 
-bigint *bigint_add_word_signed(bigint * dst, const bigint * src_a,
-                               bigint_word b, int b_neg) {
+bigint *bigint_add_word_signed(bigint *dst, const bigint *src_a, bigint_word b,
+                               int b_neg) {
     int na = src_a->size;
 
     bigint_reserve(dst, na + 1);
 
-    dst->size =
-        bigint_raw_add_signed(dst->words, &dst->neg, src_a->words, na,
-                              src_a->neg, &b, 1, b_neg);
+    dst->size = bigint_raw_add_signed(dst->words, &dst->neg, src_a->words, na,
+                                      src_a->neg, &b, 1, b_neg);
 
     return dst;
 }
 
-bigint *bigint_add_word(bigint * dst, const bigint * src_a, bigint_word b) {
+bigint *bigint_add_word(bigint *dst, const bigint *src_a, bigint_word b) {
     return bigint_add_word_signed(dst, src_a, b, 0);
 }
 
-bigint *bigint_sub_word(bigint * dst, const bigint * src_a, bigint_word b) {
+bigint *bigint_sub_word(bigint *dst, const bigint *src_a, bigint_word b) {
     return bigint_add_word_signed(dst, src_a, b, 1);
 }
 
@@ -751,8 +741,8 @@ int bigint_raw_shift_left(bigint_word *dst, int n_dst, const bigint_word *src,
     }
 }
 
-int bigint_raw_shift_right(bigint_word *dst, int n_dst,
-                           const bigint_word *src, int n_src, int shift) {
+int bigint_raw_shift_right(bigint_word *dst, int n_dst, const bigint_word *src,
+                           int n_src, int shift) {
     int i;
     int word_shift = shift / BIGINT_WORD_BITS;
     int bits_shift = shift % BIGINT_WORD_BITS;
@@ -786,22 +776,19 @@ int bigint_raw_shift_right(bigint_word *dst, int n_dst,
     }
 }
 
-bigint *bigint_shift_left(bigint * dst, const bigint * src, unsigned shift) {
+bigint *bigint_shift_left(bigint *dst, const bigint *src, unsigned shift) {
     unsigned n =
-        src->size + shift / BIGINT_WORD_BITS + (shift % BIGINT_WORD_BITS !=
-                                                0);
+        src->size + shift / BIGINT_WORD_BITS + (shift % BIGINT_WORD_BITS != 0);
     bigint_reserve(dst, n);
-    dst->size =
-        bigint_raw_shift_left(dst->words, dst->capacity, src->words,
-                              src->size, shift);
+    dst->size = bigint_raw_shift_left(dst->words, dst->capacity, src->words,
+                                      src->size, shift);
     return bigint_set_neg(dst, src->neg);
 }
 
-bigint *bigint_shift_right(bigint * dst, const bigint * src, unsigned shift) {
+bigint *bigint_shift_right(bigint *dst, const bigint *src, unsigned shift) {
     bigint_reserve(dst, src->size);
-    dst->size =
-        bigint_raw_shift_right(dst->words, dst->capacity, src->words,
-                               src->size, shift);
+    dst->size = bigint_raw_shift_right(dst->words, dst->capacity, src->words,
+                                       src->size, shift);
     return bigint_set_neg(dst, src->neg);
 }
 
@@ -812,11 +799,11 @@ int bigint_raw_bitlength(const bigint_word *src_a, int na) {
     return bigint_word_bitlength(src_a[last]) + last * BIGINT_WORD_BITS;
 }
 
-int bigint_bitlength(const bigint * a) {
+int bigint_bitlength(const bigint *a) {
     return bigint_raw_bitlength(a->words, a->size);
 }
 
-int bigint_count_trailing_zeros(const bigint * a) {
+int bigint_count_trailing_zeros(const bigint *a) {
     int i;
     for (i = 0; i < a->size; i++) {
         bigint_word w = a->words[i];
@@ -826,14 +813,13 @@ int bigint_count_trailing_zeros(const bigint * a) {
     return a->size * BIGINT_WORD_BITS;
 }
 
-bigint *bigint_div_mod(bigint * dst_quotient, bigint * dst_remainder,
-                       const bigint * src_numerator,
-                       const bigint * src_denominator) {
+bigint *bigint_div_mod(bigint *dst_quotient, bigint *dst_remainder,
+                       const bigint *src_numerator,
+                       const bigint *src_denominator) {
     int shift;
     int src_numerator_neg = src_numerator->neg;
     int src_denominator_neg = src_denominator->neg;
-    bigint denominator[1], *remainder = dst_remainder, *quotient =
-        dst_quotient;
+    bigint denominator[1], *remainder = dst_remainder, *quotient = dst_quotient;
 
     if (src_denominator->size == 0)
         return NULL;
@@ -851,8 +837,8 @@ bigint *bigint_div_mod(bigint * dst_quotient, bigint * dst_remainder,
     }
 
     /* fast path for half word size */
-    if (src_denominator->size == 1
-        && src_denominator->words[0] <= BIGINT_HALF_WORD_MAX) {
+    if (src_denominator->size == 1 &&
+        src_denominator->words[0] <= BIGINT_HALF_WORD_MAX) {
         bigint_word rem;
         bigint_cpy(quotient, src_numerator);
         bigint_div_mod_half_word(quotient, &rem, src_denominator->words[0]);
@@ -867,8 +853,7 @@ bigint *bigint_div_mod(bigint * dst_quotient, bigint * dst_remainder,
     quotient->size = 0;
 
     if (bigint_cmp_abs(remainder, src_denominator) >= 0) {
-        shift =
-            bigint_bitlength(remainder) - bigint_bitlength(src_denominator);
+        shift = bigint_bitlength(remainder) - bigint_bitlength(src_denominator);
 
         bigint_init(denominator);
         bigint_shift_left(denominator, src_denominator, shift);
@@ -891,8 +876,8 @@ bigint *bigint_div_mod(bigint * dst_quotient, bigint * dst_remainder,
     return dst_quotient;
 }
 
-bigint *bigint_div(bigint * dst, const bigint * numerator,
-                   const bigint * denominator) {
+bigint *bigint_div(bigint *dst, const bigint *numerator,
+                   const bigint *denominator) {
     bigint unused[1];
     bigint_init(unused);
 
@@ -902,8 +887,8 @@ bigint *bigint_div(bigint * dst, const bigint * numerator,
     return dst;
 }
 
-bigint *bigint_mod(bigint * dst, const bigint * numerator,
-                   const bigint * denominator) {
+bigint *bigint_mod(bigint *dst, const bigint *numerator,
+                   const bigint *denominator) {
     bigint unused[1];
     bigint_init(unused);
 
@@ -913,7 +898,7 @@ bigint *bigint_mod(bigint * dst, const bigint * numerator,
     return dst;
 }
 
-bigint *bigint_div_mod_half_word(bigint * dst, bigint_word *dst_remainder,
+bigint *bigint_div_mod_half_word(bigint *dst, bigint_word *dst_remainder,
                                  bigint_word denominator) {
     int i, j;
     bigint_word parts[2], div_word, mod_word, remainder = 0;
@@ -948,7 +933,7 @@ bigint *bigint_div_mod_half_word(bigint * dst, bigint_word *dst_remainder,
     return dst;
 }
 
-bigint *bigint_gcd(bigint * dst, const bigint * src_a, const bigint * src_b) {
+bigint *bigint_gcd(bigint *dst, const bigint *src_a, const bigint *src_b) {
     int shift, shift_a, shift_b;
     bigint a[1], b[1];
 
@@ -990,7 +975,7 @@ bigint *bigint_gcd(bigint * dst, const bigint * src_a, const bigint * src_b) {
     return dst;
 }
 
-bigint *bigint_sqrt(bigint * dst, const bigint * src) {
+bigint *bigint_sqrt(bigint *dst, const bigint *src) {
     int bit;
     bigint sum[1], tmp[1];
     const double MAX_INT_THAT_FITS_IN_DOUBLE = pow(2.0, 52.0);
@@ -1034,7 +1019,7 @@ bigint *bigint_sqrt(bigint * dst, const bigint * src) {
     return dst;
 }
 
-char *bigint_write_base(char *dst, int *n_dst, const bigint * a,
+char *bigint_write_base(char *dst, int *n_dst, const bigint *a,
                         bigint_word base, int zero_terminate) {
     int i = 0, n = *n_dst;
     static const char *table = "0123456789abcdefghijklmnopqrstuvwxyz";
@@ -1074,17 +1059,17 @@ char *bigint_write_base(char *dst, int *n_dst, const bigint * a,
     return dst;
 }
 
-char *bigint_write(char *dst, int n_dst, const bigint * a) {
+char *bigint_write(char *dst, int n_dst, const bigint *a) {
     return bigint_write_base(dst, &n_dst, a, 10, 1);
 }
 
-bigint *bigint_rand_bits(bigint * dst, int n_bits, bigint_rand_func rand_func) {
+bigint *bigint_rand_bits(bigint *dst, int n_bits, bigint_rand_func rand_func) {
     int n_word_bits = n_bits % BIGINT_WORD_BITS;
     int n_words = n_bits / BIGINT_WORD_BITS + (n_word_bits != 0);
 
     bigint_reserve(dst, n_words);
 
-    rand_func((uint8_t *) dst->words, sizeof(*dst->words) * n_words);
+    rand_func((uint8_t *)dst->words, sizeof(*dst->words) * n_words);
 
     if (n_word_bits) {
         dst->words[n_words - 1] >>= BIGINT_WORD_BITS - n_word_bits;
@@ -1094,7 +1079,7 @@ bigint *bigint_rand_bits(bigint * dst, int n_bits, bigint_rand_func rand_func) {
     return dst;
 }
 
-bigint *bigint_rand_inclusive(bigint * dst, const bigint * n,
+bigint *bigint_rand_inclusive(bigint *dst, const bigint *n,
                               bigint_rand_func rand_func) {
     int n_bits = bigint_bitlength(n);
 
@@ -1105,7 +1090,7 @@ bigint *bigint_rand_inclusive(bigint * dst, const bigint * n,
     return dst;
 }
 
-bigint *bigint_rand_exclusive(bigint * dst, const bigint * n,
+bigint *bigint_rand_exclusive(bigint *dst, const bigint *n,
                               bigint_rand_func rand_func) {
     int n_bits = bigint_bitlength(n);
 
@@ -1116,9 +1101,8 @@ bigint *bigint_rand_exclusive(bigint * dst, const bigint * n,
     return dst;
 }
 
-bigint *bigint_pow_mod(bigint * dst, const bigint * src_base,
-                       const bigint * src_exponent,
-                       const bigint * src_modulus) {
+bigint *bigint_pow_mod(bigint *dst, const bigint *src_base,
+                       const bigint *src_exponent, const bigint *src_modulus) {
     bigint base[1], exponent[1], tmp[1], unused[1], modulus[1];
 
     bigint_init(base);
@@ -1149,7 +1133,7 @@ bigint *bigint_pow_mod(bigint * dst, const bigint * src_base,
     return dst;
 }
 
-int bigint_is_probable_prime(const bigint * n, int n_tests,
+int bigint_is_probable_prime(const bigint *n, int n_tests,
                              bigint_rand_func rand_func) {
     bigint a[1], d[1], x[1], two[1], n_minus_one[1], n_minus_three[1];
     int i, shift;
@@ -1208,8 +1192,7 @@ int bigint_is_probable_prime(const bigint * n, int n_tests,
     return 1;
 }
 
-bigint *bigint_pow_word(bigint * dst, const bigint * base,
-                        bigint_word exponent) {
+bigint *bigint_pow_word(bigint *dst, const bigint *base, bigint_word exponent) {
     bigint result[1], p[1];
 
     bigint_init(p);
@@ -1245,7 +1228,7 @@ void bigint_raw_get_high_bits(bigint_word *dst, int n_dst,
         bigint_raw_shift_left(dst, n_dst, src_a, na, +shift);
 }
 
-double bigint_double(const bigint * src) {
+double bigint_double(const bigint *src) {
     /* assumes IEEE 754 floating point standard */
     int n, n_mant_bits = 52;
     uint64_t x = 0, exponent = 1023;
@@ -1388,16 +1371,16 @@ void freeMaybeBigInt(MaybeBigInt *x) {
 }
 
 void printMaybeBigInt(MaybeBigInt *x, int depth) {
-    eprintf("%*s", depth * PAD_WIDTH, "");
-    fprintMaybeBigInt(errout, x);
+    printf("%*s", depth * PAD_WIDTH, "");
+    fprintMaybeBigInt(stdout, x);
 }
 
 void printBigInt(BigInt *x, int depth) {
-    eprintf("%*s", depth * PAD_WIDTH, "");
-    fprintBigInt(errout, x);
+    printf("%*s", depth * PAD_WIDTH, "");
+    fprintBigInt(stdout, x);
 }
 
-void bigint_fprint(FILE *f, bigint * bi) {
+void bigint_fprint(FILE *f, bigint *bi) {
     int size = bigint_write_size(bi, 10);
     if (size < 256) {
         static char buffer[256];
@@ -1425,17 +1408,17 @@ void fprintMaybeBigInt(FILE *f, MaybeBigInt *x) {
         return;
     }
     switch (x->type) {
-        case BI_SMALL:
-            fprintf(f, "%d", x->small);
-            break;
-        case BI_BIG:
-            bigint_fprint(f, &x->big);
-            break;
-        case BI_IRRATIONAL:
-            fprintf(f, "%f", x->irrational);
-            break;
-        default:
-            cant_happen("unrecognized type of MaybeBigInt: %d", x->type);
+    case BI_SMALL:
+        fprintf(f, "%d", x->small);
+        break;
+    case BI_BIG:
+        bigint_fprint(f, &x->big);
+        break;
+    case BI_IRRATIONAL:
+        fprintf(f, "%f", x->irrational);
+        break;
+    default:
+        cant_happen("unrecognized type of MaybeBigInt: %d", x->type);
     }
     if (x->imag) {
         fprintf(f, "i");
@@ -1449,22 +1432,21 @@ size_t sprintMaybeBigInt(char *s, MaybeBigInt *x) {
     } else {
         int size;
         switch (x->type) {
-            case BI_SMALL:
-                size = sprintf(s, "%d", x->small) + 1;
-                break;
-            case BI_BIG: {
-                    size = bigint_write_size(&x->big, 10) - (x->big.neg ? 0 : 1);
-                    bigint_write_base(s, &size, &x->big, 10, 1);
-                }
-                break;
-            case BI_IRRATIONAL:
-                size = sprintf(s, "%f", x->irrational) + 1;
-                break;
-            default:
-                cant_happen("unrecognized type of MaybeBigInt: %d", x->type);
+        case BI_SMALL:
+            size = sprintf(s, "%d", x->small) + 1;
+            break;
+        case BI_BIG: {
+            size = bigint_write_size(&x->big, 10) - (x->big.neg ? 0 : 1);
+            bigint_write_base(s, &size, &x->big, 10, 1);
+        } break;
+        case BI_IRRATIONAL:
+            size = sprintf(s, "%f", x->irrational) + 1;
+            break;
+        default:
+            cant_happen("unrecognized type of MaybeBigInt: %d", x->type);
         }
         if (x->imag) {
-            sprintf(&s[size-1], "i");
+            sprintf(&s[size - 1], "i");
             size++;
         }
         return size;
@@ -1472,20 +1454,21 @@ size_t sprintMaybeBigInt(char *s, MaybeBigInt *x) {
 }
 
 size_t printSizeMaybeBigInt(MaybeBigInt *x) {
-    if (x == NULL) return 1;
+    if (x == NULL)
+        return 1;
     size_t size;
     switch (x->type) {
-        case BI_SMALL:
-            size = snprintf(NULL, 0, "%d", x->small) + 1;
-            break;
-        case BI_BIG:
-            size = bigint_write_size(&x->big, 10) - (x->big.neg ? 0 : 1);
-            break;
-        case BI_IRRATIONAL:
-            size = snprintf(NULL, 0, "%f", x->irrational) + 1;
-            break;
-        default:
-            cant_happen("unrecognized type of MaybeBigInt: %d", x->type);
+    case BI_SMALL:
+        size = snprintf(NULL, 0, "%d", x->small) + 1;
+        break;
+    case BI_BIG:
+        size = bigint_write_size(&x->big, 10) - (x->big.neg ? 0 : 1);
+        break;
+    case BI_IRRATIONAL:
+        size = snprintf(NULL, 0, "%f", x->irrational) + 1;
+        break;
+    default:
+        cant_happen("unrecognized type of MaybeBigInt: %d", x->type);
     }
     if (x->imag) {
         size += 1;
@@ -1493,15 +1476,13 @@ size_t printSizeMaybeBigInt(MaybeBigInt *x) {
     return size;
 }
 
-Cmp cmpBigInt(BigInt *a, BigInt *b) {
-    return (Cmp) bigint_cmp(&a->bi, &b->bi);
-}
+Cmp cmpBigInt(BigInt *a, BigInt *b) { return (Cmp)bigint_cmp(&a->bi, &b->bi); }
 
 Cmp cmpBigIntInt(BigInt *a, int b) {
     bigint bi;
     bigint_init(&bi);
     bigint_from_int(&bi, b);
-    Cmp res = (Cmp) bigint_cmp(&a->bi, &bi);
+    Cmp res = (Cmp)bigint_cmp(&a->bi, &bi);
     bigint_free(&bi);
     return res;
 }
@@ -1515,7 +1496,7 @@ static int bigint_cmp_int(bigint *b, int i) {
     bigint bi;
     bigint_init(&bi);
     bigint_from_int(&bi, i);
-    Cmp res = (Cmp) bigint_cmp(b, &bi);
+    Cmp res = (Cmp)bigint_cmp(b, &bi);
     bigint_free(&bi);
     return res;
 }
@@ -1526,56 +1507,60 @@ Cmp cmpBigIntDouble(BigInt *a, Double b) {
 
 Cmp cmpMaybeBigInt(MaybeBigInt *x, MaybeBigInt *y) {
     switch (x->type) {
+    case BI_SMALL:
+        switch (y->type) {
         case BI_SMALL:
-            switch (y->type) {
-                case BI_SMALL:
-                    return x->small < y->small ?  CMP_LT :
-                           x->small == y->small ?  CMP_EQ : CMP_GT;
-                case BI_BIG:
-                    return (Cmp)(bigint_cmp_int(&y->big, x->small) * -1);
-                case BI_IRRATIONAL:
-                    return x->small < y->irrational ?  CMP_LT :
-                           x->small == y->irrational ?  CMP_EQ : CMP_GT;
-                default:
-                    cant_happen("unrecognized type of MaybeBigInt: %d", x->type);
-            }
-            break;
+            return x->small < y->small    ? CMP_LT
+                   : x->small == y->small ? CMP_EQ
+                                          : CMP_GT;
         case BI_BIG:
-            switch (y->type) {
-                case BI_SMALL:
-                    return (Cmp)(bigint_cmp_int(&x->big, y->small));
-                    bigint by;
-                    bigint_init(&by);
-                    bigint_from_int(&by, y->small);
-                    Cmp res = (Cmp) bigint_cmp(&x->big, &by);
-                    bigint_free(&by);
-                    return res;
-                case BI_BIG:
-                    return (Cmp) bigint_cmp(&x->big, &y->big);
-                case BI_IRRATIONAL:
-                    return bigint_cmp_double(&x->big, y->irrational);
-                    break;
-                default:
-                    cant_happen("unrecognized type of MaybeBigInt: %d", x->type);
-            }
-            break;
+            return (Cmp)(bigint_cmp_int(&y->big, x->small) * -1);
         case BI_IRRATIONAL:
-            switch (y->type) {
-                case BI_SMALL:
-                    return x->irrational < y->small ?  CMP_LT :
-                           x->irrational == y->small ?  CMP_EQ : CMP_GT;
-                case BI_BIG:
-                    return (Cmp)(bigint_cmp_double(&x->big, x->irrational) * -1);
-                    cant_happen("attempt to compare bigint and rational");
-                case BI_IRRATIONAL:
-                    return x->irrational < y->irrational ?  CMP_LT :
-                           x->irrational == y->irrational ?  CMP_EQ : CMP_GT;
-                default:
-                    cant_happen("unrecognized type of MaybeBigInt: %d", x->type);
-            }
+            return x->small < y->irrational    ? CMP_LT
+                   : x->small == y->irrational ? CMP_EQ
+                                               : CMP_GT;
+        default:
+            cant_happen("unrecognized type of MaybeBigInt: %d", x->type);
+        }
+        break;
+    case BI_BIG:
+        switch (y->type) {
+        case BI_SMALL:
+            return (Cmp)(bigint_cmp_int(&x->big, y->small));
+            bigint by;
+            bigint_init(&by);
+            bigint_from_int(&by, y->small);
+            Cmp res = (Cmp)bigint_cmp(&x->big, &by);
+            bigint_free(&by);
+            return res;
+        case BI_BIG:
+            return (Cmp)bigint_cmp(&x->big, &y->big);
+        case BI_IRRATIONAL:
+            return bigint_cmp_double(&x->big, y->irrational);
             break;
         default:
             cant_happen("unrecognized type of MaybeBigInt: %d", x->type);
+        }
+        break;
+    case BI_IRRATIONAL:
+        switch (y->type) {
+        case BI_SMALL:
+            return x->irrational < y->small    ? CMP_LT
+                   : x->irrational == y->small ? CMP_EQ
+                                               : CMP_GT;
+        case BI_BIG:
+            return (Cmp)(bigint_cmp_double(&x->big, x->irrational) * -1);
+            cant_happen("attempt to compare bigint and rational");
+        case BI_IRRATIONAL:
+            return x->irrational < y->irrational    ? CMP_LT
+                   : x->irrational == y->irrational ? CMP_EQ
+                                                    : CMP_GT;
+        default:
+            cant_happen("unrecognized type of MaybeBigInt: %d", x->type);
+        }
+        break;
+    default:
+        cant_happen("unrecognized type of MaybeBigInt: %d", x->type);
     }
 }
 
@@ -1618,33 +1603,25 @@ static BigInt *_opIntBigInt(bigint_binop op, int i, BigInt *a) {
     return res;
 }
 
-BigInt *addBigInt(BigInt *a, BigInt *b) {
-    return _opBigInt(bigint_add, a, b);
-}
+BigInt *addBigInt(BigInt *a, BigInt *b) { return _opBigInt(bigint_add, a, b); }
 
 BigInt *addBigIntInt(BigInt *a, int b) {
     return _opBigIntInt(bigint_add, a, b);
 }
 
-BigInt *subBigInt(BigInt *a, BigInt *b) {
-    return _opBigInt(bigint_sub, a, b);
-}
+BigInt *subBigInt(BigInt *a, BigInt *b) { return _opBigInt(bigint_sub, a, b); }
 
 BigInt *subIntBigInt(int a, BigInt *b) {
     return _opIntBigInt(bigint_sub, a, b);
 }
 
-BigInt *mulBigInt(BigInt *a, BigInt *b) {
-    return _opBigInt(bigint_mul, a, b);
-}
+BigInt *mulBigInt(BigInt *a, BigInt *b) { return _opBigInt(bigint_mul, a, b); }
 
 BigInt *mulBigIntInt(BigInt *a, int b) {
     return _opBigIntInt(bigint_mul, a, b);
 }
 
-BigInt *divBigInt(BigInt *a, BigInt *b) {
-    return _opBigInt(bigint_div, a, b);
-}
+BigInt *divBigInt(BigInt *a, BigInt *b) { return _opBigInt(bigint_div, a, b); }
 
 BigInt *divBigIntInt(BigInt *a, int b) {
     return _opBigIntInt(bigint_div, a, b);
@@ -1654,9 +1631,7 @@ BigInt *divIntBigInt(int a, BigInt *b) {
     return _opIntBigInt(bigint_div, a, b);
 }
 
-BigInt *modBigInt(BigInt *a, BigInt *b) {
-    return _opBigInt(bigint_mod, a, b);
-}
+BigInt *modBigInt(BigInt *a, BigInt *b) { return _opBigInt(bigint_mod, a, b); }
 
 BigInt *modIntBigInt(int a, BigInt *b) {
     return _opIntBigInt(bigint_mod, a, b);
@@ -1666,9 +1641,7 @@ BigInt *modBigIntInt(BigInt *a, int b) {
     return _opBigIntInt(bigint_mod, a, b);
 }
 
-BigInt *gcdBigInt(BigInt *a, BigInt *b) {
-    return _opBigInt(bigint_gcd, a, b);
-}
+BigInt *gcdBigInt(BigInt *a, BigInt *b) { return _opBigInt(bigint_gcd, a, b); }
 
 BigInt *gcdBigIntInt(BigInt *a, int b) {
     return _opBigIntInt(bigint_gcd, a, b);
@@ -1719,13 +1692,9 @@ BigInt *powIntBigInt(int a, BigInt *b) {
     return res;
 }
 
-void negateBigInt(BigInt *b) {
-    bigint_negate(&b->bi);
-}
+void negateBigInt(BigInt *b) { bigint_negate(&b->bi); }
 
-Double bigIntToDouble(BigInt *bi) {
-    return bigint_double(&bi->bi);
-}
+Double bigIntToDouble(BigInt *bi) { return bigint_double(&bi->bi); }
 
 bool isEvenBigInt(BigInt *bi) {
     return bi->bi.size == 0 || (bi->bi.words[0] & 1) == 0;
