@@ -18,133 +18,135 @@
 
 #include "tc_pp.h"
 
-void ppTcType(TcType *type) {
+void ppTcType(FILE *out, TcType *type) {
     if (type == NULL) {
-        eprintf("<null type>");
+        fprintf(out, "<null type>");
         return;
     }
     switch (type->type) {
     case TCTYPE_TYPE_FUNCTION:
-        ppTcFunction(type->val.function);
+        ppTcFunction(out, type->val.function);
         break;
     case TCTYPE_TYPE_PAIR:
-        ppTcPair(type->val.pair);
+        ppTcPair(out, type->val.pair);
         break;
     case TCTYPE_TYPE_THUNK:
-        ppTcThunk(type->val.thunk);
+        ppTcThunk(out, type->val.thunk);
         break;
     case TCTYPE_TYPE_VAR:
-        ppTcVar(type->val.var);
+        ppTcVar(out, type->val.var);
         break;
     case TCTYPE_TYPE_BIGINTEGER:
-        eprintf("number");
+        fprintf(out, "number");
         break;
     case TCTYPE_TYPE_SMALLINTEGER:
-        eprintf("smallint");
+        fprintf(out, "smallint");
         break;
     case TCTYPE_TYPE_CHARACTER:
-        eprintf("char");
+        fprintf(out, "char");
         break;
     case TCTYPE_TYPE_UNKNOWN:
-        eprintf("unknown:%s", type->val.unknown->name);
+        fprintf(out, "unknown:%s", type->val.unknown->name);
         break;
     case TCTYPE_TYPE_TYPESIG:
-        ppTcTypeSig(type->val.typeSig);
+        ppTcTypeSig(out, type->val.typeSig);
         break;
     case TCTYPE_TYPE_TUPLE:
-        ppTcTuple(type->val.tuple);
+        ppTcTuple(out, type->val.tuple);
         break;
     case TCTYPE_TYPE_OPAQUE:
-        eprintf("opaque:%s", type->val.opaque->name);
+        fprintf(out, "opaque:%s", type->val.opaque->name);
         break;
     default:
-        eprintf("unrecognized type %s", tcTypeTypeName(type->type));
+        fprintf(out, "unrecognized type %s", tcTypeTypeName(type->type));
     }
 }
 
-void ppTcFunction(TcFunction *function) {
+void ppTcFunction(FILE *out, TcFunction *function) {
     if (function->arg->type == TCTYPE_TYPE_FUNCTION) {
-        eprintf("(");
-        ppTcType(function->arg);
-        eprintf(")");
+        fprintf(out, "(");
+        ppTcType(out, function->arg);
+        fprintf(out, ")");
     } else {
-        ppTcType(function->arg);
+        ppTcType(out, function->arg);
     }
-    eprintf(" -> ");
-    ppTcType(function->result);
+    fprintf(out, " -> ");
+    ppTcType(out, function->result);
 }
 
-void ppTcPair(TcPair *pair) {
-    eprintf("#(");
-    ppTcType(pair->first);
-    eprintf(", ");
-    ppTcType(pair->second);
-    eprintf(")");
+void ppTcPair(FILE *out, TcPair *pair) {
+    fprintf(out, "#(");
+    ppTcType(out, pair->first);
+    fprintf(out, ", ");
+    ppTcType(out, pair->second);
+    fprintf(out, ")");
 }
 
-void ppTcThunk(TcThunk *thunk) {
-    eprintf("#() -> ");
-    ppTcType(thunk->type);
+void ppTcThunk(FILE *out, TcThunk *thunk) {
+    fprintf(out, "#() -> ");
+    ppTcType(out, thunk->type);
 }
 
-void ppTcVar(TcVar *var) {
-    eprintf("%s", var->name->name);
+void ppTcVar(FILE *out, TcVar *var) {
+    fprintf(out, "%s", var->name->name);
     if (var->instance != NULL) {
-        eprintf(" [");
-        ppTcType(var->instance);
-        eprintf("]");
+        fprintf(out, " [");
+        ppTcType(out, var->instance);
+        fprintf(out, "]");
     }
 }
 
-void ppTcTuple(TcTypeArray *tuple) {
-    eprintf("#(");
+void ppTcTuple(FILE *out, TcTypeArray *tuple) {
+    fprintf(out, "#(");
     for (Index i = 0; i < tuple->size; i++) {
-        ppTcType(tuple->entries[i]);
+        ppTcType(out, tuple->entries[i]);
         if (i + 1 < tuple->size) {
-            eprintf(", ");
+            fprintf(out, ", ");
         }
     }
-    eprintf(")");
+    fprintf(out, ")");
 }
 
-static void ppTypeSigArgs(TcTypeSigArgs *args) {
+static void ppTypeSigArgs(FILE *out, TcTypeSigArgs *args) {
     while (args != NULL) {
-        ppTcType(args->type);
+        ppTcType(out, args->type);
         if (args->next)
-            eprintf(", ");
+            fprintf(out, ", ");
         args = args->next;
     }
 }
 
-void ppTcTypeSig(TcTypeSig *typeSig) {
-    eprintf("%s", typeSig->name->name);
+void ppTcTypeSig(FILE *out, TcTypeSig *typeSig) {
+    fprintf(out, "%s", typeSig->name->name);
     if (typeSig->args != NULL) {
-        eprintf("(");
-        ppTypeSigArgs(typeSig->args);
-        eprintf(")");
+        fprintf(out, "(");
+        ppTypeSigArgs(out, typeSig->args);
+        fprintf(out, ")");
     }
 }
 
-static inline void pad(int depth) { eprintf("%*s", depth * 2, ""); }
+static inline void pad(FILE *out, int depth) {
+    fprintf(out, "%*s", depth * 2, "");
+}
 
-static void _ppTcEnv(TcEnv *env, int depth) {
+static void _ppTcEnv(FILE *out, TcEnv *env, int depth) {
     if (env == NULL) {
-        pad(depth);
-        eprintf("<NULL> env\n");
+        pad(out, depth);
+        fprintf(out, "<NULL> env\n");
         return;
     }
-    pad(depth);
-    eprintf("{\n");
+    pad(out, depth);
+    fprintf(out, "{\n");
     HashSymbol *name;
     Index i = 0;
     TcType *value;
     while ((name = iterateTcTypeTable(env->table, &i, &value)) != NULL) {
-        pad(depth);
-        eprintf("  %s => %s\n", name->name, tcTypeTypeName(value->type));
+        pad(out, depth);
+        fprintf(out, "  %s => %s\n", name->name, tcTypeTypeName(value->type));
     }
-    _ppTcEnv(env->next, depth + 1);
-    pad(depth);
-    eprintf("}\n");
+    _ppTcEnv(out, env->next, depth + 1);
+    pad(out, depth);
+    fprintf(out, "}\n");
 }
 
-void ppTcEnv(TcEnv *env) { _ppTcEnv(env, 0); }
+void ppTcEnv(FILE *out, TcEnv *env) { _ppTcEnv(out, env, 0); }

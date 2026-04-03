@@ -376,11 +376,11 @@ static TcType *analyzeComparison(LamExp *exp1, LamExp *exp2, TcEnv *env,
         eprintf("while unifying comparison:\n");
         ppLamExp(stderr, exp1);
         eprintf(" (type: ");
-        ppTcType(prune(type1));
+        ppTcType(stderr, prune(type1));
         eprintf(")\nwith\n");
         ppLamExp(stderr, exp2);
         eprintf(" (type: ");
-        ppTcType(prune(type2));
+        ppTcType(stderr, prune(type2));
         eprintf(")\n");
         REPORT_PARSER_INFO(exp1);
         if (!EQ_PARSER_INFO(exp1, exp2)) {
@@ -404,11 +404,11 @@ static TcType *analyzeSpaceship(LamExp *exp1, LamExp *exp2, TcEnv *env,
         eprintf("while unifying <=>:\n");
         ppLamExp(stderr, exp1);
         eprintf(" (type: ");
-        ppTcType(prune(type1));
+        ppTcType(stderr, prune(type1));
         eprintf(")\nwith\n");
         ppLamExp(stderr, exp2);
         eprintf(" (type: ");
-        ppTcType(prune(type2));
+        ppTcType(stderr, prune(type2));
         eprintf(")\n");
         REPORT_PARSER_INFO(exp1);
         if (!EQ_PARSER_INFO(exp1, exp2)) {
@@ -574,7 +574,7 @@ static TcType *analyzeDeconstruct(LamDeconstruct *deconstruct, TcEnv *env,
     // ppTcEnv(env);
     TcType *constructor = lookUpConstructorType(deconstruct->name, env, ng);
     int save = PROTECT(constructor);
-    // ppTcType(constructor); eprintf("\n");
+    // ppTcType(stderr, constructor); eprintf("\n");
     if (constructor == NULL) {
         can_happen(CPI(deconstruct), "undefined type deconstructor %s",
                    deconstruct->name->name);
@@ -606,7 +606,7 @@ static TcType *analyzeTupleIndex(LamTupleIndex *index, TcEnv *env, TcNg *ng) {
     if (!unify(tuple, template, "tuple index")) {
         eprintf("while analyzing tuple ");
         REPORT_PARSER_INFO(index->exp);
-        ppTcType(tuple);
+        ppTcType(stderr, tuple);
         eprintf("\n");
         ppLamTupleIndex(stderr, index);
         eprintf("\n");
@@ -732,11 +732,11 @@ static TcType *analyzeApply(LamApply *apply, TcEnv *env, TcNg *ng) {
             eprintf("while analyzing apply ");
             ppLamExp(stderr, apply->function);
             eprintf(" (type: ");
-            ppTcType(prune(fn));
+            ppTcType(stderr, prune(fn));
             eprintf(") to ");
             ppLamExp(stderr, apply->args->exp);
             eprintf(" (type: ");
-            ppTcType(prune(arg));
+            ppTcType(stderr, prune(arg));
             eprintf(")\n");
             REPORT_PARSER_INFO(apply->function);
             if (!EQ_PARSER_INFO(apply->function, apply->args)) {
@@ -771,11 +771,11 @@ static TcType *analyzeIff(LamIff *iff, TcEnv *env, TcNg *ng) {
         eprintf("while unifying consequent:\n");
         ppLamExp(stderr, iff->consequent);
         eprintf(" (type: ");
-        ppTcType(prune(consequent));
+        ppTcType(stderr, prune(consequent));
         eprintf(")\nwith alternative:\n");
         ppLamExp(stderr, iff->alternative);
         eprintf(" (type: ");
-        ppTcType(prune(alternative));
+        ppTcType(stderr, prune(alternative));
         eprintf(")\n");
         REPORT_PARSER_INFO(iff->consequent);
         if (!EQ_PARSER_INFO(iff->consequent, iff->alternative)) {
@@ -817,7 +817,7 @@ static TcType *analyzePrint(LamPrint *print, TcEnv *env, TcNg *ng) {
     print->printer = compilePrinterForType(CPI(print), type, env);
     UNPROTECT(save);
     // LEAVE(analyzePrint);
-    IFDEBUG(ppTcType(type));
+    IFDEBUG(ppTcType(stderr, type));
     return type;
 }
 
@@ -896,14 +896,14 @@ static void processLetRecBinding(LamBindings *bindings, TcEnv *env, TcNg *ng) {
         eprintf("while unifying letrec %s with ", bindings->var->name);
         ppLamExp(stderr, bindings->val);
         eprintf("\nExisting Type: ");
-        ppTcType(existingType);
+        ppTcType(stderr, existingType);
         eprintf("\nNew Type: ");
-        ppTcType(type);
+        ppTcType(stderr, type);
         eprintf("\n");
         REPORT_PARSER_INFO(bindings->val);
     }
     DEBUGN("analyzeLetRec %s :: ", bindings->var->name);
-    IFDEBUGN(ppTcType(existingType));
+    IFDEBUGN(ppTcType(stderr, existingType));
     UNPROTECT(save);
 }
 
@@ -1774,7 +1774,7 @@ static TcType *lookUp(TcEnv *env, HashSymbol *symbol, TcNg *ng) {
         TcType *res = fresh(type, ng);
         // LEAVE(lookUp);
         DEBUGN("lookUp %s => ", symbol->name);
-        IFDEBUGN(ppTcType(res));
+        IFDEBUGN(ppTcType(stderr, res));
         return res;
     }
     // LEAVE(lookUp);
@@ -1963,19 +1963,19 @@ static void addThenToEnv(TcEnv *env) {
 static bool failUnify(TcType *a, TcType *b, char *reason) {
     // can_happen sets a flag that will prevent later stages
     can_happen(NULLPI, "\nunification failed [%s]", reason);
-    ppTcType(a);
+    ppTcType(stderr, a);
     eprintf(" vs ");
-    ppTcType(b);
+    ppTcType(stderr, b);
     eprintf("\n");
     return false;
 }
 
 static bool failUnifyFunctions(TcFunction *a, TcFunction *b, char *reason) {
     // can_happen sets a flag that will prevent later stages
-    can_happen(NULLPI, "\nunification failed [%s]", reason);
-    ppTcFunction(a);
+    can_happen(NULLPI, "\nfunction unification failed [%s]", reason);
+    ppTcFunction(stderr, a);
     eprintf(" vs ");
-    ppTcFunction(b);
+    ppTcFunction(stderr, b);
     eprintf("\n");
     return false;
 }
@@ -2020,9 +2020,9 @@ static bool unifyOpaque(HashSymbol *a, HashSymbol *b) {
 
 static bool failUnifyTypeSigs(TcTypeSig *a, TcTypeSig *b, char *reason) {
     can_happen(NULLPI, "\nunification failed [%s]", reason);
-    ppTcTypeSig(a);
+    ppTcTypeSig(stderr, a);
     eprintf(" vs ");
-    ppTcTypeSig(b);
+    ppTcTypeSig(stderr, b);
     eprintf("\n");
     return false;
 }
@@ -2100,11 +2100,11 @@ static bool _unify(TcType *a, TcType *b) {
 
 static bool unify(TcType *a, TcType *b, char *trace __attribute__((unused))) {
     // *INDENT-OFF*
-    IFDEBUGN(eprintf("unify(%s) :> ", trace); ppTcType(a); eprintf(" =?= ");
-             ppTcType(b));
+    IFDEBUGN(eprintf("unify(%s) :> ", trace); ppTcType(stderr, a);
+             eprintf(" =?= "); ppTcType(stderr, b));
     bool res = _unify(a, b);
-    IFDEBUGN(eprintf("unify(%s) <: ", trace); ppTcType(a); eprintf(" === ");
-             ppTcType(b));
+    IFDEBUGN(eprintf("unify(%s) <: ", trace); ppTcType(stderr, a);
+             eprintf(" === "); ppTcType(stderr, b));
     return res;
     // *INDENT-ON*
 }

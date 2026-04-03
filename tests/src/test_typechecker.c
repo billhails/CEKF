@@ -108,7 +108,7 @@ static TcType *analyze(AstProg *prog) {
     PROTECT(env);
     TcType *res = tc_analyze(exp, env);
     PROTECT(res);
-    ppTcType(res);
+    ppTcType(stderr, res);
     eprintf("\n");
     UNPROTECT(save);
     return res;
@@ -168,9 +168,9 @@ static void test_adder() {
     PROTECT(bigInt);
     TcType *expected = makeFunction3(bigInt, bigInt, bigInt);
     PROTECT(expected);
-    ppTcType(expected);
+    ppTcType(stderr, expected);
     eprintf(" -- expected\n");
-    ppTcType(res);
+    ppTcType(stderr, res);
     eprintf(" -- res\n");
     assert(compareTcTypes(res, expected));
     UNPROTECT(save);
