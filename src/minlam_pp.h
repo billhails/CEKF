@@ -23,24 +23,23 @@
 
 #include "minlam.h"
 
-void ppHashSymbol(HashSymbol *);
-void ppMinApply(MinApply *);
-void ppMinAnnotatedVar(MinAnnotatedVar *);
-void ppMinBindings(MinBindings *);
-void ppMinCallCC(MinExp *);
-void ppMinCond(MinCond *);
-void ppMinExpD(MinExp *, int);
-void ppMinExp(MinExp *);
-void ppMinIff(MinIff *);
-void ppMinIntList(MinIntList *);
-void ppMinLam(MinLam *);
-void ppMinLetRec(MinLetRec *);
-void ppMinMakeTuple(MinExprList *);
-void ppMinMakeVec(MinExprList *);
-void ppMinMatch(MinMatch *);
-void ppMinPrimApp(MinPrimApp *);
-void ppMinPrimOp(MinPrimOp);
-void ppMinSequence(MinExprList *);
-void ppMinVarList(SymbolList *);
+void ppMinApply(FILE *, MinApply *);
+void ppMinAnnotatedVar(FILE *, MinAnnotatedVar *);
+void ppMinBindings(FILE *, MinBindings *);
+void ppMinCallCC(FILE *, MinExp *);
+void ppMinCond(FILE *, MinCond *);
+void ppMinExpD(FILE *, MinExp *, int);
+void ppMinExp(FILE *, MinExp *);
+void ppMinIff(FILE *, MinIff *);
+void ppMinIntList(FILE *, MinIntList *);
+void ppMinLam(FILE *, MinLam *);
+void ppMinLetRec(FILE *, MinLetRec *);
+void ppMinMakeTuple(FILE *, MinExprList *);
+void ppMinMakeVec(FILE *, MinExprList *);
+void ppMinMatch(FILE *, MinMatch *);
+void ppMinPrimApp(FILE *, MinPrimApp *);
+void ppMinPrimOp(FILE *, MinPrimOp);
+void ppMinSequence(FILE *, MinExprList *);
+void ppMinVarList(FILE *, SymbolList *);
 
 #endif

@@ -22,33 +22,33 @@
 #include "minlam_pp.h"
 #include <stdio.h>
 #include <unistd.h>
-void ppMinTag(MinExp *tag);
+void ppMinTag(FILE *out, MinExp *tag);
 
 // indented pretty-printer internals
-static void iMinExp(MinExp *exp, int d);
-static void iMinLam(MinLam *lam, int d);
-static void iMinAmb(MinAmb *amb, int d);
-static void iMinPrimApp(MinPrimApp *primApp, int d);
-static void iMinApply(MinApply *apply, int d);
-static void iMinIff(MinIff *iff, int d);
-static void iMinLetRec(MinLetRec *letRec, int d);
-static void iMinBindings(MinBindings *bindings, int d);
-static void iMinMatch(MinMatch *match, int d);
-static void iMinCond(MinCond *cond, int d);
-static void iMinMakeVec(MinExprList *makeVec, int d);
-static void iMinSequence(MinExprList *sequence, int d);
-static void iMinCallCC(MinExp *exp, int d);
-static void iMinAnnotatedVar(MinAnnotatedVar *var);
+static void iMinExp(FILE *out, MinExp *exp, int d);
+static void iMinLam(FILE *out, MinLam *lam, int d);
+static void iMinAmb(FILE *out, MinAmb *amb, int d);
+static void iMinPrimApp(FILE *out, MinPrimApp *primApp, int d);
+static void iMinApply(FILE *out, MinApply *apply, int d);
+static void iMinIff(FILE *out, MinIff *iff, int d);
+static void iMinLetRec(FILE *out, MinLetRec *letRec, int d);
+static void iMinBindings(FILE *out, MinBindings *bindings, int d);
+static void iMinMatch(FILE *out, MinMatch *match, int d);
+static void iMinCond(FILE *out, MinCond *cond, int d);
+static void iMinMakeVec(FILE *out, MinExprList *makeVec, int d);
+static void iMinSequence(FILE *out, MinExprList *sequence, int d);
+static void iMinCallCC(FILE *out, MinExp *exp, int d);
+static void iMinAnnotatedVar(FILE *out, MinAnnotatedVar *var);
 
-static void indent(int d) {
+static void indent(FILE *out, int d) {
     for (int i = 0; i < d; i++) {
-        eprintf("  ");
+        fprintf(out, "  ");
     }
 }
 
-static void newlineIndent(int d) {
-    eprintf("\n");
-    indent(d);
+static void newlineIndent(FILE *out, int d) {
+    fprintf(out, "\n");
+    indent(out, d);
 }
 
 // returns true if the expression is "simple" (fits on one line)
@@ -82,489 +82,502 @@ static bool allSimple(MinExprList *list) {
     return true;
 }
 
-void ppMinExpD(MinExp *exp, int depth) { iMinExp(exp, depth); }
+static void ppMinHashSymbol(FILE *out, HashSymbol *symbol) {
+    fprintf(out, "%s", symbol->name);
+}
 
-static void iMinLam(MinLam *lam, int d) {
+void ppMinExpD(FILE *out, MinExp *exp, int depth) { iMinExp(out, exp, depth); }
+
+static void iMinLam(FILE *out, MinLam *lam, int d) {
     if (lam == NULL) {
-        eprintf("<NULL lambda>");
+        fprintf(out, "<NULL lambda>");
         return;
     }
-    eprintf("(λ ");
-    ppMinVarList(lam->args);
-    newlineIndent(d + 1);
-    iMinExp(lam->exp, d + 1);
-    eprintf(")");
+    fprintf(out, "(λ ");
+    ppMinVarList(out, lam->args);
+    newlineIndent(out, d + 1);
+    iMinExp(out, lam->exp, d + 1);
+    fprintf(out, ")");
 }
 
-static void iMinAmb(MinAmb *amb, int d) {
+static void iMinAmb(FILE *out, MinAmb *amb, int d) {
     if (amb == NULL) {
-        eprintf("<NULL amb>");
+        fprintf(out, "<NULL amb>");
         return;
     }
-    eprintf("(amb");
-    newlineIndent(d + 1);
-    iMinExp(amb->left, d + 1);
-    newlineIndent(d + 1);
-    iMinExp(amb->right, d + 1);
-    eprintf(")");
+    fprintf(out, "(amb");
+    newlineIndent(out, d + 1);
+    iMinExp(out, amb->left, d + 1);
+    newlineIndent(out, d + 1);
+    iMinExp(out, amb->right, d + 1);
+    fprintf(out, ")");
 }
 
-void ppMinLam(MinLam *lam) { iMinLam(lam, 0); }
+void ppMinLam(FILE *out, MinLam *lam) { iMinLam(out, lam, 0); }
 
-void ppMinAmb(MinAmb *amb) { iMinAmb(amb, 0); }
+void ppMinAmb(FILE *out, MinAmb *amb) { iMinAmb(out, amb, 0); }
 
-static void _ppMinVarList(SymbolList *varList) {
+static void _ppMinVarList(FILE *out, SymbolList *varList) {
     if (varList == NULL)
         return;
-    ppHashSymbol(varList->symbol);
+    ppMinHashSymbol(out, varList->symbol);
     if (varList->next != NULL) {
-        eprintf(" ");
-        _ppMinVarList(varList->next);
+        fprintf(out, " ");
+        _ppMinVarList(out, varList->next);
     }
 }
 
-void ppMinVarList(SymbolList *varList) {
-    eprintf("(");
-    _ppMinVarList(varList);
-    eprintf(")");
+void ppMinVarList(FILE *out, SymbolList *varList) {
+    fprintf(out, "(");
+    _ppMinVarList(out, varList);
+    fprintf(out, ")");
 }
 
-static void iMinExp(MinExp *exp, int d) {
+static void iMinExp(FILE *out, MinExp *exp, int d) {
     if (exp == NULL) {
-        eprintf("<NULL exp>");
+        fprintf(out, "<NULL exp>");
         return;
     }
     switch (exp->type) {
     case MINEXP_TYPE_LAM:
-        iMinLam(getMinExp_Lam(exp), d);
+        iMinLam(out, getMinExp_Lam(exp), d);
         break;
     case MINEXP_TYPE_VAR:
-        ppHashSymbol(getMinExp_Var(exp));
+        ppMinHashSymbol(out, getMinExp_Var(exp));
         break;
     case MINEXP_TYPE_AVAR:
-        iMinAnnotatedVar(getMinExp_Avar(exp));
+        iMinAnnotatedVar(out, getMinExp_Avar(exp));
         break;
     case MINEXP_TYPE_BIGINTEGER:
-        fprintMaybeBigInt(errout, getMinExp_BigInteger(exp));
+        fprintMaybeBigInt(out, getMinExp_BigInteger(exp));
         break;
     case MINEXP_TYPE_STDINT:
-        eprintf("%d", getMinExp_Stdint(exp));
+        fprintf(out, "%d", getMinExp_Stdint(exp));
         break;
     case MINEXP_TYPE_PRIM:
-        iMinPrimApp(getMinExp_Prim(exp), d);
+        iMinPrimApp(out, getMinExp_Prim(exp), d);
         break;
     case MINEXP_TYPE_SEQUENCE:
-        iMinSequence(getMinExp_Sequence(exp), d);
+        iMinSequence(out, getMinExp_Sequence(exp), d);
         break;
     case MINEXP_TYPE_MAKEVEC:
-        iMinMakeVec(getMinExp_MakeVec(exp), d);
+        iMinMakeVec(out, getMinExp_MakeVec(exp), d);
         break;
     case MINEXP_TYPE_APPLY:
-        iMinApply(getMinExp_Apply(exp), d);
+        iMinApply(out, getMinExp_Apply(exp), d);
         break;
     case MINEXP_TYPE_IFF:
-        iMinIff(getMinExp_Iff(exp), d);
+        iMinIff(out, getMinExp_Iff(exp), d);
         break;
     case MINEXP_TYPE_CALLCC:
-        iMinCallCC(getMinExp_CallCC(exp), d);
+        iMinCallCC(out, getMinExp_CallCC(exp), d);
         break;
     case MINEXP_TYPE_LETREC:
-        iMinLetRec(getMinExp_LetRec(exp), d);
+        iMinLetRec(out, getMinExp_LetRec(exp), d);
         break;
     case MINEXP_TYPE_MATCH:
-        iMinMatch(getMinExp_Match(exp), d);
+        iMinMatch(out, getMinExp_Match(exp), d);
         break;
     case MINEXP_TYPE_CHARACTER:
         if (getMinExp_Character(exp) == L'\n')
-            eprintf("\"\\n\"");
+            fprintf(out, "\"\\n\"");
         else if (getMinExp_Character(exp) == L'\t')
-            eprintf("\"\\t\"");
+            fprintf(out, "\"\\t\"");
         else if (getMinExp_Character(exp) == L'\"')
-            eprintf("\"\\\"\"");
+            fprintf(out, "\"\\\"\"");
         else if (getMinExp_Character(exp) == L'\\')
-            eprintf("\"\\\\\"");
+            fprintf(out, "\"\\\\\"");
         else
-            eprintf("\"%lc\"", getMinExp_Character(exp));
+            fprintf(out, "\"%lc\"", getMinExp_Character(exp));
         break;
     case MINEXP_TYPE_BACK:
-        eprintf("(back)");
+        fprintf(out, "(back)");
         break;
     case MINEXP_TYPE_DONE:
-        eprintf("(done)");
+        fprintf(out, "(done)");
         break;
     case MINEXP_TYPE_COND:
-        iMinCond(getMinExp_Cond(exp), d);
+        iMinCond(out, getMinExp_Cond(exp), d);
         break;
     case MINEXP_TYPE_AMB:
-        iMinAmb(getMinExp_Amb(exp), d);
+        iMinAmb(out, getMinExp_Amb(exp), d);
         break;
     default:
-        eprintf("<unrecognised expression type %s>", minExpTypeName(exp->type));
+        fprintf(out, "<unrecognised expression type %s>",
+                minExpTypeName(exp->type));
     }
 }
 
-void ppMinExp(MinExp *exp) { iMinExp(exp, 0); }
+void ppMinExp(FILE *out, MinExp *exp) { iMinExp(out, exp, 0); }
 
-static void iMinPrimApp(MinPrimApp *primApp, int d) {
+static void iMinPrimApp(FILE *out, MinPrimApp *primApp, int d) {
     if (primApp == NULL) {
-        eprintf("<NULL primApp>");
+        fprintf(out, "<NULL primApp>");
         return;
     }
-    eprintf("(");
-    ppMinPrimOp(primApp->type);
-    eprintf(" ");
-    iMinExp(primApp->exp1, d);
-    eprintf(" ");
-    iMinExp(primApp->exp2, d);
-    eprintf(")");
+    fprintf(out, "(");
+    ppMinPrimOp(out, primApp->type);
+    fprintf(out, " ");
+    iMinExp(out, primApp->exp1, d);
+    fprintf(out, " ");
+    iMinExp(out, primApp->exp2, d);
+    fprintf(out, ")");
 }
 
-void ppMinPrimApp(MinPrimApp *primApp) { iMinPrimApp(primApp, 0); }
+void ppMinPrimApp(FILE *out, MinPrimApp *primApp) {
+    iMinPrimApp(out, primApp, 0);
+}
 
-void ppMinPrimOp(MinPrimOp type) {
+void ppMinPrimOp(FILE *out, MinPrimOp type) {
     switch (type) {
     case MINPRIMOP_TYPE_ADD:
-        eprintf("+");
+        fprintf(out, "+");
         break;
     case MINPRIMOP_TYPE_SUB:
-        eprintf("-");
+        fprintf(out, "-");
         break;
     case MINPRIMOP_TYPE_MUL:
-        eprintf("*");
+        fprintf(out, "*");
         break;
     case MINPRIMOP_TYPE_DIV:
-        eprintf("/");
+        fprintf(out, "/");
         break;
     case MINPRIMOP_TYPE_GCD:
-        eprintf("gcd");
+        fprintf(out, "gcd");
         break;
     case MINPRIMOP_TYPE_LCM:
-        eprintf("lcm");
+        fprintf(out, "lcm");
         break;
     case MINPRIMOP_TYPE_CANON:
-        eprintf("canon");
+        fprintf(out, "canon");
         break;
     case MINPRIMOP_TYPE_EQ:
-        eprintf("==");
+        fprintf(out, "==");
         break;
     case MINPRIMOP_TYPE_NE:
-        eprintf("!=");
+        fprintf(out, "!=");
         break;
     case MINPRIMOP_TYPE_GT:
-        eprintf(">");
+        fprintf(out, ">");
         break;
     case MINPRIMOP_TYPE_LT:
-        eprintf("<");
+        fprintf(out, "<");
         break;
     case MINPRIMOP_TYPE_GE:
-        eprintf(">=");
+        fprintf(out, ">=");
         break;
     case MINPRIMOP_TYPE_LE:
-        eprintf("<=");
+        fprintf(out, "<=");
         break;
     case MINPRIMOP_TYPE_VEC:
-        eprintf("vec");
+        fprintf(out, "vec");
         break;
     case MINPRIMOP_TYPE_MOD:
-        eprintf("%%");
+        fprintf(out, "%%");
         break;
     case MINPRIMOP_TYPE_POW:
-        eprintf("**");
+        fprintf(out, "**");
         break;
     case MINPRIMOP_TYPE_CMP:
-        eprintf("<=>");
+        fprintf(out, "<=>");
         break;
     default:
-        eprintf("<unrecognised prim op %s>", minPrimOpName(type));
+        fprintf(out, "<unrecognised prim op %s>", minPrimOpName(type));
     }
 }
 
 // indented sequence helper
-static void _iMinSequence(MinExprList *sequence, int d, bool first) {
+static void _iMinSequence(FILE *out, MinExprList *sequence, int d, bool first) {
     if (sequence == NULL)
         return;
     if (!first) {
         if (isSimple(sequence->exp)) {
-            eprintf(" ");
+            fprintf(out, " ");
         } else {
-            newlineIndent(d);
+            newlineIndent(out, d);
         }
     }
-    iMinExp(sequence->exp, d);
-    _iMinSequence(sequence->next, d, false);
+    iMinExp(out, sequence->exp, d);
+    _iMinSequence(out, sequence->next, d, false);
 }
 
 // indented args helper
-static void _iMinArgs(MinExprList *list, int d) {
+static void _iMinArgs(FILE *out, MinExprList *list, int d) {
     if (list == NULL)
         return;
     if (isSimple(list->exp)) {
-        eprintf(" ");
+        fprintf(out, " ");
     } else {
-        newlineIndent(d);
+        newlineIndent(out, d);
     }
-    iMinExp(list->exp, d);
-    _iMinArgs(list->next, d);
+    iMinExp(out, list->exp, d);
+    _iMinArgs(out, list->next, d);
 }
 
-static void iMinSequence(MinExprList *sequence, int d) {
-    eprintf("(begin");
-    _iMinSequence(sequence, d + 1, false);
-    eprintf(")");
+static void iMinSequence(FILE *out, MinExprList *sequence, int d) {
+    fprintf(out, "(begin");
+    _iMinSequence(out, sequence, d + 1, false);
+    fprintf(out, ")");
 }
 
-void ppMinSequence(MinExprList *sequence) { iMinSequence(sequence, 0); }
-
-static void iMinMakeVec(MinExprList *makeVec, int d) {
-    eprintf("(make-vec");
-    _iMinArgs(makeVec, d + 1);
-    eprintf(")");
+void ppMinSequence(FILE *out, MinExprList *sequence) {
+    iMinSequence(out, sequence, 0);
 }
 
-void ppMinMakeVec(MinExprList *makeVec) { iMinMakeVec(makeVec, 0); }
-
-void ppMinMakeTuple(MinExprList *args) {
-    eprintf("(make-tuple");
-    _iMinArgs(args, 1);
-    eprintf(")");
+static void iMinMakeVec(FILE *out, MinExprList *makeVec, int d) {
+    fprintf(out, "(make-vec");
+    _iMinArgs(out, makeVec, d + 1);
+    fprintf(out, ")");
 }
 
-static void iMinApply(MinApply *apply, int d) {
+void ppMinMakeVec(FILE *out, MinExprList *makeVec) {
+    iMinMakeVec(out, makeVec, 0);
+}
+
+void ppMinMakeTuple(FILE *out, MinExprList *args) {
+    fprintf(out, "(make-tuple");
+    _iMinArgs(out, args, 1);
+    fprintf(out, ")");
+}
+
+static void iMinApply(FILE *out, MinApply *apply, int d) {
     if (apply == NULL) {
-        eprintf("<NULL apply>");
+        fprintf(out, "<NULL apply>");
         return;
     }
     if (apply->isBuiltin) {
-        eprintf("[builtin ");
+        fprintf(out, "[builtin ");
     } else {
         if (apply->cc) {
-            eprintf("(A/C");
+            fprintf(out, "(A/C");
         } else {
-            eprintf("(");
+            fprintf(out, "(");
         }
     }
-    iMinExp(apply->function, d + 1);
+    iMinExp(out, apply->function, d + 1);
     if (allSimple(apply->args)) {
-        _iMinArgs(apply->args, d + 1);
+        _iMinArgs(out, apply->args, d + 1);
     } else {
-        _iMinArgs(apply->args, d + 1);
+        _iMinArgs(out, apply->args, d + 1);
     }
     if (apply->isBuiltin) {
-        eprintf("]");
+        fprintf(out, "]");
     } else {
-        eprintf(")");
+        fprintf(out, ")");
     }
 }
 
-void ppMinApply(MinApply *apply) { iMinApply(apply, 0); }
+void ppMinApply(FILE *out, MinApply *apply) { iMinApply(out, apply, 0); }
 
-static void iMinIff(MinIff *iff, int d) {
+static void iMinIff(FILE *out, MinIff *iff, int d) {
     if (iff == NULL) {
-        eprintf("<NULL if>");
+        fprintf(out, "<NULL if>");
         return;
     }
-    eprintf("(if ");
-    iMinExp(iff->condition, d + 1);
-    newlineIndent(d + 1);
-    iMinExp(iff->consequent, d + 1);
-    newlineIndent(d + 1);
-    iMinExp(iff->alternative, d + 1);
-    eprintf(")");
+    fprintf(out, "(if ");
+    iMinExp(out, iff->condition, d + 1);
+    newlineIndent(out, d + 1);
+    iMinExp(out, iff->consequent, d + 1);
+    newlineIndent(out, d + 1);
+    iMinExp(out, iff->alternative, d + 1);
+    fprintf(out, ")");
 }
 
-void ppMinIff(MinIff *iff) { iMinIff(iff, 0); }
+void ppMinIff(FILE *out, MinIff *iff) { iMinIff(out, iff, 0); }
 
-static void _iMinIntCondCases(MinIntCondCases *cases, int d) {
-    newlineIndent(d);
-    eprintf("(");
-    fprintMaybeBigInt(errout, cases->constant);
-    eprintf(" ");
-    iMinExp(cases->body, d + 1);
-    eprintf(")");
+static void _iMinIntCondCases(FILE *out, MinIntCondCases *cases, int d) {
+    newlineIndent(out, d);
+    fprintf(out, "(");
+    fprintMaybeBigInt(out, cases->constant);
+    fprintf(out, " ");
+    iMinExp(out, cases->body, d + 1);
+    fprintf(out, ")");
     if (cases->next != NULL) {
-        _iMinIntCondCases(cases->next, d);
+        _iMinIntCondCases(out, cases->next, d);
     }
 }
 
-static void _iMinCharCondCases(MinCharCondCases *cases, int d) {
-    newlineIndent(d);
+static void _iMinCharCondCases(FILE *out, MinCharCondCases *cases, int d) {
+    newlineIndent(out, d);
     if (cases->isDefault) {
-        eprintf("(_ ");
+        fprintf(out, "(_ ");
     } else {
-        eprintf("(\"%c\" ", cases->constant);
+        fprintf(out, "(\"%c\" ", cases->constant);
     }
-    iMinExp(cases->body, d + 1);
-    eprintf(")");
+    iMinExp(out, cases->body, d + 1);
+    fprintf(out, ")");
     if (cases->next != NULL) {
-        _iMinCharCondCases(cases->next, d);
+        _iMinCharCondCases(out, cases->next, d);
     }
 }
 
-static void _iMinCondCases(MinCondCases *cases, int d) {
+static void _iMinCondCases(FILE *out, MinCondCases *cases, int d) {
     switch (cases->type) {
     case MINCONDCASES_TYPE_INTEGERS:
-        _iMinIntCondCases(getMinCondCases_Integers(cases), d);
+        _iMinIntCondCases(out, getMinCondCases_Integers(cases), d);
         break;
     case MINCONDCASES_TYPE_CHARACTERS:
-        _iMinCharCondCases(getMinCondCases_Characters(cases), d);
+        _iMinCharCondCases(out, getMinCondCases_Characters(cases), d);
         break;
     default:
-        eprintf("<unrecognised case type %s>",
+        fprintf(out, "<unrecognised case type %s>",
                 minCondCasesTypeName(cases->type));
     }
 }
 
-static void iMinCond(MinCond *cond, int d) {
+static void iMinCond(FILE *out, MinCond *cond, int d) {
     if (cond == NULL) {
-        eprintf("<NULL cond>");
+        fprintf(out, "<NULL cond>");
         return;
     }
-    eprintf("(cond ");
-    iMinExp(cond->value, d + 1);
+    fprintf(out, "(cond ");
+    iMinExp(out, cond->value, d + 1);
     if (cond->cases != NULL) {
-        _iMinCondCases(cond->cases, d + 1);
+        _iMinCondCases(out, cond->cases, d + 1);
     }
-    eprintf(")");
+    fprintf(out, ")");
 }
 
-void ppMinCond(MinCond *cond) { iMinCond(cond, 0); }
+void ppMinCond(FILE *out, MinCond *cond) { iMinCond(out, cond, 0); }
 
-static void iMinCallCC(MinExp *exp, int d) {
+static void iMinCallCC(FILE *out, MinExp *exp, int d) {
     if (exp == NULL) {
-        eprintf("<NULL call/cc>");
+        fprintf(out, "<NULL call/cc>");
         return;
     }
-    eprintf("(call/cc");
-    newlineIndent(d + 1);
-    iMinExp(exp, d + 1);
-    eprintf(")");
+    fprintf(out, "(call/cc");
+    newlineIndent(out, d + 1);
+    iMinExp(out, exp, d + 1);
+    fprintf(out, ")");
 }
 
-void ppMinCallCC(MinExp *exp) { iMinCallCC(exp, 0); }
+void ppMinCallCC(FILE *out, MinExp *exp) { iMinCallCC(out, exp, 0); }
 
-static void _iMinBindings(MinBindings *bindings, int d) {
+static void _iMinBindings(FILE *out, MinBindings *bindings, int d) {
     if (bindings == NULL)
         return;
-    newlineIndent(d);
-    eprintf("(");
-    ppHashSymbol(bindings->var);
+    newlineIndent(out, d);
+    fprintf(out, "(");
+    ppMinHashSymbol(out, bindings->var);
     if (isSimple(bindings->val)) {
-        eprintf(" ");
-        iMinExp(bindings->val, d + 1);
+        fprintf(out, " ");
+        iMinExp(out, bindings->val, d + 1);
     } else {
-        newlineIndent(d + 1);
-        iMinExp(bindings->val, d + 1);
+        newlineIndent(out, d + 1);
+        iMinExp(out, bindings->val, d + 1);
     }
-    eprintf(")");
-    _iMinBindings(bindings->next, d);
+    fprintf(out, ")");
+    _iMinBindings(out, bindings->next, d);
 }
 
-static void iMinBindings(MinBindings *bindings, int d) {
-    eprintf("(");
-    _iMinBindings(bindings, d);
-    eprintf(")");
+static void iMinBindings(FILE *out, MinBindings *bindings, int d) {
+    fprintf(out, "(");
+    _iMinBindings(out, bindings, d);
+    fprintf(out, ")");
 }
 
-static void iMinLetRec(MinLetRec *letRec, int d) {
+static void iMinLetRec(FILE *out, MinLetRec *letRec, int d) {
     if (letRec == NULL) {
-        eprintf("<NULL letRec>");
+        fprintf(out, "<NULL letRec>");
         return;
     }
-    eprintf("(letrec");
-    newlineIndent(d + 1);
-    iMinBindings(letRec->bindings, d + 2);
+    fprintf(out, "(letrec");
+    newlineIndent(out, d + 1);
+    iMinBindings(out, letRec->bindings, d + 2);
     if (letRec->body != NULL) {
-        newlineIndent(d + 1);
-        iMinExp(letRec->body, d + 1);
+        newlineIndent(out, d + 1);
+        iMinExp(out, letRec->body, d + 1);
     }
-    eprintf(")");
+    fprintf(out, ")");
 }
 
-void ppMinLetRec(MinLetRec *letRec) { iMinLetRec(letRec, 0); }
+void ppMinLetRec(FILE *out, MinLetRec *letRec) { iMinLetRec(out, letRec, 0); }
 
-static void _iMinMatchList(MinMatchList *cases, int d) {
+static void _iMinMatchList(FILE *out, MinMatchList *cases, int d) {
     if (cases == NULL)
         return;
-    newlineIndent(d);
-    eprintf("(");
-    ppMinIntList(cases->matches);
+    newlineIndent(out, d);
+    fprintf(out, "(");
+    ppMinIntList(out, cases->matches);
     if (cases->body) {
         if (isSimple(cases->body)) {
-            eprintf(" ");
-            iMinExp(cases->body, d + 1);
+            fprintf(out, " ");
+            iMinExp(out, cases->body, d + 1);
         } else {
-            newlineIndent(d + 1);
-            iMinExp(cases->body, d + 1);
+            newlineIndent(out, d + 1);
+            iMinExp(out, cases->body, d + 1);
         }
     }
-    eprintf(")");
-    _iMinMatchList(cases->next, d);
+    fprintf(out, ")");
+    _iMinMatchList(out, cases->next, d);
 }
 
-static void iMinMatch(MinMatch *match, int d) {
+static void iMinMatch(FILE *out, MinMatch *match, int d) {
     if (match == NULL) {
-        eprintf("<NULL match>");
+        fprintf(out, "<NULL match>");
         return;
     }
-    eprintf("(match ");
-    iMinExp(match->index, d + 1);
+    fprintf(out, "(match ");
+    iMinExp(out, match->index, d + 1);
     if (match->cases != NULL) {
-        _iMinMatchList(match->cases, d + 1);
+        _iMinMatchList(out, match->cases, d + 1);
     }
-    eprintf(")");
+    fprintf(out, ")");
 }
 
-void ppMinMatch(MinMatch *match) { iMinMatch(match, 0); }
+void ppMinMatch(FILE *out, MinMatch *match) { iMinMatch(out, match, 0); }
 
-static void iMinAnnotatedVar(MinAnnotatedVar *var) {
+static void iMinAnnotatedVar(FILE *out, MinAnnotatedVar *var) {
     if (var == NULL) {
-        eprintf("<NULL annotated var>");
+        fprintf(out, "<NULL annotated var>");
         return;
     }
-    ppHashSymbol(var->var);
-    eprintf("<%d>", var->position);
+    ppMinHashSymbol(out, var->var);
+    fprintf(out, "<%d>", var->position);
 }
 
-void ppMinAnnotatedVar(MinAnnotatedVar *var) { iMinAnnotatedVar(var); }
+void ppMinAnnotatedVar(FILE *out, MinAnnotatedVar *var) {
+    iMinAnnotatedVar(out, var);
+}
 
-static void _ppMinBindings(MinBindings *bindings) {
+static void _ppMinBindings(FILE *out, MinBindings *bindings) {
     if (bindings == NULL)
         return;
-    eprintf("(");
-    ppHashSymbol(bindings->var);
-    eprintf(" ");
-    ppMinExp(bindings->val);
-    eprintf(")");
+    fprintf(out, "(");
+    ppMinHashSymbol(out, bindings->var);
+    fprintf(out, " ");
+    ppMinExp(out, bindings->val);
+    fprintf(out, ")");
     if (bindings->next) {
-        eprintf(" ");
-        _ppMinBindings(bindings->next);
+        fprintf(out, " ");
+        _ppMinBindings(out, bindings->next);
     }
 }
 
-void ppMinBindings(MinBindings *bindings) {
-    eprintf("(");
-    _ppMinBindings(bindings);
-    eprintf(")");
+void ppMinBindings(FILE *out, MinBindings *bindings) {
+    fprintf(out, "(");
+    _ppMinBindings(out, bindings);
+    fprintf(out, ")");
 }
 
-static void _ppMinIntList(MinIntList *list) {
+static void _ppMinIntList(FILE *out, MinIntList *list) {
     if (list == NULL)
         return;
-    eprintf("%d", list->item);
+    fprintf(out, "%d", list->item);
     if (list->next != NULL) {
-        eprintf(" ");
-        _ppMinIntList(list->next);
+        fprintf(out, " ");
+        _ppMinIntList(out, list->next);
     }
 }
 
-void ppMinIntList(MinIntList *list) {
-    eprintf("(");
-    _ppMinIntList(list);
-    eprintf(")");
+void ppMinIntList(FILE *out, MinIntList *list) {
+    fprintf(out, "(");
+    _ppMinIntList(out, list);
+    fprintf(out, ")");
 }
 
-void ppMinTag(MinExp *tag) {
-    eprintf("(tag ");
-    ppMinExp(tag);
-    eprintf(")");
+void ppMinTag(FILE *out, MinExp *tag) {
+    fprintf(out, "(tag ");
+    ppMinExp(out, tag);
+    fprintf(out, ")");
 }

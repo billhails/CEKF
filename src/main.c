@@ -582,7 +582,7 @@ int main(int argc, char *argv[]) {
         REPLACE_PROTECT(save2, minExp);
 
         if (desugar_flag) {
-            ppMinExp(minExp);
+            ppMinExp(stdout, minExp);
             eprintf("\n");
             exit(0);
         }
@@ -591,7 +591,7 @@ int main(int argc, char *argv[]) {
         REPLACE_PROTECT(save2, minExp);
 
         if (alpha_flag) {
-            ppMinExp(minExp);
+            ppMinExp(stdout, minExp);
             eprintf("\n");
             exit(0);
         }
@@ -600,7 +600,7 @@ int main(int argc, char *argv[]) {
         REPLACE_PROTECT(save2, minExp);
 
         if (curry_flag) {
-            ppMinExp(minExp);
+            ppMinExp(stdout, minExp);
             eprintf("\n");
             exit(0);
         }
@@ -616,7 +616,7 @@ int main(int argc, char *argv[]) {
         REPLACE_PROTECT(save2, minExp);
 
         if (beta_flag) {
-            ppMinExp(minExp);
+            ppMinExp(stdout, minExp);
             eprintf("\n");
             exit(0);
         }
@@ -625,7 +625,7 @@ int main(int argc, char *argv[]) {
         REPLACE_PROTECT(save2, minExp);
 
         if (fold_flag) {
-            ppMinExp(minExp);
+            ppMinExp(stdout, minExp);
             eprintf("\n");
             exit(0);
         }
@@ -634,7 +634,7 @@ int main(int argc, char *argv[]) {
         REPLACE_PROTECT(save2, minExp);
 
         if (uncurry_flag) {
-            ppMinExp(minExp);
+            ppMinExp(stdout, minExp);
             eprintf("\n");
             exit(0);
         }
@@ -655,7 +655,7 @@ int main(int argc, char *argv[]) {
             REPLACE_PROTECT(save2, minExp);
 
             if (cps_flag) {
-                ppMinExp(minExp);
+                ppMinExp(stdout, minExp);
                 eprintf("\n");
                 exit(0);
             }
@@ -681,7 +681,7 @@ int main(int argc, char *argv[]) {
             REPLACE_PROTECT(save2, minExp);
 
             if (amb_flag) {
-                ppMinExp(minExp);
+                ppMinExp(stdout, minExp);
                 eprintf("\n");
                 exit(0);
             }
@@ -694,7 +694,7 @@ int main(int argc, char *argv[]) {
             REPLACE_PROTECT(save2, minExp);
 
             if (shake_flag) {
-                ppMinExp(minExp);
+                ppMinExp(stdout, minExp);
                 eprintf("\n");
                 exit(0);
             }
@@ -710,7 +710,7 @@ int main(int argc, char *argv[]) {
             REPLACE_PROTECT(save2, minExp);
 
             if (closure_flag) {
-                ppMinExp(minExp);
+                ppMinExp(stdout, minExp);
                 eprintf("\n");
                 exit(0);
             }
@@ -722,7 +722,7 @@ int main(int argc, char *argv[]) {
             REPLACE_PROTECT(save2, minExp);
 
             if (dumpIR) {
-                ppMinExp(minExp);
+                ppMinExp(stdout, minExp);
                 exit(0);
             }
 

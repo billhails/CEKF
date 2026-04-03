@@ -528,8 +528,7 @@ static MinBindings *desugarLamBindings(LamBindings *node) {
     MinBindings *result = newMinBindings(CPI(node), node->var, val, next);
     if (desugar_conversion_function != NULL &&
         strcmp(node->var->name, desugar_conversion_function) == 0) {
-        ppMinExp(result->val);
-        eprintf("\n");
+        ppMinExp(stdout, result->val);
         exit(0);
     }
     UNPROTECT(save);

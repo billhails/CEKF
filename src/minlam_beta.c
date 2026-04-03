@@ -535,7 +535,8 @@ static MinBindings *betaMinBindings(MinBindings *node) {
     }
     if (beta_conversion_function != NULL &&
         strcmp(beta_conversion_function, result->var->name) == 0) {
-        ppMinExp(new_val);
+        ppMinExp(stdout, new_val);
+        exit(0);
     }
     UNPROTECT(save);
     LEAVE(betaMinBindings);
