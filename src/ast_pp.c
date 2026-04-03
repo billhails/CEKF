@@ -32,7 +32,7 @@
 #include "pratt_scanner.h"
 #include "print_generator.h"
 #include "symbols.h"
-#include "utils.h"
+#include "utils_helper.h"
 
 static void ppAstDefLazy(SCharArray *, AstDefLazy *);
 static void ppAstDefMulti(SCharArray *, AstMultiDefine *);
@@ -613,19 +613,4 @@ void ppAstExpression(SCharArray *dest, AstExpression *expr) {
     default:
         cant_happen("unexpected %s", astExpressionTypeName(expr->type));
     }
-}
-
-void psprintf(SCharArray *utf8, const char *message, ...) {
-    va_list args;
-    va_start(args, message);
-    va_list copy;
-    va_copy(copy, args);
-    size_t size = vsnprintf(NULL, 0, message, args) + 1;
-    extendSCharArray(utf8, utf8->size + size);
-    char *start = &utf8->entries[utf8->size];
-    vsnprintf(start, size, message, copy);
-    va_end(args);
-    va_end(copy);
-    utf8->size += size;
-    utf8->size--;
 }

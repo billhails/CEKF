@@ -22,8 +22,6 @@
 #include "pratt.h"
 #include "utils.h"
 
-void psprintf(SCharArray *, const char *, ...)
-    __attribute__((format(printf, 2, 3)));
 void ppAstExpression(SCharArray *, AstExpression *);
 
 #endif

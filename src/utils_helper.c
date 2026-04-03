@@ -17,6 +17,7 @@
  */
 
 #include "utils_helper.h"
+#include <stdarg.h>
 
 // These little helpers are a bit too specific to be generated.
 
@@ -388,4 +389,19 @@ SymbolArray *symbolSetToArray(SymbolSet *set) {
     }
     UNPROTECT(save);
     return array;
+}
+
+void psprintf(SCharArray *utf8, const char *message, ...) {
+    va_list args;
+    va_start(args, message);
+    va_list copy;
+    va_copy(copy, args);
+    size_t size = vsnprintf(NULL, 0, message, args) + 1;
+    extendSCharArray(utf8, utf8->size + size);
+    char *start = &utf8->entries[utf8->size];
+    vsnprintf(start, size, message, copy);
+    va_end(args);
+    va_end(copy);
+    utf8->size += size;
+    utf8->size--;
 }
