@@ -739,8 +739,8 @@ int main(int argc, char *argv[]) {
         annotate(anfExp, builtIns);
 
         if (dumpIR) {
-            ppAnfExp(anfExp);
-            eprintf("\n");
+            ppAnfExp(stdout, anfExp);
+            printf("\n");
             exit(0);
         }
 

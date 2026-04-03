@@ -26,410 +26,410 @@
 #include "hash.h"
 #include "utils.h"
 
-void ppAnfEnv(AnfEnv *env) {
-    eprintf("[\n");
+void ppAnfEnv(FILE *out, AnfEnv *env) {
+    fprintf(out, "[\n");
     if (env == NULL) {
-        eprintf("]\n");
+        fprintf(out, "]\n");
         return;
     }
     Index i = 0;
     HashSymbol *key;
     int value;
     while ((key = iterateIntMap(env->table, &i, &value)) != NULL) {
-        eprintf("%s: %d\n", key->name, value);
+        fprintf(out, "%s: %d\n", key->name, value);
     }
-    ppAnfEnv(env->next);
-    eprintf("]\n");
+    ppAnfEnv(out, env->next);
+    fprintf(out, "]\n");
 }
 
-void ppAexpLam(AexpLam *x) {
-    eprintf("(lambda ");
-    ppAexpVarList(x->args);
-    eprintf(" ");
-    ppAnfExp(x->exp);
-    eprintf(")");
+void ppAexpLam(FILE *out, AexpLam *x) {
+    fprintf(out, "(lambda ");
+    ppAexpVarList(out, x->args);
+    fprintf(out, " ");
+    ppAnfExp(out, x->exp);
+    fprintf(out, ")");
 }
 
-void ppAexpVarList(AexpVarList *x) {
-    eprintf("(");
+void ppAexpVarList(FILE *out, AexpVarList *x) {
+    fprintf(out, "(");
     while (x != NULL) {
-        ppAexpVar(x->var);
+        ppAexpVar(out, x->var);
         if (x->next != NULL) {
-            eprintf(" ");
+            fprintf(out, " ");
         }
         x = x->next;
     }
-    eprintf(")");
+    fprintf(out, ")");
 }
 
-static void ppChar(char c) {
+static void ppChar(FILE *out, char c) {
     switch (c) {
     case '\n':
-        eprintf("\"\\n\"");
+        fprintf(out, "\"\\n\"");
         break;
     case '\t':
-        eprintf("\"\\t\"");
+        fprintf(out, "\"\\t\"");
         break;
     case '\"':
-        eprintf("\"\\\"\"");
+        fprintf(out, "\"\\\"\"");
         break;
     default:
-        eprintf("\"%c\"", c);
+        fprintf(out, "\"%c\"", c);
     }
 }
 
-void ppAexpVar(HashSymbol *x) { eprintf("%s", x->name); }
+void ppAexpVar(FILE *out, HashSymbol *x) { fprintf(out, "%s", x->name); }
 
-void ppAexpAnnotatedVar(AexpAnnotatedVar *x) {
-    // ppAexpVar(x->var);
+void ppAexpAnnotatedVar(FILE *out, AexpAnnotatedVar *x) {
+    // ppAexpVar(out, x->var);
     if (x->type == AEXPANNOTATEDVARTYPE_TYPE_STACK)
-        eprintf("LVAR:%s:%d", x->var->name, x->offset);
+        fprintf(out, "LVAR:%s:%d", x->var->name, x->offset);
     else
-        eprintf("VAR:%s:%d:%d", x->var->name, x->frame, x->offset);
+        fprintf(out, "VAR:%s:%d:%d", x->var->name, x->frame, x->offset);
 }
 
-void ppAexpPrimApp(AexpPrimApp *x) {
-    eprintf("(");
+void ppAexpPrimApp(FILE *out, AexpPrimApp *x) {
+    fprintf(out, "(");
     switch (x->type) {
     case AEXPPRIMOP_TYPE_ADD:
-        eprintf("add ");
+        fprintf(out, "add ");
         break;
     case AEXPPRIMOP_TYPE_SUB:
-        eprintf("sub ");
+        fprintf(out, "sub ");
         break;
     case AEXPPRIMOP_TYPE_MUL:
-        eprintf("mul ");
+        fprintf(out, "mul ");
         break;
     case AEXPPRIMOP_TYPE_DIV:
-        eprintf("div ");
+        fprintf(out, "div ");
         break;
     case AEXPPRIMOP_TYPE_GCD:
-        eprintf("gcd ");
+        fprintf(out, "gcd ");
         break;
     case AEXPPRIMOP_TYPE_LCM:
-        eprintf("lcm ");
+        fprintf(out, "lcm ");
         break;
     case AEXPPRIMOP_TYPE_CANON:
-        eprintf("canon ");
+        fprintf(out, "canon ");
         break;
     case AEXPPRIMOP_TYPE_EQ:
-        eprintf("eq ");
+        fprintf(out, "eq ");
         break;
     case AEXPPRIMOP_TYPE_NE:
-        eprintf("ne ");
+        fprintf(out, "ne ");
         break;
     case AEXPPRIMOP_TYPE_GT:
-        eprintf("gt ");
+        fprintf(out, "gt ");
         break;
     case AEXPPRIMOP_TYPE_LT:
-        eprintf("lt ");
+        fprintf(out, "lt ");
         break;
     case AEXPPRIMOP_TYPE_GE:
-        eprintf("ge ");
+        fprintf(out, "ge ");
         break;
     case AEXPPRIMOP_TYPE_LE:
-        eprintf("le ");
+        fprintf(out, "le ");
         break;
     case AEXPPRIMOP_TYPE_VEC:
-        eprintf("vec ");
+        fprintf(out, "vec ");
         break;
     case AEXPPRIMOP_TYPE_MOD:
-        eprintf("mod ");
+        fprintf(out, "mod ");
         break;
     case AEXPPRIMOP_TYPE_CMP:
-        eprintf("cmp ");
+        fprintf(out, "cmp ");
         break;
     case AEXPPRIMOP_TYPE_POW:
-        eprintf("pow ");
+        fprintf(out, "pow ");
         break;
     default:
         cant_happen("unrecognized op %s", aexpPrimOpName(x->type));
     }
-    ppAexp(x->exp1);
+    ppAexp(out, x->exp1);
     if (x->exp2 != NULL) {
-        eprintf(" ");
-        ppAexp(x->exp2);
+        fprintf(out, " ");
+        ppAexp(out, x->exp2);
     }
-    eprintf(")");
+    fprintf(out, ")");
 }
 
-static void ppAexpListContents(AexpList *x) {
+static void ppAexpListContents(FILE *out, AexpList *x) {
     while (x != NULL) {
-        ppAexp(x->exp);
+        ppAexp(out, x->exp);
         if (x->next) {
-            eprintf(" ");
+            fprintf(out, " ");
         }
         x = x->next;
     }
 }
 
-void ppAexpList(AexpList *x) {
-    eprintf("(");
-    ppAexpListContents(x);
-    eprintf(")");
+void ppAexpList(FILE *out, AexpList *x) {
+    fprintf(out, "(");
+    ppAexpListContents(out, x);
+    fprintf(out, ")");
 }
 
-static void ppAexpIntListContents(AexpIntList *x) {
+static void ppAexpIntListContents(FILE *out, AexpIntList *x) {
     while (x != NULL) {
-        eprintf("%d", x->integer);
+        fprintf(out, "%d", x->integer);
         if (x->next) {
-            eprintf(" ");
+            fprintf(out, " ");
         }
         x = x->next;
     }
 }
 
-void ppAexpIntList(AexpIntList *x) {
-    eprintf("(");
-    ppAexpIntListContents(x);
-    eprintf(")");
+void ppAexpIntList(FILE *out, AexpIntList *x) {
+    fprintf(out, "(");
+    ppAexpIntListContents(out, x);
+    fprintf(out, ")");
 }
 
-void ppAexpMakeList(AexpList *x) {
-    eprintf("(list ");
-    ppAexpListContents(x);
-    eprintf(")");
+void ppAexpMakeList(FILE *out, AexpList *x) {
+    fprintf(out, "(list ");
+    ppAexpListContents(out, x);
+    fprintf(out, ")");
 }
 
-void ppAexpMakeVec(AexpMakeVec *x) {
-    eprintf("(make-vec ");
-    ppAexpListContents(x->args);
-    eprintf(")");
+void ppAexpMakeVec(FILE *out, AexpMakeVec *x) {
+    fprintf(out, "(make-vec ");
+    ppAexpListContents(out, x->args);
+    fprintf(out, ")");
 }
 
-void ppBareAexpList(AexpList *x) {
+void ppBareAexpList(FILE *out, AexpList *x) {
     while (x != NULL) {
-        ppAexp(x->exp);
+        ppAexp(out, x->exp);
         if (x->next) {
-            eprintf(" ");
+            fprintf(out, " ");
         }
         x = x->next;
     }
 }
 
-void ppCexpApply(CexpApply *x) {
-    eprintf("(");
-    ppAexp(x->function);
-    eprintf(" ");
-    ppBareAexpList(x->args);
-    eprintf(")");
+void ppCexpApply(FILE *out, CexpApply *x) {
+    fprintf(out, "(");
+    ppAexp(out, x->function);
+    fprintf(out, " ");
+    ppBareAexpList(out, x->args);
+    fprintf(out, ")");
 }
 
-void ppCexpIf(CexpIf *x) {
-    eprintf("(if ");
-    ppAexp(x->condition);
-    eprintf(" ");
-    ppAnfExp(x->consequent);
-    eprintf(" ");
-    ppAnfExp(x->alternative);
-    eprintf(")");
+void ppCexpIf(FILE *out, CexpIf *x) {
+    fprintf(out, "(if ");
+    ppAexp(out, x->condition);
+    fprintf(out, " ");
+    ppAnfExp(out, x->consequent);
+    fprintf(out, " ");
+    ppAnfExp(out, x->alternative);
+    fprintf(out, ")");
 }
 
-void ppCexpCond(CexpCond *x) {
-    eprintf("(cond ");
-    ppAexp(x->condition);
-    eprintf(" ");
-    ppCexpCondCases(x->cases);
-    eprintf(")");
+void ppCexpCond(FILE *out, CexpCond *x) {
+    fprintf(out, "(cond ");
+    ppAexp(out, x->condition);
+    fprintf(out, " ");
+    ppCexpCondCases(out, x->cases);
+    fprintf(out, ")");
 }
 
-void ppCexpIntCondCases(CexpIntCondCases *x) {
+void ppCexpIntCondCases(FILE *out, CexpIntCondCases *x) {
     while (x != NULL) {
-        eprintf("(");
-        fprintMaybeBigInt(errout, x->option);
-        eprintf(" ");
-        ppAnfExp(x->body);
-        eprintf(")");
+        fprintf(out, "(");
+        fprintMaybeBigInt(out, x->option);
+        fprintf(out, " ");
+        ppAnfExp(out, x->body);
+        fprintf(out, ")");
         if (x->next) {
-            eprintf(" ");
+            fprintf(out, " ");
         }
         x = x->next;
     }
 }
 
-void ppCexpCharCondCases(CexpCharCondCases *x) {
+void ppCexpCharCondCases(FILE *out, CexpCharCondCases *x) {
     while (x != NULL) {
-        eprintf("(");
-        ppChar(x->option);
-        eprintf(" ");
-        ppAnfExp(x->body);
-        eprintf(")");
+        fprintf(out, "(");
+        ppChar(out, x->option);
+        fprintf(out, " ");
+        ppAnfExp(out, x->body);
+        fprintf(out, ")");
         if (x->next) {
-            eprintf(" ");
+            fprintf(out, " ");
         }
         x = x->next;
     }
 }
 
-void ppCexpCondCases(CexpCondCases *x) {
+void ppCexpCondCases(FILE *out, CexpCondCases *x) {
     switch (x->type) {
     case CEXPCONDCASES_TYPE_INTCASES:
-        ppCexpIntCondCases(x->val.intCases);
+        ppCexpIntCondCases(out, x->val.intCases);
         break;
     case CEXPCONDCASES_TYPE_CHARCASES:
-        ppCexpCharCondCases(x->val.charCases);
+        ppCexpCharCondCases(out, x->val.charCases);
         break;
     default:
         cant_happen("unrecognised type %d in ppCexpCondCases", x->type);
     }
 }
 
-void ppCexpLetRec(CexpLetRec *x) {
-    eprintf("(letrec ");
-    ppAnfLetRecBindings(x->bindings);
-    eprintf(" ");
-    ppAnfExp(x->body);
-    eprintf(")");
+void ppCexpLetRec(FILE *out, CexpLetRec *x) {
+    fprintf(out, "(letrec ");
+    ppAnfLetRecBindings(out, x->bindings);
+    fprintf(out, " ");
+    ppAnfExp(out, x->body);
+    fprintf(out, ")");
 }
 
-void ppAnfLetRecBindings(AnfLetRecBindings *x) {
-    eprintf("(");
+void ppAnfLetRecBindings(FILE *out, AnfLetRecBindings *x) {
+    fprintf(out, "(");
     while (x != NULL) {
-        eprintf("(");
-        ppAexpVar(x->var);
-        eprintf(" ");
-        ppAexp(x->val);
-        eprintf(")");
+        fprintf(out, "(");
+        ppAexpVar(out, x->var);
+        fprintf(out, " ");
+        ppAexp(out, x->val);
+        fprintf(out, ")");
         if (x->next != NULL) {
-            eprintf(" ");
+            fprintf(out, " ");
         }
         x = x->next;
     }
-    eprintf(")");
+    fprintf(out, ")");
 }
 
-void ppCexpAmb(CexpAmb *x) {
-    eprintf("(amb ");
-    ppAnfExp(x->exp1);
-    eprintf(" ");
-    ppAnfExp(x->exp2);
-    eprintf(")");
+void ppCexpAmb(FILE *out, CexpAmb *x) {
+    fprintf(out, "(amb ");
+    ppAnfExp(out, x->exp1);
+    fprintf(out, " ");
+    ppAnfExp(out, x->exp2);
+    fprintf(out, ")");
 }
 
-void ppCexpCut(CexpCut *x) {
-    eprintf("(cut ");
-    ppAnfExp(x->exp);
-    eprintf(")");
+void ppCexpCut(FILE *out, CexpCut *x) {
+    fprintf(out, "(cut ");
+    ppAnfExp(out, x->exp);
+    fprintf(out, ")");
 }
 
-void ppAnfMatchList(AnfMatchList *x) {
+void ppAnfMatchList(FILE *out, AnfMatchList *x) {
     if (x == NULL)
         return;
-    eprintf("(");
-    ppAexpIntList(x->matches);
-    eprintf(" ");
-    ppAnfExp(x->body);
-    eprintf(")");
+    fprintf(out, "(");
+    ppAexpIntList(out, x->matches);
+    fprintf(out, " ");
+    ppAnfExp(out, x->body);
+    fprintf(out, ")");
     if (x->next != NULL) {
-        eprintf(" ");
-        ppAnfMatchList(x->next);
+        fprintf(out, " ");
+        ppAnfMatchList(out, x->next);
     }
 }
 
-void ppCexpMatch(CexpMatch *x) {
-    eprintf("(match ");
-    ppAexp(x->condition);
-    eprintf(" ");
-    ppAnfMatchList(x->clauses);
-    eprintf(")");
+void ppCexpMatch(FILE *out, CexpMatch *x) {
+    fprintf(out, "(match ");
+    ppAexp(out, x->condition);
+    fprintf(out, " ");
+    ppAnfMatchList(out, x->clauses);
+    fprintf(out, ")");
 }
 
-void ppAexp(Aexp *x) {
+void ppAexp(FILE *out, Aexp *x) {
     switch (x->type) {
     case AEXP_TYPE_LAM:
-        ppAexpLam(x->val.lam);
+        ppAexpLam(out, x->val.lam);
         break;
     case AEXP_TYPE_VAR:
-        ppAexpVar(x->val.var);
+        ppAexpVar(out, x->val.var);
         break;
     case AEXP_TYPE_ANNOTATEDVAR:
-        ppAexpAnnotatedVar(x->val.annotatedVar);
+        ppAexpAnnotatedVar(out, x->val.annotatedVar);
         break;
     case AEXP_TYPE_BIGINTEGER:
-        fprintMaybeBigInt(errout, x->val.bigInteger);
+        fprintMaybeBigInt(out, x->val.bigInteger);
         break;
     case AEXP_TYPE_LITTLEINTEGER:
-        eprintf("%d", x->val.littleInteger);
+        fprintf(out, "%d", x->val.littleInteger);
         break;
     case AEXP_TYPE_CHARACTER:
-        ppChar(x->val.character);
+        ppChar(out, x->val.character);
         break;
     case AEXP_TYPE_PRIM:
-        ppAexpPrimApp(x->val.prim);
+        ppAexpPrimApp(out, x->val.prim);
         break;
     case AEXP_TYPE_MAKEVEC:
-        ppAexpMakeVec(x->val.makeVec);
+        ppAexpMakeVec(out, x->val.makeVec);
         break;
     default:
         cant_happen("unrecognised aexp %s", aexpTypeName(x->type));
     }
 }
 
-void ppCexp(Cexp *x) {
+void ppCexp(FILE *out, Cexp *x) {
     switch (x->type) {
     case CEXP_TYPE_APPLY:
-        ppCexpApply(x->val.apply);
+        ppCexpApply(out, x->val.apply);
         break;
     case CEXP_TYPE_IFF:
-        ppCexpIf(x->val.iff);
+        ppCexpIf(out, x->val.iff);
         break;
     case CEXP_TYPE_COND:
-        ppCexpCond(x->val.cond);
+        ppCexpCond(out, x->val.cond);
         break;
     case CEXP_TYPE_CALLCC:
-        eprintf("(call/cc ");
-        ppAexp(x->val.callCC);
-        eprintf(")");
+        fprintf(out, "(call/cc ");
+        ppAexp(out, x->val.callCC);
+        fprintf(out, ")");
         break;
     case CEXP_TYPE_LETREC:
-        ppCexpLetRec(x->val.letRec);
+        ppCexpLetRec(out, x->val.letRec);
         break;
     case CEXP_TYPE_AMB:
-        ppCexpAmb(x->val.amb);
+        ppCexpAmb(out, x->val.amb);
         break;
     case CEXP_TYPE_CUT:
-        ppCexpCut(x->val.cut);
+        ppCexpCut(out, x->val.cut);
         break;
     case CEXP_TYPE_MATCH:
-        ppCexpMatch(x->val.match);
+        ppCexpMatch(out, x->val.match);
         break;
     case CEXP_TYPE_BACK:
-        eprintf("(back)");
+        fprintf(out, "(back)");
         break;
     case CEXP_TYPE_ERROR:
-        eprintf("(error)");
+        fprintf(out, "(error)");
         break;
     default:
         cant_happen("unrecognised cexp %d in ppCexp", x->type);
     }
 }
 
-void ppAnfExp(AnfExp *x) {
+void ppAnfExp(FILE *out, AnfExp *x) {
     switch (x->type) {
     case ANFEXP_TYPE_AEXP:
-        ppAexp(x->val.aexp);
+        ppAexp(out, x->val.aexp);
         break;
     case ANFEXP_TYPE_CEXP:
-        ppCexp(x->val.cexp);
+        ppCexp(out, x->val.cexp);
         break;
     case ANFEXP_TYPE_LET:
-        ppAnfExpLet(x->val.let);
+        ppAnfExpLet(out, x->val.let);
         break;
     case ANFEXP_TYPE_DONE:
-        eprintf("<DONE>");
+        fprintf(out, "<DONE>");
         break;
     default:
-        eprintf("<unrecognised exp %s>", anfExpTypeName(x->type));
+        fprintf(out, "<unrecognised exp %s>", anfExpTypeName(x->type));
         exit(1);
     }
 }
 
-void ppAnfExpLet(AnfExpLet *x) {
-    eprintf("(let (");
-    ppAexpVar(x->var);
-    eprintf(" ");
-    ppAnfExp(x->val);
-    eprintf(") ");
-    ppAnfExp(x->body);
-    eprintf(")");
+void ppAnfExpLet(FILE *out, AnfExpLet *x) {
+    fprintf(out, "(let (");
+    ppAexpVar(out, x->var);
+    fprintf(out, " ");
+    ppAnfExp(out, x->val);
+    fprintf(out, ") ");
+    ppAnfExp(out, x->body);
+    fprintf(out, ")");
 }

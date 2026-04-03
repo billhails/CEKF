@@ -35,7 +35,7 @@ file in the project.
 
 | Category | Files | Approx. calls | Notes |
 | --- | --- | --- | --- |
-| Pretty-printers | `lambda_pp.c`, `minlam_pp.c`, `anf_pp.c`, `tpmc_pp.c` | ~390 | Mechanical — all become `fprintf(fp, ...)` once `FILE*` is added |
+| Pretty-printers | `lambda_pp.c`, `minlam_pp.c`, `anf_pp.c`, `ast_pp.c`, `tpmc_pp.c` | ~390 | Mechanical — all become `fprintf(fp, ...)` once `FILE*` is added |
 | Debuggers/annotators | `annotate.c`, `debug.c`, `tc_helper.c`, `tc_analyze.c` | ~210 | Needs intent analysis — mix of debug and error reporting |
 | Infrastructure | `memory.c`, `hash.c`, `cekf.c` | ~46 | Mostly debug traces, all guarded |
 | Error reporting | `step.c`, `main.c`, `builtin_sqlite.c`, `errors.c` | ~30 | Correct home for `eprintf` — leave as-is |
