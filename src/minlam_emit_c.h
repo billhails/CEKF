@@ -1,5 +1,5 @@
-#ifndef cekf_minlam_emit_h
-#define cekf_minlam_emit_h
+#ifndef cekf_minlam_emit_c_h
+#define cekf_minlam_emit_c_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2026  Bill Hails
@@ -22,6 +22,6 @@
 #include "emit_helper.h"
 #include "minlam.h"
 
-void emitProgram(MinExp *, BuiltIns *, FILE *);
+void emitCProgram(MinExp *, BuiltIns *, FILE *);
 
 #endif

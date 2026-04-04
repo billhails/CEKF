@@ -19,7 +19,7 @@
  * Generated from src/minlam.yaml by tools/generate.py
  */
 
-#include "minlam_emit.h"
+#include "minlam_emit_c.h"
 #include "memory.h"
 #include "minlam.h"
 #include "minlam_pp.h"
@@ -1229,7 +1229,7 @@ static void emitMinExp(MinExp *node, EmitterContext *ctx) {
 // Public API
 //////////////
 
-void emitProgram(MinExp *node, BuiltIns *builtIns, FILE *out) {
+void emitCProgram(MinExp *node, BuiltIns *builtIns, FILE *out) {
     Opaque *body = newOpaque_EmitBuffer();
     int save = PROTECT(body);
     HashSymbol *main = newSymbol("main");

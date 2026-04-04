@@ -53,7 +53,7 @@
 #include "minlam_cps.h"
 #include "minlam_cpsTrampoline.h"
 #include "minlam_curry.h"
-#include "minlam_emit.h"
+#include "minlam_emit_c.h"
 #include "minlam_eta.h"
 #include "minlam_fold.h"
 #include "minlam_pp.h"
@@ -728,7 +728,7 @@ int main(int argc, char *argv[]) {
             //////////
             // Emit C
             //////////
-            emitProgram(minExp, builtIns, stdout);
+            emitCProgram(minExp, builtIns, stdout);
             exit(0);
         }
 
