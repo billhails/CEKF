@@ -94,6 +94,7 @@ extern bool assertions_failed;
 extern int assertions_accumulate;
 static char *binary_output_file = NULL;
 static char *binary_input_file = NULL;
+static char *target_c_file = NULL;
 static char *snippet = NULL;
 
 extern StringArray *include_paths;
@@ -207,7 +208,8 @@ static void usage(char *prog, int status) {
 #ifdef SAFETY_CHECKS
         "    --stress-gc              Stress the garbage collector.\n"
 #endif
-        "    --target-c               Output C code instead.\n"
+        "    --target-c[=file]        Output C code instead (to file if "
+        "specified).\n"
 #ifdef UNIT_TESTS
         "    --test                   Run unit tests.\n"
 #endif
@@ -234,7 +236,7 @@ static int processArgs(int argc, char *argv[]) {
 #ifdef SAFETY_CHECKS
             {"stress-gc", no_argument, &forceGcFlag, 1},
 #endif
-            {"target-c", no_argument, &targetCFlag, 1},
+            {"target-c", optional_argument, 0, 'T'},
             {"parse-only", no_argument, &parse_only_flag, 1},
             {"dump-ir", no_argument, &dumpIR, 1},
             {"dump-ast", no_argument, &ast_flag, 1},
@@ -318,6 +320,13 @@ static int processArgs(int argc, char *argv[]) {
 
         if (c == 'i') {
             pushStringArray(include_paths, strdup(optarg));
+        }
+
+        if (c == 'T') {
+            targetCFlag = 1;
+            if (optarg) {
+                target_c_file = optarg;
+            }
         }
 
         if (c == '?' || c == 'h') {
@@ -728,7 +737,20 @@ int main(int argc, char *argv[]) {
             //////////
             // Emit C
             //////////
-            emitCProgram(minExp, builtIns, stdout);
+            FILE *outFile = stdout;
+            int shouldClose = 0;
+            if (target_c_file != NULL) {
+                outFile = fopen(target_c_file, "w");
+                if (outFile == NULL) {
+                    perror(target_c_file);
+                    exit(1);
+                }
+                shouldClose = 1;
+            }
+            emitCProgram(minExp, builtIns, outFile);
+            if (shouldClose) {
+                fclose(outFile);
+            }
             exit(0);
         }
 
