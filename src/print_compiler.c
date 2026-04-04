@@ -206,7 +206,7 @@ static LamExp *compilePrinterForString(ParserInfo I) {
 
 static LamExp *compilePrinterForTypeSig(ParserInfo I, TcTypeSig *typeSig,
                                         TcEnv *env) {
-    IFDEBUG(printTcTypeSig(typeSig, 0));
+    IFDEBUG(printTcTypeSig(stderr, typeSig, 0));
     if (typeSig->name == listSymbol()) {
         if (typeSig->args &&
             typeSig->args->type->type == TCTYPE_TYPE_CHARACTER) {

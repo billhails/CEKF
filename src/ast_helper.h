@@ -31,6 +31,7 @@ extern struct AstNameSpaceArray *nameSpaces;
 void markAstSymbolTable(void);
 
 void printAstSymbol(HashSymbol *x, int depth);
+void fprintAstSymbol(FILE *fp, HashSymbol *x, int depth);
 
 void initNameSpaces();
 

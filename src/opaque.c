@@ -81,3 +81,13 @@ void printOpaque(Opaque *x, int depth) {
     else
         printf("<opaque:%p>", x->data);
 }
+
+void fprintOpaque(FILE *fp, Opaque *x, int depth) {
+    fprintf(fp, "%*s", depth * PAD_WIDTH, "");
+    if (x == NULL)
+        fprintf(fp, "<opaque:null>");
+    else if (x->print)
+        x->print(x->data);
+    else
+        fprintf(fp, "<opaque:%p>", x->data);
+}

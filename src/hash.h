@@ -1,5 +1,5 @@
 #ifndef cekf_hash_h
-#  define cekf_hash_h
+#define cekf_hash_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2023  Bill Hails
@@ -18,14 +18,14 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#  include <stdbool.h>
+#include <stdbool.h>
 
-#  include "common.h"
-#  include "memory.h"
-#  include "types.h"
+#include "common.h"
+#include "memory.h"
+#include "types.h"
 
 // Maximum fraction of hash table capacity occupied before growing the table.
-#  define HASH_MAX_LOAD 0.75
+#define HASH_MAX_LOAD 0.75
 
 // Type used for hash values
 typedef uint32_t hash_t;
@@ -38,7 +38,7 @@ typedef struct HashSymbol {
 
 // Function types for marking and printing hash table values
 typedef void (*MarkHashValueFunction)(void *value);
-typedef void (*PrintHashValueFunction)(void *value, int depth);
+typedef void (*PrintHashValueFunction)(FILE *fp, void *value, int depth);
 
 // Hash table structure
 typedef struct HashTable {
@@ -68,6 +68,8 @@ HashSymbol *uniqueHashSymbol(HashTable *table, char *name, void *valuePtr);
 
 extern bool quietPrintHashTable;
 
+void fprintHashSymbol(FILE *fp, HashSymbol *symbol);
+void fprintHashTable(FILE *fp, HashTable *table, int depth);
 void printHashTable(HashTable *table, int depth);
 void printHashSymbol(HashSymbol *symbol);
 

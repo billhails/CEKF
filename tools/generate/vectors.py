@@ -104,7 +104,7 @@ class SimpleVector(Base):
         myName=self.getName()
         a = '.' if isInline else '->'
         pad(depth)
-        print(f'print{myName}(_x{a}{prefix}{field}, depth+1); {c}')
+        print(f'print{myName}(fp, _x{a}{prefix}{field}, depth+1); {c}')
 
     def printEqField(self, catalog, isInline, field, depth, prefix=''):
         c = self.comment('printEqField')
@@ -242,15 +242,15 @@ class SimpleVector(Base):
         print(f" * Prints the contents of a {myName} object for debugging.")
         print(f" */")
         print(f"{decl} {{ {c}")
-        print(f"    pad(depth); {c}")
-        print(f'    if (_x == NULL) {{ eprintf("{myName} (NULL)"); return; }} {c}')
-        print(f'    eprintf("{myName}(%d)[\\n", _x->size); {c}')
+        print(f"    pad(fp, depth); {c}")
+        print(f'    if (_x == NULL) {{ fprintf(fp, "{myName} (NULL)"); return; }} {c}')
+        print(f'    fprintf(fp, "{myName}(%d)[\\n", _x->size); {c}')
         print(f"    for (Index i = 0; i < _x->size; i++) {{ {c}")
         self.entries.printPrintArrayLine(False, catalog, "i", 2)
-        print(f'        eprintf("\\n"); {c}')
+        print(f'        fprintf(fp, "\\n"); {c}')
         print(f"    }} {c}")
-        print(f"    pad(depth); {c}")
-        print(f'    eprintf("]"); {c}')
+        print(f"    pad(fp, depth); {c}")
+        print(f'    fprintf(fp, "]"); {c}')
         print(f"}} {c}")
         print("")
 

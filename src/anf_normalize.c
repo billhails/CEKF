@@ -494,7 +494,7 @@ static AnfExp *normalizeApply(MinApply *minApply, AnfExp *tail) {
     AexpList *args = replaceMinArgs(minApply->args, replacements);
     PROTECT(args);
     DEBUG("back from replaceMinArgs");
-    IFDEBUG(printMinExpTable(replacements, 0));
+    IFDEBUG(printMinExpTable(stderr, replacements, 0));
     Cexp *cexp =
         makeCexp_Apply(CPI(minApply), function, countAexpList(args), args);
     REPLACE_PROTECT(save2, cexp);
@@ -512,8 +512,8 @@ static AnfExp *normalizeApply(MinApply *minApply, AnfExp *tail) {
 static AnfExp *letBind(AnfExp *body, MinExpTable *replacements) {
     ENTER(letBind);
     // DEBUG("sleep %d", sleep(1));
-    IFDEBUG(printExp(body, 0));
-    IFDEBUG(printMinExpTable(replacements, 0));
+    IFDEBUG(printMinExp(stderr, body, 0));
+    IFDEBUG(printMinExpTable(stderr, replacements, 0));
     if (countMinExpTable(replacements) == 0) {
         LEAVE(letBind);
         return body;
@@ -814,7 +814,7 @@ static Aexp *replaceMinCexp(MinExp *apply, MinExpTable *replacements) {
     }
     HashSymbol *subst = freshSymbol();
     setMinExpTable(replacements, subst, apply);
-    IFDEBUG(printMinExpTable(replacements, 0));
+    IFDEBUG(printMinExpTable(stderr, replacements, 0));
     LEAVE(replaceMinCexp);
     return newAexp_Var(CPI(apply), subst);
 }

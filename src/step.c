@@ -973,7 +973,7 @@ static void step() {
                 switch (readCurrentByte()) {
                 case BYTECODES_TYPE_BIGINT: {
                     BigInt *bigInt = readCurrentBigInt();
-                    fprintBigInt(stdout, bigInt);
+                    fprintBigInt2(stdout, bigInt);
                 } break;
                 case BYTECODES_TYPE_STDINT: {
                     Integer Int = readCurrentInt();
@@ -1199,7 +1199,7 @@ static void step() {
             int save = PROTECT(bigInt);
 #ifdef DEBUG_STEP
             printf("BIGINT [");
-            fprintBigInt(stdout, bigInt);
+            fprintBigInt2(stdout, bigInt);
             printf("]\n");
 #endif
             Value v = value_Bigint(bigInt);
@@ -1212,7 +1212,7 @@ static void step() {
             int save = PROTECT(bigInt);
 #ifdef DEBUG_STEP
             printf("BIGINT_IMAG [");
-            fprintBigInt(stdout, bigInt);
+            fprintBigInt2(stdout, bigInt);
             printf("]\n");
 #endif
             Value v = value_Bigint_imag(bigInt);

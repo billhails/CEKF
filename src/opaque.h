@@ -41,5 +41,6 @@ Opaque *newOpaque(void *data, OpaqueOperation clean, OpaqueOperation print,
 void markOpaque(Opaque *);
 void freeOpaque(Opaque *);
 void printOpaque(Opaque *, int);
+void fprintOpaque(FILE *, Opaque *, int);
 
 #endif

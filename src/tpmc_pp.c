@@ -84,7 +84,7 @@ void ppTpmcPatternValue(FILE *out, TpmcPatternValue *patternValue) {
         fprintf(out, "'%c'", patternValue->val.character);
         break;
     case TPMCPATTERNVALUE_TYPE_BIGINTEGER:
-        fprintMaybeBigInt(out, patternValue->val.bigInteger);
+        fprintMaybeBigInt2(out, patternValue->val.bigInteger);
         break;
     case TPMCPATTERNVALUE_TYPE_TUPLE:
         ppTpmcTuplePattern(out, patternValue->val.tuple);

@@ -149,7 +149,7 @@ static void iMinExp(FILE *out, MinExp *exp, int d) {
         iMinAnnotatedVar(out, getMinExp_Avar(exp));
         break;
     case MINEXP_TYPE_BIGINTEGER:
-        fprintMaybeBigInt(out, getMinExp_BigInteger(exp));
+        fprintMaybeBigInt2(out, getMinExp_BigInteger(exp));
         break;
     case MINEXP_TYPE_STDINT:
         fprintf(out, "%d", getMinExp_Stdint(exp));
@@ -388,7 +388,7 @@ void ppMinIff(FILE *out, MinIff *iff) { iMinIff(out, iff, 0); }
 static void _iMinIntCondCases(FILE *out, MinIntCondCases *cases, int d) {
     newlineIndent(out, d);
     fprintf(out, "(");
-    fprintMaybeBigInt(out, cases->constant);
+    fprintMaybeBigInt2(out, cases->constant);
     fprintf(out, " ");
     iMinExp(out, cases->body, d + 1);
     fprintf(out, ")");

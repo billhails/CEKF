@@ -204,7 +204,7 @@ class SimpleHash(Base):
     def getPrintSignature(self, catalog):
         myType = self.getTypeDeclaration(catalog)
         myName = self.getName()
-        return f"void print{myName}({myType} _x, int depth)"
+        return f"void print{myName}(FILE *fp, {myType} _x, int depth)"
 
     def printPrintDeclaration(self, catalog):
         c = self.comment('printPrintDeclaration')
@@ -218,7 +218,7 @@ class SimpleHash(Base):
         print(f" * @brief Print the contents of a {self.getName()} for debugging.")
         print(f" */")
         print(f"{decl} {{ {c}")
-        print(f"    printHashTable(&(_x->wrapped), depth); {c}")
+        print(f"    fprintHashTable(fp, &(_x->wrapped), depth); {c}")
         print(f"}} {c}")
         print("")
 
@@ -232,13 +232,13 @@ class SimpleHash(Base):
     def printPrintHashField(self, depth):
         c = self.comment('printPrintHashField')
         pad(depth)
-        print(f'printHashTable(*(HashTable **)ptr, depth + 1); {c}')
+        print(f'fprintHashTable(fp, *(HashTable **)ptr, depth + 1); {c}')
 
     def printPrintField(self, isInline, field, depth, prefix=''):
         c = self.comment('printPrintField')
         a = AccessorHelper.accessor(isInline)
         pad(depth)
-        print(f'printHashTable((HashTable *)_x{a}{prefix}{field}, depth + 1); {c}')
+        print(f'fprintHashTable(fp, (HashTable *)_x{a}{prefix}{field}, depth + 1); {c}')
 
     def printEqField(self, catalog, isInline, field, depth, prefix=''):
         c = self.comment('printEqField')
@@ -266,7 +266,7 @@ class SimpleHash(Base):
                 markFn = 'NULL'
             self.entries.printPrintDeclaration(catalog)
             print('')
-            print(f'static void {printFn}(void *ptr, int depth) {{ {c}')
+            print(f'static void {printFn}(FILE *fp, void *ptr, int depth) {{ {c}')
             self.entries.printPrintHashLine(catalog, 1)
             print(f'}} {c}')
             print('')

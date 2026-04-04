@@ -119,7 +119,7 @@ class DiscriminatedUnion(SimpleStruct):
         print(f"        default: {c}")
         print(f'            cant_happen("unrecognised type %d in print{myName}", _x{a}type); {c}')
         print(f"    }} {c}")
-        print(f'    eprintf("\\n"); {c}')
+        print(f'    fprintf(fp, "\\n"); {c}')
     
     def generateVisitorDecl(self, target):
         """Generate forward declaration for union visitor (dispatcher)"""

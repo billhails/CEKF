@@ -1372,12 +1372,12 @@ void freeMaybeBigInt(MaybeBigInt *x) {
 
 void printMaybeBigInt(MaybeBigInt *x, int depth) {
     printf("%*s", depth * PAD_WIDTH, "");
-    fprintMaybeBigInt(stdout, x);
+    fprintMaybeBigInt2(stdout, x);
 }
 
 void printBigInt(BigInt *x, int depth) {
     printf("%*s", depth * PAD_WIDTH, "");
-    fprintBigInt(stdout, x);
+    fprintBigInt2(stdout, x);
 }
 
 void bigint_fprint(FILE *f, bigint *bi) {
@@ -1394,7 +1394,7 @@ void bigint_fprint(FILE *f, bigint *bi) {
     }
 }
 
-void fprintBigInt(FILE *f, BigInt *x) {
+void fprintBigInt2(FILE *f, BigInt *x) {
     if (x == NULL) {
         fprintf(f, "<null>");
         return;
@@ -1402,7 +1402,12 @@ void fprintBigInt(FILE *f, BigInt *x) {
     bigint_fprint(f, &x->bi);
 }
 
-void fprintMaybeBigInt(FILE *f, MaybeBigInt *x) {
+void fprintBigInt(FILE *fp, BigInt *x, int depth) {
+    fprintf(fp, "%*s", depth * PAD_WIDTH, "");
+    fprintBigInt2(fp, x);
+}
+
+void fprintMaybeBigInt2(FILE *f, MaybeBigInt *x) {
     if (x == NULL) {
         fprintf(f, "<null>");
         return;
@@ -1423,6 +1428,11 @@ void fprintMaybeBigInt(FILE *f, MaybeBigInt *x) {
     if (x->imag) {
         fprintf(f, "i");
     }
+}
+
+void fprintMaybeBigInt(FILE *fp, MaybeBigInt *x, int depth) {
+    fprintf(fp, "%*s", depth * PAD_WIDTH, "");
+    fprintMaybeBigInt2(fp, x);
 }
 
 size_t sprintMaybeBigInt(char *s, MaybeBigInt *x) {

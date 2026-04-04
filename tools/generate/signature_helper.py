@@ -30,8 +30,8 @@ class SignatureHelper:
     
     @staticmethod
     def print_signature(name, type_decl):
-        """Generate print function signature: void printName(Type _x, int depth)"""
-        return f"void print{name}({type_decl} _x, int depth)"
+        """Generate print function signature: void printName(FILE *fp, Type _x, int depth)"""
+        return f"void print{name}(FILE *fp, {type_decl} _x, int depth)"
     
     @staticmethod
     def copy_signature(name, type_decl):

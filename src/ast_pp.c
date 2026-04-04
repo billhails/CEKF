@@ -456,7 +456,7 @@ static void ppAstTaggedArgList(FILE *out, AstTaggedArgList *taggedArgList) {
 }
 
 static void ppMaybeBigInt(FILE *out, MaybeBigInt *maybe) {
-    fprintMaybeBigInt(out, maybe);
+    fprintMaybeBigInt2(out, maybe);
 }
 
 static void ppUnicodeChar(FILE *out, Character c) {

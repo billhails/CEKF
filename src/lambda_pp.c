@@ -95,7 +95,7 @@ void ppLamExp(FILE *out, LamExp *exp) {
         ppLamHashSymbol(out, getLamExp_Var(exp));
         break;
     case LAMEXP_TYPE_BIGINTEGER:
-        fprintMaybeBigInt(out, getLamExp_BigInteger(exp));
+        fprintMaybeBigInt2(out, getLamExp_BigInteger(exp));
         break;
     case LAMEXP_TYPE_STDINT:
         fprintf(out, "%d", getLamExp_Stdint(exp));
@@ -336,7 +336,7 @@ void ppLamIff(FILE *out, LamIff *iff) {
 
 static void _ppLamIntCondCases(FILE *out, LamIntCondCases *cases) {
     fprintf(out, "(");
-    fprintMaybeBigInt(out, cases->constant);
+    fprintMaybeBigInt2(out, cases->constant);
     fprintf(out, " ");
     ppLamExp(out, cases->body);
     fprintf(out, ")");

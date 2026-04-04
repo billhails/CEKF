@@ -325,7 +325,7 @@ class SimpleStruct(Base):
         c = self.comment('printPrintFunctionBody')
         for field in self.fields:
             field.printPrintLine(self.isInline(catalog), catalog, 1)
-            print(f'    eprintf("\\n"); {c}')
+            print(f'    fprintf(fp, "\\n"); {c}')
 
     def printMarkHashField(self, depth):
         c = self.comment('printMarkHashField')
@@ -363,14 +363,14 @@ class SimpleStruct(Base):
         c = self.comment('printPrintHashField')
         myName=self.getName()
         pad(depth)
-        print(f'print{myName}(*({myName} **)ptr, depth + 1); {c}')
+        print(f'print{myName}(fp, *({myName} **)ptr, depth + 1); {c}')
 
     def printPrintField(self, isInline, field, depth, prefix=''):
         c = self.comment('printPrintField')
         myName=self.getName()
         a = AccessorHelper.accessor(isInline)
         pad(depth)
-        print(f'print{myName}(_x{a}{prefix}{field}, depth + 1); {c}')
+        print(f'print{myName}(fp, _x{a}{prefix}{field}, depth + 1); {c}')
 
     def printCopyField(self, isInline, field, depth, prefix=''):
         c = self.comment('printCopyField')
@@ -496,13 +496,13 @@ class SimpleStruct(Base):
         print(f" */")
         decl=self.getPrintSignature(catalog)
         print(f"{decl} {{ {c}")
-        print(f"    pad(depth); {c}")
+        print(f"    pad(fp, depth); {c}")
         if not self.isInline(catalog):
-            print(f'    if (_x == NULL) {{ eprintf("{myName} (NULL)"); return; }} {c}')
-        print(f'    eprintf("{myName}[\\n"); {c}')
+            print(f'    if (_x == NULL) {{ fprintf(fp, "{myName} (NULL)"); return; }} {c}')
+        print(f'    fprintf(fp, "{myName}[\\n"); {c}')
         self.printPrintFunctionBody(catalog)
-        print(f"    pad(depth); {c}")
-        print(f'    eprintf("]"); {c}')
+        print(f"    pad(fp, depth); {c}")
+        print(f'    fprintf(fp, "]"); {c}')
         print(f"}} {c}\n")
 
     def getDefineValue(self):

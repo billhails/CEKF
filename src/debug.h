@@ -26,9 +26,6 @@
 
 void printCEKF(CEKF *x);
 
-void printContainedValue(Value x, int depth);
-void printValue(Value x, int depth);
-
 void dumpByteCode(FILE *out, ByteCodeArray *b, LocationArray *l);
 
 #endif

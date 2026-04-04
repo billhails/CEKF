@@ -236,7 +236,7 @@ void ppCexpCond(FILE *out, CexpCond *x) {
 void ppCexpIntCondCases(FILE *out, CexpIntCondCases *x) {
     while (x != NULL) {
         fprintf(out, "(");
-        fprintMaybeBigInt(out, x->option);
+        fprintMaybeBigInt2(out, x->option);
         fprintf(out, " ");
         ppAnfExp(out, x->body);
         fprintf(out, ")");
@@ -346,7 +346,7 @@ void ppAexp(FILE *out, Aexp *x) {
         ppAexpAnnotatedVar(out, x->val.annotatedVar);
         break;
     case AEXP_TYPE_BIGINTEGER:
-        fprintMaybeBigInt(out, x->val.bigInteger);
+        fprintMaybeBigInt2(out, x->val.bigInteger);
         break;
     case AEXP_TYPE_LITTLEINTEGER:
         fprintf(out, "%d", x->val.littleInteger);

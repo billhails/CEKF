@@ -74,14 +74,14 @@ class SimpleArray(Base):
         c = self.comment('printPrintHashField')
         pad(depth)
         myName=self.getName()
-        print(f'print{myName}(*({myName} **)ptr, depth + 1); {c}')
+        print(f'print{myName}(fp, *({myName} **)ptr, depth + 1); {c}')
 
     def printPrintField(self, isInline, field, depth, prefix=''):
         c = self.comment('printPrintField')
         myName=self.getName()
         a = AccessorHelper.accessor(isInline)
         pad(depth)
-        print(f'print{myName}(_x{a}{prefix}{field}, depth + 1); {c}')
+        print(f'print{myName}(fp, _x{a}{prefix}{field}, depth + 1); {c}')
 
     def printAccessDeclarations(self, catalog):
         entryType = self.entries.getTypeDeclaration(catalog)
@@ -890,18 +890,18 @@ class SimpleArray(Base):
         print(f" * @brief Prints the {myName} object `_x` for debugging.")
         print(f" */")
         print(f"{decl} {{ {c}")
-        print(f"    pad(depth); {c}")
+        print(f"    pad(fp, depth); {c}")
         if not self.isInline(catalog):
-            print(f'    if (_x == NULL) {{ eprintf("{myName} (NULL)"); return; }} {c}')
+            print(f'    if (_x == NULL) {{ fprintf(fp, "{myName} (NULL)"); return; }} {c}')
         if self.tagged:
-            print(f'    eprintf("<<%s>>", _x{a}_tag); {c}')
+            print(f'    fprintf(fp, "<<%s>>", _x{a}_tag); {c}')
         if self.dimension == 1:
-            print(f'    eprintf("{myName}(%d)[\\n", _x{a}size); {c}')
+            print(f'    fprintf(fp, "{myName}(%d)[\\n", _x{a}size); {c}')
         else:
-            print(f'    eprintf("{myName}(%d * %d)[\\n", _x{a}width, _x{a}height); {c}')
+            print(f'    fprintf(fp, "{myName}(%d * %d)[\\n", _x{a}width, _x{a}height); {c}')
         self.printPrintFunctionBody(catalog)
-        print(f"    pad(depth); {c}")
-        print(f'    eprintf("]"); {c}')
+        print(f"    pad(fp, depth); {c}")
+        print(f'    fprintf(fp, "]"); {c}')
         print(f"}} {c}")
         print("")
 
@@ -916,21 +916,21 @@ class SimpleArray(Base):
         a = AccessorHelper.accessor(self.isInline(catalog))
         print(f"    for (Index i = 0; i < _x{a}size; i++) {{ {c}")
         self.entries.printPrintArrayLine(self.isInline(catalog), catalog, "i", 2)
-        print(f'        eprintf("\\n"); {c}')
+        print(f'        fprintf(fp, "\\n"); {c}')
         print(f"    }} {c}")
 
     def print2dPrintFunctionBody(self, catalog):
         c = self.comment('print2dPrintFunctionBody')
         a = AccessorHelper.accessor(self.isInline(catalog))
         print(f"    for (Index i = 0; i < _x{a}height; i++) {{ {c}")
-        print(f"        pad(depth); {c}")
-        print(f'        eprintf("[\\n"); {c}')
+        print(f"        pad(fp, depth); {c}")
+        print(f'        fprintf(fp, "[\\n"); {c}')
         print(f"        for (Index j = 0; j < _x{a}width; j++) {{ {c}")
         self.entries.printPrintArrayLine(self.isInline(catalog), catalog, f"i * _x{a}width + j", 3)
-        print(f'            eprintf("\\n"); {c}')
+        print(f'            fprintf(fp, "\\n"); {c}')
         print(f"        }} {c}")
-        print(f"        pad(depth); {c}")
-        print(f'        eprintf("]\\n"); {c}')
+        print(f"        pad(fp, depth); {c}")
+        print(f'        fprintf(fp, "]\\n"); {c}')
         print(f"    }} {c}")
 
     def printFreeObjCase(self, catalog):

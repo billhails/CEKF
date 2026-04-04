@@ -117,7 +117,7 @@ static void mermaidPattern(TpmcPattern *pattern) {
         printf("'%c'", value->val.character);
         break;
     case TPMCPATTERNVALUE_TYPE_BIGINTEGER:
-        fprintMaybeBigInt(stdout, value->val.bigInteger);
+        fprintMaybeBigInt2(stdout, value->val.bigInteger);
         break;
     case TPMCPATTERNVALUE_TYPE_CONSTRUCTOR:
         printf("%s(", value->val.constructor->tag->name);

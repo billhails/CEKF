@@ -356,10 +356,10 @@ void fputValue(FILE *fh, Value x) {
         fprintf(fh, "%di", x.val.stdint);
         break;
     case VALUE_TYPE_BIGINT:
-        fprintBigInt(fh, x.val.bigint);
+        fprintBigInt2(fh, x.val.bigint);
         break;
     case VALUE_TYPE_BIGINT_IMAG:
-        fprintBigInt(fh, x.val.bigint);
+        fprintBigInt2(fh, x.val.bigint);
         fprintf(fh, "i");
         break;
     case VALUE_TYPE_RATIONAL:

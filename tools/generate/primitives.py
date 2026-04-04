@@ -135,12 +135,12 @@ class Primitive(Base):
     def printPrintHashField(self, depth):
         c = self.comment('printPrintHashField')
         pad(depth)
-        print(f'eprintf("%*s", depth * PAD_WIDTH, ""); {c}')
+        print(f'fprintf(fp, "%*s", depth * PAD_WIDTH, ""); {c}')
         pad(depth)
         if self.printFn == 'printf':
-            print(f'eprintf("{self.cname} {self.printf}", *({self.cname} *)ptr); {c}')
+            print(f'fprintf(fp, "{self.cname} {self.printf}", *({self.cname} *)ptr); {c}')
         else:
-            print(f'{self.printFn}(*({self.cname} *)ptr, depth + 1); {c}')
+            print(f'{self.printFn}(fp, *({self.cname} *)ptr, depth + 1); {c}')
 
 
     def printPrintField(self, isInline, field, depth, prefix=''):
@@ -148,12 +148,12 @@ class Primitive(Base):
         a = '.' if isInline else '->'
         if self.printFn == 'printf':
             pad(depth)
-            print(f'pad(depth + 1); {c}')
+            print(f'pad(fp, depth + 1); {c}')
             pad(depth)
-            print(f'eprintf("{self.cname} {self.printf}", _x{a}{prefix}{field}); {c}')
+            print(f'fprintf(fp, "{self.cname} {self.printf}", _x{a}{prefix}{field}); {c}')
         else:
             pad(depth)
-            print(f'{self.printFn}(_x{a}{prefix}{field}, depth + 1); {c}')
+            print(f'{self.printFn}(fp, _x{a}{prefix}{field}, depth + 1); {c}')
 
     def printCopyField(self, isInline, field, depth, prefix=''):
         c = self.comment('printCopyField')

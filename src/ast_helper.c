@@ -31,6 +31,15 @@ void printAstSymbol(struct HashSymbol *x, int depth) {
     eprintf("AstSymbol[\"%s\"]", x->name);
 }
 
+void fprintAstSymbol(FILE *fp, struct HashSymbol *x, int depth) {
+    fprintf(fp, "%*s", depth * PAD_WIDTH, "");
+    if (x == NULL) {
+        fprintf(fp, "AstSymbol (NULL)");
+        return;
+    }
+    fprintf(fp, "AstSymbol[\"%s\"]", x->name);
+}
+
 void markNameSpaces() { markAstNameSpaceArray(nameSpaces); }
 
 void initNameSpaces() {
