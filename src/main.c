@@ -543,6 +543,9 @@ int main(int argc, char *argv[]) {
         clock_t end = clock();
         report(argv[0], begin, compiled, end);
     } else {
+        ///////////
+        // Parsing
+        ///////////
         // Generate wrappers for builtins before parsing
         // they will be insterted into the preamble on
         // encountering the __builtins__ directive
@@ -556,10 +559,12 @@ int main(int argc, char *argv[]) {
         int save2 = PROTECT(prog);
 
         if (parse_only_flag) {
-            // Stop after parsing to enable parser-only profiling
-            exit(0);
+            exit(0); // for profiling
         }
 
+        ////////////////////////
+        // Namespace Desugaring
+        ////////////////////////
         prog = nsAstProg(prog);
         REPLACE_PROTECT(save2, prog);
 
@@ -568,12 +573,17 @@ int main(int argc, char *argv[]) {
             exit(0);
         }
 
-        // forceGcFlag = true;
+        /////////////////////
+        // Lambda Conversion
+        /////////////////////
         LamExp *exp = convertProg(prog);
         REPLACE_PROTECT(save2, exp);
 
         typeCheck(exp, builtIns);
 
+        ////////////////////////
+        // constructor inlining
+        ////////////////////////
         exp = inlineExp(exp);
         REPLACE_PROTECT(save2, exp);
 
@@ -586,6 +596,9 @@ int main(int argc, char *argv[]) {
         exit(0);
 #endif
 
+        /////////////////////
+        // desugar -> MinLam
+        /////////////////////
         MinExp *minExp = desugarLamExp(exp);
         REPLACE_PROTECT(save2, minExp);
 
@@ -595,6 +608,9 @@ int main(int argc, char *argv[]) {
             exit(0);
         }
 
+        /////
+        // ɑ
+        /////
         minExp = alphaConvertMinExp(minExp, builtIns);
         REPLACE_PROTECT(save2, minExp);
 
@@ -604,6 +620,9 @@ int main(int argc, char *argv[]) {
             exit(0);
         }
 
+        /////////
+        // curry
+        /////////
         minExp = curryMinExp(minExp);
         REPLACE_PROTECT(save2, minExp);
 
@@ -615,11 +634,22 @@ int main(int argc, char *argv[]) {
 
         // if we move currying below this point we need to
         // update the following steps to propagate the isBuiltin flag
+
+        /////
+        // β
+        /////
         minExp = betaMinExp(minExp);
         REPLACE_PROTECT(save2, minExp);
 
+        /////
+        // η
+        /////
         minExp = etaMinExp(minExp);
         REPLACE_PROTECT(save2, minExp);
+
+        /////
+        // β
+        /////
         minExp = betaMinExp(minExp); // second pass.
         REPLACE_PROTECT(save2, minExp);
 
@@ -629,6 +659,9 @@ int main(int argc, char *argv[]) {
             exit(0);
         }
 
+        ////////////////////
+        // Operator Folding
+        ////////////////////
         minExp = foldMinExp(minExp);
         REPLACE_PROTECT(save2, minExp);
 
@@ -638,6 +671,9 @@ int main(int argc, char *argv[]) {
             exit(0);
         }
 
+        ///////////
+        // uncurry
+        ///////////
         minExp = uncurry(minExp);
         REPLACE_PROTECT(save2, minExp);
 
@@ -682,9 +718,10 @@ int main(int argc, char *argv[]) {
             minExp = betaMinExp(minExp);
             REPLACE_PROTECT(save2, minExp);
 
-            /////
-            // η
-            /////
+            ///////////////////////////////////////////////
+            // η - this should achieve TCO by rewriting
+            // continuations after CPS: (λ (x) (k x)) => k
+            ///////////////////////////////////////////////
             minExp = etaMinExp(minExp);
             REPLACE_PROTECT(save2, minExp);
 
@@ -697,7 +734,6 @@ int main(int argc, char *argv[]) {
             /////////
             // Shake
             /////////
-            // forceGcFlag = 1;
             minExp = shakeMinExp(minExp);
             REPLACE_PROTECT(save2, minExp);
 

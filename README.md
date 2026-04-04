@@ -150,7 +150,7 @@ subgraph Target C
    amb_conversion([AMB Conversion]):::process ==>
    amb(CPS λ with failure continuation):::minlam ==>
    beta3([Additional β-conversion]):::process ==>
-   eta3([Additional η-conversion]):::process ==>
+   eta3(["Additional η-conversion (TCO)"]):::process ==>
    tree_shaking(["Dead Binding Elimination (Tree Shaking)"]):::process ==>
    small(Only Necessary Code):::minlam ==>
    closure_conversion([Closure Lifting]):::process ==>
