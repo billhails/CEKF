@@ -339,7 +339,6 @@ static TcType *analyzeVar(ParserInfo I, HashSymbol *var, TcEnv *env, TcNg *ng) {
     // ENTER(analyzeVar);
     TcType *res = lookUp(env, var, ng);
     if (res == NULL) {
-        // ppTcEnv(env);
         can_happen(I, "undefined variable %s", var->name);
         return makeUnknown(var);
     }
@@ -374,13 +373,13 @@ static TcType *analyzeComparison(LamExp *exp1, LamExp *exp2, TcEnv *env,
     PROTECT(type2);
     if (!unify(type1, type2, "comparison")) {
         eprintf("while unifying comparison:\n");
-        ppLamExp(exp1);
+        ppLamExp(stderr, exp1);
         eprintf(" (type: ");
-        ppTcType(prune(type1));
+        ppTcType(stderr, prune(type1));
         eprintf(")\nwith\n");
-        ppLamExp(exp2);
+        ppLamExp(stderr, exp2);
         eprintf(" (type: ");
-        ppTcType(prune(type2));
+        ppTcType(stderr, prune(type2));
         eprintf(")\n");
         REPORT_PARSER_INFO(exp1);
         if (!EQ_PARSER_INFO(exp1, exp2)) {
@@ -402,13 +401,13 @@ static TcType *analyzeSpaceship(LamExp *exp1, LamExp *exp2, TcEnv *env,
     PROTECT(type2);
     if (!unify(type1, type2, "<=>")) {
         eprintf("while unifying <=>:\n");
-        ppLamExp(exp1);
+        ppLamExp(stderr, exp1);
         eprintf(" (type: ");
-        ppTcType(prune(type1));
+        ppTcType(stderr, prune(type1));
         eprintf(")\nwith\n");
-        ppLamExp(exp2);
+        ppLamExp(stderr, exp2);
         eprintf(" (type: ");
-        ppTcType(prune(type2));
+        ppTcType(stderr, prune(type2));
         eprintf(")\n");
         REPORT_PARSER_INFO(exp1);
         if (!EQ_PARSER_INFO(exp1, exp2)) {
@@ -569,17 +568,12 @@ static TcType *findResultType(TcType *fn) {
 
 static TcType *analyzeDeconstruct(LamDeconstruct *deconstruct, TcEnv *env,
                                   TcNg *ng) {
-    // ENTER(analyzeDeconstruct);
-    // eprintf("analyze deconstruct %s\n", deconstruct->name->name);
-    // ppTcEnv(env);
     TcType *constructor = lookUpConstructorType(deconstruct->name, env, ng);
     int save = PROTECT(constructor);
-    // ppTcType(constructor); eprintf("\n");
     if (constructor == NULL) {
         can_happen(CPI(deconstruct), "undefined type deconstructor %s",
                    deconstruct->name->name);
         TcType *res = makeFreshVar(deconstruct->name->name);
-        // LEAVE(analyzeDeconstruct);
         return res;
     }
     TcType *fieldType = findNthArg(deconstruct->vec - 1, constructor);
@@ -588,7 +582,7 @@ static TcType *analyzeDeconstruct(LamDeconstruct *deconstruct, TcEnv *env,
     PROTECT(expType);
     if (!unify(expType, resultType, "deconstruct")) {
         eprintf("while unifying deconstruct:\n");
-        ppLamDeconstruct(deconstruct);
+        ppLamDeconstruct(stderr, deconstruct);
         eprintf("\n");
         REPORT_PARSER_INFO(deconstruct);
         eprintf("\n");
@@ -606,9 +600,9 @@ static TcType *analyzeTupleIndex(LamTupleIndex *index, TcEnv *env, TcNg *ng) {
     if (!unify(tuple, template, "tuple index")) {
         eprintf("while analyzing tuple ");
         REPORT_PARSER_INFO(index->exp);
-        ppTcType(tuple);
+        ppTcType(stderr, tuple);
         eprintf("\n");
-        ppLamTupleIndex(index);
+        ppLamTupleIndex(stderr, index);
         eprintf("\n");
         HashSymbol *name = newSymbol("tuple");
         UNPROTECT(save);
@@ -700,7 +694,7 @@ static TcType *analyzeApply(LamApply *apply, TcEnv *env, TcNg *ng) {
             // Unify the variable with the thunk type
             if (!unify(fnType, thunkType, "zero-arg apply")) {
                 eprintf("while analyzing zero-arg application of:\n");
-                ppLamExp(apply->function);
+                ppLamExp(stderr, apply->function);
                 eprintf("\n");
                 REPORT_PARSER_INFO(apply->function);
             }
@@ -730,13 +724,13 @@ static TcType *analyzeApply(LamApply *apply, TcEnv *env, TcNg *ng) {
         // unify(#a -> #b, #c -> #d)
         if (!unify(fn, functionType, "apply")) {
             eprintf("while analyzing apply ");
-            ppLamExp(apply->function);
+            ppLamExp(stderr, apply->function);
             eprintf(" (type: ");
-            ppTcType(prune(fn));
+            ppTcType(stderr, prune(fn));
             eprintf(") to ");
-            ppLamExp(apply->args->exp);
+            ppLamExp(stderr, apply->args->exp);
             eprintf(" (type: ");
-            ppTcType(prune(arg));
+            ppTcType(stderr, prune(arg));
             eprintf(")\n");
             REPORT_PARSER_INFO(apply->function);
             if (!EQ_PARSER_INFO(apply->function, apply->args)) {
@@ -769,13 +763,13 @@ static TcType *analyzeIff(LamIff *iff, TcEnv *env, TcNg *ng) {
     PROTECT(alternative);
     if (!unify(consequent, alternative, "iff")) {
         eprintf("while unifying consequent:\n");
-        ppLamExp(iff->consequent);
+        ppLamExp(stderr, iff->consequent);
         eprintf(" (type: ");
-        ppTcType(prune(consequent));
+        ppTcType(stderr, prune(consequent));
         eprintf(")\nwith alternative:\n");
-        ppLamExp(iff->alternative);
+        ppLamExp(stderr, iff->alternative);
         eprintf(" (type: ");
-        ppTcType(prune(alternative));
+        ppTcType(stderr, prune(alternative));
         eprintf(")\n");
         REPORT_PARSER_INFO(iff->consequent);
         if (!EQ_PARSER_INFO(iff->consequent, iff->alternative)) {
@@ -801,7 +795,7 @@ static TcType *analyzeCallCC(LamExp *called, TcEnv *env, TcNg *ng) {
     PROTECT(calledType);
     if (!unify(calledType, aba, "call/cc")) {
         eprintf("while unifying call/cc:\n");
-        ppLamExp(called);
+        ppLamExp(stderr, called);
         eprintf("\n");
         REPORT_PARSER_INFO(called);
     }
@@ -817,7 +811,7 @@ static TcType *analyzePrint(LamPrint *print, TcEnv *env, TcNg *ng) {
     print->printer = compilePrinterForType(CPI(print), type, env);
     UNPROTECT(save);
     // LEAVE(analyzePrint);
-    IFDEBUG(ppTcType(type));
+    IFDEBUG(ppTcType(stderr, type));
     return type;
 }
 
@@ -894,16 +888,16 @@ static void processLetRecBinding(LamBindings *bindings, TcEnv *env, TcNg *ng) {
     PROTECT(type);
     if (!unify(existingType, type, "letrec")) {
         eprintf("while unifying letrec %s with ", bindings->var->name);
-        ppLamExp(bindings->val);
+        ppLamExp(stderr, bindings->val);
         eprintf("\nExisting Type: ");
-        ppTcType(existingType);
+        ppTcType(stderr, existingType);
         eprintf("\nNew Type: ");
-        ppTcType(type);
+        ppTcType(stderr, type);
         eprintf("\n");
         REPORT_PARSER_INFO(bindings->val);
     }
     DEBUGN("analyzeLetRec %s :: ", bindings->var->name);
-    IFDEBUGN(ppTcType(existingType));
+    IFDEBUGN(ppTcType(stderr, existingType));
     UNPROTECT(save);
 }
 
@@ -1066,7 +1060,7 @@ static TcType *analyzeLetRec(LamLetRec *letRec, TcEnv *env, TcNg *ng) {
     for (LamBindings *bindings = letRec->bindings; bindings != NULL;
          bindings = bindings->next) {
         DEBUGN("analyzeLetRec %s => ", bindings->var->name);
-        IFDEBUGN(ppLamExp(bindings->val));
+        IFDEBUGN(ppLamExp(stderr, bindings->val));
         if (!isLambdaBinding(bindings)) {
             prepareLetRecEnv(bindings, env);
         }
@@ -1356,7 +1350,7 @@ static TcType *analyzeMatchCases(LamMatchList *cases, TcEnv *env, TcNg *ng) {
     PROTECT(this);
     if (!unify(this, rest, "match cases")) {
         eprintf("while unifying match cases:\n");
-        ppLamExp(cases->body);
+        ppLamExp(stderr, cases->body);
         eprintf("\n");
         REPORT_PARSER_INFO(cases->body);
     }
@@ -1373,7 +1367,7 @@ static TcType *analyzeBigIntegerExp(LamExp *exp, TcEnv *env, TcNg *ng) {
     PROTECT(integer);
     if (!unify(type, integer, "big integer exp")) {
         eprintf("while analyzing bigint expr:\n");
-        ppLamExp(exp);
+        ppLamExp(stderr, exp);
         eprintf("\n");
         REPORT_PARSER_INFO(exp);
     }
@@ -1390,7 +1384,7 @@ static TcType *analyzeSmallIntegerExp(LamExp *exp, TcEnv *env, TcNg *ng) {
     PROTECT(integer);
     if (!unify(type, integer, "small integer exp")) {
         eprintf("while analyzing smallint expr:\n");
-        ppLamExp(exp);
+        ppLamExp(stderr, exp);
         eprintf("\n");
         REPORT_PARSER_INFO(exp);
     }
@@ -1407,7 +1401,7 @@ static TcType *analyzeBooleanExp(LamExp *exp, TcEnv *env, TcNg *ng) {
     PROTECT(boolean);
     if (!unify(type, boolean, "boolean exp")) {
         eprintf("while analyzing boolean expr:\n");
-        ppLamExp(exp);
+        ppLamExp(stderr, exp);
         eprintf("\n");
         REPORT_PARSER_INFO(exp);
     }
@@ -1530,7 +1524,7 @@ static TcType *analyzeCond(LamCond *cond, TcEnv *env, TcNg *ng) {
         if (!unify(value, integer, "cond[1]")) {
             eprintf("while analyzing integer cond:\n");
             REPORT_PARSER_INFO(cond->value);
-            ppLamExp(cond->value);
+            ppLamExp(stderr, cond->value);
             eprintf("\n");
         }
         result =
@@ -1542,7 +1536,7 @@ static TcType *analyzeCond(LamCond *cond, TcEnv *env, TcNg *ng) {
         if (!unify(value, character, "cond[2]")) {
             eprintf("while analyzing character cond:\n");
             REPORT_PARSER_INFO(cond->value);
-            ppLamExp(cond->value);
+            ppLamExp(stderr, cond->value);
             eprintf("\n");
         }
         result = analyzeCharCondCases(getLamCondCases_Characters(cond->cases),
@@ -1564,9 +1558,9 @@ static TcType *analyzeAmb(LamAmb *amb, TcEnv *env, TcNg *ng) {
     PROTECT(right);
     if (!unify(left, right, "amb")) {
         eprintf("while unifying amb:\n");
-        ppLamExp(amb->left);
+        ppLamExp(stderr, amb->left);
         eprintf("\nwith:\n");
-        ppLamExp(amb->right);
+        ppLamExp(stderr, amb->right);
         eprintf("\n");
         REPORT_PARSER_INFO(amb->left);
         if (!EQ_PARSER_INFO(amb->left, amb->right)) {
@@ -1774,7 +1768,7 @@ static TcType *lookUp(TcEnv *env, HashSymbol *symbol, TcNg *ng) {
         TcType *res = fresh(type, ng);
         // LEAVE(lookUp);
         DEBUGN("lookUp %s => ", symbol->name);
-        IFDEBUGN(ppTcType(res));
+        IFDEBUGN(ppTcType(stderr, res));
         return res;
     }
     // LEAVE(lookUp);
@@ -1963,19 +1957,19 @@ static void addThenToEnv(TcEnv *env) {
 static bool failUnify(TcType *a, TcType *b, char *reason) {
     // can_happen sets a flag that will prevent later stages
     can_happen(NULLPI, "\nunification failed [%s]", reason);
-    ppTcType(a);
+    ppTcType(stderr, a);
     eprintf(" vs ");
-    ppTcType(b);
+    ppTcType(stderr, b);
     eprintf("\n");
     return false;
 }
 
 static bool failUnifyFunctions(TcFunction *a, TcFunction *b, char *reason) {
     // can_happen sets a flag that will prevent later stages
-    can_happen(NULLPI, "\nunification failed [%s]", reason);
-    ppTcFunction(a);
+    can_happen(NULLPI, "\nfunction unification failed [%s]", reason);
+    ppTcFunction(stderr, a);
     eprintf(" vs ");
-    ppTcFunction(b);
+    ppTcFunction(stderr, b);
     eprintf("\n");
     return false;
 }
@@ -2020,9 +2014,9 @@ static bool unifyOpaque(HashSymbol *a, HashSymbol *b) {
 
 static bool failUnifyTypeSigs(TcTypeSig *a, TcTypeSig *b, char *reason) {
     can_happen(NULLPI, "\nunification failed [%s]", reason);
-    ppTcTypeSig(a);
+    ppTcTypeSig(stderr, a);
     eprintf(" vs ");
-    ppTcTypeSig(b);
+    ppTcTypeSig(stderr, b);
     eprintf("\n");
     return false;
 }
@@ -2100,11 +2094,11 @@ static bool _unify(TcType *a, TcType *b) {
 
 static bool unify(TcType *a, TcType *b, char *trace __attribute__((unused))) {
     // *INDENT-OFF*
-    IFDEBUGN(eprintf("unify(%s) :> ", trace); ppTcType(a); eprintf(" =?= ");
-             ppTcType(b));
+    IFDEBUGN(eprintf("unify(%s) :> ", trace); ppTcType(stderr, a);
+             eprintf(" =?= "); ppTcType(stderr, b));
     bool res = _unify(a, b);
-    IFDEBUGN(eprintf("unify(%s) <: ", trace); ppTcType(a); eprintf(" === ");
-             ppTcType(b));
+    IFDEBUGN(eprintf("unify(%s) <: ", trace); ppTcType(stderr, a);
+             eprintf(" === "); ppTcType(stderr, b));
     return res;
     // *INDENT-ON*
 }

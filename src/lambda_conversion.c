@@ -1150,8 +1150,8 @@ static LamBindings *prependDefine(AstDefine *define, LamContext *env,
     LamExp *exp = convertExpression(define->expression, env);
     if (lambda_conversion_function != NULL &&
         strcmp(lambda_conversion_function, define->symbol->name) == 0) {
-        ppLamExp(exp);
-        eprintf("\n");
+        ppLamExp(stdout, exp);
+        printf("\n");
     }
     if (doMermaid)
         tpmc_mermaid_flag = 0;

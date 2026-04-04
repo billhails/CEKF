@@ -179,11 +179,11 @@ static void assertSimplifiesToExpr(MinExp *expr, MinExp *expected) {
     if (!matches) {
         eprintf("assertSimplifiesToExpr mismatch\n");
         eprintf("  expr:       ");
-        ppMinExp(expr);
+        ppMinExp(stderr, expr);
         eprintf("\n  simplified: ");
-        ppMinExp(simplified);
+        ppMinExp(stderr, simplified);
         eprintf("\n  expected:   ");
-        ppMinExp(expected);
+        ppMinExp(stderr, expected);
         eprintf("\n");
     }
     assert(matches);

@@ -1,5 +1,5 @@
-#ifndef cekf_minlam_emit_h
-#define cekf_minlam_emit_h
+#ifndef cekf_tc_pp_h
+#define cekf_tc_pp_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2026  Bill Hails
@@ -18,10 +18,16 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "builtins.h"
-#include "emit_helper.h"
-#include "minlam.h"
+#include "tc.h"
+#include <stdio.h>
 
-void emitProgram(MinExp *, BuiltIns *, FILE *);
+void ppTcType(FILE *out, TcType *type);
+void ppTcFunction(FILE *out, TcFunction *function);
+void ppTcPair(FILE *out, TcPair *pair);
+void ppTcThunk(FILE *out, TcThunk *thunk);
+void ppTcVar(FILE *out, TcVar *var);
+void ppTcTypeSig(FILE *out, TcTypeSig *typeSig);
+void ppTcTuple(FILE *out, TcTypeArray *tuple);
+void ppTcEnv(FILE *out, TcEnv *env);
 
 #endif

@@ -41,7 +41,7 @@ static LamExp *performLamSimplifications(LamLam *lam) {
         && getLamExp_Apply(exp)->args == NULL
         && getLamExp_Apply(exp)->function->type != LAMEXP_TYPE_CONSTRUCTOR) {
         LEAVE(performLamSimplifications);
-        IFDEBUG(printLamLam(lam, 0));
+        IFDEBUG(printLamLam(stderr, lam, 0));
         return getLamExp_Apply(exp)->function;
     }
 #else
@@ -331,8 +331,6 @@ static LamCond *performCondSimplifications(LamCond *cond) {
 
 LamExp *lamPerformSimplifications(LamExp *exp) {
     ENTER(lamPerformSimplifications);
-    // ppLamExp(exp);
-    // eprintf("\n");
     if (exp != NULL) {
         switch (exp->type) {
         case LAMEXP_TYPE_BIGINTEGER:

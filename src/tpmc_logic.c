@@ -870,7 +870,7 @@ LamLam *tpmcConvert(bool allow_unsafe, ParserInfo I, int nArgs, int nbodies,
     performRulesSubstitutions(I, input);
     TpmcMatrix *matrix = convertToMatrix(input);
     PROTECT(matrix);
-    IFDEBUG(ppTpmcMatrix(matrix));
+    IFDEBUG(ppTpmcMatrix(stderr, matrix));
     TpmcStateArray *finalStates = extractFinalStates(input);
     PROTECT(finalStates);
     TpmcStateArray *knownStates = newTpmcStateArray("tpmcConvert");

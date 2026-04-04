@@ -408,8 +408,8 @@ static MinBindings *visitLetRecValues(MinBindings *node, MinAlphaEnv *context) {
     int save = PROTECT(new_val);
     if (alpha_conversion_function != NULL &&
         strcmp(alpha_conversion_function, node->var->name) == 0) {
-        ppMinExp(new_val);
-        eprintf("\n");
+        ppMinExp(stdout, new_val);
+        exit(0);
     }
     MinBindings *new_next = visitLetRecValues(node->next, context);
     PROTECT(new_next);

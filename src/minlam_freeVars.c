@@ -32,31 +32,22 @@
 #endif
 
 // Forward declarations
-static void freeVarsMinLam(MinLam *node, SymbolSet *result, SymbolEnv *context);
-static void freeVarsMinExprList(MinExprList *node, SymbolSet *result,
-                                SymbolEnv *context);
-static void freeVarsMinPrimApp(MinPrimApp *node, SymbolSet *result,
-                               SymbolEnv *context);
-static void freeVarsMinApply(MinApply *node, SymbolSet *result,
-                             SymbolEnv *context);
-static void freeVarsMinIff(MinIff *node, SymbolSet *result, SymbolEnv *context);
-static void freeVarsMinCond(MinCond *node, SymbolSet *result,
-                            SymbolEnv *context);
-static void freeVarsMinIntCondCases(MinIntCondCases *node, SymbolSet *result,
-                                    SymbolEnv *context);
-static void freeVarsMinCharCondCases(MinCharCondCases *node, SymbolSet *result,
-                                     SymbolEnv *context);
-static void freeVarsMinMatch(MinMatch *node, SymbolSet *result,
-                             SymbolEnv *context);
-static void freeVarsMinMatchList(MinMatchList *node, SymbolSet *result,
-                                 SymbolEnv *context);
-static void freeVarsMinLetRec(MinLetRec *node, SymbolSet *result,
-                              SymbolEnv *context);
-static void freeVarsMinBindings(MinBindings *node, SymbolSet *result,
-                                SymbolEnv *context);
-static void freeVarsMinAmb(MinAmb *node, SymbolSet *result, SymbolEnv *context);
-static void freeVarsMinCondCases(MinCondCases *node, SymbolSet *result,
-                                 SymbolEnv *context);
+static void freeVarsMinLam(MinLam *, SymbolSet *, SymbolEnv *);
+static void freeVarsMinExprList(MinExprList *, SymbolSet *, SymbolEnv *);
+static void freeVarsMinPrimApp(MinPrimApp *, SymbolSet *, SymbolEnv *);
+static void freeVarsMinApply(MinApply *, SymbolSet *, SymbolEnv *);
+static void freeVarsMinIff(MinIff *, SymbolSet *, SymbolEnv *);
+static void freeVarsMinCond(MinCond *, SymbolSet *, SymbolEnv *);
+static void freeVarsMinIntCondCases(MinIntCondCases *, SymbolSet *,
+                                    SymbolEnv *);
+static void freeVarsMinCharCondCases(MinCharCondCases *, SymbolSet *,
+                                     SymbolEnv *);
+static void freeVarsMinMatch(MinMatch *, SymbolSet *, SymbolEnv *);
+static void freeVarsMinMatchList(MinMatchList *, SymbolSet *, SymbolEnv *);
+static void freeVarsMinLetRec(MinLetRec *, SymbolSet *, SymbolEnv *);
+static void freeVarsMinBindings(MinBindings *, SymbolSet *, SymbolEnv *);
+static void freeVarsMinAmb(MinAmb *, SymbolSet *, SymbolEnv *);
+static void freeVarsMinCondCases(MinCondCases *, SymbolSet *, SymbolEnv *);
 
 static bool isSymbolInEnv(SymbolEnv *env, HashSymbol *symbol) {
     while (env != NULL) {

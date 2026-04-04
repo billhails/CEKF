@@ -69,6 +69,12 @@ hashes:
         data:
             entries: HashSymbol
 
+    SymbolSetMap:
+        meta:
+            brief: Map from Symbol to SymbolSet
+        data:
+            entries: SymbolSet
+
     BoolMap:
         data:
             entries: bool

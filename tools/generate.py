@@ -382,7 +382,7 @@ def generate_debug_implementation(args, catalog, document, packageName, limited_
     for include in limited_includes:
         print(f'#include "{include}"')
     printSection("helper functions")
-    print('static void pad(int depth) { eprintf("%*s", depth * PAD_WIDTH, ""); }')
+    print('static void pad(FILE *fp, int depth) { fprintf(fp, "%*s", depth * PAD_WIDTH, ""); }')
     printSection("print functions")
     catalog.printPrintFunctions()
 

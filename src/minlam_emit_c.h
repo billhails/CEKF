@@ -1,8 +1,8 @@
-#ifndef cekf_debug_h
-#define cekf_debug_h
+#ifndef cekf_minlam_emit_c_h
+#define cekf_minlam_emit_c_h
 /*
  * CEKF - VM supporting amb
- * Copyright (C) 2022-2023  Bill Hails
+ * Copyright (C) 2022-2026  Bill Hails
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,14 +18,10 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "anf.h"
-#include "annotate.h"
-#include "bytecode.h"
-#include "cekf.h"
-#include <stdio.h>
+#include "builtins.h"
+#include "emit_helper.h"
+#include "minlam.h"
 
-void printCEKF(CEKF *x);
-
-void dumpByteCode(FILE *out, ByteCodeArray *b, LocationArray *l);
+void emitCProgram(MinExp *, BuiltIns *, FILE *);
 
 #endif

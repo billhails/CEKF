@@ -74,14 +74,14 @@ class SimpleArray(Base):
         c = self.comment('printPrintHashField')
         pad(depth)
         myName=self.getName()
-        print(f'print{myName}(*({myName} **)ptr, depth + 1); {c}')
+        print(f'print{myName}(fp, *({myName} **)ptr, depth + 1); {c}')
 
     def printPrintField(self, isInline, field, depth, prefix=''):
         c = self.comment('printPrintField')
         myName=self.getName()
         a = AccessorHelper.accessor(isInline)
         pad(depth)
-        print(f'print{myName}(_x{a}{prefix}{field}, depth + 1); {c}')
+        print(f'print{myName}(fp, _x{a}{prefix}{field}, depth + 1); {c}')
 
     def printAccessDeclarations(self, catalog):
         entryType = self.entries.getTypeDeclaration(catalog)
@@ -890,18 +890,18 @@ class SimpleArray(Base):
         print(f" * @brief Prints the {myName} object `_x` for debugging.")
         print(f" */")
         print(f"{decl} {{ {c}")
-        print(f"    pad(depth); {c}")
+        print(f"    pad(fp, depth); {c}")
         if not self.isInline(catalog):
-            print(f'    if (_x == NULL) {{ eprintf("{myName} (NULL)"); return; }} {c}')
+            print(f'    if (_x == NULL) {{ fprintf(fp, "{myName} (NULL)"); return; }} {c}')
         if self.tagged:
-            print(f'    eprintf("<<%s>>", _x{a}_tag); {c}')
+            print(f'    fprintf(fp, "<<%s>>", _x{a}_tag); {c}')
         if self.dimension == 1:
-            print(f'    eprintf("{myName}(%d)[\\n", _x{a}size); {c}')
+            print(f'    fprintf(fp, "{myName}(%d)[\\n", _x{a}size); {c}')
         else:
-            print(f'    eprintf("{myName}(%d * %d)[\\n", _x{a}width, _x{a}height); {c}')
+            print(f'    fprintf(fp, "{myName}(%d * %d)[\\n", _x{a}width, _x{a}height); {c}')
         self.printPrintFunctionBody(catalog)
-        print(f"    pad(depth); {c}")
-        print(f'    eprintf("]"); {c}')
+        print(f"    pad(fp, depth); {c}")
+        print(f'    fprintf(fp, "]"); {c}')
         print(f"}} {c}")
         print("")
 
@@ -916,21 +916,21 @@ class SimpleArray(Base):
         a = AccessorHelper.accessor(self.isInline(catalog))
         print(f"    for (Index i = 0; i < _x{a}size; i++) {{ {c}")
         self.entries.printPrintArrayLine(self.isInline(catalog), catalog, "i", 2)
-        print(f'        eprintf("\\n"); {c}')
+        print(f'        fprintf(fp, "\\n"); {c}')
         print(f"    }} {c}")
 
     def print2dPrintFunctionBody(self, catalog):
         c = self.comment('print2dPrintFunctionBody')
         a = AccessorHelper.accessor(self.isInline(catalog))
         print(f"    for (Index i = 0; i < _x{a}height; i++) {{ {c}")
-        print(f"        pad(depth); {c}")
-        print(f'        eprintf("[\\n"); {c}')
+        print(f"        pad(fp, depth); {c}")
+        print(f'        fprintf(fp, "[\\n"); {c}')
         print(f"        for (Index j = 0; j < _x{a}width; j++) {{ {c}")
         self.entries.printPrintArrayLine(self.isInline(catalog), catalog, f"i * _x{a}width + j", 3)
-        print(f'            eprintf("\\n"); {c}')
+        print(f'            fprintf(fp, "\\n"); {c}')
         print(f"        }} {c}")
-        print(f"        pad(depth); {c}")
-        print(f'        eprintf("]\\n"); {c}')
+        print(f"        pad(fp, depth); {c}")
+        print(f'        fprintf(fp, "]\\n"); {c}')
         print(f"    }} {c}")
 
     def printFreeObjCase(self, catalog):
@@ -997,12 +997,9 @@ class SimpleArray(Base):
         output = []
         
         output.append(f"static {myName} *{target}{myName}({myName} *node, VisitorContext *context) {{\n")
-        output.append(f"    ENTER({target}{myName});\n")
-        output.append(f"    if (node == NULL) {{\n")
-        output.append(f"        LEAVE({target}{myName});\n")
+        output.append(f"    if (node == NULL)\n")
         output.append(f"        return NULL;\n")
-        output.append(f"    }}\n")
-        output.append(f"\n")
+        output.append(f"    ENTER({target}{myName});\n")
         
         entryType = self.entries.getTypeDeclaration(catalog)
         
@@ -1037,13 +1034,11 @@ class SimpleArray(Base):
             output.append(f"            set{myName}Index(result, x, y, new_element);\n")
             output.append(f"        }}\n")
             output.append(f"    }}\n")
-            output.append(f"\n")
             output.append(f"    if (changed) {{\n")
             output.append(f"        UNPROTECT(save);\n")
             output.append(f"        LEAVE({target}{myName});\n")
             output.append(f"        return result;\n")
             output.append(f"    }}\n")
-            output.append(f"\n")
             output.append(f"    UNPROTECT(save);\n")
             output.append(f"    LEAVE({target}{myName});\n")
             output.append(f"    return node;\n")
@@ -1055,7 +1050,6 @@ class SimpleArray(Base):
             else:
                 output.append(f"    {myName} *result = new{myName}();\n")
             output.append(f"    int save = PROTECT(result);\n")
-            output.append(f"\n")
             output.append(f"    // Iterate over all elements\n")
             output.append(f"    for (Index i = 0; i < node->size; i++) {{\n")
             output.append(f"        {entryType} element = peekn{myName}(node, i);\n")
@@ -1064,13 +1058,11 @@ class SimpleArray(Base):
             output.append(f"        changed = changed || (new_element != element);\n")
             output.append(f"        push{myName}(result, new_element);\n")
             output.append(f"    }}\n")
-            output.append(f"\n")
             output.append(f"    if (changed) {{\n")
             output.append(f"        UNPROTECT(save);\n")
             output.append(f"        LEAVE({target}{myName});\n")
             output.append(f"        return result;\n")
             output.append(f"    }}\n")
-            output.append(f"\n")
             output.append(f"    UNPROTECT(save);\n")
             output.append(f"    LEAVE({target}{myName});\n")
             output.append(f"    return node;\n")

@@ -746,8 +746,6 @@ static MinExp *uncurryMinExp(MinExp *node, IntMap *context) {
         MinApply *variant = getMinExp_Apply(node);
         result = uncurryMinApply(variant, context);
         PROTECT(result);
-        // ppMinExp(result);
-        // eprintf("\n");
         break;
     }
     case MINEXP_TYPE_BACK: {

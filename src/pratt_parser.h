@@ -19,6 +19,7 @@
  */
 
 #include "ast.h"
+#include "ast_pp.h"
 #include "common.h"
 #include "pratt.h"
 #include "utils.h"
@@ -26,8 +27,6 @@
 #ifdef DEBUG_PRATT_PARSER
 void disablePrattDebug(void);
 #endif
-void ppAstNest(SCharArray *, AstNest *);
-void ppAstProg(SCharArray *, AstProg *);
 int initFileIdStack(void);
 int initParserStack(void);
 int initNsOpsCache(void);

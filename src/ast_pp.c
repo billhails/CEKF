@@ -32,214 +32,214 @@
 #include "pratt_scanner.h"
 #include "print_generator.h"
 #include "symbols.h"
-#include "utils.h"
+#include "utils_helper.h"
 
-static void ppAstDefLazy(SCharArray *, AstDefLazy *);
-static void ppAstDefMulti(SCharArray *, AstMultiDefine *);
-static void ppAstDefinitions(SCharArray *, AstDefinitions *);
-static void ppAstDefinition(SCharArray *, AstDefinition *);
-static void ppAstDefine(SCharArray *, AstDefine *);
-static void ppAstTypeDef(SCharArray *, AstTypeDef *);
-static void ppAstAlias(SCharArray *, AstAlias *);
-static void ppAstTypeSig(SCharArray *, AstTypeSig *);
-static void ppAstType(SCharArray *, AstType *);
-static void ppAstTypeBody(SCharArray *, AstTypeBody *);
-static void ppAstTypeConstructor(SCharArray *, AstTypeConstructor *);
-static void ppAstTypeConstructorArgs(SCharArray *, AstTypeConstructorArgs *);
-static void ppAstTypeList(SCharArray *, AstTypeList *);
-static void ppAstTypeMap(SCharArray *, AstTypeMap *);
-static void ppAstExpressions(SCharArray *, AstExpressions *);
-static void ppAstTypeSymbols(SCharArray *, AstTypeSymbols *);
-static void ppAstTypeClause(SCharArray *, AstTypeClause *);
-static void ppAstTypeFunction(SCharArray *, AstTypeFunction *);
-static void ppAstLookUpOrSymbol(SCharArray *, AstLookUpOrSymbol *);
-static void ppAstLookUpSymbol(SCharArray *, AstLookUpSymbol *);
-static void ppAstCompositeFunction(SCharArray *, AstCompositeFunction *);
-static void ppAstFunction(SCharArray *, AstFunction *);
-static void ppAstFargList(SCharArray *, AstFargList *);
-static void ppAstTaggedArgList(SCharArray *, AstTaggedArgList *);
-static void ppastFarg(SCharArray *, AstFarg *);
-static void ppAstNamedArg(SCharArray *, AstNamedArg *);
-static void ppAstUnpack(SCharArray *, AstUnpack *);
-static void ppAstUnpackStruct(SCharArray *, AstUnpackStruct *);
-static void ppAstIff(SCharArray *, AstIff *);
-static void ppAstLookUp(SCharArray *, AstLookUp *);
-static void ppAstPrint(SCharArray *, AstPrint *);
-static void ppAstStruct(SCharArray *, AstStruct *);
-static void ppAstTaggedExpressions(SCharArray *, AstTaggedExpressions *);
+static void ppAstDefLazy(FILE *out, AstDefLazy *);
+static void ppAstDefMulti(FILE *out, AstMultiDefine *);
+static void ppAstDefinitions(FILE *out, AstDefinitions *);
+static void ppAstDefinition(FILE *out, AstDefinition *);
+static void ppAstDefine(FILE *out, AstDefine *);
+static void ppAstTypeDef(FILE *out, AstTypeDef *);
+static void ppAstAlias(FILE *out, AstAlias *);
+static void ppAstTypeSig(FILE *out, AstTypeSig *);
+static void ppAstType(FILE *out, AstType *);
+static void ppAstTypeBody(FILE *out, AstTypeBody *);
+static void ppAstTypeConstructor(FILE *out, AstTypeConstructor *);
+static void ppAstTypeConstructorArgs(FILE *out, AstTypeConstructorArgs *);
+static void ppAstTypeList(FILE *out, AstTypeList *);
+static void ppAstTypeMap(FILE *out, AstTypeMap *);
+static void ppAstExpressions(FILE *out, AstExpressions *);
+static void ppAstTypeSymbols(FILE *out, AstTypeSymbols *);
+static void ppAstTypeClause(FILE *out, AstTypeClause *);
+static void ppAstTypeFunction(FILE *out, AstTypeFunction *);
+static void ppAstLookUpOrSymbol(FILE *out, AstLookUpOrSymbol *);
+static void ppAstLookUpSymbol(FILE *out, AstLookUpSymbol *);
+static void ppAstCompositeFunction(FILE *out, AstCompositeFunction *);
+static void ppAstFunction(FILE *out, AstFunction *);
+static void ppAstFargList(FILE *out, AstFargList *);
+static void ppAstTaggedArgList(FILE *out, AstTaggedArgList *);
+static void ppastFarg(FILE *out, AstFarg *);
+static void ppAstNamedArg(FILE *out, AstNamedArg *);
+static void ppAstUnpack(FILE *out, AstUnpack *);
+static void ppAstUnpackStruct(FILE *out, AstUnpackStruct *);
+static void ppAstIff(FILE *out, AstIff *);
+static void ppAstLookUp(FILE *out, AstLookUp *);
+static void ppAstPrint(FILE *out, AstPrint *);
+static void ppAstStruct(FILE *out, AstStruct *);
+static void ppAstTaggedExpressions(FILE *out, AstTaggedExpressions *);
 
-static void ppMaybeBigInt(SCharArray *, MaybeBigInt *);
-static void ppUnicodeChar(SCharArray *, Character);
-static void ppHashSymbol(SCharArray *, HashSymbol *);
+static void ppMaybeBigInt(FILE *out, MaybeBigInt *);
+static void ppUnicodeChar(FILE *out, Character);
+static void ppAstHashSymbol(FILE *out, HashSymbol *);
 
-void ppAstNest(SCharArray *dest, AstNest *nest) {
-    psprintf(dest, "{ ");
+void ppAstNest(FILE *out, AstNest *nest) {
+    fprintf(out, "{ ");
     if (nest) {
         if (nest->definitions) {
             if (nest->expressions) {
-                psprintf(dest, "let ");
-                ppAstDefinitions(dest, nest->definitions);
-                psprintf(dest, "in ");
-                ppAstExpressions(dest, nest->expressions);
+                fprintf(out, "let ");
+                ppAstDefinitions(out, nest->definitions);
+                fprintf(out, "in ");
+                ppAstExpressions(out, nest->expressions);
             } else {
-                psprintf(dest, "nameSpace ");
-                ppAstDefinitions(dest, nest->definitions);
+                fprintf(out, "nameSpace ");
+                ppAstDefinitions(out, nest->definitions);
             }
         } else {
-            ppAstExpressions(dest, nest->expressions);
+            ppAstExpressions(out, nest->expressions);
         }
     }
-    psprintf(dest, "}");
+    fprintf(out, "}");
 }
 
-void ppAstNameSpaceImpl(SCharArray *dest, AstNameSpaceImpl *impl) {
-    psprintf(dest, "\"%u:%u:%lu\": {", major(impl->id->stDev),
-             minor(impl->id->stDev), impl->id->stIno);
-    ppAstDefinitions(dest, impl->definitions);
-    psprintf(dest, "}");
+void ppAstNameSpaceImpl(FILE *out, AstNameSpaceImpl *impl) {
+    fprintf(out, "\"%u:%u:%lu\": {", major(impl->id->stDev),
+            minor(impl->id->stDev), impl->id->stIno);
+    ppAstDefinitions(out, impl->definitions);
+    fprintf(out, "}");
 }
 
-void ppAstProg(SCharArray *dest, AstProg *prog) {
-    psprintf(dest, "preamble: {");
-    ppAstDefinitions(dest, prog->preamble);
-    psprintf(dest, "} nameSpaces: [");
+void ppAstProg(FILE *out, AstProg *prog) {
+    fprintf(out, "preamble: {");
+    ppAstDefinitions(out, prog->preamble);
+    fprintf(out, "} nameSpaces: [");
     for (Index i = 0; i < prog->nameSpaces->size; ++i) {
-        ppAstNameSpaceImpl(dest, prog->nameSpaces->entries[i]);
+        ppAstNameSpaceImpl(out, prog->nameSpaces->entries[i]);
     }
-    psprintf(dest, "] body: {");
-    ppAstExpressions(dest, prog->body);
-    psprintf(dest, "}");
+    fprintf(out, "] body: {");
+    ppAstExpressions(out, prog->body);
+    fprintf(out, "}");
 }
 
-void ppAstDefinitions(SCharArray *dest, AstDefinitions *definitions) {
+void ppAstDefinitions(FILE *out, AstDefinitions *definitions) {
     while (definitions) {
-        ppAstDefinition(dest, definitions->definition);
-        psprintf(dest, "; ");
+        ppAstDefinition(out, definitions->definition);
+        fprintf(out, "; ");
         definitions = definitions->next;
     }
 }
 
-static void ppAstDefinition(SCharArray *dest, AstDefinition *definition) {
+static void ppAstDefinition(FILE *out, AstDefinition *definition) {
     switch (definition->type) {
     case AST_DEFINITION_TYPE_DEFINE:
-        ppAstDefine(dest, definition->val.define);
+        ppAstDefine(out, definition->val.define);
         break;
     case AST_DEFINITION_TYPE_TYPEDEF:
-        ppAstTypeDef(dest, definition->val.typeDef);
+        ppAstTypeDef(out, definition->val.typeDef);
         break;
     case AST_DEFINITION_TYPE_ALIAS:
-        ppAstAlias(dest, definition->val.alias);
+        ppAstAlias(out, definition->val.alias);
         break;
     case AST_DEFINITION_TYPE_BLANK:
         break;
     case AST_DEFINITION_TYPE_LAZY:
-        ppAstDefLazy(dest, definition->val.lazy);
+        ppAstDefLazy(out, definition->val.lazy);
         break;
     case AST_DEFINITION_TYPE_MULTI:
-        ppAstDefMulti(dest, definition->val.multi);
+        ppAstDefMulti(out, definition->val.multi);
         break;
     default:
         cant_happen("unrecognised %s", astDefinitionTypeName(definition->type));
     }
 }
 
-static void ppAstDefLazy(SCharArray *dest, AstDefLazy *defLazy) {
-    psprintf(dest, "lazy fn ");
-    ppHashSymbol(dest, defLazy->name);
-    psprintf(dest, "(");
-    ppAstFargList(dest, defLazy->definition->altArgs->argList);
-    psprintf(dest, ") ");
-    ppAstNest(dest, defLazy->definition->nest);
+static void ppAstDefLazy(FILE *out, AstDefLazy *defLazy) {
+    fprintf(out, "lazy fn ");
+    ppAstHashSymbol(out, defLazy->name);
+    fprintf(out, "(");
+    ppAstFargList(out, defLazy->definition->altArgs->argList);
+    fprintf(out, ") ");
+    ppAstNest(out, defLazy->definition->nest);
 }
 
-static void ppAstSymbolList(SCharArray *dest, AstSymbolList *symbolList) {
+static void ppAstSymbolList(FILE *out, AstSymbolList *symbolList) {
     if (symbolList) {
-        ppHashSymbol(dest, symbolList->symbol);
+        ppAstHashSymbol(out, symbolList->symbol);
         if (symbolList->next) {
-            psprintf(dest, ", ");
-            ppAstSymbolList(dest, symbolList->next);
+            fprintf(out, ", ");
+            ppAstSymbolList(out, symbolList->next);
         }
     }
 }
 
-static void ppAstDefMulti(SCharArray *dest, AstMultiDefine *define) {
-    psprintf(dest, "#(");
-    ppAstSymbolList(dest, define->symbols);
-    psprintf(dest, ") = ");
-    ppAstExpression(dest, define->expression);
-    psprintf(dest, "; ");
+static void ppAstDefMulti(FILE *out, AstMultiDefine *define) {
+    fprintf(out, "#(");
+    ppAstSymbolList(out, define->symbols);
+    fprintf(out, ") = ");
+    ppAstExpression(out, define->expression);
+    fprintf(out, "; ");
 }
 
-static void ppAstDefine(SCharArray *dest, AstDefine *define) {
-    ppHashSymbol(dest, define->symbol);
-    psprintf(dest, " = ");
-    ppAstExpression(dest, define->expression);
+static void ppAstDefine(FILE *out, AstDefine *define) {
+    ppAstHashSymbol(out, define->symbol);
+    fprintf(out, " = ");
+    ppAstExpression(out, define->expression);
 }
 
-static void ppAstTypeDef(SCharArray *dest, AstTypeDef *typeDef) {
-    psprintf(dest, "typedef ");
-    ppAstTypeSig(dest, typeDef->typeSig);
-    psprintf(dest, " {");
-    ppAstTypeBody(dest, typeDef->typeBody);
-    psprintf(dest, "}");
+static void ppAstTypeDef(FILE *out, AstTypeDef *typeDef) {
+    fprintf(out, "typedef ");
+    ppAstTypeSig(out, typeDef->typeSig);
+    fprintf(out, " {");
+    ppAstTypeBody(out, typeDef->typeBody);
+    fprintf(out, "}");
 }
 
-static void ppAstAlias(SCharArray *dest, AstAlias *alias) {
-    psprintf(dest, "alias ");
-    ppHashSymbol(dest, alias->name);
-    psprintf(dest, " = ");
-    ppAstType(dest, alias->type);
+static void ppAstAlias(FILE *out, AstAlias *alias) {
+    fprintf(out, "alias ");
+    ppAstHashSymbol(out, alias->name);
+    fprintf(out, " = ");
+    ppAstType(out, alias->type);
 }
 
-static void ppAstTypeSig(SCharArray *dest, AstTypeSig *typeSig) {
-    ppHashSymbol(dest, typeSig->symbol);
+static void ppAstTypeSig(FILE *out, AstTypeSig *typeSig) {
+    ppAstHashSymbol(out, typeSig->symbol);
     if (typeSig->typeSymbols != NULL) {
-        psprintf(dest, "(");
-        ppAstTypeSymbols(dest, typeSig->typeSymbols);
-        psprintf(dest, ")");
+        fprintf(out, "(");
+        ppAstTypeSymbols(out, typeSig->typeSymbols);
+        fprintf(out, ")");
     }
 }
 
-static void ppAstType(SCharArray *dest, AstType *type) {
+static void ppAstType(FILE *out, AstType *type) {
     if (type != NULL) {
-        ppAstTypeClause(dest, type->typeClause);
+        ppAstTypeClause(out, type->typeClause);
         if (type->next) {
-            psprintf(dest, ", ");
-            ppAstType(dest, type->next);
+            fprintf(out, ", ");
+            ppAstType(out, type->next);
         }
     }
 }
 
-static void ppAstTypeBody(SCharArray *dest, AstTypeBody *typeBody) {
+static void ppAstTypeBody(FILE *out, AstTypeBody *typeBody) {
     if (typeBody != NULL) {
-        ppAstTypeConstructor(dest, typeBody->typeConstructor);
+        ppAstTypeConstructor(out, typeBody->typeConstructor);
         if (typeBody->next) {
-            psprintf(dest, " | ");
-            ppAstTypeBody(dest, typeBody->next);
+            fprintf(out, " | ");
+            ppAstTypeBody(out, typeBody->next);
         }
     }
 }
 
-static void ppAstTypeConstructor(SCharArray *dest,
+static void ppAstTypeConstructor(FILE *out,
                                  AstTypeConstructor *typeConstructor) {
-    ppHashSymbol(dest, typeConstructor->symbol);
-    ppAstTypeConstructorArgs(dest, typeConstructor->args);
+    ppAstHashSymbol(out, typeConstructor->symbol);
+    ppAstTypeConstructorArgs(out, typeConstructor->args);
 }
 
 static void
-ppAstTypeConstructorArgs(SCharArray *dest,
+ppAstTypeConstructorArgs(FILE *out,
                          AstTypeConstructorArgs *typeConstructorArgs) {
     if (typeConstructorArgs) {
         switch (typeConstructorArgs->type) {
         case AST_TYPECONSTRUCTORARGS_TYPE_LIST:
-            psprintf(dest, "(");
-            ppAstTypeList(dest, typeConstructorArgs->val.list);
-            psprintf(dest, ")");
+            fprintf(out, "(");
+            ppAstTypeList(out, typeConstructorArgs->val.list);
+            fprintf(out, ")");
             break;
         case AST_TYPECONSTRUCTORARGS_TYPE_MAP:
-            psprintf(dest, "{ ");
-            ppAstTypeMap(dest, typeConstructorArgs->val.map);
-            psprintf(dest, " }");
+            fprintf(out, "{ ");
+            ppAstTypeMap(out, typeConstructorArgs->val.map);
+            fprintf(out, " }");
             break;
         default:
             cant_happen("unrecognised %s", astTypeConstructorArgsTypeName(
@@ -248,89 +248,88 @@ ppAstTypeConstructorArgs(SCharArray *dest,
     }
 }
 
-static void ppAstTypeList(SCharArray *dest, AstTypeList *typeList) {
+static void ppAstTypeList(FILE *out, AstTypeList *typeList) {
     if (typeList) {
-        ppAstType(dest, typeList->type);
+        ppAstType(out, typeList->type);
         if (typeList->next) {
-            psprintf(dest, ", ");
-            ppAstTypeList(dest, typeList->next);
+            fprintf(out, ", ");
+            ppAstTypeList(out, typeList->next);
         }
     }
 }
 
-static void ppAstTypeMap(SCharArray *dest, AstTypeMap *typeMap) {
+static void ppAstTypeMap(FILE *out, AstTypeMap *typeMap) {
     if (typeMap) {
-        ppHashSymbol(dest, typeMap->key);
-        psprintf(dest, ": ");
-        ppAstType(dest, typeMap->type);
+        ppAstHashSymbol(out, typeMap->key);
+        fprintf(out, ": ");
+        ppAstType(out, typeMap->type);
         if (typeMap->next) {
-            psprintf(dest, ", ");
-            ppAstTypeMap(dest, typeMap->next);
+            fprintf(out, ", ");
+            ppAstTypeMap(out, typeMap->next);
         }
     }
 }
 
-static void ppAstExpressions(SCharArray *dest, AstExpressions *expressions) {
+static void ppAstExpressions(FILE *out, AstExpressions *expressions) {
     if (expressions) {
-        ppAstExpression(dest, expressions->expression);
-        psprintf(dest, "; ");
+        ppAstExpression(out, expressions->expression);
+        fprintf(out, "; ");
         if (expressions->next) {
-            ppAstExpressions(dest, expressions->next);
+            ppAstExpressions(out, expressions->next);
         }
     }
 }
 
-static void ppAstTypeSymbols(SCharArray *dest, AstTypeSymbols *typeSymbols) {
+static void ppAstTypeSymbols(FILE *out, AstTypeSymbols *typeSymbols) {
     if (typeSymbols) {
-        ppHashSymbol(dest, typeSymbols->typeSymbol);
+        ppAstHashSymbol(out, typeSymbols->typeSymbol);
         if (typeSymbols->next) {
-            psprintf(dest, ", ");
-            ppAstTypeSymbols(dest, typeSymbols->next);
+            fprintf(out, ", ");
+            ppAstTypeSymbols(out, typeSymbols->next);
         }
     }
 }
 
-static void ppAstTypeClause(SCharArray *dest, AstTypeClause *typeClause) {
+static void ppAstTypeClause(FILE *out, AstTypeClause *typeClause) {
     switch (typeClause->type) {
     case AST_TYPECLAUSE_TYPE_INTEGER:
-        psprintf(dest, "number");
+        fprintf(out, "number");
         break;
     case AST_TYPECLAUSE_TYPE_CHARACTER:
-        psprintf(dest, "char");
+        fprintf(out, "char");
         break;
     case AST_TYPECLAUSE_TYPE_VAR:
-        ppHashSymbol(dest, typeClause->val.var);
+        ppAstHashSymbol(out, typeClause->val.var);
         break;
     case AST_TYPECLAUSE_TYPE_TYPEFUNCTION:
-        ppAstTypeFunction(dest, typeClause->val.typeFunction);
+        ppAstTypeFunction(out, typeClause->val.typeFunction);
         break;
     case AST_TYPECLAUSE_TYPE_TYPETUPLE:
-        psprintf(dest, "<tuple>(");
-        ppAstTypeList(dest, typeClause->val.typeTuple);
-        psprintf(dest, ")");
+        fprintf(out, "<tuple>(");
+        ppAstTypeList(out, typeClause->val.typeTuple);
+        fprintf(out, ")");
         break;
     default:
         cant_happen("unrecognised %s", astTypeClauseTypeName(typeClause->type));
     }
 }
 
-static void ppAstTypeFunction(SCharArray *dest, AstTypeFunction *typeFunction) {
-    ppAstLookUpOrSymbol(dest, typeFunction->symbol);
+static void ppAstTypeFunction(FILE *out, AstTypeFunction *typeFunction) {
+    ppAstLookUpOrSymbol(out, typeFunction->symbol);
     if (typeFunction->typeList) {
-        psprintf(dest, "(");
-        ppAstTypeList(dest, typeFunction->typeList);
-        psprintf(dest, ")");
+        fprintf(out, "(");
+        ppAstTypeList(out, typeFunction->typeList);
+        fprintf(out, ")");
     }
 }
 
-static void ppAstLookUpOrSymbol(SCharArray *dest,
-                                AstLookUpOrSymbol *lookUpOrSymbol) {
+static void ppAstLookUpOrSymbol(FILE *out, AstLookUpOrSymbol *lookUpOrSymbol) {
     switch (lookUpOrSymbol->type) {
     case AST_LOOKUPORSYMBOL_TYPE_LOOKUP:
-        ppAstLookUpSymbol(dest, lookUpOrSymbol->val.lookUp);
+        ppAstLookUpSymbol(out, lookUpOrSymbol->val.lookUp);
         break;
     case AST_LOOKUPORSYMBOL_TYPE_SYMBOL:
-        ppHashSymbol(dest, lookUpOrSymbol->val.symbol);
+        ppAstHashSymbol(out, lookUpOrSymbol->val.symbol);
         break;
     default:
         cant_happen("unrecognised %s",
@@ -338,294 +337,273 @@ static void ppAstLookUpOrSymbol(SCharArray *dest,
     }
 }
 
-static void ppAstLookUpSymbol(SCharArray *dest, AstLookUpSymbol *lookUpSymbol) {
-    ppHashSymbol(dest, lookUpSymbol->nsSymbol);
-    psprintf(dest, "<%d>.", lookUpSymbol->nsId);
-    ppHashSymbol(dest, lookUpSymbol->symbol);
+static void ppAstLookUpSymbol(FILE *out, AstLookUpSymbol *lookUpSymbol) {
+    ppAstHashSymbol(out, lookUpSymbol->nsSymbol);
+    fprintf(out, "<%d>.", lookUpSymbol->nsId);
+    ppAstHashSymbol(out, lookUpSymbol->symbol);
 }
 
-static void ppAstLookUp(SCharArray *dest, AstLookUp *lookUp) {
-    ppHashSymbol(dest, lookUp->nsSymbol);
-    psprintf(dest, "<%d>.", lookUp->nsId);
-    ppAstExpression(dest, lookUp->expression);
+static void ppAstLookUp(FILE *out, AstLookUp *lookUp) {
+    ppAstHashSymbol(out, lookUp->nsSymbol);
+    fprintf(out, "<%d>.", lookUp->nsId);
+    ppAstExpression(out, lookUp->expression);
 }
 
-static void ppFunctionComponents(SCharArray *dest,
+static void ppFunctionComponents(FILE *out,
                                  AstCompositeFunction *compositeFunction) {
     if (compositeFunction) {
-        ppAstFunction(dest, compositeFunction->function);
-        psprintf(dest, " ");
-        ppFunctionComponents(dest, compositeFunction->next);
+        ppAstFunction(out, compositeFunction->function);
+        fprintf(out, " ");
+        ppFunctionComponents(out, compositeFunction->next);
     }
 }
 
-static void ppAstCompositeFunction(SCharArray *dest,
+static void ppAstCompositeFunction(FILE *out,
                                    AstCompositeFunction *compositeFunction) {
     if (compositeFunction == NULL)
         return;
     if (compositeFunction->unsafe) {
-        psprintf(dest, "unsafe ");
+        fprintf(out, "unsafe ");
     }
-    psprintf(dest, "fn { ");
-    ppFunctionComponents(dest, compositeFunction);
-    psprintf(dest, "}");
+    fprintf(out, "fn { ");
+    ppFunctionComponents(out, compositeFunction);
+    fprintf(out, "}");
 }
 
-static void ppAstFunction(SCharArray *dest, AstFunction *function) {
-    psprintf(dest, "(");
-    ppAstFargList(dest, function->argList);
-    psprintf(dest, ") ");
-    ppAstNest(dest, function->nest);
+static void ppAstFunction(FILE *out, AstFunction *function) {
+    fprintf(out, "(");
+    ppAstFargList(out, function->argList);
+    fprintf(out, ") ");
+    ppAstNest(out, function->nest);
 }
 
-static void ppAstFargList(SCharArray *dest, AstFargList *argList) {
+static void ppAstFargList(FILE *out, AstFargList *argList) {
     if (argList) {
-        ppastFarg(dest, argList->arg);
+        ppastFarg(out, argList->arg);
         if (argList->next) {
-            psprintf(dest, ", ");
-            ppAstFargList(dest, argList->next);
+            fprintf(out, ", ");
+            ppAstFargList(out, argList->next);
         }
     }
 }
 
-static void ppastFarg(SCharArray *dest, AstFarg *arg) {
+static void ppastFarg(FILE *out, AstFarg *arg) {
     switch (arg->type) {
     case AST_FARG_TYPE_WILDCARD:
-        psprintf(dest, "_");
+        fprintf(out, "_");
         break;
     case AST_FARG_TYPE_SYMBOL:
-        ppHashSymbol(dest, arg->val.symbol);
+        ppAstHashSymbol(out, arg->val.symbol);
         break;
     case AST_FARG_TYPE_LOOKUP:
-        ppAstLookUpSymbol(dest, arg->val.lookUp);
+        ppAstLookUpSymbol(out, arg->val.lookUp);
         break;
     case AST_FARG_TYPE_NAMED:
-        ppAstNamedArg(dest, arg->val.named);
+        ppAstNamedArg(out, arg->val.named);
         break;
     case AST_FARG_TYPE_UNPACK:
-        ppAstUnpack(dest, arg->val.unpack);
+        ppAstUnpack(out, arg->val.unpack);
         break;
     case AST_FARG_TYPE_UNPACKSTRUCT:
-        ppAstUnpackStruct(dest, arg->val.unpackStruct);
+        ppAstUnpackStruct(out, arg->val.unpackStruct);
         break;
     case AST_FARG_TYPE_NUMBER:
-        ppMaybeBigInt(dest, arg->val.number);
+        ppMaybeBigInt(out, arg->val.number);
         break;
     case AST_FARG_TYPE_CHARACTER:
-        ppUnicodeChar(dest, arg->val.character);
+        ppUnicodeChar(out, arg->val.character);
         break;
     case AST_FARG_TYPE_TUPLE:
-        psprintf(dest, "<tuple>(");
-        ppAstFargList(dest, arg->val.tuple);
-        psprintf(dest, ")");
+        fprintf(out, "<tuple>(");
+        ppAstFargList(out, arg->val.tuple);
+        fprintf(out, ")");
         break;
     default:
         break;
     }
 }
 
-static void ppAstNamedArg(SCharArray *dest, AstNamedArg *namedArg) {
-    ppHashSymbol(dest, namedArg->name);
-    psprintf(dest, " = ");
-    ppastFarg(dest, namedArg->arg);
+static void ppAstNamedArg(FILE *out, AstNamedArg *namedArg) {
+    ppAstHashSymbol(out, namedArg->name);
+    fprintf(out, " = ");
+    ppastFarg(out, namedArg->arg);
 }
 
-static void ppAstUnpack(SCharArray *dest, AstUnpack *unpack) {
-    ppAstLookUpOrSymbol(dest, unpack->symbol);
-    psprintf(dest, "(");
-    ppAstFargList(dest, unpack->argList);
-    psprintf(dest, ")");
+static void ppAstUnpack(FILE *out, AstUnpack *unpack) {
+    ppAstLookUpOrSymbol(out, unpack->symbol);
+    fprintf(out, "(");
+    ppAstFargList(out, unpack->argList);
+    fprintf(out, ")");
 }
 
-static void ppAstUnpackStruct(SCharArray *dest, AstUnpackStruct *unpackStruct) {
-    ppAstLookUpOrSymbol(dest, unpackStruct->symbol);
-    psprintf(dest, "{ ");
-    ppAstTaggedArgList(dest, unpackStruct->argList);
-    psprintf(dest, " }");
+static void ppAstUnpackStruct(FILE *out, AstUnpackStruct *unpackStruct) {
+    ppAstLookUpOrSymbol(out, unpackStruct->symbol);
+    fprintf(out, "{ ");
+    ppAstTaggedArgList(out, unpackStruct->argList);
+    fprintf(out, " }");
 }
 
-static void ppAstTaggedArgList(SCharArray *dest,
-                               AstTaggedArgList *taggedArgList) {
+static void ppAstTaggedArgList(FILE *out, AstTaggedArgList *taggedArgList) {
     if (taggedArgList) {
-        ppHashSymbol(dest, taggedArgList->tag);
-        psprintf(dest, ": ");
-        ppastFarg(dest, taggedArgList->arg);
+        ppAstHashSymbol(out, taggedArgList->tag);
+        fprintf(out, ": ");
+        ppastFarg(out, taggedArgList->arg);
         if (taggedArgList->next) {
-            psprintf(dest, ", ");
-            ppAstTaggedArgList(dest, taggedArgList->next);
+            fprintf(out, ", ");
+            ppAstTaggedArgList(out, taggedArgList->next);
         }
     }
 }
 
-static void ppMaybeBigInt(SCharArray *dest, MaybeBigInt *maybe) {
-    size_t size = printSizeMaybeBigInt(maybe);
-    extendSCharArray(dest, dest->size + size);
-    char *start = &dest->entries[dest->size];
-    size = sprintMaybeBigInt(start, maybe);
-    dest->size += size;
-    dest->size--;
+static void ppMaybeBigInt(FILE *out, MaybeBigInt *maybe) {
+    fprintMaybeBigInt2(out, maybe);
 }
 
-static void ppUnicodeChar(SCharArray *dest, Character c) {
+static void ppUnicodeChar(FILE *out, Character c) {
     char buf[MB_LEN_MAX];
     int len = wctomb(buf, c);
     if (len > 0) {
         buf[len] = '\0';
-        psprintf(dest, "%s", buf);
+        fprintf(out, "%s", buf);
     }
 }
 
-static void ppHashSymbol(SCharArray *dest, HashSymbol *symbol) {
-    psprintf(dest, "%s", symbol->name);
+static void ppAstHashSymbol(FILE *out, HashSymbol *symbol) {
+    fprintf(out, "%s", symbol->name);
 }
 
-void ppAstFunCall(SCharArray *dest, AstFunCall *funCall) {
-    ppAstExpression(dest, funCall->function);
-    psprintf(dest, "(");
+void ppAstFunCall(FILE *out, AstFunCall *funCall) {
+    ppAstExpression(out, funCall->function);
+    fprintf(out, "(");
     for (AstExpressions *expressions = funCall->arguments; expressions != NULL;
          expressions = expressions->next) {
-        ppAstExpression(dest, expressions->expression);
+        ppAstExpression(out, expressions->expression);
         if (expressions->next) {
-            psprintf(dest, ", ");
+            fprintf(out, ", ");
         }
     }
-    psprintf(dest, ")");
+    fprintf(out, ")");
 }
 
-void ppAstCharacter(SCharArray *dest, Character c) {
+void ppAstCharacter(FILE *out, Character c) {
     char buffer[MB_LEN_MAX];
     int len = wctomb(buffer, c);
     if (len > 0) {
         buffer[len] = '\0';
-        psprintf(dest, "'%s'", buffer);
+        fprintf(out, "'%s'", buffer);
     }
 }
 
-void ppAstTuple(SCharArray *dest, AstExpressions *expressions) {
-    psprintf(dest, "<tuple>(");
+void ppAstTuple(FILE *out, AstExpressions *expressions) {
+    fprintf(out, "<tuple>(");
     while (expressions) {
-        ppAstExpression(dest, expressions->expression);
+        ppAstExpression(out, expressions->expression);
         if (expressions->next)
-            psprintf(dest, ", ");
+            fprintf(out, ", ");
         expressions = expressions->next;
     }
-    psprintf(dest, ")");
+    fprintf(out, ")");
 }
 
-static void ppAstIff(SCharArray *dest, AstIff *iff) {
-    psprintf(dest, "if (");
-    ppAstExpression(dest, iff->test);
-    psprintf(dest, ") ");
-    ppAstNest(dest, iff->consequent);
-    psprintf(dest, " else ");
-    ppAstNest(dest, iff->alternative);
+static void ppAstIff(FILE *out, AstIff *iff) {
+    fprintf(out, "if (");
+    ppAstExpression(out, iff->test);
+    fprintf(out, ") ");
+    ppAstNest(out, iff->consequent);
+    fprintf(out, " else ");
+    ppAstNest(out, iff->alternative);
 }
 
-static void ppAstPrint(SCharArray *dest, AstPrint *print) {
-    psprintf(dest, "print(");
-    ppAstExpression(dest, print->exp);
-    psprintf(dest, ")");
+static void ppAstPrint(FILE *out, AstPrint *print) {
+    fprintf(out, "print(");
+    ppAstExpression(out, print->exp);
+    fprintf(out, ")");
 }
 
-static void ppAstStruct(SCharArray *dest, AstStruct *structure) {
-    ppAstLookUpOrSymbol(dest, structure->symbol);
-    psprintf(dest, "{ ");
-    ppAstTaggedExpressions(dest, structure->expressions);
-    psprintf(dest, " }");
+static void ppAstStruct(FILE *out, AstStruct *structure) {
+    ppAstLookUpOrSymbol(out, structure->symbol);
+    fprintf(out, "{ ");
+    ppAstTaggedExpressions(out, structure->expressions);
+    fprintf(out, " }");
 }
 
-static void ppAstTaggedExpressions(SCharArray *dest,
+static void ppAstTaggedExpressions(FILE *out,
                                    AstTaggedExpressions *taggedExpressions) {
     if (taggedExpressions) {
-        ppHashSymbol(dest, taggedExpressions->tag);
-        psprintf(dest, ": (");
-        ppAstExpression(dest, taggedExpressions->expression);
-        psprintf(dest, ")");
+        ppAstHashSymbol(out, taggedExpressions->tag);
+        fprintf(out, ": (");
+        ppAstExpression(out, taggedExpressions->expression);
+        fprintf(out, ")");
         if (taggedExpressions->next) {
-            psprintf(dest, ", ");
-            ppAstTaggedExpressions(dest, taggedExpressions->next);
+            fprintf(out, ", ");
+            ppAstTaggedExpressions(out, taggedExpressions->next);
         }
     }
 }
 
-void ppAstExpression(SCharArray *dest, AstExpression *expr) {
+void ppAstExpression(FILE *out, AstExpression *expr) {
     switch (expr->type) {
     case AST_EXPRESSION_TYPE_NUMBER:
-        ppMaybeBigInt(dest, expr->val.number);
+        ppMaybeBigInt(out, expr->val.number);
         break;
     case AST_EXPRESSION_TYPE_SYMBOL:
-        psprintf(dest, "%s", expr->val.symbol->name);
+        fprintf(out, "%s", expr->val.symbol->name);
         break;
     case AST_EXPRESSION_TYPE_ANNOTATEDSYMBOL:
-        psprintf(dest, "%s", expr->val.annotatedSymbol->symbol->name);
-        psprintf(dest, "/*orig:");
-        ppAstExpression(dest, expr->val.annotatedSymbol->originalImpl);
-        psprintf(dest, "*/");
+        fprintf(out, "%s", expr->val.annotatedSymbol->symbol->name);
+        fprintf(out, "/*orig:");
+        ppAstExpression(out, expr->val.annotatedSymbol->originalImpl);
+        fprintf(out, "*/");
         break;
     case AST_EXPRESSION_TYPE_FUNCALL:
-        ppAstFunCall(dest, expr->val.funCall);
+        ppAstFunCall(out, expr->val.funCall);
         break;
     case AST_EXPRESSION_TYPE_CHARACTER:
-        ppAstCharacter(dest, expr->val.character);
+        ppAstCharacter(out, expr->val.character);
         break;
     case AST_EXPRESSION_TYPE_TUPLE:
-        ppAstTuple(dest, expr->val.tuple);
+        ppAstTuple(out, expr->val.tuple);
         break;
     case AST_EXPRESSION_TYPE_FUN:
-        ppAstCompositeFunction(dest, expr->val.fun);
+        ppAstCompositeFunction(out, expr->val.fun);
         break;
     case AST_EXPRESSION_TYPE_IFF:
-        ppAstIff(dest, expr->val.iff);
+        ppAstIff(out, expr->val.iff);
         break;
     case AST_EXPRESSION_TYPE_NEST:
-        ppAstNest(dest, expr->val.nest);
+        ppAstNest(out, expr->val.nest);
         break;
     case AST_EXPRESSION_TYPE_BACK:
-        psprintf(dest, "back");
+        fprintf(out, "back");
         break;
     case AST_EXPRESSION_TYPE_ENV:
-        psprintf(dest, "env");
+        fprintf(out, "env");
         break;
     case AST_EXPRESSION_TYPE_LOOKUP:
-        ppAstLookUp(dest, expr->val.lookUp);
+        ppAstLookUp(out, expr->val.lookUp);
         break;
     case AST_EXPRESSION_TYPE_PRINT:
-        ppAstPrint(dest, expr->val.print);
+        ppAstPrint(out, expr->val.print);
         break;
     case AST_EXPRESSION_TYPE_STRUCTURE:
-        ppAstStruct(dest, expr->val.structure);
+        ppAstStruct(out, expr->val.structure);
         break;
     case AST_EXPRESSION_TYPE_ASSERTION:
-        psprintf(dest, "assert(");
-        ppAstExpression(dest, expr->val.assertion);
-        psprintf(dest, ")");
+        fprintf(out, "assert(");
+        ppAstExpression(out, expr->val.assertion);
+        fprintf(out, ")");
         break;
     case AST_EXPRESSION_TYPE_ERROR:
-        psprintf(dest, "error(");
-        ppAstExpression(dest, expr->val.error);
-        psprintf(dest, ")");
+        fprintf(out, "error(");
+        ppAstExpression(out, expr->val.error);
+        fprintf(out, ")");
         break;
     case AST_EXPRESSION_TYPE_TYPEOF:
-        psprintf(dest, "(typeof ");
-        ppAstExpression(dest, expr->val.typeOf->exp);
-        psprintf(dest, ")");
+        fprintf(out, "(typeof ");
+        ppAstExpression(out, expr->val.typeOf->exp);
+        fprintf(out, ")");
         break;
     default:
         cant_happen("unexpected %s", astExpressionTypeName(expr->type));
     }
-}
-
-void psprintf(SCharArray *utf8, const char *message, ...) {
-    va_list args;
-    va_start(args, message);
-    va_list copy;
-    va_copy(copy, args);
-    size_t size = vsnprintf(NULL, 0, message, args) + 1;
-    extendSCharArray(utf8, utf8->size + size);
-    char *start = &utf8->entries[utf8->size];
-    vsnprintf(start, size, message, copy);
-    va_end(args);
-    va_end(copy);
-    utf8->size += size;
-    utf8->size--;
 }

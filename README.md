@@ -76,40 +76,55 @@ the $step$ function: one to deal with `amb` and one to deal with `back`.
 flowchart TD
 classDef process fill:#aef,color:#123;
 classDef new fill:#8bf,color:#000;
-classDef minlam fill:#456,color:#fea;
-source(Source) -->
-scanner([Scanner]):::process -->
-tokens(Tokens) -->
-parser([Parser]):::process -->
-oi([Operator Inlining]):::process -->
-scanner
-parser ==>
-ast(AST) ==>
-namespace_removal([Namespace Desugaring]):::process ==>
-denamespace(Simplified AST)
+classDef minlam fill:#036,color:#fea;
+classDef ast fill:#aa0,color:#000;
+classDef lambda fill:#4a8,color:#000;
+classDef anf fill:#a84,color:#000;
 
-denamespace -.-> tcast([Typecheck AST]):::new
-tcast -.-> tcdast(Typechecked AST)
-tcdast -.-> lconv([Lambda Conversion]):::new
+subgraph Parse
+   source(Source) ==>
+   scanner([Scanner]):::process ==>
+   tokens(Tokens) ==>
+   parser([Parser]):::process ==>
+   oi([Operator Inlining]):::process --> scanner
+   parser ==>
+   ast(AST):::ast
+end
+
+ast ==> namespace_removal([Namespace Desugaring]):::process ==>
+denamespace(Simplified AST):::ast
+
+denamespace -.-> tcast
+
+subgraph Proposed
+   tcast([Typecheck AST]):::new
+   tcast -.-> tcdast(Typechecked AST):::ast
+   tcdast -.-> lconv([Lambda Conversion]):::new
+end
+
 lconv -.-> lambda_ds
 
-denamespace ==>
-lc([Lambda Conversion]):::process ==> tpmc([Pattern Matching Compiler]):::process
-lc <==> pg([Print Function Generator]):::process
-lc <==> me([Lazy Function Expansion]):::process
-tpmc ==> vs([Variable Substitution]):::process
-vs ==> lc
-lc <==> des([Desugaring]):::process
-lc ==> lambda0(Plain Lambda Form)
+denamespace ==> lc
+
+subgraph Lambda Conversion
+   lc([Lambda Conversion]):::process ==> tpmc([Pattern Matching Compiler]):::process
+   lc <==> pg([Print Function Generator]):::process
+   lc <==> me([Lazy Function Expansion]):::process
+   tpmc ==> vs([Variable Substitution]):::process
+   vs ==> lc
+   lc <==> des([Desugaring]):::process
+end
+
+lc ==> lambda0(Plain Lambda Form):::lambda
 lambda0 ==> sim([Simplification]):::process
-sim ==> lambda1(Plain Lambda Form)
+sim ==> lambda1(Plain Lambda Form):::lambda
 lambda1 ==> tc([Type Checking]):::process
 tc <==> pc([Print Compiler]):::process
-tc ==> lambda2(Plain Lambda Form)
+tc ==> lambda2(Plain Lambda Form):::lambda
 lambda2 ==> ci([Constructor Inlining]):::process
-ci ==> lambda3(Inlined Lambda)
+ci ==> lambda3(Inlined Lambda):::lambda
 desugaring(["Desugaring"]):::process
-desugaring ==> lambda_ds(desugared lambda):::minlam
+desugaring ==> lambda_ds("minimal lambda (MinLam)"):::minlam
 
 lambda_ds ==> alpha(["ɑ-Conversion"]):::process
 alpha ==> lambda_a(alphatized lambda):::minlam
@@ -124,42 +139,56 @@ folded ==> uncurry(["Un-Currying"]):::process
 uncurry ==> uncurried(uncurried lambda):::minlam
 
 uncurried ==> anfr([ANF Rewrite]):::process
-anfr ==> lambda_b(New ANF)
+anfr ==> lambda_b(New ANF):::anf
 
-uncurried ==> cps([CPS Transform]):::process
-cps ==> beta2([Additional β-conversion]):::process ==>
-lambda_e("CPS λ"):::minlam
-lambda_e ==> cloc([Closure Conversion]):::process
-cloc ==> lambda_c(Explicit Closure):::minlam
-lambda_c ==> amb_conversion([AMB Conversion]):::process
-amb_conversion ==> amb(Pure CPS λ with failllure continuation):::minlam
-amb ==> closure_conversion([Closure Lifting]):::process
-closure_conversion ==> closures(Explicit Closures):::minlam
-closures ==> beta3([Yet another β]):::process ==>
-eta2([And another η]):::process ==>
-de_bruijn([DeBruijn Indexing]):::process
-de_bruijn ==> indexed("Annotated Variables (Final IR)"):::minlam
-indexed ==> c_emitter([Emit C]):::process
-c_emitter ==> target_c(Pure C code)
+uncurried ==> cps
+
+subgraph Target C
+   cps([CPS Transform]):::process ==>
+   beta2([Additional β-conversion]):::process ==>
+   lambda_e("CPS λ"):::minlam ==>
+   amb_conversion([AMB Conversion]):::process ==>
+   amb(CPS λ with failure continuation):::minlam ==>
+   beta3([Additional β-conversion]):::process ==>
+   eta3(["Additional η-conversion (TCO)"]):::process ==>
+   tree_shaking(["Dead Binding Elimination (Tree Shaking)"]):::process ==>
+   small(Only Necessary Code):::minlam ==>
+   closure_conversion([Closure Lifting]):::process ==>
+   closures(Explicit Closures):::minlam ==>
+   de_bruijn([DeBruijn Indexing]):::process ==>
+   indexed("Annotated Variables (Final IR)"):::minlam ==>
+   c_emitter([Emit C]):::process ==>
+   target_c(Pure C code)
+end
    
 lambda3 ==> desugaring
-uncurried ==> anfc([A-Normal Form Conversion]):::process
-anfc ==> anf(ANF)
-anf ==> lexa([Lexical Analysis]):::process
-lexa ==> ann(Annotated ANF)
-ann ==> bcc([Bytecode Compiler]):::process
-bcc ==> bc(Byte Code)
-bc <==> bcf(Bytecode Files)
-bc ==> cekf([CEKF Runtime VM]):::process
+uncurried ==> anfc
+
+subgraph Target Bytecode
+   anfc([A-Normal Form Conversion]):::process ==>
+   anf(ANF):::anf ==>
+   lexa([Lexical Analysis]):::process ==>
+   ann(Annotated ANF):::anf ==>
+   bcc([Bytecode Compiler]):::process ==>
+   bc(Byte Code) ==>
+   cekf([CEKF Runtime VM]):::process
+   bc <==> bcf(Bytecode Files)
+end
 ```
 
 A big driver for the progress made has been arriving at a minimalist
-lambda (`minlam`) set of structures for the IR. In the diagram above
-the stages making use of this `minlam` representation are coloured mid-blue/grey.
+lambda (`MinLam`) set of structures for the IR. In the diagram above
+the stages making use of this `MinLam` representation are coloured
+dark-blue/grey.
 
-The "ANF Rewrite" stage was a successful attempt to re-implement the clunky existing ANF transform, but in the process it became apparent that the CEK machine itself was blocking optimizations and so the trajectory pivoted towards targeting a more "traditional" register machine via CPS, initially in C but with an eye towards LLVM in the longer term.
+The "ANF Rewrite" stage was a successful attempt to re-implement the
+clunky existing ANF transform, but in the process it became apparent that
+the CEK machine itself was blocking optimizations and so the trajectory
+pivoted towards targeting a more "traditional" register machine via CPS,
+initially in C but with an eye towards LLVM in the longer term.
 
-The various components named in the diagram above are linked to their implementation entry point here:
+The various components named in the diagram above are linked to their
+implementation entry point here:
 
 * Scanner [pratt_scanner.c](src/pratt_scanner.c)
 * Parser [pratt_parser.c](src/pratt_parser.c)

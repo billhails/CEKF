@@ -33,7 +33,7 @@ CpsKontProcWrapper:
 HashSymbol:
     data:
         cname: "struct HashSymbol *"
-        printFn: printAstSymbol
+        printFn: fprintAstSymbol
         valued: true
 
 int:
@@ -63,7 +63,7 @@ byte:
 opaque:
     data:
         cname: "struct Opaque *"
-        printFn: printOpaque
+        printFn: fprintOpaque
         markFn: markOpaque
         valued: true
 
@@ -106,7 +106,7 @@ schar:
 BigInt:
     data:
         cname: "struct BigInt *"
-        printFn: "printBigInt"
+        printFn: "fprintBigInt"
         markFn: "markBigInt"
         cmpFn: "cmpBigInt"
         valued: true
@@ -114,7 +114,7 @@ BigInt:
 MaybeBigInt:
     data:
         cname: "struct MaybeBigInt *"
-        printFn: "printMaybeBigInt"
+        printFn: "fprintMaybeBigInt"
         markFn: "markMaybeBigInt"
         cmpFn: "cmpMaybeBigInt"
         valued: true

@@ -18,12 +18,13 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include <stdio.h>
+
 #include "ast.h"
 #include "pratt.h"
 #include "utils.h"
 
-void psprintf(SCharArray *, const char *, ...)
-    __attribute__((format(printf, 2, 3)));
-void ppAstExpression(SCharArray *, AstExpression *);
+void ppAstExpression(FILE *out, AstExpression *);
+void ppAstProg(FILE *out, AstProg *);
 
 #endif

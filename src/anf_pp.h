@@ -1,5 +1,5 @@
 #ifndef cekf_anf_pp_h
-#  define cekf_anf_pp_h
+#define cekf_anf_pp_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2025  Bill Hails
@@ -20,38 +20,38 @@
 
 // Bespoke pretty-printer for anf
 
-#  include <stdio.h>
-#  include <stdlib.h>
+#include <stdio.h>
+#include <stdlib.h>
 
-#  include "common.h"
-#  include "anf.h"
+#include "anf.h"
+#include "common.h"
 
-void ppAnfEnv(AnfEnv *x);
-void ppAexpLam(AexpLam *x);
-void ppAexpVarList(AexpVarList *x);
-void ppAexpVar(HashSymbol *x);
-void ppAexpAnnotatedVar(AexpAnnotatedVar *x);
-void ppAexpPrimApp(AexpPrimApp *x);
-void ppAexpList(AexpList *x);
-void ppAexpIntList(AexpIntList *x);
-void ppAexpMakeList(AexpList *x);
-void ppAexpMakeVec(AexpMakeVec *x);
-void ppBareAexpList(AexpList *x);
-void ppCexpApply(CexpApply *x);
-void ppCexpIf(CexpIf *x);
-void ppCexpCond(CexpCond *x);
-void ppCexpIntCondCases(CexpIntCondCases *x);
-void ppCexpCharCondCases(CexpCharCondCases *x);
-void ppCexpCondCases(CexpCondCases *x);
-void ppCexpLetRec(CexpLetRec *x);
-void ppAnfLetRecBindings(AnfLetRecBindings *x);
-void ppCexpAmb(CexpAmb *x);
-void ppCexpCut(CexpCut *x);
-void ppAnfMatchList(AnfMatchList *x);
-void ppCexpMatch(CexpMatch *x);
-void ppAexp(Aexp *x);
-void ppCexp(Cexp *x);
-void ppAnfExp(AnfExp *x);
-void ppAnfExpLet(AnfExpLet *x);
+void ppAnfEnv(FILE *out, AnfEnv *x);
+void ppAexpLam(FILE *out, AexpLam *x);
+void ppAexpVarList(FILE *out, AexpVarList *x);
+void ppAexpVar(FILE *out, HashSymbol *x);
+void ppAexpAnnotatedVar(FILE *out, AexpAnnotatedVar *x);
+void ppAexpPrimApp(FILE *out, AexpPrimApp *x);
+void ppAexpList(FILE *out, AexpList *x);
+void ppAexpIntList(FILE *out, AexpIntList *x);
+void ppAexpMakeList(FILE *out, AexpList *x);
+void ppAexpMakeVec(FILE *out, AexpMakeVec *x);
+void ppBareAexpList(FILE *out, AexpList *x);
+void ppCexpApply(FILE *out, CexpApply *x);
+void ppCexpIf(FILE *out, CexpIf *x);
+void ppCexpCond(FILE *out, CexpCond *x);
+void ppCexpIntCondCases(FILE *out, CexpIntCondCases *x);
+void ppCexpCharCondCases(FILE *out, CexpCharCondCases *x);
+void ppCexpCondCases(FILE *out, CexpCondCases *x);
+void ppCexpLetRec(FILE *out, CexpLetRec *x);
+void ppAnfLetRecBindings(FILE *out, AnfLetRecBindings *x);
+void ppCexpAmb(FILE *out, CexpAmb *x);
+void ppCexpCut(FILE *out, CexpCut *x);
+void ppAnfMatchList(FILE *out, AnfMatchList *x);
+void ppCexpMatch(FILE *out, CexpMatch *x);
+void ppAexp(FILE *out, Aexp *x);
+void ppCexp(FILE *out, Cexp *x);
+void ppAnfExp(FILE *out, AnfExp *x);
+void ppAnfExpLet(FILE *out, AnfExpLet *x);
 
 #endif

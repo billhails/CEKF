@@ -22,6 +22,7 @@
 #include "pratt_scanner.h"
 #include "symbol.h"
 #include "tc_analyze.h"
+#include "tc_pp.h"
 #include "test.h"
 #include "wrapper_synthesis.h"
 static BuiltIns *builtIns = NULL;
@@ -107,7 +108,7 @@ static TcType *analyze(AstProg *prog) {
     PROTECT(env);
     TcType *res = tc_analyze(exp, env);
     PROTECT(res);
-    ppTcType(res);
+    ppTcType(stderr, res);
     eprintf("\n");
     UNPROTECT(save);
     return res;
@@ -167,9 +168,9 @@ static void test_adder() {
     PROTECT(bigInt);
     TcType *expected = makeFunction3(bigInt, bigInt, bigInt);
     PROTECT(expected);
-    ppTcType(expected);
+    ppTcType(stderr, expected);
     eprintf(" -- expected\n");
-    ppTcType(res);
+    ppTcType(stderr, res);
     eprintf(" -- res\n");
     assert(compareTcTypes(res, expected));
     UNPROTECT(save);

@@ -12,12 +12,13 @@ applies its own transforms and emits C directly.
 
 ```text
 MinExp (from desugaring)
-  ↓ runCpsTrampolineTc()   — CPS transform
+  ↓ runCpsTrampolineTc()    — CPS transform
   ↓ betaMinExp()            — beta reduction
   ↓ ambMinExp()             — amb (backtracking) transform
   ↓ betaMinExp()            — beta reduction (2nd pass)
   ↓ etaMinExp()             — eta reduction
   ↓ betaMinExp()            — beta reduction (3rd pass)
+  ↓ shakeMinExp()           — dead binding elimination (tree shaking)
   ↓ flatClosureConvert()    — closure conversion (or sharedClosureConvert)
   ↓ indexMinExp()           — lexical addressing (De Bruijn indices)
   ↓ emitProgram()           — C code generation
@@ -91,7 +92,7 @@ this pass, variables map directly to `reg[N]` in the generated C code.
 
 ## Generated C Code Structure
 
-The emitter (`src/minlam_emit.c`, function `emitProgram`) produces a
+The emitter (`src/minlam_emit_c.c`, function `emitProgram`) produces a
 single self-contained C file:
 
 ```c
@@ -206,7 +207,7 @@ binary generation: `--include=fn --target-c --flat-closures`.
 | `src/minlam_amb.c` | Amb transform |
 | `src/minlam_closureConvert.c` | Closure conversion (flat/shared) |
 | `src/minlam_annotate.c` | Lexical indexing |
-| `src/minlam_emit.c` | C code emitter |
+| `src/minlam_emit_c.c` | C code emitter |
 | `src/minlam_runtime.c` | Runtime support |
 | `src/minlam_runtime.h` | Runtime API |
 | `src/minlam.yaml` | MinExp type definitions |

@@ -190,7 +190,7 @@ static inline void makePartialFromClo(Value *callable, Clo *clo, int naargs) {
     Clo *pclo = newClo(clo->pending - naargs, clo->C, env);
     PROTECT(pclo);
 #ifdef DEBUG_STEP
-    dumpFrame(env->S);
+    dumpFrame(stderr, env->S);
 #endif
     callable->type = VALUE_TYPE_PCLO;
     callable->val.clo = pclo;
@@ -627,16 +627,18 @@ __attribute__((unused)) static int failStackSize(Fail *f) {
 }
 
 static void step() {
-    if (dump_bytecode_flag)
-        dumpByteCode(&state.B, state.L);
+    if (dump_bytecode_flag) {
+        dumpByteCode(stdout, &state.B, state.L);
+        exit(0);
+    }
     state.L = NULL;
     state.C = 0;
     while (state.C != END_CONTROL) {
         ++count;
         int bytecode;
 #ifdef DEBUG_STEP
-        // dumpStack(state.S);
-        // printf("%4ld) %04lx ### ", count, state.C);
+        dumpStack(stderr, state.S);
+        printf("%4ld) %04lx ### ", count, state.C);
         printf("%04lx ### ", state.C);
 #endif
         switch (bytecode = readCurrentByte()) {
@@ -971,7 +973,7 @@ static void step() {
                 switch (readCurrentByte()) {
                 case BYTECODES_TYPE_BIGINT: {
                     BigInt *bigInt = readCurrentBigInt();
-                    fprintBigInt(stdout, bigInt);
+                    fprintBigInt2(stdout, bigInt);
                 } break;
                 case BYTECODES_TYPE_STDINT: {
                     Integer Int = readCurrentInt();
@@ -1197,7 +1199,7 @@ static void step() {
             int save = PROTECT(bigInt);
 #ifdef DEBUG_STEP
             printf("BIGINT [");
-            fprintBigInt(stdout, bigInt);
+            fprintBigInt2(stdout, bigInt);
             printf("]\n");
 #endif
             Value v = value_Bigint(bigInt);
@@ -1210,7 +1212,7 @@ static void step() {
             int save = PROTECT(bigInt);
 #ifdef DEBUG_STEP
             printf("BIGINT_IMAG [");
-            fprintBigInt(stdout, bigInt);
+            fprintBigInt2(stdout, bigInt);
             printf("]\n");
 #endif
             Value v = value_Bigint_imag(bigInt);

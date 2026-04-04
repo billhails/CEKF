@@ -45,5 +45,9 @@ SymbolSet *differenceSymbolSet(SymbolSet *a, SymbolSet *b);
 bool eqSymbolSet(SymbolSet *a, SymbolSet *b);
 
 SymbolMap *copySymbolMap(SymbolMap *orig);
+SymbolArray *symbolSetToArray(SymbolSet *set);
+
+void psprintf(SCharArray *, const char *, ...)
+    __attribute__((format(printf, 2, 3)));
 
 #endif

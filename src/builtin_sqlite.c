@@ -65,18 +65,18 @@ static void opaque_sqlite3_finalize(void *data) {
 Value builtin_sqlite3_open(Vec *v) {
     SCharVec *buf = listToUtf8(v->entries[0]);
     int save = PROTECT(buf);
-    sqlite3 *ppDb = NULL;
-    int status = sqlite3_open(buf->entries, &ppDb);
+    sqlite3 *sqDb = NULL;
+    int status = sqlite3_open(buf->entries, &sqDb);
     if (status != SQLITE_OK) {
-        Value errMsg = utf8ToList(sqlite3_errmsg(ppDb));
+        Value errMsg = utf8ToList(sqlite3_errmsg(sqDb));
         protectValue(errMsg);
-        sqlite3_close(ppDb);
+        sqlite3_close(sqDb);
         Value result = makeTryResult(0, errMsg);
         UNPROTECT(save);
         return result;
     }
-    DEBUG("sqlite open %p", ppDb);
-    Opaque *wrapper = newOpaque(ppDb, opaque_sqlite3_close, NULL, NULL);
+    DEBUG("sqlite open %p", sqDb);
+    Opaque *wrapper = newOpaque(sqDb, opaque_sqlite3_close, NULL, NULL);
     Value opaque = value_Opaque(wrapper);
     protectValue(opaque);
     Value result = makeTryResult(1, opaque);
@@ -385,11 +385,11 @@ static void registerSQLiteOpen(BuiltIns *registry) {
 static void registerSQLiteClose(BuiltIns *registry) {
     BuiltInArgs *args = newBuiltInArgs();
     int save = PROTECT(args);
-    TcType *ppDb = makeSqliteType();
-    PROTECT(ppDb);
+    TcType *sqDb = makeSqliteType();
+    PROTECT(sqDb);
     TcType *b = makeBoolean();
     PROTECT(b);
-    pushBuiltInArgs(args, ppDb);
+    pushBuiltInArgs(args, sqDb);
     pushNewBuiltIn(registry, "sqlite3_close", b, args,
                    (void *)builtin_sqlite3_close, "builtin_sqlite3_close");
     UNPROTECT(save);

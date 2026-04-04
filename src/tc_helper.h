@@ -20,18 +20,11 @@
 
 #include "ast_helper.h"
 #include "tc.h"
+#include "tc_pp.h"
 #include "utils.h"
 
 struct SCharArray;
 
-void ppTcType(TcType *type);
-void ppTcFunction(TcFunction *function);
-void ppTcPair(TcPair *pair);
-void ppTcThunk(TcThunk *thunk);
-void ppTcVar(TcVar *var);
-void ppTcTypeSig(TcTypeSig *typeSig);
-void ppTcTuple(TcTypeArray *tuple);
-void ppTcEnv(TcEnv *env);
 bool getFromTcEnv(TcEnv *env, HashSymbol *symbol, TcType **type);
 struct SCharArray *tcTypeToSCharArray(TcType *type);
 void appendStringToSCharArray(struct SCharArray *buffer, char *str);

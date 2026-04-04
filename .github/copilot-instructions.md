@@ -189,6 +189,7 @@ For detailed information on specific compiler stages, see:
 - [tpmc.md](../docs/agent/tpmc.md) - Pattern matching compilation
 - [anf.md](../docs/agent/anf.md) - A-Normal Form conversion
 - [c-generation.md](../docs/agent/c-generation.md) - C code generation backend (`--target-c`)
+- [tree-shaking.md](../docs/agent/tree-shaking.md) - Dead binding elimination for `--target-c`
 - [language-syntax.md](../docs/agent/language-syntax.md) - F♮ language reference
 
 ## Rewrite Prototyping

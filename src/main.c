@@ -30,6 +30,7 @@
 #include "ast.h"
 #include "ast_debug.h"
 #include "ast_ns.h"
+#include "ast_pp.h"
 #include "bigint.h"
 #include "builtins_helper.h"
 #include "bytecode.h"
@@ -52,10 +53,11 @@
 #include "minlam_cps.h"
 #include "minlam_cpsTrampoline.h"
 #include "minlam_curry.h"
-#include "minlam_emit.h"
+#include "minlam_emit_c.h"
 #include "minlam_eta.h"
 #include "minlam_fold.h"
 #include "minlam_pp.h"
+#include "minlam_shake.h"
 #include "minlam_uncurry.h"
 #include "pratt.h"
 #include "pratt_parser.h"
@@ -63,6 +65,7 @@
 #include "step.h"
 #include "tc_analyze.h"
 #include "tc_debug.h"
+#include "tc_pp.h"
 #include "tpmc_mermaid.h"
 #include "utils.h"
 #include "wrapper_synthesis.h"
@@ -91,6 +94,7 @@ extern bool assertions_failed;
 extern int assertions_accumulate;
 static char *binary_output_file = NULL;
 static char *binary_input_file = NULL;
+static char *target_c_file = NULL;
 static char *snippet = NULL;
 
 extern StringArray *include_paths;
@@ -102,6 +106,7 @@ static int uncurry_flag = 0;
 static int cps_flag = 0;
 static int amb_flag = 0;
 static int closure_flag = 0;
+static int shake_flag = 0;
 static int flat_closures_flag = 0;
 
 /**
@@ -195,6 +200,7 @@ static void usage(char *prog, int status) {
         "    --include=<dir>          Add dir to the list of directories to "
         "be searched.\n"
         "    --dump-amb               Display the IR after the amb transform.\n"
+        "    --dump-shake             Display the IR after tree shaking.\n"
         "    --dump-uncurry           Display the IR after uncurrying.\n"
         "    --parse-only             Stop after parsing to enable "
         "parser-only profiling.\n"
@@ -202,7 +208,8 @@ static void usage(char *prog, int status) {
 #ifdef SAFETY_CHECKS
         "    --stress-gc              Stress the garbage collector.\n"
 #endif
-        "    --target-c               Output C code instead.\n"
+        "    --target-c[=file]        Output C code instead (to file if "
+        "specified).\n"
 #ifdef UNIT_TESTS
         "    --test                   Run unit tests.\n"
 #endif
@@ -229,7 +236,7 @@ static int processArgs(int argc, char *argv[]) {
 #ifdef SAFETY_CHECKS
             {"stress-gc", no_argument, &forceGcFlag, 1},
 #endif
-            {"target-c", no_argument, &targetCFlag, 1},
+            {"target-c", optional_argument, 0, 'T'},
             {"parse-only", no_argument, &parse_only_flag, 1},
             {"dump-ir", no_argument, &dumpIR, 1},
             {"dump-ast", no_argument, &ast_flag, 1},
@@ -243,6 +250,7 @@ static int processArgs(int argc, char *argv[]) {
             {"dump-cps", no_argument, &cps_flag, 1},
             {"dump-amb", no_argument, &amb_flag, 1},
             {"dump-closure", no_argument, &closure_flag, 1},
+            {"dump-shake", no_argument, &shake_flag, 1},
             {"assertions-accumulate", no_argument, &assertions_accumulate, 1},
             {"dump-tpmc", required_argument, 0, 'm'},
             {"dump-lambda", optional_argument, 0, 'l'},
@@ -312,6 +320,13 @@ static int processArgs(int argc, char *argv[]) {
 
         if (c == 'i') {
             pushStringArray(include_paths, strdup(optarg));
+        }
+
+        if (c == 'T') {
+            targetCFlag = 1;
+            if (optarg) {
+                target_c_file = optarg;
+            }
         }
 
         if (c == '?' || c == 'h') {
@@ -387,8 +402,8 @@ static LamExp *convertProg(AstProg *prog) {
     exp = lamPerformSimplifications(exp);
     REPLACE_PROTECT(save, exp);
     if (lambda_flag) {
-        ppLamExp(exp);
-        eprintf("\n");
+        ppLamExp(stdout, exp);
+        printf("\n");
         exit(0);
     }
     UNPROTECT(save);
@@ -407,8 +422,8 @@ static LamExp *inlineExp(LamExp *exp) {
     exp = inlineLamExp(exp);
     int save = PROTECT(exp);
     if (inline_flag) {
-        ppLamExp(exp);
-        eprintf("\n");
+        ppLamExp(stdout, exp);
+        printf("\n");
         exit(0);
     }
     UNPROTECT(save);
@@ -429,7 +444,7 @@ static void typeCheck(LamExp *exp, BuiltIns *builtIns) {
         exit(1);
     }
 #ifdef DEBUG_TC
-    ppTcType(res);
+    ppTcType(stderr, res);
     eprintf("\n");
 #endif
     UNPROTECT(save);
@@ -444,7 +459,7 @@ static void typeCheck(LamExp *exp, BuiltIns *builtIns) {
 static void annotate(AnfExp *anfExp, BuiltIns *builtIns) {
     annotateAnf(anfExp, builtIns);
 #ifdef DEBUG_ANF
-    ppExp(anfExp);
+    ppAnfExp(stderr, anfExp);
     eprintf("\n");
 #endif
 }
@@ -504,16 +519,7 @@ int main(int argc, char *argv[]) {
         argc, binary_input_file ? nextargc : nextargc + 1, argv);
     PROTECT(builtIns);
 
-#ifdef UNIT_TESTS
-    if (test_flag) {
-        if (run_unit_tests()) {
-            exit(0);
-        } else {
-            exit(1);
-        }
-    } else
-#endif
-        if (binary_input_file) {
+    if (binary_input_file) {
         ByteCodeArray byteCodes;
         initByteCodeArray(&byteCodes, 8);
         switch (readBinaryInputFile(&byteCodes, binary_input_file)) {
@@ -537,6 +543,9 @@ int main(int argc, char *argv[]) {
         clock_t end = clock();
         report(argv[0], begin, compiled, end);
     } else {
+        ///////////
+        // Parsing
+        ///////////
         // Generate wrappers for builtins before parsing
         // they will be insterted into the preamble on
         // encountering the __builtins__ directive
@@ -550,130 +559,193 @@ int main(int argc, char *argv[]) {
         int save2 = PROTECT(prog);
 
         if (parse_only_flag) {
-            // Stop after parsing to enable parser-only profiling
-            exit(0);
+            exit(0); // for profiling
         }
 
+        ////////////////////////
+        // Namespace Desugaring
+        ////////////////////////
         prog = nsAstProg(prog);
         REPLACE_PROTECT(save2, prog);
 
         if (ast_flag) {
-            SCharArray *dest = newSCharArray();
-            PROTECT(dest);
-            ppAstProg(dest, prog);
-            printf("%s\n", dest->entries);
+            ppAstProg(stdout, prog);
             exit(0);
         }
 
-        // forceGcFlag = true;
+        /////////////////////
+        // Lambda Conversion
+        /////////////////////
         LamExp *exp = convertProg(prog);
         REPLACE_PROTECT(save2, exp);
 
         typeCheck(exp, builtIns);
 
+        ////////////////////////
+        // constructor inlining
+        ////////////////////////
         exp = inlineExp(exp);
         REPLACE_PROTECT(save2, exp);
-
-        MinExp *minExp = desugarLamExp(exp);
-        REPLACE_PROTECT(save2, minExp);
-
-        if (desugar_flag) {
-            ppMinExp(minExp);
-            eprintf("\n");
-            exit(0);
-        }
 
 #if 0
         // forceGcFlag = true;
         LamExp *anfLam = anfNormalize2(exp);
         REPLACE_PROTECT(save2, anfLam);
-        ppLamExp(anfLam);
-        eprintf("\n");
+        ppLamExp(stdout, anfLam);
+        printf("\n");
         exit(0);
 #endif
-        minExp = alphaConvertMinExp(minExp, builtIns);
+
+        /////////////////////
+        // desugar -> MinLam
+        /////////////////////
+        MinExp *minExp = desugarLamExp(exp);
         REPLACE_PROTECT(save2, minExp);
 
-        if (alpha_flag) {
-            ppMinExp(minExp);
+        if (desugar_flag) {
+            ppMinExp(stdout, minExp);
             eprintf("\n");
             exit(0);
         }
 
+        /////
+        // ɑ
+        /////
+        minExp = alphaConvertMinExp(minExp, builtIns);
+        REPLACE_PROTECT(save2, minExp);
+
+        if (alpha_flag) {
+            ppMinExp(stdout, minExp);
+            eprintf("\n");
+            exit(0);
+        }
+
+        /////////
+        // curry
+        /////////
         minExp = curryMinExp(minExp);
         REPLACE_PROTECT(save2, minExp);
 
         if (curry_flag) {
-            ppMinExp(minExp);
+            ppMinExp(stdout, minExp);
             eprintf("\n");
             exit(0);
         }
 
         // if we move currying below this point we need to
         // update the following steps to propagate the isBuiltin flag
+
+        /////
+        // β
+        /////
         minExp = betaMinExp(minExp);
         REPLACE_PROTECT(save2, minExp);
 
+        /////
+        // η
+        /////
         minExp = etaMinExp(minExp);
         REPLACE_PROTECT(save2, minExp);
+
+        /////
+        // β
+        /////
         minExp = betaMinExp(minExp); // second pass.
         REPLACE_PROTECT(save2, minExp);
 
         if (beta_flag) {
-            ppMinExp(minExp);
+            ppMinExp(stdout, minExp);
             eprintf("\n");
             exit(0);
         }
 
+        ////////////////////
+        // Operator Folding
+        ////////////////////
         minExp = foldMinExp(minExp);
         REPLACE_PROTECT(save2, minExp);
 
         if (fold_flag) {
-            ppMinExp(minExp);
+            ppMinExp(stdout, minExp);
             eprintf("\n");
             exit(0);
         }
 
+        ///////////
+        // uncurry
+        ///////////
         minExp = uncurry(minExp);
         REPLACE_PROTECT(save2, minExp);
 
         if (uncurry_flag) {
-            ppMinExp(minExp);
+            ppMinExp(stdout, minExp);
             eprintf("\n");
             exit(0);
         }
 
         if (targetCFlag) {
-            MinExp *done = makeDoneCont(CPI(minExp), true);
+            ///////
+            // CPS
+            ///////
+            MinExp *done = makeDoneCont(CPI(minExp), 0, true);
             PROTECT(done);
-            // forceGcFlag = true;
             minExp = runCpsTrampolineTc(minExp, done);
-            // forceGcFlag = false;
             REPLACE_PROTECT(save2, minExp);
+
+            /////
+            // β
+            /////
             minExp = betaMinExp(minExp); // necessary for the amb transform
             REPLACE_PROTECT(save2, minExp);
 
             if (cps_flag) {
-                ppMinExp(minExp);
+                ppMinExp(stdout, minExp);
                 eprintf("\n");
                 exit(0);
             }
 
-            MinExp *fail = makeDoneCont(CPI(minExp), false);
+            ///////
+            // AMB
+            ///////
+            MinExp *fail = makeDoneCont(CPI(minExp), 1, false);
             PROTECT(fail);
             minExp = ambMinExp(minExp, fail);
             REPLACE_PROTECT(save2, minExp);
+
+            /////
+            // β
+            /////
             minExp = betaMinExp(minExp);
             REPLACE_PROTECT(save2, minExp);
+
+            ///////////////////////////////////////////////
+            // η - this should achieve TCO by rewriting
+            // continuations after CPS: (λ (x) (k x)) => k
+            ///////////////////////////////////////////////
             minExp = etaMinExp(minExp);
             REPLACE_PROTECT(save2, minExp);
 
             if (amb_flag) {
-                ppMinExp(minExp);
+                ppMinExp(stdout, minExp);
                 eprintf("\n");
                 exit(0);
             }
 
+            /////////
+            // Shake
+            /////////
+            minExp = shakeMinExp(minExp);
+            REPLACE_PROTECT(save2, minExp);
+
+            if (shake_flag) {
+                ppMinExp(stdout, minExp);
+                eprintf("\n");
+                exit(0);
+            }
+
+            ///////////////////
+            // Closure Convert
+            ///////////////////
             if (flat_closures_flag) {
                 minExp = flatClosureConvert(minExp);
             } else {
@@ -682,21 +754,39 @@ int main(int argc, char *argv[]) {
             REPLACE_PROTECT(save2, minExp);
 
             if (closure_flag) {
-                ppMinExp(minExp);
+                ppMinExp(stdout, minExp);
                 eprintf("\n");
                 exit(0);
             }
 
+            ////////////
+            // DeBruijn
+            ////////////
             minExp = indexMinExp(minExp);
             REPLACE_PROTECT(save2, minExp);
 
             if (dumpIR) {
-                ppMinExp(minExp);
+                ppMinExp(stdout, minExp);
                 exit(0);
             }
 
-            emitProgram(minExp, builtIns, stdout);
-            eprintf("\n");
+            //////////
+            // Emit C
+            //////////
+            FILE *outFile = stdout;
+            int shouldClose = 0;
+            if (target_c_file != NULL) {
+                outFile = fopen(target_c_file, "w");
+                if (outFile == NULL) {
+                    perror(target_c_file);
+                    exit(1);
+                }
+                shouldClose = 1;
+            }
+            emitCProgram(minExp, builtIns, outFile);
+            if (shouldClose) {
+                fclose(outFile);
+            }
             exit(0);
         }
 
@@ -706,8 +796,8 @@ int main(int argc, char *argv[]) {
         annotate(anfExp, builtIns);
 
         if (dumpIR) {
-            ppAnfExp(anfExp);
-            eprintf("\n");
+            ppAnfExp(stdout, anfExp);
+            printf("\n");
             exit(0);
         }
 

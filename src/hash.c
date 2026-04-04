@@ -22,14 +22,14 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "common.h"
 #include "cekf.h"
+#include "common.h"
 #include "hash.h"
 #include "memory.h"
 #ifdef DEBUG_HASHTABLE
-#  include "debugging_on.h"
+#include "debugging_on.h"
 #else
-#  include "debugging_off.h"
+#include "debugging_off.h"
 #endif
 
 bool quietPrintHashTable = false;
@@ -43,9 +43,11 @@ bool hash_debug_flag = false;
 
 /**
  * Creates a new, empty hash table.
- * 
- * @param valuesize size of each value stored in the table, can be zero for no values.
- * @param markfunction function to mark each value during garbage collection, can be NULL if no values.
+ *
+ * @param valuesize size of each value stored in the table, can be zero for no
+ * values.
+ * @param markfunction function to mark each value during garbage collection,
+ * can be NULL if no values.
  * @param printfunction function to print each value, can be NULL if no values.
  * @return pointer to the newly created HashTable
  */
@@ -71,14 +73,14 @@ HashTable *newHashTable(size_t valuesize, MarkHashValueFunction markfunction,
 
 /**
  * FNV-1a hash function for strings.
- * 
+ *
  * @param string null-terminated string to be hashed
  * @return hash value
  */
 hash_t hashString(const char *string) {
     hash_t hash = 2166136261u;
     for (; *string != '\0'; string++) {
-        hash ^= (uint8_t) * string;
+        hash ^= (uint8_t)*string;
         hash *= 16777619;
     }
     return hash;
@@ -86,7 +88,7 @@ hash_t hashString(const char *string) {
 
 /**
  * Returns a pointer to the value storage for the given index in the table.
- * 
+ *
  * @param table pointer to the HashTable
  * @param index index of the entry
  * @return pointer to the value storage, or NULL if valuesize is zero.
@@ -94,14 +96,14 @@ hash_t hashString(const char *string) {
 static void *valuePtr(HashTable *table, int index) {
     if (table->valuesize == 0)
         return NULL;
-    return (char *) table->values + (index * table->valuesize);
+    return (char *)table->values + (index * table->valuesize);
 }
 
 /**
  * Finds the index of the given variable in the keys array,
  * or the index where it should be inserted if not present.
  * Uses hashing to speed up the search.
- * 
+ *
  * @param keys array of HashSymbol pointers
  * @param capacity size of the keys array
  * @param key pointer to the HashSymbol to find
@@ -124,7 +126,7 @@ static hash_t findEntry(HashSymbol **keys, int capacity, HashSymbol *key) {
  * Rehashes all existing entries into the new keys array.
  * Copies existing values to the new values array at their
  * new hash positions (if the table has values).
- * 
+ *
  * @param table pointer to the HashTable
  * @param capacity new capacity for the table
  */
@@ -136,7 +138,7 @@ static void growCapacity(HashTable *table, int capacity) {
 
     void *values = NULL;
     if (table->valuesize > 0) {
-        values = NEW_ARRAY(char, table->valuesize * capacity);
+        values = NEW_ARRAY(char, table->valuesize *capacity);
         bzero(values, table->valuesize * capacity);
     }
 
@@ -147,7 +149,7 @@ static void growCapacity(HashTable *table, int capacity) {
         hash_t new_index = findEntry(keys, capacity, var);
         keys[new_index] = var;
         if (table->valuesize > 0) {
-            void *dst = (char *) values + (new_index * table->valuesize);
+            void *dst = (char *)values + (new_index * table->valuesize);
             void *src = valuePtr(table, old_index);
             memcpy(dst, src, table->valuesize);
         }
@@ -162,7 +164,7 @@ static void growCapacity(HashTable *table, int capacity) {
 
 /**
  * Checks if the table needs to grow, and grows it if necessary.
- * 
+ *
  * @param table pointer to the HashTable
  */
 static void checkCapacity(HashTable *table) {
@@ -175,9 +177,9 @@ static void checkCapacity(HashTable *table) {
 /**
  * Sets the given variable to the given value in the hash table.
  * If the variable is not already present, it is added.
- * Note the value is a pointer and the thing being pointed to is what gets copied.
- * This allows for tables with arbitrarily sized values.
- * 
+ * Note the value is a pointer and the thing being pointed to is what gets
+ * copied. This allows for tables with arbitrarily sized values.
+ *
  * @param table pointer to the HashTable
  * @param var pointer to the HashSymbol variable
  * @param value pointer to the value to copy, can be NULL.
@@ -201,10 +203,10 @@ void hashSet(HashTable *table, HashSymbol *key, void *value) {
         void *target = valuePtr(table, index);
 #if defined(DEBUG_HASHTABLE) || defined(DEBUG_LEAK)
         eprintf("memcpy(%p, %p, %ld);\n", target, src, table->valuesize);
-#  ifdef DEBUG_LEAK
-        eprintf("// *%p == %p, table->values == %p\n", src, *((void **) src),
+#ifdef DEBUG_LEAK
+        eprintf("// *%p == %p, table->values == %p\n", src, *((void **)src),
                 table->values);
-#  endif
+#endif
 #endif
         memcpy(target, value, table->valuesize);
     }
@@ -212,10 +214,11 @@ void hashSet(HashTable *table, HashSymbol *key, void *value) {
 
 /**
  * Gets the value associated with the given variable in the hash table.
- * 
+ *
  * @param table pointer to the HashTable
  * @param var pointer to the HashSymbol variable
- * @param dest pointer to the destination where the value will be copied, can be NULL.
+ * @param dest pointer to the destination where the value will be copied, can be
+ * NULL.
  * @return true if the variable is present, false otherwise
  */
 bool hashGet(HashTable *table, HashSymbol *var, void *dest) {
@@ -234,7 +237,7 @@ bool hashGet(HashTable *table, HashSymbol *var, void *dest) {
 
 /**
  * Looks up the key with the given name in the hash table.
- * 
+ *
  * @param table pointer to the HashTable
  * @param name null-terminated string name of the variable to find
  * @return pointer to the HashSymbol if found, NULL otherwise
@@ -249,8 +252,8 @@ HashSymbol *hashGetVar(HashTable *table, const char *name) {
     for (;;) {
         if (table->keys[index] == NULL)
             return NULL;
-        if (table->keys[index]->hash == hash
-            && strcmp(name, table->keys[index]->name) == 0) {
+        if (table->keys[index]->hash == hash &&
+            strcmp(name, table->keys[index]->name) == 0) {
             return table->keys[index];
         }
         index = (index + 1) & (table->capacity - 1);
@@ -259,17 +262,15 @@ HashSymbol *hashGetVar(HashTable *table, const char *name) {
 
 /**
  * Memory management access to markHashTable.
- * 
+ *
  * @param h pointer to the Header of the HashTable
  */
-void markHashTableObj(Header *h) {
-    markHashTable((HashTable *) h);
-}
+void markHashTableObj(Header *h) { markHashTable((HashTable *)h); }
 
 /**
  * Part of the mark phase of the mark-sweep garbage collection,
  * marks the given hash table and its contents.
- * 
+ *
  * Note that the keys (HashSymbol objects) are not themselves
  * memory-managed. It is assumed that symbols are permanent.
  *
@@ -286,8 +287,8 @@ void markHashTable(HashTable *table) {
         for (Index i = 0; i < table->capacity; i++) {
             if (table->keys[i] != NULL) {
                 DEBUG("markHashTable() [%d][%d][%p]", table->id, i,
-                      (char *) table->values + (i * table->valuesize));
-                table->markfunction((char *) table->values +
+                      (char *)table->values + (i * table->valuesize));
+                table->markfunction((char *)table->values +
                                     (i * table->valuesize));
             }
         }
@@ -296,11 +297,11 @@ void markHashTable(HashTable *table) {
 
 /**
  * Frees the memory occupied by the given hash table.
- * 
+ *
  * @param h pointer to the Header of the HashTable
  */
 void freeHashTableObj(Header *h) {
-    HashTable *table = (HashTable *) h;
+    HashTable *table = (HashTable *)h;
     DEBUG("freeHashTableObj() [%d]", table->id);
     if (table == NULL)
         return;
@@ -309,8 +310,7 @@ void freeHashTableObj(Header *h) {
         FREE_ARRAY(HashSymbol *, table->keys, table->capacity);
         if (table->valuesize > 0) {
             DEBUG("freeHashTableObj values: %p", table->values);
-            FREE_ARRAY(char, table->values,
-                       table->capacity * table->valuesize);
+            FREE_ARRAY(char, table->values, table->capacity * table->valuesize);
         }
     }
     FREE(h, HashTable);
@@ -322,9 +322,9 @@ void freeHashTableObj(Header *h) {
  * the existing HashSymbol is returned. Otherwise a new
  * HashSymbol is created, added to the table with the given value,
  * and returned.
- * 
+ *
  * This should be the only function that directly creates HashSymbol objects.
- * 
+ *
  * @param table pointer to the HashTable.
  * @param name null-terminated string name of the variable.
  * @param src pointer to the value to associate with the variable, can be NULL.
@@ -345,59 +345,65 @@ HashSymbol *uniqueHashSymbol(HashTable *table, char *name, void *src) {
 
 /**
  * Prints the given HashSymbol.
- * 
+ *
  * @param symbol pointer to the HashSymbol to be printed
  */
-void printHashSymbol(HashSymbol *symbol) {
-    eprintf("%s", symbol->name);
+void fprintHashSymbol(FILE *fp, HashSymbol *symbol) {
+    fprintf(fp, "%s", symbol->name);
 }
+
+void printHashSymbol(HashSymbol *symbol) { fprintHashSymbol(stdout, symbol); }
 
 /**
  * Prints the given hash table and its contents.
- * 
+ *
  * @param table pointer to the HashTable to be printed
  * @param depth indentation depth for pretty printing
  */
-void printHashTable(HashTable *table, int depth) {
-    eprintf("%*s", depth * PAD_WIDTH, "");
+void fprintHashTable(FILE *fp, HashTable *table, int depth) {
+    fprintf(fp, "%*s", depth * PAD_WIDTH, "");
     if (table == NULL) {
-        eprintf("HashTable: (NULL)");
+        fprintf(fp, "HashTable: (NULL)");
         return;
     }
-    eprintf("HashTable %d: {", table->id);
+    fprintf(fp, "HashTable %d: {", table->id);
     bool first = true;
     for (Index i = 0; i < table->capacity; ++i) {
         if (table->keys[i] != NULL) {
             if (first) {
                 first = false;
-                eprintf("\n");
+                fprintf(fp, "\n");
             }
-            eprintf("%*s", (depth + 1) * PAD_WIDTH, "");
-            printHashSymbol(table->keys[i]);
-            if (table->valuesize > 0 && table->printfunction != NULL
-                && !quietPrintHashTable) {
-                eprintf(" =>");
+            fprintf(fp, "%*s", (depth + 1) * PAD_WIDTH, "");
+            fprintHashSymbol(fp, table->keys[i]);
+            if (table->valuesize > 0 && table->printfunction != NULL &&
+                !quietPrintHashTable) {
+                fprintf(fp, " =>");
                 if (table->shortEntries)
-                    eprintf(" ");
+                    fprintf(fp, " ");
                 else
-                    eprintf("\n");
-                table->printfunction(valuePtr(table, i),
+                    fprintf(fp, "\n");
+                table->printfunction(fp, valuePtr(table, i),
                                      table->shortEntries ? 0 : (depth + 2));
-                eprintf("\n");
+                fprintf(fp, "\n");
             } else {
-                eprintf("\n");
+                fprintf(fp, "\n");
             }
         }
     }
     if (first)
-        eprintf("}");
+        fprintf(fp, "}");
     else
-        eprintf("%*s}", depth * PAD_WIDTH, "");
+        fprintf(fp, "%*s}", depth * PAD_WIDTH, "");
+}
+
+void printHashTable(HashTable *table, int depth) {
+    fprintHashTable(stdout, table, depth);
 }
 
 /**
  * Iterates over the entries in the hash table.
- * 
+ *
  * @param table pointer to the HashTable
  * @param index pointer to the current index, updated by the function
  * @param data pointer to storage for the value, can be NULL.
@@ -423,15 +429,15 @@ HashSymbol *iterateHashTable(HashTable *table, Index *index, void *data) {
 
 /**
  * Copies all entries from one hash table to another.
- * 
+ *
  * @param to pointer to the destination HashTable
  * @param from pointer to the source HashTable
  */
 void copyHashTable(HashTable *to, HashTable *from) {
     if (from->valuesize != to->valuesize) {
-        cant_happen
-            ("attempt to copy between hash tables with different storage size: %ld vs %ld",
-             from->valuesize, to->valuesize);
+        cant_happen("attempt to copy between hash tables with different "
+                    "storage size: %ld vs %ld",
+                    from->valuesize, to->valuesize);
     }
     for (Index i = 0; i < from->capacity; ++i) {
         if (from->keys[i] != NULL) {

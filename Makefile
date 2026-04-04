@@ -140,15 +140,15 @@ FN_BFILES=$(patsubst $(FNDIR)/%,$(TMPDIR)/%,$(patsubst %.fn,%.fnc,$(FN_FILES)))
 FN_OFILES=$(patsubst %.c,%.o,$(FN_CFILES))
 FN_BINARIES=$(patsubst %.o,%,$(FN_OFILES))
 
-TARGET_ARGS=--include=fn --target-c --flat-closure
+TARGET_ARGS=--include=fn --flat-closure
 
 $(TEST_FN_CFILES): $(TMPDIR)/%.c: $(TEST_FN_DIR)/%.fn $(TARGET) | $(TMPDIR)
-	$(TARGET) $(TARGET_ARGS) $<  > $@~ && mv $@~ $@
+	$(TARGET) $(TARGET_ARGS) --target-c=$@~ $<  && mv $@~ $@
 	indent $@
 	rm -f $@~
 
 $(FN_CFILES): $(TMPDIR)/%.c: $(FNDIR)/%.fn $(TARGET) | $(TMPDIR)
-	$(TARGET) $(TARGET_ARGS) $<  > $@~ && mv $@~ $@
+	$(TARGET) $(TARGET_ARGS) --target-c=$@~ $< && mv $@~ $@
 	indent $@
 	rm -f $@~
 
@@ -186,7 +186,7 @@ tmp/test_harness.o: tmp/test_harness.c
 	$(LAXCC) $(INCLUDE_PATHS) -c $< -o $@
 
 tmp/test_harness.c: $(FNDIR)/rewrite/test_harness.fn $(TARGET)
-	$(TARGET) --target-c $<  > $@~ && mv $@~ $@
+	$(TARGET) --target-c=$@~ $< && mv $@~ $@
 	indent $@
 	rm -f $@~
 

@@ -22,33 +22,34 @@
  */
 
 #include "lambda.h"
+#include <stdio.h>
 
-void ppLamExpD(LamExp *exp, int depth);
-void ppLamLam(LamLam *lam);
-void ppLamVarList(SymbolList *varList);
-void ppLamExp(LamExp *exp);
-void ppHashSymbol(HashSymbol *symbol);
-void ppLamPrimApp(LamPrimApp *primApp);
-void ppLamPrimOp(LamPrimOp type);
-void ppLamSequence(LamSequence *sequence);
-void ppLamMakeVec(LamMakeVec *makeVec);
-void ppLamApply(LamApply *apply);
-void ppLamIff(LamIff *iff);
-void ppLamCond(LamCond *cond);
-void ppLamCallCC(LamExp *exp);
-void ppLamPrint(LamPrint *print);
-void ppLamLetRec(LamLetRec *letRec);
-void ppLamLetStar(LamLetStar *letStar);
-void ppLamDeconstruct(LamDeconstruct *deconstruct);
-void ppLamConstruct(LamConstruct *construct);
-void ppLamConstant(LamConstant *constant);
-void ppLamTypeDefs(LamTypeDefs *typeDefs);
-void ppLamLet(LamLet *let);
-void ppLamMatch(LamMatch *match);
-void ppLamTupleIndex(LamTupleIndex *index);
-void ppLamBindings(LamBindings *bindings);
-void ppLamIntList(LamIntList *list);
-void ppLamMakeTuple(LamArgs *args);
-void ppLamContext(LamContext *env);
+void ppLamExpD(FILE *out, LamExp *exp, int depth);
+void ppLamLam(FILE *out, LamLam *lam);
+void ppLamVarList(FILE *out, SymbolList *varList);
+void ppLamExp(FILE *out, LamExp *exp);
+void ppHashSymbol(FILE *out, HashSymbol *symbol);
+void ppLamPrimApp(FILE *out, LamPrimApp *primApp);
+void ppLamPrimOp(FILE *out, LamPrimOp type);
+void ppLamSequence(FILE *out, LamSequence *sequence);
+void ppLamMakeVec(FILE *out, LamMakeVec *makeVec);
+void ppLamApply(FILE *out, LamApply *apply);
+void ppLamIff(FILE *out, LamIff *iff);
+void ppLamCond(FILE *out, LamCond *cond);
+void ppLamCallCC(FILE *out, LamExp *exp);
+void ppLamPrint(FILE *out, LamPrint *print);
+void ppLamLetRec(FILE *out, LamLetRec *letRec);
+void ppLamLetStar(FILE *out, LamLetStar *letStar);
+void ppLamDeconstruct(FILE *out, LamDeconstruct *deconstruct);
+void ppLamConstruct(FILE *out, LamConstruct *construct);
+void ppLamConstant(FILE *out, LamConstant *constant);
+void ppLamTypeDefs(FILE *out, LamTypeDefs *typeDefs);
+void ppLamLet(FILE *out, LamLet *let);
+void ppLamMatch(FILE *out, LamMatch *match);
+void ppLamTupleIndex(FILE *out, LamTupleIndex *index);
+void ppLamBindings(FILE *out, LamBindings *bindings);
+void ppLamIntList(FILE *out, LamIntList *list);
+void ppLamMakeTuple(FILE *out, LamArgs *args);
+void ppLamContext(FILE *out, LamContext *env);
 
 #endif

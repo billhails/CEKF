@@ -206,7 +206,7 @@ static LamExp *compilePrinterForString(ParserInfo I) {
 
 static LamExp *compilePrinterForTypeSig(ParserInfo I, TcTypeSig *typeSig,
                                         TcEnv *env) {
-    IFDEBUG(printTcTypeSig(typeSig, 0));
+    IFDEBUG(printTcTypeSig(stderr, typeSig, 0));
     if (typeSig->name == listSymbol()) {
         if (typeSig->args &&
             typeSig->args->type->type == TCTYPE_TYPE_CHARACTER) {
@@ -247,7 +247,7 @@ static LamExp *compilePrinterForTuple(ParserInfo I, TcTypeArray *tuple,
         PROTECT(args);
         LamExp *res = makeLamExp_Apply(I, exp, args);
         UNPROTECT(save);
-        IFDEBUG(ppLamExp(res));
+        IFDEBUG(ppLamExp(stderr, res));
         LEAVE(compilePrinterForTuple);
         return res;
     } else {

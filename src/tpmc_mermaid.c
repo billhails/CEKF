@@ -69,7 +69,7 @@ static SCharVec *mermaidStateName(TpmcState *state, SymbolSet *seen) {
         sprintf(buf, "F%d", state->stamp);
         if (!seenName(buf, seen)) {
             printf("%s(\"", buf);
-            ppLamExp(state->state->val.final->action);
+            ppLamExp(stdout, state->state->val.final->action);
             printf("<br/>");
             mermaidFreeVariables(state->freeVariables);
             printf("\")\n");
@@ -117,7 +117,7 @@ static void mermaidPattern(TpmcPattern *pattern) {
         printf("'%c'", value->val.character);
         break;
     case TPMCPATTERNVALUE_TYPE_BIGINTEGER:
-        fprintMaybeBigInt(stdout, value->val.bigInteger);
+        fprintMaybeBigInt2(stdout, value->val.bigInteger);
         break;
     case TPMCPATTERNVALUE_TYPE_CONSTRUCTOR:
         printf("%s(", value->val.constructor->tag->name);

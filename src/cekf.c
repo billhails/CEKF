@@ -79,36 +79,36 @@ Fail *makeFail(Control offset, Env *env, Kont *k, Fail *next) {
 }
 
 #ifdef DEBUG_STEP
-void dumpStack(Stack *s) {
+void dumpStack(FILE *out, Stack *s) {
     for (Index i = 0; i < s->frames_index; i++) {
         for (Index j = 0; j < s->frames[i].offset; j++) {
             if (j == 0)
-                eprintf("      [%03d] [%03d] %s\n", i, j,
+                fprintf(out, "      [%03d] [%03d] %s\n", i, j,
                         valueTypeName(s->entries[s->frames[i].frame + j].type));
             else
-                eprintf("            [%03d] %s\n", j,
+                fprintf(out, "            [%03d] %s\n", j,
                         valueTypeName(s->entries[s->frames[i].frame + j].type));
         }
     }
     for (Index i = 0; i < s->offset; i++) {
         if (i == 0)
-            eprintf("      [%03d] [%03d] %s\n", s->frames_index, i,
+            fprintf(out, "      [%03d] [%03d] %s\n", s->frames_index, i,
                     valueTypeName(s->entries[s->frame + i].type));
         else
-            eprintf("            [%03d] %s\n", i,
+            fprintf(out, "            [%03d] %s\n", i,
                     valueTypeName(s->entries[s->frame + i].type));
     }
 }
 #endif
 
 #ifdef DEBUG_STEP
-void dumpFrame(Frame *s) {
-    eprintf("=================================\n");
-    eprintf("FRAME DUMP sp = %d, capacity = %d\n", s->size, s->capacity);
+void dumpFrame(FILE *out, Frame *s) {
+    fprintf(out, "=================================\n");
+    fprintf(out, "FRAME DUMP sp = %d, capacity = %d\n", s->size, s->capacity);
     for (Index i = 0; i < s->size; i++) {
-        eprintf("[%03d] %s\n", i, valueTypeName(s->entries[i].type));
+        fprintf(out, "[%03d] %s\n", i, valueTypeName(s->entries[i].type));
     }
-    eprintf("=================================\n");
+    fprintf(out, "=================================\n");
 }
 #endif
 

@@ -41,7 +41,6 @@ typedef struct VisitorContext {
     SymbolMap *replacements;
 } VisitorContext;
 
-// Forward declarations
 static AstNest *nsAstNest(AstNest *, VisitorContext);
 static AstNameSpaceImpl *nsAstNameSpaceImpl(AstNameSpaceImpl *, int,
                                             VisitorContext);
@@ -214,18 +213,41 @@ static void populateReplacementsFromDefinitions(AstDefinitions *definitions,
     }
 }
 
+/////////////////////////////////////////
+// Switch to Appropriate NS Replacements
+/////////////////////////////////////////
+
+static VisitorContext getNsReplacements(VisitorContext context, int nsId) {
+#ifdef SAFETY_CHECKS
+    if (nsId < 0 || ((Index)nsId) >= context.nameSpaces->size) {
+        cant_happen("invalid namespace id %d", nsId);
+    }
+    if (context.nameSpaces->entries[nsId] == NULL) {
+        cant_happen("namespace id %d has not been visited yet [1]", nsId);
+    }
+    if (context.nameSpaces->entries[nsId]->replacements == NULL) {
+        cant_happen("namespace id %d has not been visited yet [2]", nsId);
+    }
+#endif
+    // CBV
+    context.replacements = context.nameSpaces->entries[nsId]->replacements;
+    return context;
+}
+
 ///////////////////////
 // Merging Definitions
 ///////////////////////
 
+// builds a new preamble with the contents of the namespace appended
+// as normal definitions.
 static AstDefinitions *
-mergeNameSpaceImplToPreamble(AstDefinitions *preamble,
-                             AstNameSpaceImpl *nameSpaceImpl) {
+mergeNameSpaceToPreamble(AstDefinitions *preamble,
+                         AstNameSpaceImpl *nameSpaceImpl) {
     if (preamble == NULL) {
         return nameSpaceImpl->definitions;
     } else {
         AstDefinitions *rest =
-            mergeNameSpaceImplToPreamble(preamble->next, nameSpaceImpl);
+            mergeNameSpaceToPreamble(preamble->next, nameSpaceImpl);
         int save = PROTECT(rest);
         AstDefinitions *this =
             newAstDefinitions(CPI(preamble), preamble->definition, rest);
@@ -234,13 +256,14 @@ mergeNameSpaceImplToPreamble(AstDefinitions *preamble,
     }
 }
 
+// append all namespaces to (and as part of) the preamble
 static AstDefinitions *
 mergeNameSpacesToPreamble(AstDefinitions *preamble,
                           AstNameSpaceArray *nameSpaces) {
     int save = PROTECT(preamble);
     for (Index i = 0; i < nameSpaces->size; i++) {
         AstNameSpaceImpl *nsImpl = nameSpaces->entries[i];
-        preamble = mergeNameSpaceImplToPreamble(preamble, nsImpl);
+        preamble = mergeNameSpaceToPreamble(preamble, nsImpl);
         REPLACE_PROTECT(save, preamble);
     }
     UNPROTECT(save);
@@ -251,21 +274,28 @@ mergeNameSpacesToPreamble(AstDefinitions *preamble,
 // Visitor implementations
 ////////////////////////////
 
+/**
+ * Public API and main control.
+ *
+ * 1. Parse each namespace in dependency order, collecting a map
+ *    from symbol to fully qualified replacement for each definition
+ *    in the namespace as well as replacing lookups with previously
+ *    collected qualified symbols from previous namespaces.
+ * 2. Parse the body replacing lookups with qualified symbols.
+ * 3. Append namespaces to the preamble as normal definitions.
+ * 4. Return a new AstProg with the new preamble, new body and an
+ *    empty namespace array.
+ */
 AstProg *nsAstProg(AstProg *node) {
-    ENTER(nsAstProg);
     if (node == NULL) {
-        LEAVE(nsAstProg);
         return NULL;
     }
+    ENTER(nsAstProg);
     SymbolMap *replacements = newSymbolMap();
     int save = PROTECT(replacements);
     VisitorContext context = {.nameSpaces = node->nameSpaces,
                               .replacements = replacements};
     bool changed = false;
-    // preamble
-    AstDefinitions *new_preamble = nsAstDefinitions(node->preamble, context);
-    PROTECT(new_preamble);
-    changed = changed || (new_preamble != node->preamble);
     // namespaces
     AstNameSpaceArray *new_nameSpaces =
         nsAstNameSpaceArray(node->nameSpaces, context);
@@ -278,7 +308,8 @@ AstProg *nsAstProg(AstProg *node) {
     AstProg *result = node;
     // merge
     if (changed) {
-        new_preamble = mergeNameSpacesToPreamble(new_preamble, new_nameSpaces);
+        AstDefinitions *new_preamble =
+            mergeNameSpacesToPreamble(node->preamble, new_nameSpaces);
         PROTECT(new_preamble);
         new_nameSpaces = newAstNameSpaceArray();
         PROTECT(new_nameSpaces);
@@ -290,12 +321,10 @@ AstProg *nsAstProg(AstProg *node) {
 }
 
 static AstNest *nsAstNest(AstNest *node, VisitorContext context) {
-    ENTER(nsAstNest);
     if (node == NULL) {
-        LEAVE(nsAstNest);
         return NULL;
     }
-
+    ENTER(nsAstNest);
     bool changed = false;
     AstDefinitions *new_definitions =
         nsAstDefinitions(node->definitions, context);
@@ -305,12 +334,10 @@ static AstNest *nsAstNest(AstNest *node, VisitorContext context) {
         nsAstExpressions(node->expressions, context);
     PROTECT(new_expressions);
     changed = changed || (new_expressions != node->expressions);
-
     AstNest *result = node;
     if (changed) {
         result = newAstNest(CPI(node), new_definitions, new_expressions);
     }
-
     UNPROTECT(save);
     LEAVE(nsAstNest);
     return result;
@@ -318,11 +345,10 @@ static AstNest *nsAstNest(AstNest *node, VisitorContext context) {
 
 static AstNameSpaceImpl *nsAstNameSpaceImpl(AstNameSpaceImpl *node, int nsId,
                                             VisitorContext context) {
-    ENTER(nsAstNameSpaceImpl);
     if (node == NULL) {
-        LEAVE(nsAstNameSpaceImpl);
         return NULL;
     }
+    ENTER(nsAstNameSpaceImpl);
     bool changed = false;
     context.replacements = newSymbolMap();
     int save = PROTECT(context.replacements);
@@ -346,11 +372,10 @@ static AstNameSpaceImpl *nsAstNameSpaceImpl(AstNameSpaceImpl *node, int nsId,
 // symbols replaced.
 static AstDefinitions *nsAstDefinitions(AstDefinitions *node,
                                         VisitorContext context) {
-    ENTER(nsAstDefinitions);
     if (node == NULL) {
-        LEAVE(nsAstDefinitions);
         return NULL;
     }
+    ENTER(nsAstDefinitions);
     bool changed = false;
     AstDefinition *new_definition = nsAstDefinition(node->definition, context);
     int save = PROTECT(new_definition);
@@ -368,24 +393,20 @@ static AstDefinitions *nsAstDefinitions(AstDefinitions *node,
 }
 
 static AstDefine *nsAstDefine(AstDefine *node, VisitorContext context) {
-    ENTER(nsAstDefine);
     if (node == NULL) {
-        LEAVE(nsAstDefine);
         return NULL;
     }
-
+    ENTER(nsAstDefine);
     bool changed = false;
     AstExpression *new_expression = nsAstExpression(node->expression, context);
     int save = PROTECT(new_expression);
     changed = changed || (new_expression != node->expression);
-
     HashSymbol *new_symbol = nsSymbol(node->symbol, context);
     changed = changed || (new_symbol != node->symbol);
     AstDefine *result = node;
     if (changed) {
         result = newAstDefine(CPI(node), new_symbol, new_expression);
     }
-
     UNPROTECT(save);
     LEAVE(nsAstDefine);
     return result;
@@ -393,12 +414,10 @@ static AstDefine *nsAstDefine(AstDefine *node, VisitorContext context) {
 
 static AstMultiDefine *nsAstMultiDefine(AstMultiDefine *node,
                                         VisitorContext context) {
-    ENTER(nsAstMultiDefine);
     if (node == NULL) {
-        LEAVE(nsAstMultiDefine);
         return NULL;
     }
-
+    ENTER(nsAstMultiDefine);
     bool changed = false;
     AstSymbolList *new_symbols = nsAstSymbolList(node->symbols, context);
     int save = PROTECT(new_symbols);
@@ -406,12 +425,10 @@ static AstMultiDefine *nsAstMultiDefine(AstMultiDefine *node,
     AstExpression *new_expression = nsAstExpression(node->expression, context);
     PROTECT(new_expression);
     changed = changed || (new_expression != node->expression);
-
     AstMultiDefine *result = node;
     if (changed) {
         result = newAstMultiDefine(CPI(node), new_symbols, new_expression);
     }
-
     UNPROTECT(save);
     LEAVE(nsAstMultiDefine);
     return result;
@@ -419,11 +436,10 @@ static AstMultiDefine *nsAstMultiDefine(AstMultiDefine *node,
 
 static AstSymbolList *nsAstSymbolList(AstSymbolList *node,
                                       VisitorContext context) {
-    ENTER(nsAstSymbolList);
     if (node == NULL) {
-        LEAVE(nsAstSymbolList);
         return NULL;
     }
+    ENTER(nsAstSymbolList);
     bool changed = false;
     AstSymbolList *new_next = nsAstSymbolList(node->next, context);
     int save = PROTECT(new_next);
@@ -440,24 +456,20 @@ static AstSymbolList *nsAstSymbolList(AstSymbolList *node,
 }
 
 static AstAlias *nsAstAlias(AstAlias *node, VisitorContext context) {
-    ENTER(nsAstAlias);
     if (node == NULL) {
-        LEAVE(nsAstAlias);
         return NULL;
     }
-
+    ENTER(nsAstAlias);
     bool changed = false;
     AstType *new_type = nsAstType(node->type, context);
     int save = PROTECT(new_type);
     changed = changed || (new_type != node->type);
     HashSymbol *new_name = nsSymbol(node->name, context);
     changed = changed || (new_name != node->name);
-
     AstAlias *result = node;
     if (changed) {
         result = newAstAlias(CPI(node), new_name, new_type);
     }
-
     UNPROTECT(save);
     LEAVE(nsAstAlias);
     return result;
@@ -465,24 +477,20 @@ static AstAlias *nsAstAlias(AstAlias *node, VisitorContext context) {
 
 static AstExprAlias *nsAstExprAlias(AstExprAlias *node,
                                     VisitorContext context) {
-    ENTER(nsAstExprAlias);
     if (node == NULL) {
-        LEAVE(nsAstExprAlias);
         return NULL;
     }
-
+    ENTER(nsAstExprAlias);
     bool changed = false;
     AstExpression *new_value = nsAstExpression(node->value, context);
     int save = PROTECT(new_value);
     changed = changed || (new_value != node->value);
     HashSymbol *new_name = nsSymbol(node->name, context);
     changed = changed || (new_name != node->name);
-
     AstExprAlias *result = node;
     if (changed) {
         result = newAstExprAlias(CPI(node), new_name, new_value);
     }
-
     UNPROTECT(save);
     LEAVE(nsAstExprAlias);
     return result;
@@ -490,11 +498,10 @@ static AstExprAlias *nsAstExprAlias(AstExprAlias *node,
 
 static AstAnnotatedSymbol *nsAstAnnotatedSymbol(AstAnnotatedSymbol *node,
                                                 VisitorContext context) {
-    ENTER(nsAstAnnotatedSymbol);
     if (node == NULL) {
-        LEAVE(nsAstAnnotatedSymbol);
         return NULL;
     }
+    ENTER(nsAstAnnotatedSymbol);
     bool changed = false;
     AstExpression *new_originalImpl =
         nsAstExpression(node->originalImpl, context);
@@ -513,12 +520,10 @@ static AstAnnotatedSymbol *nsAstAnnotatedSymbol(AstAnnotatedSymbol *node,
 }
 
 static AstDefLazy *nsAstDefLazy(AstDefLazy *node, VisitorContext context) {
-    ENTER(nsAstDefLazy);
     if (node == NULL) {
-        LEAVE(nsAstDefLazy);
         return NULL;
     }
-
+    ENTER(nsAstDefLazy);
     bool changed = false;
     AstAltFunction *new_definition =
         nsAstAltFunction(node->definition, context);
@@ -526,24 +531,20 @@ static AstDefLazy *nsAstDefLazy(AstDefLazy *node, VisitorContext context) {
     changed = changed || (new_definition != node->definition);
     HashSymbol *new_name = nsSymbol(node->name, context);
     changed = changed || (new_name != node->name);
-
     AstDefLazy *result = node;
     if (changed) {
         result = newAstDefLazy(CPI(node), new_name, new_definition);
     }
-
     UNPROTECT(save);
     LEAVE(nsAstDefLazy);
     return result;
 }
 
 static AstTypeDef *nsAstTypeDef(AstTypeDef *node, VisitorContext context) {
-    ENTER(nsAstTypeDef);
     if (node == NULL) {
-        LEAVE(nsAstTypeDef);
         return NULL;
     }
-
+    ENTER(nsAstTypeDef);
     bool changed = false;
     AstTypeSig *new_typeSig = nsAstTypeSig(node->typeSig, context);
     int save = PROTECT(new_typeSig);
@@ -551,24 +552,20 @@ static AstTypeDef *nsAstTypeDef(AstTypeDef *node, VisitorContext context) {
     AstTypeBody *new_typeBody = nsAstTypeBody(node->typeBody, context);
     PROTECT(new_typeBody);
     changed = changed || (new_typeBody != node->typeBody);
-
     AstTypeDef *result = node;
     if (changed) {
         result = newAstTypeDef(CPI(node), new_typeSig, new_typeBody);
     }
-
     UNPROTECT(save);
     LEAVE(nsAstTypeDef);
     return result;
 }
 
 static AstTypeSig *nsAstTypeSig(AstTypeSig *node, VisitorContext context) {
-    ENTER(nsAstTypeSig);
     if (node == NULL) {
-        LEAVE(nsAstTypeSig);
         return NULL;
     }
-
+    ENTER(nsAstTypeSig);
     bool changed = false;
     AstTypeSymbols *new_typeSymbols =
         nsAstTypeSymbols(node->typeSymbols, context);
@@ -576,12 +573,10 @@ static AstTypeSig *nsAstTypeSig(AstTypeSig *node, VisitorContext context) {
     changed = changed || (new_typeSymbols != node->typeSymbols);
     HashSymbol *new_symbol = nsSymbol(node->symbol, context);
     changed = changed || (new_symbol != node->symbol);
-
     AstTypeSig *result = node;
     if (changed) {
         result = newAstTypeSig(CPI(node), new_symbol, new_typeSymbols);
     }
-
     UNPROTECT(save);
     LEAVE(nsAstTypeSig);
     return result;
@@ -589,36 +584,30 @@ static AstTypeSig *nsAstTypeSig(AstTypeSig *node, VisitorContext context) {
 
 static AstTypeSymbols *nsAstTypeSymbols(AstTypeSymbols *node,
                                         VisitorContext context) {
-    ENTER(nsAstTypeSymbols);
     if (node == NULL) {
-        LEAVE(nsAstTypeSymbols);
         return NULL;
     }
-
+    ENTER(nsAstTypeSymbols);
     bool changed = false;
     AstTypeSymbols *new_next = nsAstTypeSymbols(node->next, context);
     int save = PROTECT(new_next);
     changed = changed || (new_next != node->next);
     HashSymbol *new_typeSymbol = nsSymbol(node->typeSymbol, context);
     changed = changed || (new_typeSymbol != node->typeSymbol);
-
     AstTypeSymbols *result = node;
     if (changed) {
         result = newAstTypeSymbols(CPI(node), new_typeSymbol, new_next);
     }
-
     UNPROTECT(save);
     LEAVE(nsAstTypeSymbols);
     return result;
 }
 
 static AstTypeBody *nsAstTypeBody(AstTypeBody *node, VisitorContext context) {
-    ENTER(nsAstTypeBody);
     if (node == NULL) {
-        LEAVE(nsAstTypeBody);
         return NULL;
     }
-
+    ENTER(nsAstTypeBody);
     bool changed = false;
     AstTypeConstructor *new_typeConstructor =
         nsAstTypeConstructor(node->typeConstructor, context);
@@ -627,12 +616,10 @@ static AstTypeBody *nsAstTypeBody(AstTypeBody *node, VisitorContext context) {
     AstTypeBody *new_next = nsAstTypeBody(node->next, context);
     PROTECT(new_next);
     changed = changed || (new_next != node->next);
-
     AstTypeBody *result = node;
     if (changed) {
         result = newAstTypeBody(CPI(node), new_typeConstructor, new_next);
     }
-
     UNPROTECT(save);
     LEAVE(nsAstTypeBody);
     return result;
@@ -640,12 +627,10 @@ static AstTypeBody *nsAstTypeBody(AstTypeBody *node, VisitorContext context) {
 
 static AstTypeConstructor *nsAstTypeConstructor(AstTypeConstructor *node,
                                                 VisitorContext context) {
-    ENTER(nsAstTypeConstructor);
     if (node == NULL) {
-        LEAVE(nsAstTypeConstructor);
         return NULL;
     }
-
+    ENTER(nsAstTypeConstructor);
     bool changed = false;
     AstTypeConstructorArgs *new_args =
         nsAstTypeConstructorArgs(node->args, context);
@@ -653,12 +638,10 @@ static AstTypeConstructor *nsAstTypeConstructor(AstTypeConstructor *node,
     changed = changed || (new_args != node->args);
     HashSymbol *new_symbol = nsSymbol(node->symbol, context);
     changed = changed || (new_symbol != node->symbol);
-
     AstTypeConstructor *result = node;
     if (changed) {
         result = newAstTypeConstructor(CPI(node), new_symbol, new_args);
     }
-
     UNPROTECT(save);
     LEAVE(nsAstTypeConstructor);
     return result;
@@ -666,12 +649,10 @@ static AstTypeConstructor *nsAstTypeConstructor(AstTypeConstructor *node,
 
 static AstTypeFunction *nsAstTypeFunction(AstTypeFunction *node,
                                           VisitorContext context) {
-    ENTER(nsAstTypeFunction);
     if (node == NULL) {
-        LEAVE(nsAstTypeFunction);
         return NULL;
     }
-
+    ENTER(nsAstTypeFunction);
     bool changed = false;
     AstLookUpOrSymbol *new_symbol = nsAstLookUpOrSymbol(node->symbol, context);
     int save = PROTECT(new_symbol);
@@ -679,24 +660,20 @@ static AstTypeFunction *nsAstTypeFunction(AstTypeFunction *node,
     AstTypeList *new_typeList = nsAstTypeList(node->typeList, context);
     PROTECT(new_typeList);
     changed = changed || (new_typeList != node->typeList);
-
     AstTypeFunction *result = node;
     if (changed) {
         result = newAstTypeFunction(CPI(node), new_symbol, new_typeList);
     }
-
     UNPROTECT(save);
     LEAVE(nsAstTypeFunction);
     return result;
 }
 
 static AstTypeList *nsAstTypeList(AstTypeList *node, VisitorContext context) {
-    ENTER(nsAstTypeList);
     if (node == NULL) {
-        LEAVE(nsAstTypeList);
         return NULL;
     }
-
+    ENTER(nsAstTypeList);
     bool changed = false;
     AstType *new_type = nsAstType(node->type, context);
     int save = PROTECT(new_type);
@@ -704,24 +681,20 @@ static AstTypeList *nsAstTypeList(AstTypeList *node, VisitorContext context) {
     AstTypeList *new_next = nsAstTypeList(node->next, context);
     PROTECT(new_next);
     changed = changed || (new_next != node->next);
-
     AstTypeList *result = node;
     if (changed) {
         result = newAstTypeList(CPI(node), new_type, new_next);
     }
-
     UNPROTECT(save);
     LEAVE(nsAstTypeList);
     return result;
 }
 
 static AstTypeMap *nsAstTypeMap(AstTypeMap *node, VisitorContext context) {
-    ENTER(nsAstTypeMap);
     if (node == NULL) {
-        LEAVE(nsAstTypeMap);
         return NULL;
     }
-
+    ENTER(nsAstTypeMap);
     bool changed = false;
     AstType *new_type = nsAstType(node->type, context);
     int save = PROTECT(new_type);
@@ -729,24 +702,20 @@ static AstTypeMap *nsAstTypeMap(AstTypeMap *node, VisitorContext context) {
     AstTypeMap *new_next = nsAstTypeMap(node->next, context);
     PROTECT(new_next);
     changed = changed || (new_next != node->next);
-
     AstTypeMap *result = node;
     if (changed) {
         result = newAstTypeMap(CPI(node), node->key, new_type, new_next);
     }
-
     UNPROTECT(save);
     LEAVE(nsAstTypeMap);
     return result;
 }
 
 static AstType *nsAstType(AstType *node, VisitorContext context) {
-    ENTER(nsAstType);
     if (node == NULL) {
-        LEAVE(nsAstType);
         return NULL;
     }
-
+    ENTER(nsAstType);
     bool changed = false;
     AstTypeClause *new_typeClause = nsAstTypeClause(node->typeClause, context);
     int save = PROTECT(new_typeClause);
@@ -754,12 +723,10 @@ static AstType *nsAstType(AstType *node, VisitorContext context) {
     AstType *new_next = nsAstType(node->next, context);
     PROTECT(new_next);
     changed = changed || (new_next != node->next);
-
     AstType *result = node;
     if (changed) {
         result = newAstType(CPI(node), new_typeClause, new_next);
     }
-
     UNPROTECT(save);
     LEAVE(nsAstType);
     return result;
@@ -767,12 +734,10 @@ static AstType *nsAstType(AstType *node, VisitorContext context) {
 
 static AstCompositeFunction *nsAstCompositeFunction(AstCompositeFunction *node,
                                                     VisitorContext context) {
-    ENTER(nsAstCompositeFunction);
     if (node == NULL) {
-        LEAVE(nsAstCompositeFunction);
         return NULL;
     }
-
+    ENTER(nsAstCompositeFunction);
     bool changed = false;
     AstFunction *new_function = nsAstFunction(node->function, context);
     int save = PROTECT(new_function);
@@ -781,25 +746,21 @@ static AstCompositeFunction *nsAstCompositeFunction(AstCompositeFunction *node,
         nsAstCompositeFunction(node->next, context);
     PROTECT(new_next);
     changed = changed || (new_next != node->next);
-
     AstCompositeFunction *result = node;
     if (changed) {
         result = newAstCompositeFunction(CPI(node), new_function, new_next);
         result->unsafe = node->unsafe;
     }
-
     UNPROTECT(save);
     LEAVE(nsAstCompositeFunction);
     return result;
 }
 
 static AstFunction *nsAstFunction(AstFunction *node, VisitorContext context) {
-    ENTER(nsAstFunction);
     if (node == NULL) {
-        LEAVE(nsAstFunction);
         return NULL;
     }
-
+    ENTER(nsAstFunction);
     bool changed = false;
     AstFargList *new_argList = nsAstFargList(node->argList, context);
     int save = PROTECT(new_argList);
@@ -807,24 +768,20 @@ static AstFunction *nsAstFunction(AstFunction *node, VisitorContext context) {
     AstNest *new_nest = nsAstNest(node->nest, context);
     PROTECT(new_nest);
     changed = changed || (new_nest != node->nest);
-
     AstFunction *result = node;
     if (changed) {
         result = newAstFunction(CPI(node), new_argList, new_nest);
     }
-
     UNPROTECT(save);
     LEAVE(nsAstFunction);
     return result;
 }
 
 static AstFargList *nsAstFargList(AstFargList *node, VisitorContext context) {
-    ENTER(nsAstFargList);
     if (node == NULL) {
-        LEAVE(nsAstFargList);
         return NULL;
     }
-
+    ENTER(nsAstFargList);
     bool changed = false;
     AstFarg *new_arg = nsAstFarg(node->arg, context);
     int save = PROTECT(new_arg);
@@ -832,12 +789,10 @@ static AstFargList *nsAstFargList(AstFargList *node, VisitorContext context) {
     AstFargList *new_next = nsAstFargList(node->next, context);
     PROTECT(new_next);
     changed = changed || (new_next != node->next);
-
     AstFargList *result = node;
     if (changed) {
         result = newAstFargList(CPI(node), new_arg, new_next);
     }
-
     UNPROTECT(save);
     LEAVE(nsAstFargList);
     return result;
@@ -845,12 +800,10 @@ static AstFargList *nsAstFargList(AstFargList *node, VisitorContext context) {
 
 static AstTaggedArgList *nsAstTaggedArgList(AstTaggedArgList *node,
                                             VisitorContext context) {
-    ENTER(nsAstTaggedArgList);
     if (node == NULL) {
-        LEAVE(nsAstTaggedArgList);
         return NULL;
     }
-
+    ENTER(nsAstTaggedArgList);
     bool changed = false;
     AstFarg *new_arg = nsAstFarg(node->arg, context);
     int save = PROTECT(new_arg);
@@ -858,24 +811,20 @@ static AstTaggedArgList *nsAstTaggedArgList(AstTaggedArgList *node,
     AstTaggedArgList *new_next = nsAstTaggedArgList(node->next, context);
     PROTECT(new_next);
     changed = changed || (new_next != node->next);
-
     AstTaggedArgList *result = node;
     if (changed) {
         result = newAstTaggedArgList(CPI(node), node->tag, new_arg, new_next);
     }
-
     UNPROTECT(save);
     LEAVE(nsAstTaggedArgList);
     return result;
 }
 
 static AstAltArgs *nsAstAltArgs(AstAltArgs *node, VisitorContext context) {
-    ENTER(nsAstAltArgs);
     if (node == NULL) {
-        LEAVE(nsAstAltArgs);
         return NULL;
     }
-
+    ENTER(nsAstAltArgs);
     bool changed = false;
     AstFargList *new_argList = nsAstFargList(node->argList, context);
     int save = PROTECT(new_argList);
@@ -883,12 +832,10 @@ static AstAltArgs *nsAstAltArgs(AstAltArgs *node, VisitorContext context) {
     AstAltArgs *new_next = nsAstAltArgs(node->next, context);
     PROTECT(new_next);
     changed = changed || (new_next != node->next);
-
     AstAltArgs *result = node;
     if (changed) {
         result = newAstAltArgs(CPI(node), new_argList, new_next);
     }
-
     UNPROTECT(save);
     LEAVE(nsAstAltArgs);
     return result;
@@ -896,12 +843,10 @@ static AstAltArgs *nsAstAltArgs(AstAltArgs *node, VisitorContext context) {
 
 static AstAltFunction *nsAstAltFunction(AstAltFunction *node,
                                         VisitorContext context) {
-    ENTER(nsAstAltFunction);
     if (node == NULL) {
-        LEAVE(nsAstAltFunction);
         return NULL;
     }
-
+    ENTER(nsAstAltFunction);
     bool changed = false;
     AstAltArgs *new_altArgs = nsAstAltArgs(node->altArgs, context);
     int save = PROTECT(new_altArgs);
@@ -909,24 +854,20 @@ static AstAltFunction *nsAstAltFunction(AstAltFunction *node,
     AstNest *new_nest = nsAstNest(node->nest, context);
     PROTECT(new_nest);
     changed = changed || (new_nest != node->nest);
-
     AstAltFunction *result = node;
     if (changed) {
         result = newAstAltFunction(CPI(node), new_altArgs, new_nest);
     }
-
     UNPROTECT(save);
     LEAVE(nsAstAltFunction);
     return result;
 }
 
 static AstUnpack *nsAstUnpack(AstUnpack *node, VisitorContext context) {
-    ENTER(nsAstUnpack);
     if (node == NULL) {
-        LEAVE(nsAstUnpack);
         return NULL;
     }
-
+    ENTER(nsAstUnpack);
     bool changed = false;
     AstLookUpOrSymbol *new_symbol = nsAstLookUpOrSymbol(node->symbol, context);
     int save = PROTECT(new_symbol);
@@ -934,12 +875,10 @@ static AstUnpack *nsAstUnpack(AstUnpack *node, VisitorContext context) {
     AstFargList *new_argList = nsAstFargList(node->argList, context);
     PROTECT(new_argList);
     changed = changed || (new_argList != node->argList);
-
     AstUnpack *result = node;
     if (changed) {
         result = newAstUnpack(CPI(node), new_symbol, new_argList);
     }
-
     UNPROTECT(save);
     LEAVE(nsAstUnpack);
     return result;
@@ -947,12 +886,10 @@ static AstUnpack *nsAstUnpack(AstUnpack *node, VisitorContext context) {
 
 static AstUnpackStruct *nsAstUnpackStruct(AstUnpackStruct *node,
                                           VisitorContext context) {
-    ENTER(nsAstUnpackStruct);
     if (node == NULL) {
-        LEAVE(nsAstUnpackStruct);
         return NULL;
     }
-
+    ENTER(nsAstUnpackStruct);
     bool changed = false;
     AstLookUpOrSymbol *new_symbol = nsAstLookUpOrSymbol(node->symbol, context);
     int save = PROTECT(new_symbol);
@@ -960,48 +897,40 @@ static AstUnpackStruct *nsAstUnpackStruct(AstUnpackStruct *node,
     AstTaggedArgList *new_argList = nsAstTaggedArgList(node->argList, context);
     PROTECT(new_argList);
     changed = changed || (new_argList != node->argList);
-
     AstUnpackStruct *result = node;
     if (changed) {
         result = newAstUnpackStruct(CPI(node), new_symbol, new_argList);
     }
-
     UNPROTECT(save);
     LEAVE(nsAstUnpackStruct);
     return result;
 }
 
 static AstNamedArg *nsAstNamedArg(AstNamedArg *node, VisitorContext context) {
-    ENTER(nsAstNamedArg);
     if (node == NULL) {
-        LEAVE(nsAstNamedArg);
         return NULL;
     }
-
+    ENTER(nsAstNamedArg);
     bool changed = false;
     AstFarg *new_arg = nsAstFarg(node->arg, context);
     int save = PROTECT(new_arg);
     changed = changed || (new_arg != node->arg);
     HashSymbol *new_name = nsSymbol(node->name, context);
     changed = changed || (new_name != node->name);
-
     AstNamedArg *result = node;
     if (changed) {
         result = newAstNamedArg(CPI(node), new_name, new_arg);
     }
-
     UNPROTECT(save);
     LEAVE(nsAstNamedArg);
     return result;
 }
 
 static AstFunCall *nsAstFunCall(AstFunCall *node, VisitorContext context) {
-    ENTER(nsAstFunCall);
     if (node == NULL) {
-        LEAVE(nsAstFunCall);
         return NULL;
     }
-
+    ENTER(nsAstFunCall);
     bool changed = false;
     AstExpression *new_function = nsAstExpression(node->function, context);
     int save = PROTECT(new_function);
@@ -1009,13 +938,11 @@ static AstFunCall *nsAstFunCall(AstFunCall *node, VisitorContext context) {
     AstExpressions *new_arguments = nsAstExpressions(node->arguments, context);
     PROTECT(new_arguments);
     changed = changed || (new_arguments != node->arguments);
-
     AstFunCall *result = node;
     if (changed) {
         result = newAstFunCall(CPI(node), new_function, new_arguments);
         result->isBuiltin = node->isBuiltin;
     }
-
     UNPROTECT(save);
     LEAVE(nsAstFunCall);
     return result;
@@ -1023,12 +950,10 @@ static AstFunCall *nsAstFunCall(AstFunCall *node, VisitorContext context) {
 
 static AstExpressions *nsAstExpressions(AstExpressions *node,
                                         VisitorContext context) {
-    ENTER(nsAstExpressions);
     if (node == NULL) {
-        LEAVE(nsAstExpressions);
         return NULL;
     }
-
+    ENTER(nsAstExpressions);
     bool changed = false;
     AstExpression *new_expression = nsAstExpression(node->expression, context);
     int save = PROTECT(new_expression);
@@ -1036,62 +961,39 @@ static AstExpressions *nsAstExpressions(AstExpressions *node,
     AstExpressions *new_next = nsAstExpressions(node->next, context);
     PROTECT(new_next);
     changed = changed || (new_next != node->next);
-
     AstExpressions *result = node;
     if (changed) {
         result = newAstExpressions(CPI(node), new_expression, new_next);
     }
-
     UNPROTECT(save);
     LEAVE(nsAstExpressions);
     return result;
 }
 
-static VisitorContext switchVisitorContext(VisitorContext context, int nsId) {
-    VisitorContext new_context = context;
-#ifdef SAFETY_CHECKS
-    if (nsId < 0 || ((Index)nsId) >= context.nameSpaces->size) {
-        cant_happen("invalid namespace id %d", nsId);
-    }
-    if (context.nameSpaces->entries[nsId] == NULL) {
-        cant_happen("namespace id %d has not been visited yet [1]", nsId);
-    }
-    if (context.nameSpaces->entries[nsId]->replacements == NULL) {
-        cant_happen("namespace id %d has not been visited yet [2]", nsId);
-    }
-#endif
-    new_context.replacements = context.nameSpaces->entries[nsId]->replacements;
-    return new_context;
-}
-
 static HashSymbol *nsAstLookUpSymbol(AstLookUpSymbol *node,
                                      VisitorContext context) {
-    ENTER(nsAstLookUpSymbol);
     if (node == NULL) {
-        LEAVE(nsAstLookUpSymbol);
         return NULL;
     }
-    VisitorContext new_context = switchVisitorContext(context, node->nsId);
-    return nsSymbol(node->symbol, new_context);
+    ENTER(nsAstLookUpSymbol);
+    context = getNsReplacements(context, node->nsId);
+    return nsSymbol(node->symbol, context);
 }
 
 static AstExpression *nsAstLookUp(AstLookUp *node, VisitorContext context) {
-    ENTER(nsAstLookUp);
     if (node == NULL) {
-        LEAVE(nsAstLookUp);
         return NULL;
     }
-    VisitorContext new_context = switchVisitorContext(context, node->nsId);
-    return nsAstExpression(node->expression, new_context);
+    ENTER(nsAstLookUp);
+    context = getNsReplacements(context, node->nsId);
+    return nsAstExpression(node->expression, context);
 }
 
 static AstIff *nsAstIff(AstIff *node, VisitorContext context) {
-    ENTER(nsAstIff);
     if (node == NULL) {
-        LEAVE(nsAstIff);
         return NULL;
     }
-
+    ENTER(nsAstIff);
     bool changed = false;
     AstExpression *new_test = nsAstExpression(node->test, context);
     int save = PROTECT(new_test);
@@ -1102,69 +1004,57 @@ static AstIff *nsAstIff(AstIff *node, VisitorContext context) {
     AstNest *new_alternative = nsAstNest(node->alternative, context);
     PROTECT(new_alternative);
     changed = changed || (new_alternative != node->alternative);
-
     AstIff *result = node;
     if (changed) {
         result =
             newAstIff(CPI(node), new_test, new_consequent, new_alternative);
     }
-
     UNPROTECT(save);
     LEAVE(nsAstIff);
     return result;
 }
 
 static AstPrint *nsAstPrint(AstPrint *node, VisitorContext context) {
-    ENTER(nsAstPrint);
     if (node == NULL) {
-        LEAVE(nsAstPrint);
         return NULL;
     }
-
+    ENTER(nsAstPrint);
     bool changed = false;
     AstExpression *new_exp = nsAstExpression(node->exp, context);
     int save = PROTECT(new_exp);
     changed = changed || (new_exp != node->exp);
-
     AstPrint *result = node;
     if (changed) {
         result = newAstPrint(CPI(node), new_exp);
     }
-
     UNPROTECT(save);
     LEAVE(nsAstPrint);
     return result;
 }
 
 static AstTypeOf *nsAstTypeOf(AstTypeOf *node, VisitorContext context) {
-    ENTER(nsAstTypeOf);
     if (node == NULL) {
-        LEAVE(nsAstTypeOf);
         return NULL;
     }
-
+    ENTER(nsAstTypeOf);
     bool changed = false;
     AstExpression *new_exp = nsAstExpression(node->exp, context);
     int save = PROTECT(new_exp);
     changed = changed || (new_exp != node->exp);
-
     AstTypeOf *result = node;
     if (changed) {
         result = newAstTypeOf(CPI(node), new_exp);
     }
-
     UNPROTECT(save);
     LEAVE(nsAstTypeOf);
     return result;
 }
 
 static AstStruct *nsAstStruct(AstStruct *node, VisitorContext context) {
-    ENTER(nsAstStruct);
     if (node == NULL) {
-        LEAVE(nsAstStruct);
         return NULL;
     }
-
+    ENTER(nsAstStruct);
     bool changed = false;
     AstLookUpOrSymbol *new_symbol = nsAstLookUpOrSymbol(node->symbol, context);
     int save = PROTECT(new_symbol);
@@ -1173,12 +1063,10 @@ static AstStruct *nsAstStruct(AstStruct *node, VisitorContext context) {
         nsAstTaggedExpressions(node->expressions, context);
     PROTECT(new_expressions);
     changed = changed || (new_expressions != node->expressions);
-
     AstStruct *result = node;
     if (changed) {
         result = newAstStruct(CPI(node), new_symbol, new_expressions);
     }
-
     UNPROTECT(save);
     LEAVE(nsAstStruct);
     return result;
@@ -1186,12 +1074,10 @@ static AstStruct *nsAstStruct(AstStruct *node, VisitorContext context) {
 
 static AstTaggedExpressions *nsAstTaggedExpressions(AstTaggedExpressions *node,
                                                     VisitorContext context) {
-    ENTER(nsAstTaggedExpressions);
     if (node == NULL) {
-        LEAVE(nsAstTaggedExpressions);
         return NULL;
     }
-
+    ENTER(nsAstTaggedExpressions);
     bool changed = false;
     AstExpression *new_expression = nsAstExpression(node->expression, context);
     int save = PROTECT(new_expression);
@@ -1200,13 +1086,11 @@ static AstTaggedExpressions *nsAstTaggedExpressions(AstTaggedExpressions *node,
         nsAstTaggedExpressions(node->next, context);
     PROTECT(new_next);
     changed = changed || (new_next != node->next);
-
     AstTaggedExpressions *result = node;
     if (changed) {
         result = newAstTaggedExpressions(CPI(node), node->tag, new_expression,
                                          new_next);
     }
-
     UNPROTECT(save);
     LEAVE(nsAstTaggedExpressions);
     return result;
@@ -1214,15 +1098,12 @@ static AstTaggedExpressions *nsAstTaggedExpressions(AstTaggedExpressions *node,
 
 static AstTypeConstructorArgs *
 nsAstTypeConstructorArgs(AstTypeConstructorArgs *node, VisitorContext context) {
-    ENTER(nsAstTypeConstructorArgs);
     if (node == NULL) {
-        LEAVE(nsAstTypeConstructorArgs);
         return NULL;
     }
-
+    ENTER(nsAstTypeConstructorArgs);
     int save = PROTECT(NULL);
     AstTypeConstructorArgs *result = node;
-
     switch (node->type) {
     case AST_TYPECONSTRUCTORARGS_TYPE_LIST: {
         AstTypeList *variant = getAstTypeConstructorArgs_List(node);
@@ -1245,7 +1126,6 @@ nsAstTypeConstructorArgs(AstTypeConstructorArgs *node, VisitorContext context) {
     default:
         cant_happen("unrecognized AstTypeConstructorArgs type %d", node->type);
     }
-
     UNPROTECT(save);
     LEAVE(nsAstTypeConstructorArgs);
     return result;
@@ -1253,15 +1133,12 @@ nsAstTypeConstructorArgs(AstTypeConstructorArgs *node, VisitorContext context) {
 
 static AstLookUpOrSymbol *nsAstLookUpOrSymbol(AstLookUpOrSymbol *node,
                                               VisitorContext context) {
-    ENTER(nsAstLookUpOrSymbol);
     if (node == NULL) {
-        LEAVE(nsAstLookUpOrSymbol);
         return NULL;
     }
-
+    ENTER(nsAstLookUpOrSymbol);
     int save = PROTECT(NULL);
     AstLookUpOrSymbol *result = node;
-
     switch (node->type) {
     case AST_LOOKUPORSYMBOL_TYPE_SYMBOL: {
         HashSymbol *variant = getAstLookUpOrSymbol_Symbol(node);
@@ -1280,7 +1157,6 @@ static AstLookUpOrSymbol *nsAstLookUpOrSymbol(AstLookUpOrSymbol *node,
     default:
         cant_happen("unrecognized AstLookUpOrSymbol type %d", node->type);
     }
-
     UNPROTECT(save);
     LEAVE(nsAstLookUpOrSymbol);
     return result;
@@ -1288,15 +1164,12 @@ static AstLookUpOrSymbol *nsAstLookUpOrSymbol(AstLookUpOrSymbol *node,
 
 static AstDefinition *nsAstDefinition(AstDefinition *node,
                                       VisitorContext context) {
-    ENTER(nsAstDefinition);
     if (node == NULL) {
-        LEAVE(nsAstDefinition);
         return NULL;
     }
-
+    ENTER(nsAstDefinition);
     int save = PROTECT(NULL);
     AstDefinition *result = node;
-
     switch (node->type) {
     case AST_DEFINITION_TYPE_DEFINE: {
         AstDefine *variant = getAstDefinition_Define(node);
@@ -1352,7 +1225,6 @@ static AstDefinition *nsAstDefinition(AstDefinition *node,
     default:
         cant_happen("unrecognized AstDefinition type %d", node->type);
     }
-
     UNPROTECT(save);
     LEAVE(nsAstDefinition);
     return result;
@@ -1360,25 +1232,17 @@ static AstDefinition *nsAstDefinition(AstDefinition *node,
 
 static AstTypeClause *nsAstTypeClause(AstTypeClause *node,
                                       VisitorContext context) {
-    ENTER(nsAstTypeClause);
     if (node == NULL) {
-        LEAVE(nsAstTypeClause);
         return NULL;
     }
-
+    ENTER(nsAstTypeClause);
     int save = PROTECT(NULL);
     AstTypeClause *result = node;
-
     switch (node->type) {
-    case AST_TYPECLAUSE_TYPE_INTEGER: {
+    case AST_TYPECLAUSE_TYPE_INTEGER:
+    case AST_TYPECLAUSE_TYPE_CHARACTER:
+    case AST_TYPECLAUSE_TYPE_VAR:
         break;
-    }
-    case AST_TYPECLAUSE_TYPE_CHARACTER: {
-        break;
-    }
-    case AST_TYPECLAUSE_TYPE_VAR: {
-        break;
-    }
     case AST_TYPECLAUSE_TYPE_TYPEFUNCTION: {
         AstTypeFunction *variant = getAstTypeClause_TypeFunction(node);
         AstTypeFunction *new_variant = nsAstTypeFunction(variant, context);
@@ -1400,22 +1264,18 @@ static AstTypeClause *nsAstTypeClause(AstTypeClause *node,
     default:
         cant_happen("unrecognized AstTypeClause type %d", node->type);
     }
-
     UNPROTECT(save);
     LEAVE(nsAstTypeClause);
     return result;
 }
 
 static AstFarg *nsAstFarg(AstFarg *node, VisitorContext context) {
-    ENTER(nsAstFarg);
     if (node == NULL) {
-        LEAVE(nsAstFarg);
         return NULL;
     }
-
+    ENTER(nsAstFarg);
     int save = PROTECT(NULL);
     AstFarg *result = node;
-
     switch (node->type) {
     case AST_FARG_TYPE_WILDCARD: {
         break;
@@ -1461,12 +1321,9 @@ static AstFarg *nsAstFarg(AstFarg *node, VisitorContext context) {
         }
         break;
     }
-    case AST_FARG_TYPE_NUMBER: {
+    case AST_FARG_TYPE_NUMBER:
+    case AST_FARG_TYPE_CHARACTER:
         break;
-    }
-    case AST_FARG_TYPE_CHARACTER: {
-        break;
-    }
     case AST_FARG_TYPE_TUPLE: {
         AstFargList *variant = getAstFarg_Tuple(node);
         AstFargList *new_variant = nsAstFargList(variant, context);
@@ -1479,7 +1336,6 @@ static AstFarg *nsAstFarg(AstFarg *node, VisitorContext context) {
     default:
         cant_happen("unrecognized AstFarg type %d", node->type);
     }
-
     UNPROTECT(save);
     LEAVE(nsAstFarg);
     return result;
@@ -1487,22 +1343,19 @@ static AstFarg *nsAstFarg(AstFarg *node, VisitorContext context) {
 
 static AstExpression *nsAstExpression(AstExpression *node,
                                       VisitorContext context) {
-    ENTER(nsAstExpression);
     if (node == NULL) {
-        LEAVE(nsAstExpression);
         return NULL;
     }
-
+    ENTER(nsAstExpression);
     int save = PROTECT(NULL);
     AstExpression *result = node;
-
     switch (node->type) {
-    case AST_EXPRESSION_TYPE_BACK: {
+    case AST_EXPRESSION_TYPE_BACK:
+    case AST_EXPRESSION_TYPE_WILDCARD:
+    case AST_EXPRESSION_TYPE_NUMBER:
+    case AST_EXPRESSION_TYPE_CHARACTER:
+    case AST_EXPRESSION_TYPE_ENV:
         break;
-    }
-    case AST_EXPRESSION_TYPE_WILDCARD: {
-        break;
-    }
     case AST_EXPRESSION_TYPE_ALIAS: {
         AstExprAlias *variant = getAstExpression_Alias(node);
         AstExprAlias *new_variant = nsAstExprAlias(variant, context);
@@ -1540,12 +1393,6 @@ static AstExpression *nsAstExpression(AstExpression *node,
         HashSymbol *new_symbol =
             nsSymbol(getAstExpression_Symbol(node), context);
         result = newAstExpression_Symbol(CPI(node), new_symbol);
-        break;
-    }
-    case AST_EXPRESSION_TYPE_NUMBER: {
-        break;
-    }
-    case AST_EXPRESSION_TYPE_CHARACTER: {
         break;
     }
     case AST_EXPRESSION_TYPE_FUN: {
@@ -1603,9 +1450,6 @@ static AstExpression *nsAstExpression(AstExpression *node,
         }
         break;
     }
-    case AST_EXPRESSION_TYPE_ENV: {
-        break;
-    }
     case AST_EXPRESSION_TYPE_STRUCTURE: {
         AstStruct *variant = getAstExpression_Structure(node);
         AstStruct *new_variant = nsAstStruct(variant, context);
@@ -1636,7 +1480,6 @@ static AstExpression *nsAstExpression(AstExpression *node,
     default:
         cant_happen("unrecognized AstExpression type %d", node->type);
     }
-
     UNPROTECT(save);
     LEAVE(nsAstExpression);
     return result;
@@ -1644,18 +1487,18 @@ static AstExpression *nsAstExpression(AstExpression *node,
 
 static AstNameSpaceArray *nsAstNameSpaceArray(AstNameSpaceArray *node,
                                               VisitorContext context) {
-    ENTER(nsAstNameSpaceArray);
     if (node == NULL) {
-        LEAVE(nsAstNameSpaceArray);
         return NULL;
     }
+    ENTER(nsAstNameSpaceArray);
     bool changed = false;
     AstNameSpaceArray *result = newAstNameSpaceArray();
     int save = PROTECT(result);
+    // process in reverse order because lower ones depend on the higher
+    // ones
     for (Index i = 0; i < node->size; i++) {
         pushAstNameSpaceArray(result, NULL);
     }
-    // for (Index i = node->size; i > 0; i--) {
     for (Index i = 0; i < node->size; i++) {
         struct AstNameSpaceImpl *element = peeknAstNameSpaceArray(node, i);
         struct AstNameSpaceImpl *new_element =

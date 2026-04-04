@@ -62,8 +62,8 @@ void markValue(Value x);
 void markEnv(Env *x);
 void markVec(Vec *x);
 #ifdef DEBUG_STEP
-void dumpStack(Stack *stack);
-void dumpFrame(Frame *frame);
+void dumpStack(FILE *, Stack *stack);
+void dumpFrame(FILE *, Frame *frame);
 #endif
 
 SCharVec *listToUtf8(Value v);
