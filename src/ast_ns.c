@@ -23,8 +23,10 @@
 
 #include "ast.h"
 #include "ast_pp.h"
+#include "bigint.h"
 #include "memory.h"
 #include "symbol.h"
+#include "symbols.h"
 #include "utils.h"
 #include "utils_helper.h"
 
@@ -213,6 +215,106 @@ static void populateReplacementsFromDefinitions(AstDefinitions *definitions,
     }
 }
 
+///////////////////////////////////////////
+// currentFile definition and assertion
+// rewriting helpers
+///////////////////////////////////////////
+
+// Builds: fn currentFile() { "fileName" }
+// as a zero-arg function returning an AST cons-list of characters,
+// prepended to `next`. Using a function ensures lambda conversion
+// places it in the letrec (not let-star), preventing beta inlining.
+static AstDefinitions *makeCurrentFileDefinition(const char *fileName,
+                                                 ParserInfo PI,
+                                                 AstDefinitions *next) {
+    AstExpression *nil = newAstExpression_Symbol(PI, nilSymbol());
+    int save = PROTECT(nil);
+    AstFunCall *strList = newAstFunCall(PI, nil, NULL);
+    PROTECT(strList);
+
+    for (int i = strlen(fileName) - 1; i >= 0; i--) {
+        AstExpression *character = newAstExpression_Character(PI, fileName[i]);
+        int save2 = PROTECT(character);
+        AstExpression *cons = newAstExpression_Symbol(PI, consSymbol());
+        PROTECT(cons);
+        AstExpression *tail = newAstExpression_FunCall(PI, strList);
+        PROTECT(tail);
+        AstExpressions *rhs = newAstExpressions(PI, tail, NULL);
+        PROTECT(rhs);
+        AstExpressions *args = newAstExpressions(PI, character, rhs);
+        PROTECT(args);
+        strList = newAstFunCall(PI, cons, args);
+        REPLACE_PROTECT(save, strList);
+        UNPROTECT(save2);
+    }
+
+    AstExpression *stringExpr = newAstExpression_FunCall(PI, strList);
+    PROTECT(stringExpr);
+
+    // Wrap in a zero-arg function: fn () { "..." }
+    AstExpressions *bodyExpr = newAstExpressions(PI, stringExpr, NULL);
+    PROTECT(bodyExpr);
+    AstNest *nest = newAstNest(PI, NULL, bodyExpr);
+    PROTECT(nest);
+    AstFunction *func = newAstFunction(PI, NULL, nest);
+    PROTECT(func);
+    AstCompositeFunction *comp = newAstCompositeFunction(PI, func, NULL);
+    PROTECT(comp);
+    AstExpression *funExpr = newAstExpression_Fun(PI, comp);
+    PROTECT(funExpr);
+
+    AstDefinition *definition =
+        makeAstDefinition_Define(PI, currentFileSymbol(), funExpr);
+    PROTECT(definition);
+
+    AstDefinitions *result = newAstDefinitions(PI, definition, next);
+    UNPROTECT(save);
+    return result;
+}
+
+// Rewrites: assert(condition)
+// to:       __assert__(lineNo, currentFile, condition)
+// where currentFile is looked up via the namespace symbol map.
+static AstExpression *rewriteAssertionToCall(AstExpression *condition,
+                                             VisitorContext context) {
+    ParserInfo PI = CPI(condition);
+
+    // lineNo argument
+    MaybeBigInt *num = fakeBigInt(PI.lineNo, false);
+    int save = PROTECT(num);
+    AstExpression *lineNoExpr = newAstExpression_Number(PI, num);
+    PROTECT(lineNoExpr);
+
+    // currentFile() call (namespace-qualified, zero-arg function)
+    HashSymbol *fileVar = nsSymbol(currentFileSymbol(), context);
+    AstExpression *fileSymExpr = newAstExpression_Symbol(PI, fileVar);
+    PROTECT(fileSymExpr);
+    AstFunCall *fileCall = newAstFunCall(PI, fileSymExpr, NULL);
+    PROTECT(fileCall);
+    AstExpression *fileExpr = newAstExpression_FunCall(PI, fileCall);
+    PROTECT(fileExpr);
+
+    // build args: (lineNo, currentFile(), condition)
+    AstExpressions *arg3 = newAstExpressions(PI, condition, NULL);
+    PROTECT(arg3);
+    AstExpressions *arg2 = newAstExpressions(PI, fileExpr, arg3);
+    PROTECT(arg2);
+    AstExpressions *args = newAstExpressions(PI, lineNoExpr, arg2);
+    PROTECT(args);
+
+    // callee: __assert__
+    AstExpression *callee = newAstExpression_Symbol(PI, assertSymbol());
+    PROTECT(callee);
+
+    // function call
+    AstFunCall *funCall = newAstFunCall(PI, callee, args);
+    PROTECT(funCall);
+
+    AstExpression *result = newAstExpression_FunCall(PI, funCall);
+    UNPROTECT(save);
+    return result;
+}
+
 /////////////////////////////////////////
 // Switch to Appropriate NS Replacements
 /////////////////////////////////////////
@@ -295,26 +397,25 @@ AstProg *nsAstProg(AstProg *node) {
     int save = PROTECT(replacements);
     VisitorContext context = {.nameSpaces = node->nameSpaces,
                               .replacements = replacements};
-    bool changed = false;
     // namespaces
     AstNameSpaceArray *new_nameSpaces =
         nsAstNameSpaceArray(node->nameSpaces, context);
     PROTECT(new_nameSpaces);
-    changed = changed || (new_nameSpaces != node->nameSpaces);
     // body
     AstExpressions *new_body = nsAstExpressions(node->body, context);
     PROTECT(new_body);
-    changed = changed || (new_body != node->body);
-    AstProg *result = node;
-    // merge
-    if (changed) {
-        AstDefinitions *new_preamble =
-            mergeNameSpacesToPreamble(node->preamble, new_nameSpaces);
-        PROTECT(new_preamble);
-        new_nameSpaces = newAstNameSpaceArray();
-        PROTECT(new_nameSpaces);
-        result = newAstProg(CPI(node), new_preamble, new_nameSpaces, new_body);
-    }
+    // merge namespace definitions into the preamble
+    AstDefinitions *new_preamble =
+        mergeNameSpacesToPreamble(node->preamble, new_nameSpaces);
+    PROTECT(new_preamble);
+    // always prepend currentFile (tree shaking removes it if unused)
+    new_preamble =
+        makeCurrentFileDefinition(CPI(node).fileName, CPI(node), new_preamble);
+    PROTECT(new_preamble);
+    new_nameSpaces = newAstNameSpaceArray();
+    PROTECT(new_nameSpaces);
+    AstProg *result =
+        newAstProg(CPI(node), new_preamble, new_nameSpaces, new_body);
     UNPROTECT(save);
     LEAVE(nsAstProg);
     return result;
@@ -353,11 +454,17 @@ static AstNameSpaceImpl *nsAstNameSpaceImpl(AstNameSpaceImpl *node, int nsId,
     context.replacements = newSymbolMap();
     int save = PROTECT(context.replacements);
     context.nameSpaces->entries[nsId]->replacements = context.replacements;
-    populateReplacementsFromDefinitions(node->definitions, node->id, context);
-    AstDefinitions *new_definitions =
-        nsAstDefinitions(node->definitions, context);
+    AstDefinitions *defs = node->definitions;
+    if (defs != NULL) {
+        // Prepend currentFile definition so it enters the qualified symbol map
+        defs = makeCurrentFileDefinition(node->id->fileName->entries, CPI(node),
+                                         node->definitions);
+        PROTECT(defs);
+    }
+    populateReplacementsFromDefinitions(defs, node->id, context);
+    AstDefinitions *new_definitions = nsAstDefinitions(defs, context);
     PROTECT(new_definitions);
-    changed = changed || (new_definitions != node->definitions);
+    changed = changed || (new_definitions != defs);
     AstNameSpaceImpl *result = node;
     if (changed) {
         result = newAstNameSpaceImpl(CPI(node), node->id, new_definitions);
@@ -1462,10 +1569,8 @@ static AstExpression *nsAstExpression(AstExpression *node,
     case AST_EXPRESSION_TYPE_ASSERTION: {
         AstExpression *variant = getAstExpression_Assertion(node);
         AstExpression *new_variant = nsAstExpression(variant, context);
-        if (new_variant != variant) {
-            PROTECT(new_variant);
-            result = newAstExpression_Assertion(CPI(node), new_variant);
-        }
+        PROTECT(new_variant);
+        result = rewriteAssertionToCall(new_variant, context);
         break;
     }
     case AST_EXPRESSION_TYPE_ERROR: {
