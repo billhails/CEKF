@@ -342,6 +342,8 @@ static void markProtectionObj(Header *h) {
 #endif
 }
 
+void markObject(Header *object) { markObj(object, 0); }
+
 /**
  * Part of the mark phase of the mark-sweep garbage collection,
  * marks the given object by dispatching to the appropriate

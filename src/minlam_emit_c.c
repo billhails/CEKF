@@ -86,7 +86,7 @@ typedef struct EmitBuffer {
 static EmitBuffer *newEmitBuffer();
 static char *getEmitBuffer(EmitBuffer *);
 static void cleanEmitBuffer(void *);
-static void printEmitBuffer(void *);
+static void printEmitBuffer(FILE *, void *);
 
 static inline Opaque *newOpaque_EmitBuffer() {
     // no protection as buffer is manually cleaned
@@ -129,11 +129,13 @@ static void cleanEmitBuffer(void *buffer) {
     FREE(b, EmitBuffer);
 }
 
-static void printEmitBuffer(void *buffer) {
+static void printEmitBuffer(FILE *fp, void *buffer) {
     EmitBuffer *b = (EmitBuffer *)buffer;
-    fflush(b->fh);
-    if (b->buffer != NULL)
-        eprintf("%s", b->buffer);
+    if (b != NULL) {
+        fflush(b->fh);
+        if (b->buffer != NULL)
+            fprintf(fp, "%s", b->buffer);
+    }
 }
 
 ///////////////////
@@ -158,7 +160,7 @@ static EmitterContext *extendContextForLambda(HashSymbol *var,
     return new;
 }
 
-// only for atomics: sub-ctx must not allocate slots
+// only for atomics: sub-context must not allocate slots
 static EmitterContext *extendContext(EmitterContext *ctx, Opaque *body) {
     EmitterContext *new =
         newEmitterContext(ctx->currentBinding, body, ctx->builtIns, ctx->heap);
@@ -684,6 +686,8 @@ static EmitResult *emitSimpleExp(MinExp *exp, EmitterContext *ctx) {
         return result;
     }
     default:
+        ppMinExp(stderr, exp);
+        eprintf("\n");
         cant_happen("unhandled %s", minExpTypeName(exp->type));
     }
 }

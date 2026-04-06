@@ -78,6 +78,7 @@ typedef struct Header {
     bool keep;
 } Header;
 
+void markObject(struct Header *);
 void *reallocate(void *ptr, size_t oldSize, size_t newSize);
 Index protect(Header *obj);
 void replaceProtect(Index i, Header *obj);

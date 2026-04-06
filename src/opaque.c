@@ -31,7 +31,7 @@
  * @param print the print operation
  * @return the new opaque data structure
  */
-Opaque *newOpaque(void *data, OpaqueOperation clean, OpaqueOperation print,
+Opaque *newOpaque(void *data, OpaqueOperation clean, OpaquePrintOperation print,
                   OpaqueOperation mark) {
     Opaque *x = NEW(Opaque, OBJTYPE_OPAQUE);
     x->data = data;
@@ -77,7 +77,7 @@ void printOpaque(Opaque *x, int depth) {
     if (x == NULL)
         printf("<opaque:null>");
     else if (x->print)
-        x->print(x->data);
+        x->print(stdout, x->data);
     else
         printf("<opaque:%p>", x->data);
 }
@@ -87,7 +87,7 @@ void fprintOpaque(FILE *fp, Opaque *x, int depth) {
     if (x == NULL)
         fprintf(fp, "<opaque:null>");
     else if (x->print)
-        x->print(x->data);
+        x->print(fp, x->data);
     else
         fprintf(fp, "<opaque:%p>", x->data);
 }

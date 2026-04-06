@@ -9,6 +9,7 @@ IntMap --entries--> int
 SymbolMap --entries--> HashSymbol
 SymbolSetMap --entries--> SymbolSet
 BoolMap --entries--> bool
+ObjectMap --entries--> object
 FileId --stDev--> device
 FileId --stIno--> inode
 FileId --fileName--> SCharVec

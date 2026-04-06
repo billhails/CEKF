@@ -140,7 +140,7 @@ FN_BFILES=$(patsubst $(FNDIR)/%,$(TMPDIR)/%,$(patsubst %.fn,%.fnc,$(FN_FILES)))
 FN_OFILES=$(patsubst %.c,%.o,$(FN_CFILES))
 FN_BINARIES=$(patsubst %.o,%,$(FN_OFILES))
 
-TARGET_ARGS=--include=fn --flat-closure
+TARGET_ARGS=--include=fn
 
 $(TEST_FN_CFILES): $(TMPDIR)/%.c: $(TEST_FN_DIR)/%.fn $(TARGET) | $(TMPDIR)
 	$(TARGET) $(TARGET_ARGS) --target-c=$@~ $<  && mv $@~ $@
@@ -159,10 +159,10 @@ $(FN_BFILES): $(TMPDIR)/%.fnc: $(FNDIR)/%.fn $(TARGET) | $(TMPDIR)
 	$(TARGET) --binary-out=$@~ $<  && mv $@~ $@
 
 $(TEST_FN_SFILES): $(TMPDIR)/%.scm: $(TEST_FN_DIR)/%.fn $(TARGET) | $(TMPDIR)
-	$(TARGET) $(TARGET_ARGS) --dump-ir $<  > $@~ && mv $@~ $@
+	$(TARGET) $(TARGET_ARGS) --target-c --dump-inline-f $<  > $@~ && mv $@~ $@
 
 $(FN_SFILES): $(TMPDIR)/%.scm: $(FNDIR)/%.fn $(TARGET) | $(TMPDIR)
-	$(TARGET) $(TARGET_ARGS) --dump-ir $<  > $@~ && mv $@~ $@
+	$(TARGET) $(TARGET_ARGS) --target-c --dump-inline-f $<  > $@~ && mv $@~ $@
 
 $(FN_OFILES) $(TEST_FN_OFILES): %.o: %.c
 	$(LAXCC) $(INCLUDE_PATHS) -c $< -o $@

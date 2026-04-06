@@ -56,6 +56,7 @@
 #include "minlam_emit_c.h"
 #include "minlam_eta.h"
 #include "minlam_fold.h"
+#include "minlam_inline.h"
 #include "minlam_pp.h"
 #include "minlam_shake.h"
 #include "minlam_uncurry.h"
@@ -84,7 +85,8 @@ static int help_flag = 0;
 static int dumpIR = 0;
 static int ast_flag = 0;
 static int lambda_flag = 0;
-static int inline_flag = 0;
+static int inline_c_flag = 0;
+static int inline_f_flag = 0;
 static int parse_only_flag = 0;
 static int targetCFlag = 0;
 #ifdef UNIT_TESTS
@@ -182,8 +184,10 @@ static void usage(char *prog, int status) {
         "    --dump-desugared=<function> Display the intermediate code after "
         "desugaring.\n"
         "    --dump-fold              Display the IR after constant folding.\n"
-        "    --dump-inline            Display the intermediate code after "
-        "inlining.\n"
+        "    --dump-inline-c          Display the intermediate code after "
+        "constructor inlining.\n"
+        "    --dump-inline-f          Display the intermediate code after "
+        "function inlining.\n"
         "    -l\n"
         "    --dump-lambda            Display all the intermediate code.\n"
         "    -l<function>\n"
@@ -243,7 +247,8 @@ static int processArgs(int argc, char *argv[]) {
             {"dump-bytecode", no_argument, &dump_bytecode_flag, 1},
             {"exec", required_argument, 0, 'e'},
             {"help", no_argument, 0, 'h'},
-            {"dump-inline", no_argument, &inline_flag, 1},
+            {"dump-inline-c", no_argument, &inline_c_flag, 1},
+            {"dump-inline-f", no_argument, &inline_f_flag, 1},
             {"dump-curry", no_argument, &curry_flag, 1},
             {"dump-fold", no_argument, &fold_flag, 1},
             {"dump-uncurry", no_argument, &uncurry_flag, 1},
@@ -410,8 +415,6 @@ static LamExp *convertProg(AstProg *prog) {
     return exp;
 }
 
-static LamExp *inlineExp(LamExp *exp) __attribute__((unused));
-
 /**
  * Inline type constructors in a lambda expression.
  *
@@ -421,7 +424,7 @@ static LamExp *inlineExp(LamExp *exp) __attribute__((unused));
 static LamExp *inlineExp(LamExp *exp) {
     exp = inlineLamExp(exp);
     int save = PROTECT(exp);
-    if (inline_flag) {
+    if (inline_c_flag) {
         ppLamExp(stdout, exp);
         printf("\n");
         exit(0);
@@ -632,9 +635,6 @@ int main(int argc, char *argv[]) {
             exit(0);
         }
 
-        // if we move currying below this point we need to
-        // update the following steps to propagate the isBuiltin flag
-
         /////
         // β
         /////
@@ -742,6 +742,35 @@ int main(int argc, char *argv[]) {
                 eprintf("\n");
                 exit(0);
             }
+
+            ///////////////////////////////
+            // Inline Function Application
+            ///////////////////////////////
+            minExp = inlineMinExp(minExp);
+            REPLACE_PROTECT(save2, minExp);
+
+            if (inline_f_flag) {
+                ppMinExp(stdout, minExp);
+                exit(0);
+            }
+
+            /////
+            // β
+            /////
+            minExp = betaMinExp(minExp);
+            REPLACE_PROTECT(save2, minExp);
+
+            /////
+            // β
+            /////
+            minExp = betaMinExp(minExp);
+            REPLACE_PROTECT(save2, minExp);
+
+            /////
+            // η
+            /////
+            minExp = etaMinExp(minExp);
+            REPLACE_PROTECT(save2, minExp);
 
             ///////////////////
             // Closure Convert

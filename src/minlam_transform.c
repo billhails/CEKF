@@ -41,6 +41,7 @@ typedef struct Context {
 
 static MinExp *transformMinLam(MinLam *node, Context *c);
 static MinExp *transformMinApply(MinApply *node, Context *c);
+static MinExp *transformMinPrimApp(MinPrimApp *node, Context *c);
 static MinExp *transformMinIff(MinIff *node, Context *c);
 static MinExp *transformMinCond(MinCond *node, Context *c);
 static MinExp *transformMinMatch(MinMatch *node, Context *c);
@@ -132,8 +133,14 @@ static MinExprList *transformMinExprList(MinExprList *node, Context *c) {
 static MinExp *transformMinApply(MinApply *node, Context *c) {
     if (node == NULL)
         return NULL;
-    if (node->isBuiltin)
-        return newMinExp_Apply(CPI(node), node);
+    if (node->isBuiltin) {
+        MinExprList *new_args = transformMinExprList(node->args, c);
+        int save = PROTECT(new_args);
+        MinExp *result = makeMinExp_Apply(CPI(node), node->function, new_args);
+        getMinExp_Apply(result)->isBuiltin = true;
+        UNPROTECT(save);
+        return result;
+    }
     ENTER(transformMinApply);
     MinExp *new_function = apply(c, node->function);
     int save = PROTECT(new_function);
@@ -143,6 +150,23 @@ static MinExp *transformMinApply(MinApply *node, Context *c) {
     getMinExp_Apply(result)->isBuiltin = node->isBuiltin;
     UNPROTECT(save);
     LEAVE(transformMinApply);
+    return result;
+}
+
+//  (M.prim_app(op, exp1, exp2)) {
+//      M.prim_app(op, t(a, exp1), t(a, exp2))
+//  }
+static MinExp *transformMinPrimApp(MinPrimApp *node, Context *c) {
+    if (node == NULL)
+        return NULL;
+    ENTER(transformMinPrimApp);
+    MinExp *new_exp1 = apply(c, node->exp1);
+    int save = PROTECT(new_exp1);
+    MinExp *new_exp2 = apply(c, node->exp2);
+    PROTECT(new_exp2);
+    MinExp *result = makeMinExp_Prim(CPI(node), node->type, new_exp1, new_exp2);
+    UNPROTECT(save);
+    LEAVE(transformMinPrimApp);
     return result;
 }
 
@@ -377,8 +401,11 @@ static MinExp *transformMinExp(MinExp *node, Context *c) {
     case MINEXP_TYPE_BACK:
     case MINEXP_TYPE_BIGINTEGER:
     case MINEXP_TYPE_VAR:
-    case MINEXP_TYPE_PRIM:
     case MINEXP_TYPE_DONE:
+        break;
+
+    case MINEXP_TYPE_PRIM:
+        result = transformMinPrimApp(getMinExp_Prim(node), c);
         break;
 
     case MINEXP_TYPE_AMB:

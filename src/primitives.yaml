@@ -79,6 +79,13 @@ ptr:
         printf: "%p"
         valued: true
 
+object:
+    data:
+        cname: "struct Header *"
+        printf: "%p"
+        markFn: markObject
+        valued: true
+
 bool:
     data:
         cname: "bool"

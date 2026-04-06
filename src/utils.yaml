@@ -24,6 +24,7 @@ config:
       - ast_helper.h
       - opaque.h
       - sys/stat.h
+      - memory.h
 
 structs:
     FileId:
@@ -78,6 +79,12 @@ hashes:
     BoolMap:
         data:
             entries: bool
+
+    ObjectMap:
+        meta:
+            brief: Map from Symbol to any memory-managed object
+        data:
+            entries: object
 
 arrays:
     StringArray:
