@@ -53,6 +53,7 @@ static SymbolList *betaSymbolList(SymbolList *node, ObjectMap *context);
 static bool isAexp(MinExp *exp);
 static bool areAexpList(MinExprList *args);
 static bool isIdentityLam(MinLam *lam);
+static bool isCheapToDuplicate(MinExp *exp);
 static MinLam *betaMinLam(MinLam *node, ObjectMap *context);
 static MinExp *_betaMinExp(MinExp *node, ObjectMap *context);
 
@@ -124,6 +125,21 @@ static bool isIdentityLam(MinLam *lam) {
         return false;
     }
     return getMinExp_Var(lam->exp) == lam->args->symbol;
+}
+
+static bool isCheapToDuplicate(MinExp *exp) {
+    if (exp == NULL) {
+        return false;
+    }
+    switch (exp->type) {
+    case MINEXP_TYPE_VAR:
+    case MINEXP_TYPE_STDINT:
+    case MINEXP_TYPE_BIGINTEGER:
+    case MINEXP_TYPE_CHARACTER:
+        return true;
+    default:
+        return false;
+    }
 }
 
 //////////////////////////
@@ -304,13 +320,20 @@ static MinExp *betaMinApplyLambda(MinLam *lam, MinExprList *aargs,
     PROTECT(fargset);
     IntMap *counts = countFreeOccurences(lam->exp, fargset);
     PROTECT(counts);
-    int count = 0;
-    Index i = 0;
-    while (iterateIntMap(counts, &i, &count)) {
-        if (count > 1) {
+    SymbolList *formal = fargs;
+    cur = aargs;
+    for (int i = 0; i < substitutions; i++) {
+        int count = 0;
+        if (formal == NULL || cur == NULL) {
+            cant_happen("missing formal/actual during beta reduction");
+        }
+        if (getIntMap(counts, formal->symbol, &count) && count > 1 &&
+            !isCheapToDuplicate(cur->exp)) {
             UNPROTECT(save);
             return NULL;
         }
+        formal = formal->next;
+        cur = cur->next;
     }
     MinExp *res = NULL;
     if (num_fargs < num_aargs) {

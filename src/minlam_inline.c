@@ -22,6 +22,7 @@
 #include "minlam_inline.h"
 #include "memory.h"
 #include "minlam_helper.h"
+#include "minlam_inSafe.h"
 #include "minlam_isSimple.h"
 #include "minlam_pp.h"
 #include "minlam_size.h"
@@ -329,9 +330,11 @@ static MinLetRec *inlineMinLetRec(MinLetRec *node) {
             continue;
 
         bool isSimple = simpleMinExp(body);
+        bool isSafe = inSafeMinExp(body);
         eprintf("%s is%s simple\n", f->name, isSimple ? "" : " not");
+        eprintf("%s is%s inline-safe\n", f->name, isSafe ? "" : " not");
 
-        if (!isSimple)
+        if (!isSimple && !isSafe)
             continue;
 
         // add to our list

@@ -713,6 +713,18 @@ int main(int argc, char *argv[]) {
             minExp = betaEtaFixedPoint(minExp);
             REPLACE_PROTECT(save2, minExp);
 
+            /////////
+            // Shake
+            /////////
+            minExp = shakeMinExp(minExp);
+            REPLACE_PROTECT(save2, minExp);
+
+            /////////
+            // β - η
+            /////////
+            minExp = betaEtaFixedPoint(minExp);
+            REPLACE_PROTECT(save2, minExp);
+
             if (inline_f_flag) {
                 ppMinExp(stdout, minExp);
                 exit(0);
@@ -721,12 +733,6 @@ int main(int argc, char *argv[]) {
 #ifdef SAFETY_CHECKS
             checkMinExp(minExp, builtIns);
 #endif
-
-            /////////
-            // Shake
-            /////////
-            minExp = shakeMinExp(minExp);
-            REPLACE_PROTECT(save2, minExp);
 
             ///////////////////
             // Closure Convert

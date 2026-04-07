@@ -996,6 +996,7 @@ static void emitMinIff(MinIff *node, EmitterContext *ctx) {
 static void emitMinCond(MinCond *node, EmitterContext *ctx) {
     EMITLOC("emitMinCond", node, ctx);
     EmitResult *cond = emitSimpleExp(node->value, ctx);
+    int save = PROTECT(cond);
     if (node->cases->type == MINCONDCASES_TYPE_INTEGERS) {
         const char *condText = resultText(cond, ctx);
         releaseSlot(cond, ctx);
@@ -1008,6 +1009,7 @@ static void emitMinCond(MinCond *node, EmitterContext *ctx) {
         emitMinCondCases(node->cases, ctx);
         fprintf(FH(ctx), "}\n");
     }
+    UNPROTECT(save);
 }
 
 static void emitMinCondCases(MinCondCases *node, EmitterContext *ctx) {
