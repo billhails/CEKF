@@ -49,6 +49,7 @@
 #include "minlam_amb.h"
 #include "minlam_annotate.h"
 #include "minlam_beta.h"
+#include "minlam_check.h"
 #include "minlam_closureConvert.h"
 #include "minlam_cps.h"
 #include "minlam_cpsTrampoline.h"
@@ -393,81 +394,6 @@ static AstProg *parseString(char *string) {
 }
 
 /**
- * Convert an AST program into a lambda expression.
- *
- * @param prog the AST program
- * @return the lambda expression
- */
-static LamExp *convertProg(AstProg *prog) {
-    LamExp *exp = lamConvertProg(prog);
-    int save = PROTECT(exp);
-    if (hadErrors()) {
-        exit(1);
-    }
-    exp = lamPerformSimplifications(exp);
-    REPLACE_PROTECT(save, exp);
-    if (lambda_flag) {
-        ppLamExp(stdout, exp);
-        printf("\n");
-        exit(0);
-    }
-    UNPROTECT(save);
-    return exp;
-}
-
-/**
- * Inline type constructors in a lambda expression.
- *
- * @param exp the lambda expression
- * @return the inlined lambda expression
- */
-static LamExp *inlineExp(LamExp *exp) {
-    exp = inlineLamExp(exp);
-    int save = PROTECT(exp);
-    if (inline_c_flag) {
-        ppLamExp(stdout, exp);
-        printf("\n");
-        exit(0);
-    }
-    UNPROTECT(save);
-    return exp;
-}
-
-/**
- * Type check a lambda expression.
- *
- * @param exp the lambda expression
- * @param builtIns the built-in functions
- */
-static void typeCheck(LamExp *exp, BuiltIns *builtIns) {
-    TcEnv *env = tc_init(builtIns);
-    int save = PROTECT(env);
-    TcType *res __attribute__((unused)) = tc_analyze(exp, env);
-    if (hadErrors()) {
-        exit(1);
-    }
-#ifdef DEBUG_TC
-    ppTcType(stderr, res);
-    eprintf("\n");
-#endif
-    UNPROTECT(save);
-}
-
-/**
- * Annotate an ANF expression, adding location information for symbols
- *
- * @param anfExp the ANF expression
- * @param builtIns the built-in functions
- */
-static void annotate(AnfExp *anfExp, BuiltIns *builtIns) {
-    annotateAnf(anfExp, builtIns);
-#ifdef DEBUG_ANF
-    ppAnfExp(stderr, anfExp);
-    eprintf("\n");
-#endif
-}
-
-/**
  * Generate byte codes from an ANF expression.
  *
  * @param anfExp the ANF expression
@@ -579,16 +505,45 @@ int main(int argc, char *argv[]) {
         /////////////////////
         // Lambda Conversion
         /////////////////////
-        LamExp *exp = convertProg(prog);
+        LamExp *exp = lamConvertProg(prog);
         REPLACE_PROTECT(save2, exp);
+        if (hadErrors()) {
+            exit(1);
+        }
 
-        typeCheck(exp, builtIns);
+        /////////////////////////
+        // Lambda Simplification
+        /////////////////////////
+        exp = lamPerformSimplifications(exp);
+        REPLACE_PROTECT(save, exp);
+        if (lambda_flag) {
+            ppLamExp(stdout, exp);
+            printf("\n");
+            exit(0);
+        }
+
+        /////////////////
+        // Type Checking
+        /////////////////
+        TcEnv *env = tc_init(builtIns);
+        int save3 = PROTECT(env);
+        (void)tc_analyze(exp, env);
+        if (hadErrors()) {
+            exit(1);
+        }
+        UNPROTECT(save3);
 
         ////////////////////////
         // constructor inlining
         ////////////////////////
-        exp = inlineExp(exp);
+        exp = inlineLamExp(exp);
         REPLACE_PROTECT(save2, exp);
+
+        if (inline_c_flag) {
+            ppLamExp(stdout, exp);
+            printf("\n");
+            exit(0);
+        }
 
 #if 0
         // forceGcFlag = true;
@@ -610,6 +565,10 @@ int main(int argc, char *argv[]) {
             eprintf("\n");
             exit(0);
         }
+
+#ifdef SAFETY_CHECKS
+        checkMinExp(minExp, builtIns);
+#endif
 
         /////
         // ɑ
@@ -749,10 +708,9 @@ int main(int argc, char *argv[]) {
             minExp = inlineMinExp(minExp);
             REPLACE_PROTECT(save2, minExp);
 
-            if (inline_f_flag) {
-                ppMinExp(stdout, minExp);
-                exit(0);
-            }
+#ifdef SAFETY_CHECKS
+            checkMinExp(minExp, builtIns);
+#endif
 
             /////
             // β
@@ -771,6 +729,17 @@ int main(int argc, char *argv[]) {
             /////
             minExp = etaMinExp(minExp);
             REPLACE_PROTECT(save2, minExp);
+
+            /////////
+            // Shake
+            /////////
+            minExp = shakeMinExp(minExp);
+            REPLACE_PROTECT(save2, minExp);
+
+            if (inline_f_flag) {
+                ppMinExp(stdout, minExp);
+                exit(0);
+            }
 
             ///////////////////
             // Closure Convert
@@ -822,7 +791,7 @@ int main(int argc, char *argv[]) {
         AnfExp *anfExp = anfNormalize(minExp);
         REPLACE_PROTECT(save2, anfExp);
 
-        annotate(anfExp, builtIns);
+        annotateAnf(anfExp, builtIns);
 
         if (dumpIR) {
             ppAnfExp(stdout, anfExp);

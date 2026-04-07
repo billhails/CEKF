@@ -33,7 +33,7 @@
 #include "debugging_off.h"
 #endif
 
-#define INLINE_SIZE_LIMIT 30
+#define INLINE_SIZE_LIMIT 40
 
 static MinLam *inlineMinLam(MinLam *);
 static MinAnnotatedVar *inlineMinAnnotatedVar(MinAnnotatedVar *);
@@ -335,9 +335,9 @@ static MinLetRec *inlineMinLetRec(MinLetRec *node) {
             continue;
 
         // add to our list
-#ifdef INLINE_RECURSIVE
         body = copyMinExp(body);
         int save2 = PROTECT(body);
+#ifdef INLINE_RECURSIVE
         body = inlineMinExp(body);
         PROTECT(body);
         size = sizeMinExp(body);
@@ -349,9 +349,7 @@ static MinLetRec *inlineMinLetRec(MinLetRec *node) {
             eprintf("\n");
             setMinExpTable(replacements, f, body);
         }
-#ifdef INLINE_RECURSIVE
         UNPROTECT(save2);
-#endif
     }
 
     if (countMinExpTable(replacements) > 0) {

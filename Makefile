@@ -140,7 +140,7 @@ FN_BFILES=$(patsubst $(FNDIR)/%,$(TMPDIR)/%,$(patsubst %.fn,%.fnc,$(FN_FILES)))
 FN_OFILES=$(patsubst %.c,%.o,$(FN_CFILES))
 FN_BINARIES=$(patsubst %.o,%,$(FN_OFILES))
 
-TARGET_ARGS=--include=fn
+TARGET_ARGS=--include=fn --flat-closure
 
 $(TEST_FN_CFILES): $(TMPDIR)/%.c: $(TEST_FN_DIR)/%.fn $(TARGET) | $(TMPDIR)
 	$(TARGET) $(TARGET_ARGS) --target-c=$@~ $<  && mv $@~ $@

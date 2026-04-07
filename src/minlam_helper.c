@@ -163,3 +163,37 @@ bool isAtomicMinExp(MinExp *exp) {
         cant_happen("unrecognised MinExp %s", minExpTypeName(exp->type));
     }
 }
+
+IntMap *newIntMapFromSymbolList(SymbolList *list) {
+    IntMap *map = newIntMap();
+    int save = PROTECT(map);
+    int i = 0;
+    while (list != NULL) {
+        setIntMap(map, list->symbol, i);
+        i++;
+        list = list->next;
+    }
+    UNPROTECT(save);
+    return map;
+}
+
+IntMap *extendIntMapWithBindings(IntMap *context, MinBindings *bindings) {
+    IntMap *map = newIntMap();
+    int save = PROTECT(map);
+    // copy existing context
+    HashSymbol *key = NULL;
+    Index idx = 0;
+    Integer val = 0;
+    while ((key = iterateIntMap(context, &idx, &val)) != NULL) {
+        setIntMap(map, key, val);
+    }
+    // add bindings starting at next position
+    int i = (int)countIntMap(context);
+    while (bindings != NULL) {
+        setIntMap(map, bindings->var, i);
+        i++;
+        bindings = bindings->next;
+    }
+    UNPROTECT(save);
+    return map;
+}

@@ -19,10 +19,10 @@
  * Generated from src/minlam.yaml by tools/generate.py
  */
 
+#include "minlam_beta.h"
 #include "memory.h"
 #include "minlam.h"
-
-#include "minlam_beta.h"
+#include "minlam_cfo.h"
 #include "minlam_pp.h"
 #include "minlam_subst.h"
 #include "symbol.h"
@@ -57,38 +57,6 @@ static MinLam *betaMinLam(MinLam *node, ObjectMap *context);
 static MinExp *_betaMinExp(MinExp *node, ObjectMap *context);
 
 char *beta_conversion_function = NULL;
-
-#ifdef USE_BETA_CACHE
-static void store(MinExp *old, MinExp *new, ObjectMap *context) {
-    char buf[128];
-    sprintf(buf, "#%p", old);
-    HashSymbol *id = newSymbol(buf);
-    MinExp *existing = NULL;
-    if (getObjectMap(context, id, (Header **)&existing)) {
-        if (existing != new)
-            cant_happen("conflicting results");
-    }
-    SET_OBJECTMAP(context, id, new);
-}
-
-static MinExp *retrieve(MinExp *old, ObjectMap *context) {
-    if (old == NULL)
-        return NULL;
-    char buf[128];
-    sprintf(buf, "#%p", old);
-    HashSymbol *id = newSymbol(buf);
-    Header *value = NULL;
-    getObjectMap(context, id, &value);
-    return (MinExp *)value;
-}
-
-#define STORE store
-#define RETRIEVE retrieve
-
-#else
-#define STORE(a, b, c)
-#define RETRIEVE(a, b) NULL
-#endif
 
 static int curryDepth(MinExp *exp) {
     int depth = 0;
@@ -228,7 +196,7 @@ static MinExp *betaMinOverApply(MinExp *body, SymbolList *fargs,
                                 MinExprList *aargs, bool isBuiltin,
                                 ObjectMap *context) {
     // implicitly creates the short list [f1/a1]
-    MinExp *result = RETRIEVE(body, context);
+    MinExp *result = NULL;
     if (result)
         return result;
     MinExpTable *table = makeSubstitutionTable(fargs, aargs);
@@ -243,7 +211,6 @@ static MinExp *betaMinOverApply(MinExp *body, SymbolList *fargs,
     PROTECT(result);
     result = _betaMinExp(result, context);
     PROTECT(result);
-    STORE(body, result, context);
     UNPROTECT(save);
     return result;
 }
@@ -253,7 +220,7 @@ static MinExp *betaMinOverApply(MinExp *body, SymbolList *fargs,
 static MinExp *betaMinUnderApply(MinExp *body, SymbolList *fargs,
                                  MinExprList *aargs, ObjectMap *context) {
     int save = PROTECT(context);
-    MinExp *result = RETRIEVE(body, context);
+    MinExp *result = NULL;
     if (result)
         return result;
     MinExpTable *table = makeSubstitutionTable(fargs, aargs);
@@ -266,7 +233,6 @@ static MinExp *betaMinUnderApply(MinExp *body, SymbolList *fargs,
     }
     result = makeMinExp_Lam(CPI(result), fargs, result);
     PROTECT(result);
-    STORE(body, result, context);
     UNPROTECT(save);
     return result;
 }
@@ -275,7 +241,7 @@ static MinExp *betaMinUnderApply(MinExp *body, SymbolList *fargs,
 // ((λ (f1 f2) body) a1 a2) => reduce(body[f1/a1, f2/a2])
 static MinExp *betaMinSimpleApply(MinExp *body, SymbolList *fargs,
                                   MinExprList *aargs, ObjectMap *context) {
-    MinExp *result = RETRIEVE(body, context);
+    MinExp *result = NULL;
     if (result)
         return result;
     int save = PROTECT(context);
@@ -285,7 +251,6 @@ static MinExp *betaMinSimpleApply(MinExp *body, SymbolList *fargs,
     PROTECT(result);
     result = _betaMinExp(result, context);
     PROTECT(result);
-    STORE(body, result, context);
     UNPROTECT(save);
     return result;
 }
@@ -334,6 +299,18 @@ static MinExp *betaMinApplyLambda(MinLam *lam, MinExprList *aargs,
             return NULL;
         }
         cur = cur->next;
+    }
+    SymbolSet *fargset = symbolListToSet(fargs);
+    PROTECT(fargset);
+    IntMap *counts = countFreeOccurences(lam->exp, fargset);
+    PROTECT(counts);
+    int count = 0;
+    Index i = 0;
+    while (iterateIntMap(counts, &i, &count)) {
+        if (count > 1) {
+            UNPROTECT(save);
+            return NULL;
+        }
     }
     MinExp *res = NULL;
     if (num_fargs < num_aargs) {
@@ -610,10 +587,7 @@ static MinExp *_betaMinExp(MinExp *node, ObjectMap *context) {
     if (node == NULL)
         return NULL;
     ENTER(_betaMinExp);
-    MinExp *result = RETRIEVE(node, context);
-    if (result)
-        return result;
-    result = node;
+    MinExp *result = node;
     int save = PROTECT(context);
     switch (node->type) {
     case MINEXP_TYPE_AMB: {
@@ -720,7 +694,6 @@ static MinExp *_betaMinExp(MinExp *node, ObjectMap *context) {
     default:
         cant_happen("unrecognized MinExp type %s", minExpTypeName(node->type));
     }
-    STORE(node, result, context);
     UNPROTECT(save);
     LEAVE(_betaMinExp);
     return result;

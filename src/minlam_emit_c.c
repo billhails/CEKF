@@ -882,6 +882,10 @@ static void emitApplyBuiltin(MinApply *node, EmitterContext *ctx) {
     EmitResult *env = emitExtractFromClosure(k, 1, ctx);
     PROTECT(env);
     pushResultArray(targetArgs, env);
+
+    EmitResult *target = emitExtractFromClosure(k, 0, ctx);
+    PROTECT(target);
+
     releaseSlot(k, ctx);
 
     // (env result)
@@ -897,9 +901,6 @@ static void emitApplyBuiltin(MinApply *node, EmitterContext *ctx) {
     EmitResult *f = emitSimpleExp(continuations->exp, ctx);
     PROTECT(f);
     pushResultArray(targetArgs, f);
-
-    EmitResult *target = emitExtractFromClosure(k, 0, ctx);
-    PROTECT(target);
 
     // (k env result f)
     emitGoto(target, targetArgs, ctx);

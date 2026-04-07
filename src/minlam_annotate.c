@@ -19,11 +19,10 @@
  * Generated from src/minlam.yaml by tools/generate.py
  */
 
-#include "memory.h"
-#include "minlam.h"
-#include "utils.h"
-
 #include "minlam_annotate.h"
+#include "memory.h"
+#include "minlam_helper.h"
+#include "utils.h"
 
 #ifdef DEBUG_MINLAM_ANNOTATE
 #include "debugging_on.h"
@@ -49,60 +48,17 @@ static MinAmb *annotateMinAmb(MinAmb *node, IntMap *context);
 static MinExp *annotateMinExp(MinExp *node, IntMap *context);
 static MinCondCases *annotateMinCondCases(MinCondCases *node, IntMap *context);
 
-///////////
-// Helpers
-///////////
-
-static IntMap *newIntMapFromSymbolList(SymbolList *list) {
-    IntMap *map = newIntMap();
-    int save = PROTECT(map);
-    int i = 0;
-    while (list != NULL) {
-        setIntMap(map, list->symbol, i);
-        i++;
-        list = list->next;
-    }
-    UNPROTECT(save);
-    return map;
-}
-
-// Copy existing context and add bindings starting at next available position.
-// After closure conversion, letrec bodies can reference enclosing lambda
-// params, so we must extend (not replace) the context.
-static IntMap *extendIntMapWithBindings(IntMap *context,
-                                        MinBindings *bindings) {
-    IntMap *map = newIntMap();
-    int save = PROTECT(map);
-    // copy existing context
-    HashSymbol *key = NULL;
-    Index idx = 0;
-    Integer val = 0;
-    while ((key = iterateIntMap(context, &idx, &val)) != NULL) {
-        setIntMap(map, key, val);
-    }
-    // add bindings starting at next position
-    int i = (int)countIntMap(context);
-    while (bindings != NULL) {
-        setIntMap(map, bindings->var, i);
-        i++;
-        bindings = bindings->next;
-    }
-    UNPROTECT(save);
-    return map;
-}
-
 ///////////////////////////
 // Visitor implementations
 ///////////////////////////
 
 static MinLam *annotateMinLam(MinLam *node,
                               IntMap *context __attribute__((unused))) {
-    ENTER(annotateMinLam);
     if (node == NULL) {
-        LEAVE(annotateMinLam);
         return NULL;
     }
 
+    ENTER(annotateMinLam);
     IntMap *newContext = newIntMapFromSymbolList(node->args);
     int save = PROTECT(newContext);
     bool changed = false;
