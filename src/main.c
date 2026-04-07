@@ -431,6 +431,22 @@ static void report(char *prog, clock_t begin, clock_t compiled, clock_t end) {
     }
 }
 
+static MinExp *betaEtaFixedPoint(MinExp *node) {
+    int save = PROTECT(node);
+    int save2 = PROTECT(node);
+    MinExp *res = NULL;
+    while (res != node) {
+        res = node;
+        REPLACE_PROTECT(save, res);
+        node = betaMinExp(res);
+        REPLACE_PROTECT(save2, node);
+        node = etaMinExp(node);
+        REPLACE_PROTECT(save2, node);
+    }
+    UNPROTECT(save);
+    return node;
+}
+
 /**
  * Main entry point for the program.
  *
@@ -566,9 +582,11 @@ int main(int argc, char *argv[]) {
             exit(0);
         }
 
-#ifdef SAFETY_CHECKS
-        checkMinExp(minExp, builtIns);
-#endif
+        /////////
+        // Shake
+        /////////
+        minExp = shakeMinExp(minExp);
+        REPLACE_PROTECT(save2, minExp);
 
         /////
         // ɑ
@@ -594,22 +612,10 @@ int main(int argc, char *argv[]) {
             exit(0);
         }
 
-        /////
-        // β
-        /////
-        minExp = betaMinExp(minExp);
-        REPLACE_PROTECT(save2, minExp);
-
-        /////
-        // η
-        /////
-        minExp = etaMinExp(minExp);
-        REPLACE_PROTECT(save2, minExp);
-
-        /////
-        // β
-        /////
-        minExp = betaMinExp(minExp); // second pass.
+        /////////
+        // β - η
+        /////////
+        minExp = betaEtaFixedPoint(minExp);
         REPLACE_PROTECT(save2, minExp);
 
         if (beta_flag) {
@@ -651,10 +657,10 @@ int main(int argc, char *argv[]) {
             minExp = runCpsTrampolineTc(minExp, done);
             REPLACE_PROTECT(save2, minExp);
 
-            /////
-            // β
-            /////
-            minExp = betaMinExp(minExp); // necessary for the amb transform
+            /////////
+            // β - η
+            /////////
+            minExp = betaEtaFixedPoint(minExp);
             REPLACE_PROTECT(save2, minExp);
 
             if (cps_flag) {
@@ -671,17 +677,10 @@ int main(int argc, char *argv[]) {
             minExp = ambMinExp(minExp, fail);
             REPLACE_PROTECT(save2, minExp);
 
-            /////
-            // β
-            /////
-            minExp = betaMinExp(minExp);
-            REPLACE_PROTECT(save2, minExp);
-
-            ///////////////////////////////////////////////
-            // η - this should achieve TCO by rewriting
-            // continuations after CPS: (λ (x) (k x)) => k
-            ///////////////////////////////////////////////
-            minExp = etaMinExp(minExp);
+            /////////
+            // β - η
+            /////////
+            minExp = betaEtaFixedPoint(minExp);
             REPLACE_PROTECT(save2, minExp);
 
             if (amb_flag) {
@@ -708,38 +707,26 @@ int main(int argc, char *argv[]) {
             minExp = inlineMinExp(minExp);
             REPLACE_PROTECT(save2, minExp);
 
-#ifdef SAFETY_CHECKS
-            checkMinExp(minExp, builtIns);
-#endif
-
-            /////
-            // β
-            /////
-            minExp = betaMinExp(minExp);
-            REPLACE_PROTECT(save2, minExp);
-
-            /////
-            // β
-            /////
-            minExp = betaMinExp(minExp);
-            REPLACE_PROTECT(save2, minExp);
-
-            /////
-            // η
-            /////
-            minExp = etaMinExp(minExp);
-            REPLACE_PROTECT(save2, minExp);
-
             /////////
-            // Shake
+            // β - η
             /////////
-            minExp = shakeMinExp(minExp);
+            minExp = betaEtaFixedPoint(minExp);
             REPLACE_PROTECT(save2, minExp);
 
             if (inline_f_flag) {
                 ppMinExp(stdout, minExp);
                 exit(0);
             }
+
+#ifdef SAFETY_CHECKS
+            checkMinExp(minExp, builtIns);
+#endif
+
+            /////////
+            // Shake
+            /////////
+            minExp = shakeMinExp(minExp);
+            REPLACE_PROTECT(save2, minExp);
 
             ///////////////////
             // Closure Convert

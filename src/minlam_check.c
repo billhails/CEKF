@@ -22,36 +22,46 @@
 #include "minlam_check.h"
 #include "memory.h"
 #include "minlam_helper.h"
+#include "minlam_pp.h"
 #include "utils_helper.h"
 
-static void checkMinLam(MinLam *, SymbolSet *);
-static void checkMinAnnotatedVar(MinAnnotatedVar *, SymbolSet *);
-static void checkMinExprList(MinExprList *, SymbolSet *);
-static void checkMinPrimApp(MinPrimApp *, SymbolSet *);
-static void checkMinApply(MinApply *, SymbolSet *);
-static void checkMinIff(MinIff *, SymbolSet *);
-static void checkMinCond(MinCond *, SymbolSet *);
-static void checkMinIntCondCases(MinIntCondCases *, SymbolSet *);
-static void checkMinCharCondCases(MinCharCondCases *, SymbolSet *);
-static void checkMinMatch(MinMatch *, SymbolSet *);
-static void checkMinMatchList(MinMatchList *, SymbolSet *);
-static void checkMinLetRec(MinLetRec *, SymbolSet *);
-static void checkMinBindings(MinBindings *, SymbolSet *);
-static void checkMinAmb(MinAmb *, SymbolSet *);
-static void checkMinExpI(MinExp *, SymbolSet *);
-static void checkMinCondCases(MinCondCases *, SymbolSet *);
+typedef struct Context {
+    SymbolSet *symbols;
+    bool *error;
+} Context;
+
+static void checkMinLam(MinLam *, Context *);
+static void checkMinAnnotatedVar(MinAnnotatedVar *, Context *);
+static void checkMinExprList(MinExprList *, Context *);
+static void checkMinPrimApp(MinPrimApp *, Context *);
+static void checkMinApply(MinApply *, Context *);
+static void checkMinIff(MinIff *, Context *);
+static void checkMinCond(MinCond *, Context *);
+static void checkMinIntCondCases(MinIntCondCases *, Context *);
+static void checkMinCharCondCases(MinCharCondCases *, Context *);
+static void checkMinMatch(MinMatch *, Context *);
+static void checkMinMatchList(MinMatchList *, Context *);
+static void checkMinLetRec(MinLetRec *, Context *);
+static void checkMinBindings(MinBindings *, Context *);
+static void checkMinAmb(MinAmb *, Context *);
+static void checkMinExpI(MinExp *, Context *);
+static void checkMinCondCases(MinCondCases *, Context *);
 
 ///////
 // API
 ///////
 
 void checkMinExp(MinExp *node, BuiltIns *builtIns) {
-    SymbolSet *context = newSymbolSet();
-    int save = PROTECT(context);
+    bool errors = false;
+    Context context = {.symbols = newSymbolSet(), .error = &errors};
+    int save = PROTECT(context.symbols);
     for (Index i = 0; i < builtIns->size; i++) {
-        setSymbolSet(context, builtIns->entries[i]->internalName);
+        setSymbolSet(context.symbols, builtIns->entries[i]->internalName);
     }
-    checkMinExpI(node, context);
+    checkMinExpI(node, &context);
+    if (errors) {
+        cant_happen("checkMinExp detected errors");
+    }
     UNPROTECT(save);
 }
 
@@ -59,28 +69,28 @@ void checkMinExp(MinExp *node, BuiltIns *builtIns) {
 // Helper Routines
 ///////////////////
 
-static SymbolSet *addSymbolListToContext(SymbolSet *set, SymbolList *list) {
-    SymbolSet *new = copySymbolSet(set);
-    int save = PROTECT(new);
+static Context addSymbolListToContext(Context *context, SymbolList *list) {
+    Context new = {.symbols = copySymbolSet(context->symbols),
+                   .error = context->error};
+    int save = PROTECT(new.symbols);
     while (list != NULL) {
-        setSymbolSet(new, list->symbol);
+        setSymbolSet(new.symbols, list->symbol);
         list = list->next;
     }
     UNPROTECT(save);
     return new;
 }
 
-static SymbolSet *addBindingsToContext(MinBindings *bindings,
-                                       SymbolSet *context) {
+static Context addBindingsToContext(MinBindings *bindings, Context *context) {
     SymbolList *keys = minBindingsToSymbolList(bindings);
     int save = PROTECT(keys);
-    SymbolSet *new = addSymbolListToContext(context, keys);
+    Context new = addSymbolListToContext(context, keys);
     UNPROTECT(save);
     return new;
 }
 
-static void assertBound(HashSymbol *symbol, SymbolSet *context) {
-    if (!getSymbolSet(context, symbol)) {
+static void assertBound(HashSymbol *symbol, Context *context) {
+    if (!getSymbolSet(context->symbols, symbol)) {
         cant_happen("unbound variable %s", symbol->name);
     }
 }
@@ -89,43 +99,49 @@ static void assertBound(HashSymbol *symbol, SymbolSet *context) {
 // Visitor implementations
 ///////////////////////////
 
-static void checkMinLam(MinLam *node, SymbolSet *context) {
+static void checkMinLam(MinLam *node, Context *context) {
     if (node == NULL)
         cant_happen("NULL MinLam");
-    SymbolSet *newContext = addSymbolListToContext(context, node->args);
-    int save = PROTECT(newContext);
-    checkMinExpI(node->exp, newContext);
+    Context newContext = addSymbolListToContext(context, node->args);
+    int save = PROTECT(newContext.symbols);
+    checkMinExpI(node->exp, &newContext);
     UNPROTECT(save);
 }
 
-static void checkMinAnnotatedVar(MinAnnotatedVar *node, SymbolSet *context) {
+static void checkMinAnnotatedVar(MinAnnotatedVar *node, Context *context) {
     if (node == NULL)
         cant_happen("NULL MinAnnotatedVar");
     assertBound(node->var, context);
 }
 
-static void checkMinExprList(MinExprList *node, SymbolSet *context) {
+static void checkMinExprList(MinExprList *node, Context *context) {
     if (node == NULL)
         return;
     checkMinExpI(node->exp, context);
     checkMinExprList(node->next, context);
 }
 
-static void checkMinPrimApp(MinPrimApp *node, SymbolSet *context) {
+static void checkMinPrimApp(MinPrimApp *node, Context *context) {
     if (node == NULL)
         cant_happen("NULL MinPrimApp");
     checkMinExpI(node->exp1, context);
     checkMinExpI(node->exp2, context);
 }
 
-static void checkMinApply(MinApply *node, SymbolSet *context) {
+static void checkMinApply(MinApply *node, Context *context) {
     if (node == NULL)
         cant_happen("NULL MinApply");
+    if (isMinExp_Apply(node->function)) {
+        eprintf("nested application detected: ");
+        ppMinApply(stderr, node);
+        eprintf("\n");
+        *(context->error) = true;
+    }
     checkMinExpI(node->function, context);
     checkMinExprList(node->args, context);
 }
 
-static void checkMinIff(MinIff *node, SymbolSet *context) {
+static void checkMinIff(MinIff *node, Context *context) {
     if (node == NULL)
         cant_happen("NULL MinIff");
     checkMinExpI(node->condition, context);
@@ -133,66 +149,66 @@ static void checkMinIff(MinIff *node, SymbolSet *context) {
     checkMinExpI(node->alternative, context);
 }
 
-static void checkMinCond(MinCond *node, SymbolSet *context) {
+static void checkMinCond(MinCond *node, Context *context) {
     if (node == NULL)
         cant_happen("NULL MinCond");
     checkMinExpI(node->value, context);
     checkMinCondCases(node->cases, context);
 }
 
-static void checkMinIntCondCases(MinIntCondCases *node, SymbolSet *context) {
+static void checkMinIntCondCases(MinIntCondCases *node, Context *context) {
     if (node == NULL)
         return;
     checkMinExpI(node->body, context);
     checkMinIntCondCases(node->next, context);
 }
 
-static void checkMinCharCondCases(MinCharCondCases *node, SymbolSet *context) {
+static void checkMinCharCondCases(MinCharCondCases *node, Context *context) {
     if (node == NULL)
         return;
     checkMinExpI(node->body, context);
     checkMinCharCondCases(node->next, context);
 }
 
-static void checkMinMatch(MinMatch *node, SymbolSet *context) {
+static void checkMinMatch(MinMatch *node, Context *context) {
     if (node == NULL)
         cant_happen("NULL MinMatch");
     checkMinExpI(node->index, context);
     checkMinMatchList(node->cases, context);
 }
 
-static void checkMinMatchList(MinMatchList *node, SymbolSet *context) {
+static void checkMinMatchList(MinMatchList *node, Context *context) {
     if (node == NULL)
         return;
     checkMinExpI(node->body, context);
     checkMinMatchList(node->next, context);
 }
 
-static void checkMinLetRec(MinLetRec *node, SymbolSet *context) {
+static void checkMinLetRec(MinLetRec *node, Context *context) {
     if (node == NULL)
         cant_happen("NULL MinLetRec");
-    SymbolSet *newContext = addBindingsToContext(node->bindings, context);
-    int save = PROTECT(newContext);
-    checkMinBindings(node->bindings, newContext);
-    checkMinExpI(node->body, newContext);
+    Context newContext = addBindingsToContext(node->bindings, context);
+    int save = PROTECT(newContext.symbols);
+    checkMinBindings(node->bindings, &newContext);
+    checkMinExpI(node->body, &newContext);
     UNPROTECT(save);
 }
 
-static void checkMinBindings(MinBindings *node, SymbolSet *context) {
+static void checkMinBindings(MinBindings *node, Context *context) {
     if (node == NULL)
         return;
     checkMinExpI(node->val, context);
     checkMinBindings(node->next, context);
 }
 
-static void checkMinAmb(MinAmb *node, SymbolSet *context) {
+static void checkMinAmb(MinAmb *node, Context *context) {
     if (node == NULL)
         cant_happen("NULL MinAmb");
     checkMinExpI(node->left, context);
     checkMinExpI(node->right, context);
 }
 
-static void checkMinExpI(MinExp *node, SymbolSet *context) {
+static void checkMinExpI(MinExp *node, Context *context) {
     if (node == NULL)
         cant_happen("NULL MinExp");
     switch (node->type) {
@@ -252,7 +268,7 @@ static void checkMinExpI(MinExp *node, SymbolSet *context) {
     }
 }
 
-static void checkMinCondCases(MinCondCases *node, SymbolSet *context) {
+static void checkMinCondCases(MinCondCases *node, Context *context) {
     if (node == NULL)
         cant_happen("NULL MinCondCases");
     switch (node->type) {
