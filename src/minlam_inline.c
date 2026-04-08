@@ -308,7 +308,7 @@ static MinLetRec *inlineMinLetRec(MinLetRec *node) {
             isRecursive = getSymbolSet(transitive, f);
             UNPROTECT(save2);
         }
-        eprintf("%s is%s recursive\n", f->name, isRecursive ? "" : " not");
+        DEBUG("%s is%s recursive\n", f->name, isRecursive ? "" : " not");
         if (isRecursive)
             continue;
 
@@ -324,34 +324,28 @@ static MinLetRec *inlineMinLetRec(MinLetRec *node) {
         }
 
         int size = sizeMinExp(body);
-        eprintf("%s is size %d\n", f->name, size);
+        DEBUG("%s is size %d\n", f->name, size);
 
         if (size > INLINE_SIZE_LIMIT)
             continue;
 
         bool isSimple = simpleMinExp(body);
         bool isSafe = inSafeMinExp(body);
-        eprintf("%s is%s simple\n", f->name, isSimple ? "" : " not");
-        eprintf("%s is%s inline-safe\n", f->name, isSafe ? "" : " not");
+        DEBUG("%s is%s simple\n", f->name, isSimple ? "" : " not");
+        DEBUG("%s is%s inline-safe\n", f->name, isSafe ? "" : " not");
 
         if (!isSimple && !isSafe)
             continue;
 
+#ifdef DEBUG_MINLAM_INLINE
+        eprintf("INLINING %s: ", f->name);
+        ppMinExp(stderr, body);
+        eprintf("\n");
+#endif
         // add to our list
         body = copyMinExp(body);
         int save2 = PROTECT(body);
-#ifdef INLINE_RECURSIVE
-        body = inlineMinExp(body);
-        PROTECT(body);
-        size = sizeMinExp(body);
-        eprintf("%s is size %d after inlining\n", f->name, size);
-#endif
-        if (size <= INLINE_SIZE_LIMIT) {
-            eprintf("INLINING %s: ", f->name);
-            ppMinExp(stderr, body);
-            eprintf("\n");
-            setMinExpTable(replacements, f, body);
-        }
+        setMinExpTable(replacements, f, body);
         UNPROTECT(save2);
     }
 

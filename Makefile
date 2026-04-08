@@ -174,7 +174,7 @@ test-binary: all $(TEST_FN_BINARIES)
 	@for t in $(TEST_FN_BINARIES) ; do echo $$t ; $$t || exit 1 ; done
 	@echo All binary tests pass
 
-irs: $(TEST_FN_SFILES)
+irs: $(TEST_FN_SFILES) tmp/test_harness.scm
 
 test-big-binary: all tmp/test_harness
 	tmp/test_harness
