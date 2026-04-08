@@ -136,7 +136,7 @@ static MinExp *etaMinLam(MinExp *exp) {
     // η(λ.x (f x))) => ηf, where x is not free in f
     if (lambda->exp != NULL && isMinExp_Apply(lambda->exp)) {
         MinApply *apply = getMinExp_Apply(lambda->exp); // (f x)
-        if (etaSafeFunction(apply->function) &&
+        if (!apply->isBuiltin && etaSafeFunction(apply->function) &&
             fargsEqAargs(lambda->args, apply->args)) {
             SymbolSet *symbols = symbolListToSet(lambda->args);
             int save = PROTECT(symbols);

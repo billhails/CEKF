@@ -190,6 +190,11 @@ tmp/test_harness.c: $(FNDIR)/rewrite/test_harness.fn $(TARGET)
 	indent $@
 	rm -f $@~
 
+tmp/test_harness.scm: $(FNDIR)/rewrite/test_harness.fn $(TARGET)
+	$(TARGET) --target-c --dump-inline-f $< >$@~ && mv $@~ $@
+	indent $@
+	rm -f $@~
+
 tmp/test_harness.fnc: $(FNDIR)/rewrite/test_harness.fn $(TARGET)
 	$(TARGET) --binary-out=$@~ $<  && mv $@~ $@
 
