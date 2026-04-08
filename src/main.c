@@ -701,29 +701,34 @@ int main(int argc, char *argv[]) {
                 exit(0);
             }
 
-            ///////////////////////////////
-            // Inline Function Application
-            ///////////////////////////////
-            minExp = inlineMinExp(minExp);
-            REPLACE_PROTECT(save2, minExp);
+            /////////////////////////////////////////////////////
+            // Inline Function Application Fixed Point Iteration
+            /////////////////////////////////////////////////////
+            MinExp *previousInline = NULL;
+            int save4 = PROTECT(minExp);
+            while (previousInline != minExp) {
+                previousInline = minExp;
+                REPLACE_PROTECT(save4, previousInline);
 
-            /////////
-            // β - η
-            /////////
-            minExp = betaEtaFixedPoint(minExp);
-            REPLACE_PROTECT(save2, minExp);
+                //////////
+                // Inline
+                //////////
+                minExp = inlineMinExp(minExp);
+                REPLACE_PROTECT(save2, minExp);
 
-            /////////
-            // Shake
-            /////////
-            minExp = shakeMinExp(minExp);
-            REPLACE_PROTECT(save2, minExp);
+                /////////
+                // β - η
+                /////////
+                minExp = betaEtaFixedPoint(minExp);
+                REPLACE_PROTECT(save2, minExp);
 
-            /////////
-            // β - η
-            /////////
-            minExp = betaEtaFixedPoint(minExp);
-            REPLACE_PROTECT(save2, minExp);
+                /////////
+                // Shake
+                /////////
+                minExp = shakeMinExp(minExp);
+                REPLACE_PROTECT(save2, minExp);
+            }
+            UNPROTECT(save4);
 
             if (inline_f_flag) {
                 ppMinExp(stdout, minExp);
