@@ -435,6 +435,9 @@ static MinExp *betaEtaFixedPoint(MinExp *node) {
     int save = PROTECT(node);
     int save2 = PROTECT(node);
     MinExp *res = NULL;
+#ifdef DEBUG_FIXED_POINT
+    int count = 0;
+#endif
     while (res != node) {
         res = node;
         REPLACE_PROTECT(save, res);
@@ -442,7 +445,13 @@ static MinExp *betaEtaFixedPoint(MinExp *node) {
         REPLACE_PROTECT(save2, node);
         node = etaMinExp(node);
         REPLACE_PROTECT(save2, node);
+#ifdef DEBUG_FIXED_POINT
+        count++;
+#endif
     }
+#ifdef DEBUG_FIXED_POINT
+    eprintf("beta/eta fixed point: %d\n", count - 1);
+#endif
     UNPROTECT(save);
     return node;
 }
@@ -677,12 +686,6 @@ int main(int argc, char *argv[]) {
             minExp = ambMinExp(minExp, fail);
             REPLACE_PROTECT(save2, minExp);
 
-            /////////
-            // β - η
-            /////////
-            minExp = betaEtaFixedPoint(minExp);
-            REPLACE_PROTECT(save2, minExp);
-
             if (amb_flag) {
                 ppMinExp(stdout, minExp);
                 eprintf("\n");
@@ -701,11 +704,18 @@ int main(int argc, char *argv[]) {
                 exit(0);
             }
 
+#ifdef DEBUG_FIXED_POINT
+            eprintf("inline/beta/eta/shake fixed point start\n");
+#endif
+
             /////////////////////////////////////////////////////
             // Inline Function Application Fixed Point Iteration
             /////////////////////////////////////////////////////
             MinExp *previousInline = NULL;
             int save4 = PROTECT(minExp);
+#ifdef DEBUG_FIXED_POINT
+            int iterations = 0;
+#endif
             while (previousInline != minExp) {
                 previousInline = minExp;
                 REPLACE_PROTECT(save4, previousInline);
@@ -727,8 +737,15 @@ int main(int argc, char *argv[]) {
                 /////////
                 minExp = shakeMinExp(minExp);
                 REPLACE_PROTECT(save2, minExp);
+#ifdef DEBUG_FIXED_POINT
+                iterations++;
+#endif
             }
             UNPROTECT(save4);
+
+#ifdef DEBUG_FIXED_POINT
+            eprintf("inline/beta/eta/shake fixed point: %d\n", iterations - 1);
+#endif
 
             if (inline_f_flag) {
                 ppMinExp(stdout, minExp);
