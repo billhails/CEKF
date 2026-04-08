@@ -18,6 +18,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include "minlam.h"
+
 MinExp *indexMinExp(MinExp *node);
 
 #endif

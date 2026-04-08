@@ -82,57 +82,6 @@ static LamExp *lamExpError(ParserInfo I) {
 }
 
 /**
- * @brief Creates an AstDefinitions node for currentFile with the given
- * fileName.
- *
- * This creates a definition: let currentFile = "fileName"; ...
- * as an AST node that can be prepended to the preamble.
- *
- * @param fileName The fileName string to assign to currentFile.
- * @param PI Parser information for the created node.
- * @param next The next AstDefinitions in the list.
- * @return An AstDefinitions node containing the currentFile definition.
- */
-static AstDefinitions *makeCurrentFileDefinition(const char *fileName,
-                                                 ParserInfo PI,
-                                                 AstDefinitions *next) {
-    // Build a string as nested cons applications, starting with nil
-    AstExpression *nil = newAstExpression_Symbol(PI, nilSymbol());
-    int save = PROTECT(nil);
-    AstFunCall *strList = newAstFunCall(PI, nil, NULL);
-    PROTECT(strList);
-
-    // Build the string from right to left (reverse order)
-    for (int i = strlen(fileName) - 1; i >= 0; i--) {
-        AstExpression *character = newAstExpression_Character(PI, fileName[i]);
-        int save2 = PROTECT(character);
-        AstExpression *cons = newAstExpression_Symbol(PI, consSymbol());
-        PROTECT(cons);
-        AstExpression *tail = newAstExpression_FunCall(PI, strList);
-        PROTECT(tail);
-        AstExpressions *rhs = newAstExpressions(PI, tail, NULL);
-        PROTECT(rhs);
-        AstExpressions *args = newAstExpressions(PI, character, rhs);
-        PROTECT(args);
-        strList = newAstFunCall(PI, cons, args);
-        REPLACE_PROTECT(save, strList);
-        UNPROTECT(save2);
-    }
-
-    AstExpression *stringExpr = newAstExpression_FunCall(PI, strList);
-    PROTECT(stringExpr);
-
-    // Create the definition: currentFile = "..."
-    AstDefinition *definition =
-        makeAstDefinition_Define(PI, currentFileSymbol(), stringExpr);
-    PROTECT(definition);
-
-    AstDefinitions *result = newAstDefinitions(PI, definition, next);
-    UNPROTECT(save);
-    return result;
-}
-
-/**
  * @brief Converts an AST program to a lambda expression.
  *
  * This is the top-level public entry point to the lambda conversion
@@ -145,13 +94,7 @@ LamExp *lamConvertProg(AstProg *prog) {
     ENTER(lamConvertProg);
     LamContext *env = newLamContext(CPI(prog), NULL);
     int save = PROTECT(env);
-
-    // Prepend currentFile definition to preamble
-    AstDefinitions *preambleWithCurrentFile = makeCurrentFileDefinition(
-        prog->_yy_parser_info.fileName, CPI(prog), prog->preamble);
-    PROTECT(preambleWithCurrentFile);
-
-    LamExp *result = lamConvert(preambleWithCurrentFile, prog->body, env);
+    LamExp *result = lamConvert(prog->preamble, prog->body, env);
     UNPROTECT(save);
     LEAVE(lamConvertProg);
     return result;
@@ -293,10 +236,13 @@ static LamExp *lamConvert(AstDefinitions *definitions,
     // if there are functions, create a letrec, else just use the body
     if (funcDefsList != NULL) {
         // [[printers] [funcs] [vars] [[body]]]
-        result =
-            (letRecBody == NULL)
-                ? NULL
-                : makeLamExp_LetRec(CPI(letRecBody), funcDefsList, letRecBody);
+        if (letRecBody == NULL) {
+            // a program with definitions but no body needs a valid
+            // expression so the letrec is well-formed
+            letRecBody = newLamExp_Stdint(CPI(funcDefsList), 0);
+            PROTECT(letRecBody);
+        }
+        result = makeLamExp_LetRec(CPI(letRecBody), funcDefsList, letRecBody);
     } else {
         // [vars] [[body]]
         result = letRecBody;
@@ -2077,34 +2023,6 @@ static LamExp *convertAnnotatedSymbol(AstAnnotatedSymbol *annotated,
     return result;
 }
 
-/**
- * @brief Converts an assertion expression into a lambda expression.
- * @param value The assertion expression to convert.
- * @param env The lambda context to use for conversion.
- * @return The resulting lambda expression for the assertion.
- */
-static LamExp *convertAssertion(AstExpression *value, LamContext *env) {
-    LamExp *exp = convertExpression(value, env);
-    int save = PROTECT(exp);
-    LamArgs *args = newLamArgs(CPI(exp), exp, NULL);
-    PROTECT(args);
-    LamExp *fileName = stringToLamArgs(CPI(exp), exp->_yy_parser_info.fileName);
-    PROTECT(fileName);
-    args = newLamArgs(CPI(exp), fileName, args);
-    PROTECT(args);
-    MaybeBigInt *num = fakeBigInt(exp->_yy_parser_info.lineNo, false);
-    PROTECT(num);
-    LamExp *lineNo = newLamExp_BigInteger(CPI(exp), num);
-    PROTECT(lineNo);
-    args = newLamArgs(CPI(lineNo), lineNo, args);
-    PROTECT(args);
-    LamExp *function = newLamExp_Var(CPI(value), assertSymbol());
-    PROTECT(function);
-    LamExp *res = makeApplication(function, args);
-    UNPROTECT(save);
-    return res;
-}
-
 LamExp *callErrorFunction(LamExp *exp) {
     int save = PROTECT(exp);
     LamArgs *args = newLamArgs(CPI(exp), exp, NULL);
@@ -2215,8 +2133,7 @@ static LamExp *convertExpression(AstExpression *expression, LamContext *env) {
         result = convertStructure(getAstExpression_Structure(expression), env);
         break;
     case AST_EXPRESSION_TYPE_ASSERTION:
-        result = convertAssertion(getAstExpression_Assertion(expression), env);
-        break;
+        cant_happen("assertions should have been rewritten by ast_ns");
     case AST_EXPRESSION_TYPE_ERROR:
         result = convertError(getAstExpression_Error(expression), env);
         break;

@@ -15,48 +15,53 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  *
- * Minimal AST after desugaring - dead binding elimination (tree shaking).
+ * Minimal AST after desugaring
  * Generated from src/minlam.yaml by tools/generate.py
  */
 
-#include "minlam_shake.h"
+#include "minlam_inline.h"
 #include "memory.h"
-#include "minlam_freeVars.h"
 #include "minlam_helper.h"
-#include "utils.h"
-#include "utils_helper.h"
+#include "minlam_inSafe.h"
+#include "minlam_isSimple.h"
+#include "minlam_pp.h"
+#include "minlam_size.h"
+#include "minlam_substCs.h"
 
-#ifdef DEBUG_MINLAM_SHAKE
+#ifdef DEBUG_MINLAM_INLINE
 #include "debugging_on.h"
 #else
 #include "debugging_off.h"
 #endif
 
-static MinLam *shakeMinLam(MinLam *);
-static MinExprList *shakeMinExprList(MinExprList *);
-static MinPrimApp *shakeMinPrimApp(MinPrimApp *);
-static MinApply *shakeMinApply(MinApply *);
-static MinIff *shakeMinIff(MinIff *);
-static MinCond *shakeMinCond(MinCond *);
-static MinIntCondCases *shakeMinIntCondCases(MinIntCondCases *);
-static MinCharCondCases *shakeMinCharCondCases(MinCharCondCases *);
-static MinMatch *shakeMinMatch(MinMatch *);
-static MinMatchList *shakeMinMatchList(MinMatchList *);
-static MinLetRec *shakeMinLetRec(MinLetRec *);
-static MinBindings *shakeMinBindings(MinBindings *);
-static MinAmb *shakeMinAmb(MinAmb *);
-static MinCondCases *shakeMinCondCases(MinCondCases *);
+#define INLINE_SIZE_LIMIT 40
+
+static MinLam *inlineMinLam(MinLam *);
+static MinAnnotatedVar *inlineMinAnnotatedVar(MinAnnotatedVar *);
+static MinExprList *inlineMinExprList(MinExprList *);
+static MinPrimApp *inlineMinPrimApp(MinPrimApp *);
+static MinApply *inlineMinApply(MinApply *);
+static MinIff *inlineMinIff(MinIff *);
+static MinCond *inlineMinCond(MinCond *);
+static MinIntCondCases *inlineMinIntCondCases(MinIntCondCases *);
+static MinCharCondCases *inlineMinCharCondCases(MinCharCondCases *);
+static MinMatch *inlineMinMatch(MinMatch *);
+static MinMatchList *inlineMinMatchList(MinMatchList *);
+static MinLetRec *inlineMinLetRec(MinLetRec *);
+static MinBindings *inlineMinBindings(MinBindings *);
+static MinAmb *inlineMinAmb(MinAmb *);
+static MinCondCases *inlineMinCondCases(MinCondCases *);
 
 ///////////////////////////
 // Visitor implementations
 ///////////////////////////
 
-static MinLam *shakeMinLam(MinLam *node) {
+static MinLam *inlineMinLam(MinLam *node) {
     if (node == NULL)
         return NULL;
-    ENTER(shakeMinLam);
+    ENTER(inlineMinLam);
     bool changed = false;
-    MinExp *new_exp = shakeMinExp(node->exp);
+    MinExp *new_exp = inlineMinExp(node->exp);
     int save = PROTECT(new_exp);
     changed = changed || (new_exp != node->exp);
     MinLam *result = node;
@@ -65,19 +70,28 @@ static MinLam *shakeMinLam(MinLam *node) {
         result->cc = node->cc;
     }
     UNPROTECT(save);
-    LEAVE(shakeMinLam);
+    LEAVE(inlineMinLam);
     return result;
 }
 
-static MinExprList *shakeMinExprList(MinExprList *node) {
+static MinAnnotatedVar *inlineMinAnnotatedVar(MinAnnotatedVar *node) {
     if (node == NULL)
         return NULL;
-    ENTER(shakeMinExprList);
+    ENTER(inlineMinAnnotatedVar);
+    MinAnnotatedVar *result = node;
+    LEAVE(inlineMinAnnotatedVar);
+    return result;
+}
+
+static MinExprList *inlineMinExprList(MinExprList *node) {
+    if (node == NULL)
+        return NULL;
+    ENTER(inlineMinExprList);
     bool changed = false;
-    MinExp *new_exp = shakeMinExp(node->exp);
+    MinExp *new_exp = inlineMinExp(node->exp);
     int save = PROTECT(new_exp);
     changed = changed || (new_exp != node->exp);
-    MinExprList *new_next = shakeMinExprList(node->next);
+    MinExprList *new_next = inlineMinExprList(node->next);
     PROTECT(new_next);
     changed = changed || (new_next != node->next);
     MinExprList *result = node;
@@ -85,19 +99,19 @@ static MinExprList *shakeMinExprList(MinExprList *node) {
         result = newMinExprList(CPI(node), new_exp, new_next);
     }
     UNPROTECT(save);
-    LEAVE(shakeMinExprList);
+    LEAVE(inlineMinExprList);
     return result;
 }
 
-static MinPrimApp *shakeMinPrimApp(MinPrimApp *node) {
+static MinPrimApp *inlineMinPrimApp(MinPrimApp *node) {
     if (node == NULL)
         return NULL;
-    ENTER(shakeMinPrimApp);
+    ENTER(inlineMinPrimApp);
     bool changed = false;
-    MinExp *new_exp1 = shakeMinExp(node->exp1);
+    MinExp *new_exp1 = inlineMinExp(node->exp1);
     int save = PROTECT(new_exp1);
     changed = changed || (new_exp1 != node->exp1);
-    MinExp *new_exp2 = shakeMinExp(node->exp2);
+    MinExp *new_exp2 = inlineMinExp(node->exp2);
     PROTECT(new_exp2);
     changed = changed || (new_exp2 != node->exp2);
     MinPrimApp *result = node;
@@ -105,19 +119,19 @@ static MinPrimApp *shakeMinPrimApp(MinPrimApp *node) {
         result = newMinPrimApp(CPI(node), node->type, new_exp1, new_exp2);
     }
     UNPROTECT(save);
-    LEAVE(shakeMinPrimApp);
+    LEAVE(inlineMinPrimApp);
     return result;
 }
 
-static MinApply *shakeMinApply(MinApply *node) {
+static MinApply *inlineMinApply(MinApply *node) {
     if (node == NULL)
         return NULL;
-    ENTER(shakeMinApply);
+    ENTER(inlineMinApply);
     bool changed = false;
-    MinExp *new_function = shakeMinExp(node->function);
+    MinExp *new_function = inlineMinExp(node->function);
     int save = PROTECT(new_function);
     changed = changed || (new_function != node->function);
-    MinExprList *new_args = shakeMinExprList(node->args);
+    MinExprList *new_args = inlineMinExprList(node->args);
     PROTECT(new_args);
     changed = changed || (new_args != node->args);
     MinApply *result = node;
@@ -127,22 +141,22 @@ static MinApply *shakeMinApply(MinApply *node) {
         result->cc = node->cc;
     }
     UNPROTECT(save);
-    LEAVE(shakeMinApply);
+    LEAVE(inlineMinApply);
     return result;
 }
 
-static MinIff *shakeMinIff(MinIff *node) {
+static MinIff *inlineMinIff(MinIff *node) {
     if (node == NULL)
         return NULL;
-    ENTER(shakeMinIff);
+    ENTER(inlineMinIff);
     bool changed = false;
-    MinExp *new_condition = shakeMinExp(node->condition);
+    MinExp *new_condition = inlineMinExp(node->condition);
     int save = PROTECT(new_condition);
     changed = changed || (new_condition != node->condition);
-    MinExp *new_consequent = shakeMinExp(node->consequent);
+    MinExp *new_consequent = inlineMinExp(node->consequent);
     PROTECT(new_consequent);
     changed = changed || (new_consequent != node->consequent);
-    MinExp *new_alternative = shakeMinExp(node->alternative);
+    MinExp *new_alternative = inlineMinExp(node->alternative);
     PROTECT(new_alternative);
     changed = changed || (new_alternative != node->alternative);
     MinIff *result = node;
@@ -151,19 +165,19 @@ static MinIff *shakeMinIff(MinIff *node) {
                            new_alternative);
     }
     UNPROTECT(save);
-    LEAVE(shakeMinIff);
+    LEAVE(inlineMinIff);
     return result;
 }
 
-static MinCond *shakeMinCond(MinCond *node) {
+static MinCond *inlineMinCond(MinCond *node) {
     if (node == NULL)
         return NULL;
-    ENTER(shakeMinCond);
+    ENTER(inlineMinCond);
     bool changed = false;
-    MinExp *new_value = shakeMinExp(node->value);
+    MinExp *new_value = inlineMinExp(node->value);
     int save = PROTECT(new_value);
     changed = changed || (new_value != node->value);
-    MinCondCases *new_cases = shakeMinCondCases(node->cases);
+    MinCondCases *new_cases = inlineMinCondCases(node->cases);
     PROTECT(new_cases);
     changed = changed || (new_cases != node->cases);
     MinCond *result = node;
@@ -171,19 +185,19 @@ static MinCond *shakeMinCond(MinCond *node) {
         result = newMinCond(CPI(node), new_value, new_cases);
     }
     UNPROTECT(save);
-    LEAVE(shakeMinCond);
+    LEAVE(inlineMinCond);
     return result;
 }
 
-static MinIntCondCases *shakeMinIntCondCases(MinIntCondCases *node) {
+static MinIntCondCases *inlineMinIntCondCases(MinIntCondCases *node) {
     if (node == NULL)
         return NULL;
-    ENTER(shakeMinIntCondCases);
+    ENTER(inlineMinIntCondCases);
     bool changed = false;
-    MinExp *new_body = shakeMinExp(node->body);
+    MinExp *new_body = inlineMinExp(node->body);
     int save = PROTECT(new_body);
     changed = changed || (new_body != node->body);
-    MinIntCondCases *new_next = shakeMinIntCondCases(node->next);
+    MinIntCondCases *new_next = inlineMinIntCondCases(node->next);
     PROTECT(new_next);
     changed = changed || (new_next != node->next);
     MinIntCondCases *result = node;
@@ -192,19 +206,19 @@ static MinIntCondCases *shakeMinIntCondCases(MinIntCondCases *node) {
             newMinIntCondCases(CPI(node), node->constant, new_body, new_next);
     }
     UNPROTECT(save);
-    LEAVE(shakeMinIntCondCases);
+    LEAVE(inlineMinIntCondCases);
     return result;
 }
 
-static MinCharCondCases *shakeMinCharCondCases(MinCharCondCases *node) {
+static MinCharCondCases *inlineMinCharCondCases(MinCharCondCases *node) {
     if (node == NULL)
         return NULL;
-    ENTER(shakeMinCharCondCases);
+    ENTER(inlineMinCharCondCases);
     bool changed = false;
-    MinExp *new_body = shakeMinExp(node->body);
+    MinExp *new_body = inlineMinExp(node->body);
     int save = PROTECT(new_body);
     changed = changed || (new_body != node->body);
-    MinCharCondCases *new_next = shakeMinCharCondCases(node->next);
+    MinCharCondCases *new_next = inlineMinCharCondCases(node->next);
     PROTECT(new_next);
     changed = changed || (new_next != node->next);
     MinCharCondCases *result = node;
@@ -214,19 +228,19 @@ static MinCharCondCases *shakeMinCharCondCases(MinCharCondCases *node) {
         result->isDefault = node->isDefault;
     }
     UNPROTECT(save);
-    LEAVE(shakeMinCharCondCases);
+    LEAVE(inlineMinCharCondCases);
     return result;
 }
 
-static MinMatch *shakeMinMatch(MinMatch *node) {
+static MinMatch *inlineMinMatch(MinMatch *node) {
     if (node == NULL)
         return NULL;
-    ENTER(shakeMinMatch);
+    ENTER(inlineMinMatch);
     bool changed = false;
-    MinExp *new_index = shakeMinExp(node->index);
+    MinExp *new_index = inlineMinExp(node->index);
     int save = PROTECT(new_index);
     changed = changed || (new_index != node->index);
-    MinMatchList *new_cases = shakeMinMatchList(node->cases);
+    MinMatchList *new_cases = inlineMinMatchList(node->cases);
     PROTECT(new_cases);
     changed = changed || (new_cases != node->cases);
     MinMatch *result = node;
@@ -234,19 +248,19 @@ static MinMatch *shakeMinMatch(MinMatch *node) {
         result = newMinMatch(CPI(node), new_index, new_cases);
     }
     UNPROTECT(save);
-    LEAVE(shakeMinMatch);
+    LEAVE(inlineMinMatch);
     return result;
 }
 
-static MinMatchList *shakeMinMatchList(MinMatchList *node) {
+static MinMatchList *inlineMinMatchList(MinMatchList *node) {
     if (node == NULL)
         return NULL;
-    ENTER(shakeMinMatchList);
+    ENTER(inlineMinMatchList);
     bool changed = false;
-    MinExp *new_body = shakeMinExp(node->body);
+    MinExp *new_body = inlineMinExp(node->body);
     int save = PROTECT(new_body);
     changed = changed || (new_body != node->body);
-    MinMatchList *new_next = shakeMinMatchList(node->next);
+    MinMatchList *new_next = inlineMinMatchList(node->next);
     PROTECT(new_next);
     changed = changed || (new_next != node->next);
     MinMatchList *result = node;
@@ -254,55 +268,115 @@ static MinMatchList *shakeMinMatchList(MinMatchList *node) {
         result = newMinMatchList(CPI(node), node->matches, new_body, new_next);
     }
     UNPROTECT(save);
-    LEAVE(shakeMinMatchList);
+    LEAVE(inlineMinMatchList);
     return result;
 }
 
-// Where it all happens
-static MinLetRec *shakeMinLetRec(MinLetRec *node) {
+static MinLetRec *inlineMinLetRec(MinLetRec *node) {
     if (node == NULL)
         return NULL;
-    ENTER(shakeMinLetRec);
+    ENTER(inlineMinLetRec);
     bool changed = false;
-    // post-traversal processing, recurse into the body
-    // and the bindings first.
-    MinExp *new_body = shakeMinExp(node->body);
-    int save = PROTECT(new_body);
+    MinBindings *new_bindings = inlineMinBindings(node->bindings);
+    int save = PROTECT(new_bindings);
+    changed = changed || (new_bindings != node->bindings);
+    MinExp *new_body = inlineMinExp(node->body);
+    PROTECT(new_body);
     changed = changed || (new_body != node->body);
-    MinBindings *new_bindings = shakeMinBindings(node->bindings);
-    PROTECT(new_bindings);
 
-    // main algorithm
+    // all names bound by this letrec
     SymbolSet *keys = getAllKeys(node->bindings);
     PROTECT(keys);
+    // all their direct references to other names bound in this letrec
     SymbolSetMap *deps = buildDependencyGraph(node->bindings, keys);
     PROTECT(deps);
-    SymbolSet *rootSet = computeRoots(keys, new_body);
-    PROTECT(rootSet);
-    SymbolSet *live = computeLiveBindings(deps, rootSet);
-    PROTECT(live);
-    new_bindings = retainOnlyLive(new_bindings, live);
-    PROTECT(new_bindings);
+    // faster lookup
+    MinExpTable *map = minBindingsToMap(node->bindings);
+    PROTECT(map);
+    // things we'll be replacing
+    MinExpTable *replacements = newMinExpTable();
+    PROTECT(replacements);
 
-    changed = changed || (new_bindings != node->bindings);
+    HashSymbol *f = NULL;
+    Index i = 0;
+    while ((f = iterateSymbolSet(keys, &i)) != NULL) {
+        SymbolSet *fDeps = NULL;
+        bool isRecursive = false;
+        if (getSymbolSetMap(deps, f, &fDeps)) {
+            SymbolSet *transitive = computeLiveBindings(deps, fDeps);
+            int save2 = PROTECT(transitive);
+            isRecursive = getSymbolSet(transitive, f);
+            UNPROTECT(save2);
+        }
+        DEBUG("%s is%s recursive\n", f->name, isRecursive ? "" : " not");
+        if (isRecursive)
+            continue;
+
+        MinExp *body = NULL;
+        if (!getMinExpTable(map, f, &body)) {
+            cant_happen("cannot find %s in map", f->name);
+        }
+
+        if (!isMinExp_Lam(body)) {
+            eprintf("non-lamda %s :", f->name);
+            ppMinExp(stderr, body);
+            cant_happen("found non-lambda in letrec");
+        }
+
+        int size = sizeMinExp(body);
+        DEBUG("%s is size %d\n", f->name, size);
+
+        if (size > INLINE_SIZE_LIMIT)
+            continue;
+
+        bool isSimple = simpleMinExp(body);
+        bool isSafe = inSafeMinExp(body);
+        DEBUG("%s is%s simple\n", f->name, isSimple ? "" : " not");
+        DEBUG("%s is%s inline-safe\n", f->name, isSafe ? "" : " not");
+
+        if (!isSimple && !isSafe)
+            continue;
+
+#ifdef DEBUG_MINLAM_INLINE
+        eprintf("INLINING %s: ", f->name);
+        ppMinExp(stderr, body);
+        eprintf("\n");
+#endif
+        // add to our list
+        body = copyMinExp(body);
+        int save2 = PROTECT(body);
+        setMinExpTable(replacements, f, body);
+        UNPROTECT(save2);
+    }
+
+    if (countMinExpTable(replacements) > 0) {
+        new_bindings = substCsMinBindings(new_bindings, replacements);
+        PROTECT(new_bindings);
+        changed = changed || (new_bindings != node->bindings);
+
+        new_body = substCsMinExp(new_body, replacements);
+        PROTECT(new_body);
+        changed = changed || (new_body != node->body);
+    }
+
     MinLetRec *result = node;
     if (changed) {
         result = newMinLetRec(CPI(node), new_bindings, new_body);
     }
     UNPROTECT(save);
-    LEAVE(shakeMinLetRec);
+    LEAVE(inlineMinLetRec);
     return result;
 }
 
-static MinBindings *shakeMinBindings(MinBindings *node) {
+static MinBindings *inlineMinBindings(MinBindings *node) {
     if (node == NULL)
         return NULL;
-    ENTER(shakeMinBindings);
+    ENTER(inlineMinBindings);
     bool changed = false;
-    MinExp *new_val = shakeMinExp(node->val);
+    MinExp *new_val = inlineMinExp(node->val);
     int save = PROTECT(new_val);
     changed = changed || (new_val != node->val);
-    MinBindings *new_next = shakeMinBindings(node->next);
+    MinBindings *new_next = inlineMinBindings(node->next);
     PROTECT(new_next);
     changed = changed || (new_next != node->next);
     MinBindings *result = node;
@@ -311,19 +385,19 @@ static MinBindings *shakeMinBindings(MinBindings *node) {
         result->arity = node->arity;
     }
     UNPROTECT(save);
-    LEAVE(shakeMinBindings);
+    LEAVE(inlineMinBindings);
     return result;
 }
 
-static MinAmb *shakeMinAmb(MinAmb *node) {
+static MinAmb *inlineMinAmb(MinAmb *node) {
     if (node == NULL)
         return NULL;
-    ENTER(shakeMinAmb);
+    ENTER(inlineMinAmb);
     bool changed = false;
-    MinExp *new_left = shakeMinExp(node->left);
+    MinExp *new_left = inlineMinExp(node->left);
     int save = PROTECT(new_left);
     changed = changed || (new_left != node->left);
-    MinExp *new_right = shakeMinExp(node->right);
+    MinExp *new_right = inlineMinExp(node->right);
     PROTECT(new_right);
     changed = changed || (new_right != node->right);
     MinAmb *result = node;
@@ -331,25 +405,21 @@ static MinAmb *shakeMinAmb(MinAmb *node) {
         result = newMinAmb(CPI(node), new_left, new_right);
     }
     UNPROTECT(save);
-    LEAVE(shakeMinAmb);
+    LEAVE(inlineMinAmb);
     return result;
 }
 
-//////////////
-// Public API
-//////////////
-
-MinExp *shakeMinExp(MinExp *node) {
+MinExp *inlineMinExp(MinExp *node) {
     if (node == NULL)
         return NULL;
-    ENTER(shakeMinExp);
+    ENTER(inlineMinExp);
     int save = PROTECT(NULL);
     MinExp *result = node;
     switch (node->type) {
     case MINEXP_TYPE_AMB: {
         // MinAmb
         MinAmb *variant = getMinExp_Amb(node);
-        MinAmb *new_variant = shakeMinAmb(variant);
+        MinAmb *new_variant = inlineMinAmb(variant);
         if (new_variant != variant) {
             PROTECT(new_variant);
             result = newMinExp_Amb(CPI(node), new_variant);
@@ -359,7 +429,7 @@ MinExp *shakeMinExp(MinExp *node) {
     case MINEXP_TYPE_APPLY: {
         // MinApply
         MinApply *variant = getMinExp_Apply(node);
-        MinApply *new_variant = shakeMinApply(variant);
+        MinApply *new_variant = inlineMinApply(variant);
         if (new_variant != variant) {
             PROTECT(new_variant);
             result = newMinExp_Apply(CPI(node), new_variant);
@@ -369,7 +439,7 @@ MinExp *shakeMinExp(MinExp *node) {
     case MINEXP_TYPE_ARGS: {
         // MinExprList
         MinExprList *variant = getMinExp_Args(node);
-        MinExprList *new_variant = shakeMinExprList(variant);
+        MinExprList *new_variant = inlineMinExprList(variant);
         if (new_variant != variant) {
             PROTECT(new_variant);
             result = newMinExp_Args(CPI(node), new_variant);
@@ -378,6 +448,12 @@ MinExp *shakeMinExp(MinExp *node) {
     }
     case MINEXP_TYPE_AVAR: {
         // MinAnnotatedVar
+        MinAnnotatedVar *variant = getMinExp_Avar(node);
+        MinAnnotatedVar *new_variant = inlineMinAnnotatedVar(variant);
+        if (new_variant != variant) {
+            PROTECT(new_variant);
+            result = newMinExp_Avar(CPI(node), new_variant);
+        }
         break;
     }
     case MINEXP_TYPE_BACK: {
@@ -391,7 +467,7 @@ MinExp *shakeMinExp(MinExp *node) {
     case MINEXP_TYPE_BINDINGS: {
         // MinBindings
         MinBindings *variant = getMinExp_Bindings(node);
-        MinBindings *new_variant = shakeMinBindings(variant);
+        MinBindings *new_variant = inlineMinBindings(variant);
         if (new_variant != variant) {
             PROTECT(new_variant);
             result = newMinExp_Bindings(CPI(node), new_variant);
@@ -401,7 +477,7 @@ MinExp *shakeMinExp(MinExp *node) {
     case MINEXP_TYPE_CALLCC: {
         // MinExp
         MinExp *variant = getMinExp_CallCC(node);
-        MinExp *new_variant = shakeMinExp(variant);
+        MinExp *new_variant = inlineMinExp(variant);
         if (new_variant != variant) {
             PROTECT(new_variant);
             result = newMinExp_CallCC(CPI(node), new_variant);
@@ -415,7 +491,7 @@ MinExp *shakeMinExp(MinExp *node) {
     case MINEXP_TYPE_COND: {
         // MinCond
         MinCond *variant = getMinExp_Cond(node);
-        MinCond *new_variant = shakeMinCond(variant);
+        MinCond *new_variant = inlineMinCond(variant);
         if (new_variant != variant) {
             PROTECT(new_variant);
             result = newMinExp_Cond(CPI(node), new_variant);
@@ -423,13 +499,13 @@ MinExp *shakeMinExp(MinExp *node) {
         break;
     }
     case MINEXP_TYPE_DONE: {
-        // void_ptr
+        // int
         break;
     }
     case MINEXP_TYPE_IFF: {
         // MinIff
         MinIff *variant = getMinExp_Iff(node);
-        MinIff *new_variant = shakeMinIff(variant);
+        MinIff *new_variant = inlineMinIff(variant);
         if (new_variant != variant) {
             PROTECT(new_variant);
             result = newMinExp_Iff(CPI(node), new_variant);
@@ -439,7 +515,7 @@ MinExp *shakeMinExp(MinExp *node) {
     case MINEXP_TYPE_LAM: {
         // MinLam
         MinLam *variant = getMinExp_Lam(node);
-        MinLam *new_variant = shakeMinLam(variant);
+        MinLam *new_variant = inlineMinLam(variant);
         if (new_variant != variant) {
             PROTECT(new_variant);
             result = newMinExp_Lam(CPI(node), new_variant);
@@ -449,7 +525,7 @@ MinExp *shakeMinExp(MinExp *node) {
     case MINEXP_TYPE_LETREC: {
         // MinLetRec
         MinLetRec *variant = getMinExp_LetRec(node);
-        MinLetRec *new_variant = shakeMinLetRec(variant);
+        MinLetRec *new_variant = inlineMinLetRec(variant);
         if (new_variant != variant) {
             PROTECT(new_variant);
             result = newMinExp_LetRec(CPI(node), new_variant);
@@ -459,7 +535,7 @@ MinExp *shakeMinExp(MinExp *node) {
     case MINEXP_TYPE_MAKEVEC: {
         // MinExprList
         MinExprList *variant = getMinExp_MakeVec(node);
-        MinExprList *new_variant = shakeMinExprList(variant);
+        MinExprList *new_variant = inlineMinExprList(variant);
         if (new_variant != variant) {
             PROTECT(new_variant);
             result = newMinExp_MakeVec(CPI(node), new_variant);
@@ -469,7 +545,7 @@ MinExp *shakeMinExp(MinExp *node) {
     case MINEXP_TYPE_MATCH: {
         // MinMatch
         MinMatch *variant = getMinExp_Match(node);
-        MinMatch *new_variant = shakeMinMatch(variant);
+        MinMatch *new_variant = inlineMinMatch(variant);
         if (new_variant != variant) {
             PROTECT(new_variant);
             result = newMinExp_Match(CPI(node), new_variant);
@@ -479,7 +555,7 @@ MinExp *shakeMinExp(MinExp *node) {
     case MINEXP_TYPE_PRIM: {
         // MinPrimApp
         MinPrimApp *variant = getMinExp_Prim(node);
-        MinPrimApp *new_variant = shakeMinPrimApp(variant);
+        MinPrimApp *new_variant = inlineMinPrimApp(variant);
         if (new_variant != variant) {
             PROTECT(new_variant);
             result = newMinExp_Prim(CPI(node), new_variant);
@@ -489,7 +565,7 @@ MinExp *shakeMinExp(MinExp *node) {
     case MINEXP_TYPE_SEQUENCE: {
         // MinExprList
         MinExprList *variant = getMinExp_Sequence(node);
-        MinExprList *new_variant = shakeMinExprList(variant);
+        MinExprList *new_variant = inlineMinExprList(variant);
         if (new_variant != variant) {
             PROTECT(new_variant);
             result = newMinExp_Sequence(CPI(node), new_variant);
@@ -508,21 +584,21 @@ MinExp *shakeMinExp(MinExp *node) {
         cant_happen("unrecognized MinExp type %d", node->type);
     }
     UNPROTECT(save);
-    LEAVE(shakeMinExp);
+    LEAVE(inlineMinExp);
     return result;
 }
 
-static MinCondCases *shakeMinCondCases(MinCondCases *node) {
+static MinCondCases *inlineMinCondCases(MinCondCases *node) {
     if (node == NULL)
         return NULL;
-    ENTER(shakeMinCondCases);
+    ENTER(inlineMinCondCases);
     int save = PROTECT(NULL);
     MinCondCases *result = node;
     switch (node->type) {
     case MINCONDCASES_TYPE_INTEGERS: {
         // MinIntCondCases
         MinIntCondCases *variant = getMinCondCases_Integers(node);
-        MinIntCondCases *new_variant = shakeMinIntCondCases(variant);
+        MinIntCondCases *new_variant = inlineMinIntCondCases(variant);
         if (new_variant != variant) {
             PROTECT(new_variant);
             result = newMinCondCases_Integers(CPI(node), new_variant);
@@ -532,7 +608,7 @@ static MinCondCases *shakeMinCondCases(MinCondCases *node) {
     case MINCONDCASES_TYPE_CHARACTERS: {
         // MinCharCondCases
         MinCharCondCases *variant = getMinCondCases_Characters(node);
-        MinCharCondCases *new_variant = shakeMinCharCondCases(variant);
+        MinCharCondCases *new_variant = inlineMinCharCondCases(variant);
         if (new_variant != variant) {
             PROTECT(new_variant);
             result = newMinCondCases_Characters(CPI(node), new_variant);
@@ -543,6 +619,6 @@ static MinCondCases *shakeMinCondCases(MinCondCases *node) {
         cant_happen("unrecognized MinCondCases type %d", node->type);
     }
     UNPROTECT(save);
-    LEAVE(shakeMinCondCases);
+    LEAVE(inlineMinCondCases);
     return result;
 }

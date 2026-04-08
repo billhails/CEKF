@@ -4,23 +4,21 @@ link "dictutils.fn" as dic;
 
 typedef Array(#t) { array(number, number, dic.Dict(number, #t)) }
 
-print Array fn (pt, a = array(low, high, d) {
+print Array fn (pt, a = array(low, high, d)) {
     let
-        fn helper {
-            (n)) {
-                switch(dic.lookup(n, d)) {
-                    (just(v)) {
-                        pt(v);
-                        if (n < high - 1) {
-                            puts(", ");
-                            helper(n + 1);
-                        } else {
-                            true;
-                        }
-                    }
-                    (nothing) {
+        fn helper (n) {
+            switch(dic.lookup(n, d)) {
+                (just(v)) {
+                    pt(v);
+                    if (n < high - 1) {
+                        puts(", ");
+                        helper(n + 1);
+                    } else {
                         true;
                     }
+                }
+                (nothing) {
+                    true;
                 }
             }
         }

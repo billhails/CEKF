@@ -209,6 +209,7 @@ static MinApply *visitMinApply(MinApply *node, MinAlphaEnv *context) {
         // Create new node with modified fields
         MinApply *result = newMinApply(CPI(node), new_function, new_args);
         result->isBuiltin = node->isBuiltin;
+        result->cc = node->cc;
         UNPROTECT(save);
         return result;
     }
@@ -534,6 +535,10 @@ static MinExp *visitMinExp(MinExp *node, MinAlphaEnv *context) {
     }
     case MINEXP_TYPE_CHARACTER: {
         // character
+        break;
+    }
+    case MINEXP_TYPE_DONE: {
+        // int
         break;
     }
     case MINEXP_TYPE_COND: {

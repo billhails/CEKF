@@ -159,10 +159,10 @@ $(FN_BFILES): $(TMPDIR)/%.fnc: $(FNDIR)/%.fn $(TARGET) | $(TMPDIR)
 	$(TARGET) --binary-out=$@~ $<  && mv $@~ $@
 
 $(TEST_FN_SFILES): $(TMPDIR)/%.scm: $(TEST_FN_DIR)/%.fn $(TARGET) | $(TMPDIR)
-	$(TARGET) $(TARGET_ARGS) --dump-ir $<  > $@~ && mv $@~ $@
+	$(TARGET) $(TARGET_ARGS) --target-c --dump-inline-f $<  > $@~ && mv $@~ $@
 
 $(FN_SFILES): $(TMPDIR)/%.scm: $(FNDIR)/%.fn $(TARGET) | $(TMPDIR)
-	$(TARGET) $(TARGET_ARGS) --dump-ir $<  > $@~ && mv $@~ $@
+	$(TARGET) $(TARGET_ARGS) --target-c --dump-inline-f $<  > $@~ && mv $@~ $@
 
 $(FN_OFILES) $(TEST_FN_OFILES): %.o: %.c
 	$(LAXCC) $(INCLUDE_PATHS) -c $< -o $@
@@ -174,7 +174,7 @@ test-binary: all $(TEST_FN_BINARIES)
 	@for t in $(TEST_FN_BINARIES) ; do echo $$t ; $$t || exit 1 ; done
 	@echo All binary tests pass
 
-irs: $(TEST_FN_SFILES)
+irs: $(TEST_FN_SFILES) tmp/test_harness.scm
 
 test-big-binary: all tmp/test_harness
 	tmp/test_harness
@@ -189,6 +189,9 @@ tmp/test_harness.c: $(FNDIR)/rewrite/test_harness.fn $(TARGET)
 	$(TARGET) --target-c=$@~ $< && mv $@~ $@
 	indent $@
 	rm -f $@~
+
+tmp/test_harness.scm: $(FNDIR)/rewrite/test_harness.fn $(TARGET)
+	$(TARGET) --target-c --dump-inline-f $< >$@~ && mv $@~ $@
 
 tmp/test_harness.fnc: $(FNDIR)/rewrite/test_harness.fn $(TARGET)
 	$(TARGET) --binary-out=$@~ $<  && mv $@~ $@

@@ -49,6 +49,7 @@
 #include "minlam_amb.h"
 #include "minlam_annotate.h"
 #include "minlam_beta.h"
+#include "minlam_check.h"
 #include "minlam_closureConvert.h"
 #include "minlam_cps.h"
 #include "minlam_cpsTrampoline.h"
@@ -56,6 +57,7 @@
 #include "minlam_emit_c.h"
 #include "minlam_eta.h"
 #include "minlam_fold.h"
+#include "minlam_inline.h"
 #include "minlam_pp.h"
 #include "minlam_shake.h"
 #include "minlam_uncurry.h"
@@ -84,7 +86,8 @@ static int help_flag = 0;
 static int dumpIR = 0;
 static int ast_flag = 0;
 static int lambda_flag = 0;
-static int inline_flag = 0;
+static int inline_c_flag = 0;
+static int inline_f_flag = 0;
 static int parse_only_flag = 0;
 static int targetCFlag = 0;
 #ifdef UNIT_TESTS
@@ -182,8 +185,10 @@ static void usage(char *prog, int status) {
         "    --dump-desugared=<function> Display the intermediate code after "
         "desugaring.\n"
         "    --dump-fold              Display the IR after constant folding.\n"
-        "    --dump-inline            Display the intermediate code after "
-        "inlining.\n"
+        "    --dump-inline-c          Display the intermediate code after "
+        "constructor inlining.\n"
+        "    --dump-inline-f          Display the intermediate code after "
+        "function inlining.\n"
         "    -l\n"
         "    --dump-lambda            Display all the intermediate code.\n"
         "    -l<function>\n"
@@ -243,7 +248,8 @@ static int processArgs(int argc, char *argv[]) {
             {"dump-bytecode", no_argument, &dump_bytecode_flag, 1},
             {"exec", required_argument, 0, 'e'},
             {"help", no_argument, 0, 'h'},
-            {"dump-inline", no_argument, &inline_flag, 1},
+            {"dump-inline-c", no_argument, &inline_c_flag, 1},
+            {"dump-inline-f", no_argument, &inline_f_flag, 1},
             {"dump-curry", no_argument, &curry_flag, 1},
             {"dump-fold", no_argument, &fold_flag, 1},
             {"dump-uncurry", no_argument, &uncurry_flag, 1},
@@ -388,83 +394,6 @@ static AstProg *parseString(char *string) {
 }
 
 /**
- * Convert an AST program into a lambda expression.
- *
- * @param prog the AST program
- * @return the lambda expression
- */
-static LamExp *convertProg(AstProg *prog) {
-    LamExp *exp = lamConvertProg(prog);
-    int save = PROTECT(exp);
-    if (hadErrors()) {
-        exit(1);
-    }
-    exp = lamPerformSimplifications(exp);
-    REPLACE_PROTECT(save, exp);
-    if (lambda_flag) {
-        ppLamExp(stdout, exp);
-        printf("\n");
-        exit(0);
-    }
-    UNPROTECT(save);
-    return exp;
-}
-
-static LamExp *inlineExp(LamExp *exp) __attribute__((unused));
-
-/**
- * Inline type constructors in a lambda expression.
- *
- * @param exp the lambda expression
- * @return the inlined lambda expression
- */
-static LamExp *inlineExp(LamExp *exp) {
-    exp = inlineLamExp(exp);
-    int save = PROTECT(exp);
-    if (inline_flag) {
-        ppLamExp(stdout, exp);
-        printf("\n");
-        exit(0);
-    }
-    UNPROTECT(save);
-    return exp;
-}
-
-/**
- * Type check a lambda expression.
- *
- * @param exp the lambda expression
- * @param builtIns the built-in functions
- */
-static void typeCheck(LamExp *exp, BuiltIns *builtIns) {
-    TcEnv *env = tc_init(builtIns);
-    int save = PROTECT(env);
-    TcType *res __attribute__((unused)) = tc_analyze(exp, env);
-    if (hadErrors()) {
-        exit(1);
-    }
-#ifdef DEBUG_TC
-    ppTcType(stderr, res);
-    eprintf("\n");
-#endif
-    UNPROTECT(save);
-}
-
-/**
- * Annotate an ANF expression, adding location information for symbols
- *
- * @param anfExp the ANF expression
- * @param builtIns the built-in functions
- */
-static void annotate(AnfExp *anfExp, BuiltIns *builtIns) {
-    annotateAnf(anfExp, builtIns);
-#ifdef DEBUG_ANF
-    ppAnfExp(stderr, anfExp);
-    eprintf("\n");
-#endif
-}
-
-/**
  * Generate byte codes from an ANF expression.
  *
  * @param anfExp the ANF expression
@@ -500,6 +429,31 @@ static void report(char *prog, clock_t begin, clock_t compiled, clock_t end) {
         reportMemory();
         reportSteps();
     }
+}
+
+static MinExp *betaEtaFixedPoint(MinExp *node) {
+    int save = PROTECT(node);
+    int save2 = PROTECT(node);
+    MinExp *res = NULL;
+#ifdef DEBUG_FIXED_POINT
+    int count = 0;
+#endif
+    while (res != node) {
+        res = node;
+        REPLACE_PROTECT(save, res);
+        node = betaMinExp(res);
+        REPLACE_PROTECT(save2, node);
+        node = etaMinExp(node);
+        REPLACE_PROTECT(save2, node);
+#ifdef DEBUG_FIXED_POINT
+        count++;
+#endif
+    }
+#ifdef DEBUG_FIXED_POINT
+    eprintf("beta/eta fixed point: %d\n", count - 1);
+#endif
+    UNPROTECT(save);
+    return node;
 }
 
 /**
@@ -576,16 +530,45 @@ int main(int argc, char *argv[]) {
         /////////////////////
         // Lambda Conversion
         /////////////////////
-        LamExp *exp = convertProg(prog);
+        LamExp *exp = lamConvertProg(prog);
         REPLACE_PROTECT(save2, exp);
+        if (hadErrors()) {
+            exit(1);
+        }
 
-        typeCheck(exp, builtIns);
+        /////////////////////////
+        // Lambda Simplification
+        /////////////////////////
+        exp = lamPerformSimplifications(exp);
+        REPLACE_PROTECT(save, exp);
+        if (lambda_flag) {
+            ppLamExp(stdout, exp);
+            printf("\n");
+            exit(0);
+        }
+
+        /////////////////
+        // Type Checking
+        /////////////////
+        TcEnv *env = tc_init(builtIns);
+        int save3 = PROTECT(env);
+        (void)tc_analyze(exp, env);
+        if (hadErrors()) {
+            exit(1);
+        }
+        UNPROTECT(save3);
 
         ////////////////////////
         // constructor inlining
         ////////////////////////
-        exp = inlineExp(exp);
+        exp = inlineLamExp(exp);
         REPLACE_PROTECT(save2, exp);
+
+        if (inline_c_flag) {
+            ppLamExp(stdout, exp);
+            printf("\n");
+            exit(0);
+        }
 
 #if 0
         // forceGcFlag = true;
@@ -607,6 +590,12 @@ int main(int argc, char *argv[]) {
             eprintf("\n");
             exit(0);
         }
+
+        /////////
+        // Shake
+        /////////
+        minExp = shakeMinExp(minExp);
+        REPLACE_PROTECT(save2, minExp);
 
         /////
         // ɑ
@@ -632,25 +621,10 @@ int main(int argc, char *argv[]) {
             exit(0);
         }
 
-        // if we move currying below this point we need to
-        // update the following steps to propagate the isBuiltin flag
-
-        /////
-        // β
-        /////
-        minExp = betaMinExp(minExp);
-        REPLACE_PROTECT(save2, minExp);
-
-        /////
-        // η
-        /////
-        minExp = etaMinExp(minExp);
-        REPLACE_PROTECT(save2, minExp);
-
-        /////
-        // β
-        /////
-        minExp = betaMinExp(minExp); // second pass.
+        /////////
+        // β - η
+        /////////
+        minExp = betaEtaFixedPoint(minExp);
         REPLACE_PROTECT(save2, minExp);
 
         if (beta_flag) {
@@ -692,10 +666,10 @@ int main(int argc, char *argv[]) {
             minExp = runCpsTrampolineTc(minExp, done);
             REPLACE_PROTECT(save2, minExp);
 
-            /////
-            // β
-            /////
-            minExp = betaMinExp(minExp); // necessary for the amb transform
+            /////////
+            // β - η
+            /////////
+            minExp = betaEtaFixedPoint(minExp);
             REPLACE_PROTECT(save2, minExp);
 
             if (cps_flag) {
@@ -710,19 +684,6 @@ int main(int argc, char *argv[]) {
             MinExp *fail = makeDoneCont(CPI(minExp), 1, false);
             PROTECT(fail);
             minExp = ambMinExp(minExp, fail);
-            REPLACE_PROTECT(save2, minExp);
-
-            /////
-            // β
-            /////
-            minExp = betaMinExp(minExp);
-            REPLACE_PROTECT(save2, minExp);
-
-            ///////////////////////////////////////////////
-            // η - this should achieve TCO by rewriting
-            // continuations after CPS: (λ (x) (k x)) => k
-            ///////////////////////////////////////////////
-            minExp = etaMinExp(minExp);
             REPLACE_PROTECT(save2, minExp);
 
             if (amb_flag) {
@@ -742,6 +703,58 @@ int main(int argc, char *argv[]) {
                 eprintf("\n");
                 exit(0);
             }
+
+#ifdef DEBUG_FIXED_POINT
+            eprintf("inline/beta/eta/shake fixed point start\n");
+#endif
+
+            /////////////////////////////////////////////////////
+            // Inline Function Application Fixed Point Iteration
+            /////////////////////////////////////////////////////
+            MinExp *previousInline = NULL;
+            int save4 = PROTECT(minExp);
+#ifdef DEBUG_FIXED_POINT
+            int iterations = 0;
+#endif
+            while (previousInline != minExp) {
+                previousInline = minExp;
+                REPLACE_PROTECT(save4, previousInline);
+
+                //////////
+                // Inline
+                //////////
+                minExp = inlineMinExp(minExp);
+                REPLACE_PROTECT(save2, minExp);
+
+                /////////
+                // β - η
+                /////////
+                minExp = betaEtaFixedPoint(minExp);
+                REPLACE_PROTECT(save2, minExp);
+
+                /////////
+                // Shake
+                /////////
+                minExp = shakeMinExp(minExp);
+                REPLACE_PROTECT(save2, minExp);
+#ifdef DEBUG_FIXED_POINT
+                iterations++;
+#endif
+            }
+            UNPROTECT(save4);
+
+#ifdef DEBUG_FIXED_POINT
+            eprintf("inline/beta/eta/shake fixed point: %d\n", iterations - 1);
+#endif
+
+            if (inline_f_flag) {
+                ppMinExp(stdout, minExp);
+                exit(0);
+            }
+
+#ifdef SAFETY_CHECKS
+            checkMinExp(minExp, builtIns);
+#endif
 
             ///////////////////
             // Closure Convert
@@ -793,7 +806,7 @@ int main(int argc, char *argv[]) {
         AnfExp *anfExp = anfNormalize(minExp);
         REPLACE_PROTECT(save2, anfExp);
 
-        annotate(anfExp, builtIns);
+        annotateAnf(anfExp, builtIns);
 
         if (dumpIR) {
             ppAnfExp(stdout, anfExp);

@@ -27,16 +27,17 @@
 struct Opaque;
 
 typedef void (*OpaqueOperation)(void *data);
+typedef void (*OpaquePrintOperation)(FILE *fp, void *data);
 
 typedef struct Opaque {
     Header header;
     void *data;
     OpaqueOperation clean;
-    OpaqueOperation print;
+    OpaquePrintOperation print;
     OpaqueOperation mark;
 } Opaque;
 
-Opaque *newOpaque(void *data, OpaqueOperation clean, OpaqueOperation print,
+Opaque *newOpaque(void *data, OpaqueOperation clean, OpaquePrintOperation print,
                   OpaqueOperation mark);
 void markOpaque(Opaque *);
 void freeOpaque(Opaque *);

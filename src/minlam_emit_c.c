@@ -86,7 +86,7 @@ typedef struct EmitBuffer {
 static EmitBuffer *newEmitBuffer();
 static char *getEmitBuffer(EmitBuffer *);
 static void cleanEmitBuffer(void *);
-static void printEmitBuffer(void *);
+static void printEmitBuffer(FILE *, void *);
 
 static inline Opaque *newOpaque_EmitBuffer() {
     // no protection as buffer is manually cleaned
@@ -129,11 +129,13 @@ static void cleanEmitBuffer(void *buffer) {
     FREE(b, EmitBuffer);
 }
 
-static void printEmitBuffer(void *buffer) {
+static void printEmitBuffer(FILE *fp, void *buffer) {
     EmitBuffer *b = (EmitBuffer *)buffer;
-    fflush(b->fh);
-    if (b->buffer != NULL)
-        eprintf("%s", b->buffer);
+    if (b != NULL) {
+        fflush(b->fh);
+        if (b->buffer != NULL)
+            fprintf(fp, "%s", b->buffer);
+    }
 }
 
 ///////////////////
@@ -158,7 +160,7 @@ static EmitterContext *extendContextForLambda(HashSymbol *var,
     return new;
 }
 
-// only for atomics: sub-ctx must not allocate slots
+// only for atomics: sub-context must not allocate slots
 static EmitterContext *extendContext(EmitterContext *ctx, Opaque *body) {
     EmitterContext *new =
         newEmitterContext(ctx->currentBinding, body, ctx->builtIns, ctx->heap);
@@ -684,6 +686,8 @@ static EmitResult *emitSimpleExp(MinExp *exp, EmitterContext *ctx) {
         return result;
     }
     default:
+        ppMinExp(stderr, exp);
+        eprintf("\n");
         cant_happen("unhandled %s", minExpTypeName(exp->type));
     }
 }
@@ -878,6 +882,10 @@ static void emitApplyBuiltin(MinApply *node, EmitterContext *ctx) {
     EmitResult *env = emitExtractFromClosure(k, 1, ctx);
     PROTECT(env);
     pushResultArray(targetArgs, env);
+
+    EmitResult *target = emitExtractFromClosure(k, 0, ctx);
+    PROTECT(target);
+
     releaseSlot(k, ctx);
 
     // (env result)
@@ -893,9 +901,6 @@ static void emitApplyBuiltin(MinApply *node, EmitterContext *ctx) {
     EmitResult *f = emitSimpleExp(continuations->exp, ctx);
     PROTECT(f);
     pushResultArray(targetArgs, f);
-
-    EmitResult *target = emitExtractFromClosure(k, 0, ctx);
-    PROTECT(target);
 
     // (k env result f)
     emitGoto(target, targetArgs, ctx);
@@ -991,6 +996,7 @@ static void emitMinIff(MinIff *node, EmitterContext *ctx) {
 static void emitMinCond(MinCond *node, EmitterContext *ctx) {
     EMITLOC("emitMinCond", node, ctx);
     EmitResult *cond = emitSimpleExp(node->value, ctx);
+    int save = PROTECT(cond);
     if (node->cases->type == MINCONDCASES_TYPE_INTEGERS) {
         const char *condText = resultText(cond, ctx);
         releaseSlot(cond, ctx);
@@ -1003,6 +1009,7 @@ static void emitMinCond(MinCond *node, EmitterContext *ctx) {
         emitMinCondCases(node->cases, ctx);
         fprintf(FH(ctx), "}\n");
     }
+    UNPROTECT(save);
 }
 
 static void emitMinCondCases(MinCondCases *node, EmitterContext *ctx) {

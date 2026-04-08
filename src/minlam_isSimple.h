@@ -1,5 +1,5 @@
-#ifndef cekf_minlam_helper_h
-#define cekf_minlam_helper_h
+#ifndef cekf_minlam_isSimple_h
+#define cekf_minlam_isSimple_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2026  Bill Hails
@@ -18,19 +18,6 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "minlam.h"
-#include "utils.h"
-
-SymbolList *minBindingsToSymbolList(MinBindings *);
-MinExp *makeDoneCont(ParserInfo, int, bool);
-SymbolSet *computeRoots(SymbolSet *, MinExp *);
-SymbolSet *getAllKeys(MinBindings *);
-SymbolSetMap *buildDependencyGraph(MinBindings *, SymbolSet *);
-SymbolSet *computeLiveBindings(SymbolSetMap *, SymbolSet *);
-MinBindings *retainOnlyLive(MinBindings *, SymbolSet *);
-MinExpTable *minBindingsToMap(MinBindings *);
-bool isAtomicMinExp(MinExp *exp);
-IntMap *newIntMapFromSymbolList(SymbolList *list);
-IntMap *extendIntMapWithBindings(IntMap *context, MinBindings *bindings);
+bool simpleMinExp(MinExp *);
 
 #endif
