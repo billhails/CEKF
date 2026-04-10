@@ -1,29 +1,24 @@
 # emit_c
 
-Code emission utilities
+C code emission utilities
 
 ```mermaid
 flowchart LR
-BufferBag --entries--> opaque
-SlotPool --entries--> Slot
-EmitterContext --currentBinding--> HashSymbol
-EmitterContext --lambdas--> BufferBag
-EmitterContext --body--> opaque
-EmitterContext --builtIns--> BuiltIns
-EmitterContext --slots--> SlotPool
-EmitterContext --heap--> SymbolArray
-EmitterContext --activeSlots--> int
-EmitterContext --totalSlots--> int
-EmitterContext --maxReg--> int
-EmitterContext --currentReg--> int
-EmitterContext --needsUnprotect--> bool
-Slot --isAvailable--> bool
-Slot --text--> SCharArray
-Slot --index--> int
-EmitResult --var--> HashSymbol
-EmitResult --buf--> opaque
-EmitResult --constant--> opaque
-ResultArray["ResultArray[]"] --entries--> EmitResult
+CBufferBag --entries--> opaque
+CEmitterContext --currentBinding--> HashSymbol
+CEmitterContext --lambdas--> CBufferBag
+CEmitterContext --body--> opaque
+CEmitterContext --builtIns--> BuiltIns
+CEmitterContext --registers--> RegisterSlots
+CEmitterContext --activeSlots--> int
+CEmitterContext --totalSlots--> int
+CEmitterContext --maxReg--> int
+CEmitterContext --currentReg--> int
+CEmitterContext --needsUnprotect--> bool
+EmitCResult --var--> HashSymbol
+EmitCResult --buf--> opaque
+EmitCResult --constant--> opaque
+CResultArray["CResultArray[]"] --entries--> EmitCResult
 ```
 
 > Generated from src/emit_c.yaml by tools/generate.py

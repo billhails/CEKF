@@ -1,5 +1,5 @@
-#ifndef cekf_emit_c_helper_h
-#define cekf_emit_c_helper_h
+#ifndef cekf_emit_helper_h
+#define cekf_emit_helper_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2026  Bill Hails
@@ -18,6 +18,12 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "emit_c.h"
+#include "emit.h"
+#include "symbol.h"
+
+void emit_addToHeap(RegisterSlots, HashSymbol *);
+HashSymbol *emit_removeFromHeap(RegisterSlots); // can return NULL
+SymbolArray *emit_createHeap();
+Integer emit_peekHeap(RegisterSlots);
 
 #endif

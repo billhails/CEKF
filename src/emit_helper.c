@@ -16,36 +16,36 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "emit_c_helper.h"
+#include "emit_helper.h"
 
 static inline Index parent(Index i) { return i / 2; } // rounds towards zero
 static inline Index left_child(Index i) { return i * 2; }
 static inline Index right_child(Index i) { return i * 2 + 1; }
-static inline void swap(Index a, Index b, EmitterContext *context) {
-    HashSymbol *temp = context->heap->entries[a];
-    context->heap->entries[a] = context->heap->entries[b];
-    context->heap->entries[b] = temp;
+static inline void swap(Index a, Index b, RegisterSlots ctx) {
+    HashSymbol *temp = ctx.heap->entries[a];
+    ctx.heap->entries[a] = ctx.heap->entries[b];
+    ctx.heap->entries[b] = temp;
 }
 
 // returns the register number of the slot
-static Integer reg(Index i, EmitterContext *ctx) {
+static Integer reg(Index i, RegisterSlots ctx) {
 #ifdef SAFETY_CHECKS
-    if (i < 1 || i >= ctx->heap->size)
+    if (i < 1 || i >= ctx.heap->size)
         cant_happen("heap index %u out of range", i);
 #endif
 
-    HashSymbol *key = ctx->heap->entries[i];
+    HashSymbol *key = ctx.heap->entries[i];
     Slot *slot = NULL;
 
-    if (getSlotPool(ctx->slots, key, &slot)) {
+    if (getSlotPool(ctx.slots, key, &slot)) {
         return slot->index;
     } else {
         cant_happen("unrecognised %s at index %u", key->name, i);
     }
 }
 
-Integer emit_peekHeap(EmitterContext *ctx) {
-    SymbolArray *heap = ctx->heap;
+Integer emit_peekHeap(RegisterSlots ctx) {
+    SymbolArray *heap = ctx.heap;
 
     if (heap->size < 2) {
         return 1 << (sizeof(Integer) * 8 - 2);
@@ -63,8 +63,8 @@ SymbolArray *emit_createHeap() {
     return result;
 }
 
-void emit_addToHeap(EmitterContext *ctx, HashSymbol *key) {
-    SymbolArray *heap = ctx->heap;
+void emit_addToHeap(RegisterSlots ctx, HashSymbol *key) {
+    SymbolArray *heap = ctx.heap;
 
 #ifdef SAFETY_CHECKS
     if (heap->size == 0)
@@ -90,8 +90,8 @@ void emit_addToHeap(EmitterContext *ctx, HashSymbol *key) {
 }
 
 // can return NULL
-HashSymbol *emit_removeFromHeap(EmitterContext *ctx) {
-    SymbolArray *heap = ctx->heap;
+HashSymbol *emit_removeFromHeap(RegisterSlots ctx) {
+    SymbolArray *heap = ctx.heap;
 
 #ifdef SAFETY_CHECKS
     if (heap->size == 0)

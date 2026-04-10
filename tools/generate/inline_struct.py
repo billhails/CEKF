@@ -32,6 +32,8 @@ class InlineStruct(SimpleStruct):
             fname = field.getName()
             if field.default is not None:
                 print(f"    _x.{fname} = {field.default}; {c}")
+            elif field.isSelfInitializing(catalog) :
+                print(f"    _x.{fname} = {field.getConstructorName(catalog)}(); {c}")
             else:
                 print(f"    _x.{fname} = {fname}; {c}")
         print(f"    return _x; {c}")

@@ -36,6 +36,12 @@ HashSymbol:
         printFn: fprintAstSymbol
         valued: true
 
+uint:
+    data:
+        cname: UInteger
+        printf: "%u"
+        valued: true
+
 int:
     data:
         cname: Integer

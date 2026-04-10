@@ -125,6 +125,12 @@ arrays:
         data:
             entries: int
 
+    UIntArray:
+        meta:
+            brief: unsigned integer array
+        data:
+            entries: uint
+
 vectors:
     SCharVec:
         meta:

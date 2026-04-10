@@ -29,7 +29,9 @@ struct Header;
 #include "builtins_objtypes.h"
 #include "cekfs_objtypes.h"
 #include "cps_kont_objtypes.h"
+#include "emit_b_objtypes.h"
 #include "emit_c_objtypes.h"
+#include "emit_objtypes.h"
 #include "lambda_objtypes.h"
 #include "minlam_objtypes.h"
 #include "pratt_objtypes.h"
@@ -69,6 +71,8 @@ typedef enum {
     CPS_KONT_OBJTYPES(),
     UTILS_OBJTYPES(),
     TERM_OBJTYPES(),
+    EMIT_OBJTYPES(),
+    EMIT_B_OBJTYPES(),
     EMIT_C_OBJTYPES(),
 } ObjType;
 

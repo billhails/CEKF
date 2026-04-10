@@ -172,7 +172,7 @@ $(FN_BINARIES) $(TEST_FN_BINARIES): %: %.o $(ALL_OBJ)
 
 test-c: all $(TEST_FN_BINARIES)
 	@for t in $(TEST_FN_BINARIES) ; do echo $$t ; $$t || exit 1 ; done
-	@echo All c tests pass
+	@echo All generated C tests pass
 
 irs: $(TEST_FN_SFILES) tmp/test_harness.scm
 

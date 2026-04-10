@@ -26,6 +26,7 @@ UCharArray["UCharArray[]"] --entries--> byte
 SCharArray["SCharArray[]"] --entries--> schar
 SymbolArray["SymbolArray[]"] --entries--> HashSymbol
 IntArray["IntArray[]"] --entries--> int
+UIntArray["UIntArray[]"] --entries--> uint
 ```
 
 > Generated from src/utils.yaml by tools/generate.py

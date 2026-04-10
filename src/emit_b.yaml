@@ -17,55 +17,89 @@
 #
 
 config:
-    name: emit_c
-    description: C code emission utilities
+    name: emit_b
+    description: New byteode emission utilities
     parserInfo: false
     limited_includes:
       - builtins.h
       - builtins_debug.h
       - emit.h
+      - utils.h
       - emit_debug.h
 
 structs:
-    CEmitterContext:
+    BEmitterContext:
         meta:
             brief: VisitorContext for emitMinExp
         data:
             currentBinding: HashSymbol
-            lambdas: CBufferBag
-            body: opaque
+            lambdas: BBufferBag
+            body: BBuffer
             builtIns: BuiltIns
-            registers: RegisterSlots
+            slots: SlotPool
+            heap: SymbolArray # minheap
             activeSlots: int=0
             totalSlots: int=0
             maxReg: int=0
             currentReg: int=0
             needsUnprotect: bool=false
 
+    BBuffer:
+        meta:
+            brief: A buffer with code, source locations and comments
+        data:
+            codes: UIntArray
+            locations: BLocationArray
+            comments: BCommentArray
+
+    BLocation:
+        meta:
+            brief: A source code location associated with a bytecode
+        data:
+            index: index
+            fileName: string
+            lineNo: int
+
+    BComment:
+        meta:
+            brief: text comment associated with a bytecode
+        data:
+            index: index
+            text: SCharArray
+
 unions:
-    EmitCResult:
+    EmitBResult:
         meta:
             description: >
-                Either a hash symbol representing a temp variable, or an Opaque
-                EmitBuffer containing an immediate expression which can be
-                a  constant or text that refers to variables.
+                Either a symbol from the slot pool, or a BBuffer containing an
+                immediate expression which can be a constant or text that refers
+                to other registers.
         data:
             var: HashSymbol
-            buf: opaque
-            constant: opaque
+            buf: BBuffer
+            constant: BBuffer
 
 hashes:
-    CBufferBag:
+    BBufferBag:
         data:
-            entries: opaque
+            entries: BBuffer
 
 primitives: !include primitives.yaml
 
 arrays:
-    CResultArray:
+    BResultArray:
         data:
-            entries: EmitCResult
+            entries: EmitBResult
+
+    BLocationArray:
+        data:
+            entries: BLocation
+
+    BCommentArray:
+        data:
+            entries: BComment
 
 external:
   - !include builtins.yaml
   - !include emit.yaml
+  - !include utils.yaml
