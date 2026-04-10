@@ -1,7 +1,7 @@
 .PHONY: all clean realclean deps profile leak-check check-grammar \
 list-cores test indent indent-src indent-generated docs \
 install-sqlite3 coverage extracov view-coverage \
-coverage-target test-binary test-big-binary help \
+coverage-target test-c test-big-c help \
 establish-baseline test-refactoring update-baseline clean-baseline \
 scratch
 
@@ -170,13 +170,13 @@ $(FN_OFILES) $(TEST_FN_OFILES): %.o: %.c
 $(FN_BINARIES) $(TEST_FN_BINARIES): %: %.o $(ALL_OBJ)
 	$(LAXCC) -o $@ $< $(ALL_OBJ) $(LIBS)
 
-test-binary: all $(TEST_FN_BINARIES)
+test-c: all $(TEST_FN_BINARIES)
 	@for t in $(TEST_FN_BINARIES) ; do echo $$t ; $$t || exit 1 ; done
-	@echo All binary tests pass
+	@echo All c tests pass
 
 irs: $(TEST_FN_SFILES) tmp/test_harness.scm
 
-test-big-binary: all tmp/test_harness
+test-big-c: all tmp/test_harness
 	tmp/test_harness
 
 tmp/test_harness: tmp/test_harness.o $(ALL_OBJ)
@@ -197,7 +197,7 @@ tmp/test_harness.fnc: $(FNDIR)/rewrite/test_harness.fn $(TARGET)
 	$(TARGET) --binary-out=$@~ $<  && mv $@~ $@
 
 PERF_CASE=fib35
-test-perf-binary: $(TMPDIR)/$(PERF_CASE)
+test-perf-c: $(TMPDIR)/$(PERF_CASE)
 	time $(TMPDIR)/$(PERF_CASE)
 
 EXTRA_TYPES=bigint_word \
