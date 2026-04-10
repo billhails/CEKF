@@ -2,11 +2,11 @@
 
 ![logo](./docs/CEKF2.png)
 
-> I do remember one thing, it took hours and hours and by the
+> "I do remember one thing, it took hours and hours and by the
   time I was done with it, I was so involved I didn't know
   what to think. I carried it around with me for days and days,
   playing little games. Like not looking at it for a whole day,
-  and then looking at it, to see if I still liked it. I DID!
+  and then looking at it, to see if I still liked it. I DID!"
 
 Low level, hopefully fast C implementation of a CEK machine with an
 additional "F" failure continuation supporting amb (and a stack).
