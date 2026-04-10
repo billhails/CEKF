@@ -21,8 +21,6 @@ config:
     description: C code emission utilities
     parserInfo: false
     limited_includes:
-      - builtins.h
-      - builtins_debug.h
       - emit.h
       - emit_debug.h
 
@@ -31,16 +29,9 @@ structs:
         meta:
             brief: VisitorContext for emitMinExp
         data:
-            currentBinding: HashSymbol
             lambdas: CBufferBag
             body: opaque
-            builtIns: BuiltIns
-            registers: RegisterSlots
-            activeSlots: int=0
-            totalSlots: int=0
-            maxReg: int=0
-            currentReg: int=0
-            needsUnprotect: bool=false
+            context: EmitterContext
 
 unions:
     EmitCResult:
@@ -67,5 +58,4 @@ arrays:
             entries: EmitCResult
 
 external:
-  - !include builtins.yaml
   - !include emit.yaml

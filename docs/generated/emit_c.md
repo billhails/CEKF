@@ -5,16 +5,9 @@ C code emission utilities
 ```mermaid
 flowchart LR
 CBufferBag --entries--> opaque
-CEmitterContext --currentBinding--> HashSymbol
 CEmitterContext --lambdas--> CBufferBag
 CEmitterContext --body--> opaque
-CEmitterContext --builtIns--> BuiltIns
-CEmitterContext --registers--> RegisterSlots
-CEmitterContext --activeSlots--> int
-CEmitterContext --totalSlots--> int
-CEmitterContext --maxReg--> int
-CEmitterContext --currentReg--> int
-CEmitterContext --needsUnprotect--> bool
+CEmitterContext --context--> EmitterContext
 EmitCResult --var--> HashSymbol
 EmitCResult --buf--> opaque
 EmitCResult --constant--> opaque

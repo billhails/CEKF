@@ -21,10 +21,13 @@ config:
     description: Shared code emission utilities
     parserInfo: false
     limited_includes:
+      - builtins.h
+      - builtins_debug.h
       - utils.h
       - utils_debug.h
 
 structs:
+
     Slot:
         meta:
             description: Represents a register allocation
@@ -40,14 +43,22 @@ hashes:
 
 inline:
     structs:
-        RegisterSlots:
+        EmitterContext:
             meta:
-                brief: slot pool amd heap abstraction
+                brief: Shared VisitorContext for emitMinExp
             data:
+                currentBinding: HashSymbol
+                builtIns: BuiltIns
                 slots: SlotPool
                 heap: SymbolArray # minheap
+                activeSlots: int=0
+                totalSlots: int=0
+                maxReg: int=0
+                currentReg: int=0
+                needsUnprotect: bool=false
 
 primitives: !include primitives.yaml
 
 external:
   - !include utils.yaml
+  - !include builtins.yaml

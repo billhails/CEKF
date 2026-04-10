@@ -213,7 +213,7 @@ static void emitMaybeBigInt(MaybeBigInt *mbi, CEmitterContext *ctx) {
         }
         fprintf(FH(ctx), "))");
         // minlam_runtime_BigInt will have done a PROTECT that needs restoring
-        ctx->needsUnprotect = true;
+        ctx->context.needsUnprotect = true;
         break;
     }
     case BI_SMALL: {
@@ -258,45 +258,44 @@ static CEmitterContext *extendContextForLambda(HashSymbol *var,
     setCBufferBag(ctx->lambdas, var, body);
     SymbolArray *heap = emit_createHeap();
     PROTECT(heap);
-    RegisterSlots registers = {.heap = heap, .slots = newSlotPool()};
-    PROTECT(registers.slots);
-    CEmitterContext *new =
-        newCEmitterContext(ctx->currentBinding, body, ctx->builtIns, registers);
+    EmitterContext context = ctx->context;
+    context.heap = heap;
+    context.slots = newSlotPool();
+    PROTECT(context.slots);
+    context.activeSlots = 0;
+    context.totalSlots = 0;
+    context.currentReg = 0;
+    context.needsUnprotect = false;
+    CEmitterContext *new = newCEmitterContext(body, context);
     PROTECT(new);
     new->lambdas = ctx->lambdas;
-    new->maxReg = ctx->maxReg;
     UNPROTECT(save);
     return new;
 }
 
 // only for atomics: sub-context must not allocate slots
 static CEmitterContext *extendContext(CEmitterContext *ctx, Opaque *body) {
-    CEmitterContext *new = newCEmitterContext(ctx->currentBinding, body,
-                                              ctx->builtIns, ctx->registers);
+    CEmitterContext *new = newCEmitterContext(body, ctx->context);
     int save = PROTECT(new);
     new->lambdas = ctx->lambdas;
-    new->maxReg = ctx->maxReg;
-    new->currentReg = ctx->currentReg;
-    new->totalSlots = ctx->totalSlots;
-    new->activeSlots = ctx->activeSlots;
     UNPROTECT(save);
     return new;
 }
 
-static inline void setMaxReg(CEmitterContext *ctx) {
+static inline void setMaxReg(EmitterContext *ctx) {
     ctx->maxReg = MAX(ctx->maxReg, ctx->totalSlots);
 }
 
-static inline void setProtectionStatus(CEmitterContext *to,
-                                       CEmitterContext *from) {
+static inline void setProtectionStatus(EmitterContext *to,
+                                       EmitterContext *from) {
     to->needsUnprotect = to->needsUnprotect || from->needsUnprotect;
 }
 
-static inline void retrieveMaxReg(CEmitterContext *to, CEmitterContext *from) {
+static inline void retrieveMaxReg(EmitterContext *to, EmitterContext *from) {
     to->maxReg = MAX(to->maxReg, from->maxReg);
 }
 
-static BuiltIn *findBuiltIn(MinApply *node, CEmitterContext *ctx) {
+static BuiltIn *findBuiltIn(MinApply *node, EmitterContext *ctx) {
     BuiltIn *bi = NULL;
     for (Index i = 0; i < ctx->builtIns->size; i++) {
         if (ctx->builtIns->entries[i]->internalName ==
@@ -320,23 +319,23 @@ static Slot *createNewSlot(CEmitterContext *ctx) {
     SCharArray *text = newSCharArray();
     int save = PROTECT(text);
     char buf[64];
-    sprintf(buf, "reg[%d]", ctx->totalSlots);
+    sprintf(buf, "reg[%d]", ctx->context.totalSlots);
     for (char *c = buf; *c; c++) {
         pushSCharArray(text, *c);
     }
     pushSCharArray(text, '\0');
-    Slot *result = newSlot(false, text, ctx->totalSlots);
+    Slot *result = newSlot(false, text, ctx->context.totalSlots);
     UNPROTECT(save);
     return result;
 }
 
 static HashSymbol *claimSlotSymbol(CEmitterContext *ctx) {
     Slot *resultSlot = NULL;
-    HashSymbol *result = emit_removeFromHeap(ctx->registers);
+    HashSymbol *result = emit_removeFromHeap(&ctx->context);
     if (result != NULL) {
-        if (getSlotPool(ctx->registers.slots, result, &resultSlot)) {
+        if (getSlotPool(ctx->context.slots, result, &resultSlot)) {
             resultSlot->isAvailable = false;
-            ctx->activeSlots++;
+            ctx->context.activeSlots++;
             return result;
         } else {
             cant_happen("key \"%s\" from heap not in pool", result->name);
@@ -346,10 +345,10 @@ static HashSymbol *claimSlotSymbol(CEmitterContext *ctx) {
     result = genSym("tmp_");
     resultSlot = createNewSlot(ctx);
     int save = PROTECT(resultSlot);
-    setSlotPool(ctx->registers.slots, result, resultSlot);
-    ctx->activeSlots++;
-    ctx->totalSlots++;
-    setMaxReg(ctx);
+    setSlotPool(ctx->context.slots, result, resultSlot);
+    ctx->context.activeSlots++;
+    ctx->context.totalSlots++;
+    setMaxReg(&ctx->context);
     UNPROTECT(save);
     return result;
 }
@@ -361,11 +360,11 @@ static EmitCResult *claimSlot(CEmitterContext *ctx) {
 
 static void releaseSlotSymbol(HashSymbol *temp, CEmitterContext *ctx) {
     Slot *slot = NULL;
-    if (getSlotPool(ctx->registers.slots, temp, &slot)) {
+    if (getSlotPool(ctx->context.slots, temp, &slot)) {
         if (!slot->isAvailable) {
-            ctx->activeSlots--;
+            ctx->context.activeSlots--;
             slot->isAvailable = true;
-            emit_addToHeap(ctx->registers, temp);
+            emit_addToHeap(&ctx->context, temp);
         }
     } else {
         cant_happen("slot not found");
@@ -379,7 +378,7 @@ static void releaseSlot(EmitCResult *result, CEmitterContext *ctx) {
 
 static Slot *getSlot(HashSymbol *temp, CEmitterContext *ctx) {
     Slot *slot = NULL;
-    if (getSlotPool(ctx->registers.slots, temp, &slot)) {
+    if (getSlotPool(ctx->context.slots, temp, &slot)) {
         return slot;
     } else {
         cant_happen("slot not found");
@@ -395,9 +394,9 @@ static void releaseSlots(CResultArray *slots, CEmitterContext *ctx) {
 static bool slotsAvailableBelow(int N, CEmitterContext *ctx) {
     if (N == 0)
         return false;
-    if (ctx->totalSlots < N) // we've never allocated them
+    if (ctx->context.totalSlots < N) // we've never allocated them
         return true;
-    if (emit_peekHeap(ctx->registers) < N)
+    if (emit_peekHeap(&ctx->context) < N)
         return true;
     return false;
 }
@@ -444,9 +443,9 @@ static char *resultText(EmitCResult *data, CEmitterContext *ctx) {
 
 #ifdef SAFETY_CHECKS
 static void assertNoLeakedSlots(CEmitterContext *ctx, int line) {
-    if (ctx->activeSlots != ctx->currentReg) {
+    if (ctx->context.activeSlots != ctx->context.currentReg) {
         cant_happen("slot leak: active %d, expected %d line %d",
-                    ctx->activeSlots, ctx->currentReg, line);
+                    ctx->context.activeSlots, ctx->context.currentReg, line);
     }
 }
 #endif
@@ -616,7 +615,7 @@ static EmitCResult *emitNewAtomic(MinExp *exp, CEmitterContext *ctx) {
     CEmitterContext *atomicContext = extendContext(ctx, buffer);
     PROTECT(atomicContext);
     bool isConst = emitAtomic(exp, atomicContext);
-    setProtectionStatus(ctx, atomicContext);
+    setProtectionStatus(&ctx->context, &atomicContext->context);
     EmitCResult *result =
         isConst ? newEmitCResult_Constant(buffer) : newEmitCResult_Buf(buffer);
     UNPROTECT(save);
@@ -663,12 +662,12 @@ static EmitCResult *emitAnonymousLambda(MinLam *lambda, CEmitterContext *ctx) {
     HashSymbol *name = genSym("anon");
     CEmitterContext *lamContext = extendContextForLambda(name, ctx);
     int save = PROTECT(lamContext);
-    SCharArray *containing_label = makeLambdaLabel(ctx->currentBinding);
+    SCharArray *containing_label = makeLambdaLabel(ctx->context.currentBinding);
     PROTECT(containing_label);
     comment(lamContext, "inside %s, %d args", containing_label->entries,
             countSymbolList(lambda->args));
     emitMinLam(lambda, lamContext);
-    retrieveMaxReg(ctx, lamContext);
+    retrieveMaxReg(&ctx->context, &lamContext->context);
     SCharArray *label = makeLambdaLabel(name);
     PROTECT(label);
     Opaque *buf = newOpaque_EmitBuffer();
@@ -690,7 +689,7 @@ static EmitCResult *emitSimpleExp(MinExp *exp, CEmitterContext *ctx) {
         Opaque *buf = newOpaque_EmitBuffer();
         int save = PROTECT(buf);
         CEmitterContext *aVarContext = extendContext(ctx, buf);
-        setProtectionStatus(ctx, aVarContext);
+        setProtectionStatus(&ctx->context, &aVarContext->context);
         PROTECT(aVarContext);
         emitMinAnnotatedVar(avar, aVarContext);
         EmitCResult *result = newEmitCResult_Buf(buf);
@@ -713,7 +712,7 @@ static EmitCResult *emitSimpleExp(MinExp *exp, CEmitterContext *ctx) {
         PROTECT(biContext);
         emitMaybeBigInt(mbi, biContext);
         EmitCResult *result = newEmitCResult_Constant(buf);
-        setProtectionStatus(ctx, biContext);
+        setProtectionStatus(&ctx->context, &biContext->context);
         UNPROTECT(save);
         return result;
     }
@@ -794,12 +793,12 @@ static void emitMinLam(MinLam *node, CEmitterContext *ctx) {
     fprintf(FH(ctx), "// emitMinLam reserving %d incoming slots\n", nargs);
     CResultArray *slots = claimSlots(nargs, ctx);
     int save = PROTECT(slots);
-    ctx->currentReg += nargs;
+    ctx->context.currentReg += nargs;
     ASSERT_SLOTS(ctx);
     if (node->exp != NULL)
         emitMinExp(node->exp, ctx);
     releaseSlots(slots, ctx);
-    ctx->currentReg -= nargs;
+    ctx->context.currentReg -= nargs;
     UNPROTECT(save);
 }
 
@@ -855,13 +854,13 @@ static void emitGoto(EmitCResult *target, CResultArray *args,
         emitAssignReg(i, sourceSlots->entries[i], ctx);
     }
 
-    if (ctx->needsUnprotect) {
+    if (ctx->context.needsUnprotect) {
         fprintf(FH(ctx), "minlam_runtime_unprotect();\n");
-        ctx->needsUnprotect = false;
+        ctx->context.needsUnprotect = false;
     }
 
     fprintf(FH(ctx), "TRACE(\"%s\", getValue_Addr(%s), %d);\n",
-            ctx->currentBinding->name, resultText(savedTarget, ctx),
+            ctx->context.currentBinding->name, resultText(savedTarget, ctx),
             (int)args->size);
     fprintf(FH(ctx), "goto *getValue_Addr(%s);\n",
             resultText(savedTarget, ctx));
@@ -909,7 +908,7 @@ static void emitApplyBuiltin(MinApply *node, CEmitterContext *ctx) {
         claimSlotsBelow(3, ctx); // (3 args: env, result, f)
     int save = PROTECT(contArgSlots);
 
-    BuiltIn *bi = findBuiltIn(node, ctx);
+    BuiltIn *bi = findBuiltIn(node, &ctx->context);
     int numBuiltinArgs = countBuiltInArgs(bi->args);
 
     // k and f
@@ -1101,7 +1100,7 @@ static void emitMinCharCondCases(MinCharCondCases *node, CEmitterContext *ctx) {
         fprintf(FH(ctx), "default:\n");
         fprintf(FH(ctx),
                 "fprintf(stderr, \"conditions exhausted in %s\\n\");\n",
-                ctx->currentBinding->name);
+                ctx->context.currentBinding->name);
         fprintf(FH(ctx), "abort();\n");
         return;
     }
@@ -1180,11 +1179,11 @@ static void emitMinBindings(MinBindings *node, Integer depth,
     HashSymbol *uniqueName = genSym(node->var->name);
     CEmitterContext *lamContext = extendContextForLambda(uniqueName, ctx);
     int save = PROTECT(lamContext);
-    lamContext->currentBinding = uniqueName;
+    lamContext->context.currentBinding = uniqueName;
     MinLam *lambda = extractLambda(node->val);
     // emit the lambda body to the new memstream
     emitMinLam(lambda, lamContext);
-    retrieveMaxReg(ctx, lamContext);
+    retrieveMaxReg(&ctx->context, &lamContext->context);
     // but emit the closure creation to the current memstream
     emitMakeClosure(uniqueName, depth, bindings, ctx);
     UNPROTECT(save);
@@ -1209,10 +1208,10 @@ static void emitMinLetRec(MinLetRec *node, CEmitterContext *ctx) {
     int save = PROTECT(bindings);
     emitMinBindings(node->bindings, 0, bindings, ctx);
     emitBackpatchBindings(node->bindings, 0, bindings, ctx);
-    ctx->currentReg += numBindings;
+    ctx->context.currentReg += numBindings;
     ASSERT_SLOTS(ctx);
     emitMinExp(node->body, ctx);
-    ctx->currentReg -= numBindings;
+    ctx->context.currentReg -= numBindings;
     releaseSlots(bindings, ctx);
     ASSERT_SLOTS(ctx);
     UNPROTECT(save);
@@ -1288,9 +1287,9 @@ void emitCProgram(MinExp *node, BuiltIns *builtIns, FILE *out) {
     HashSymbol *main = newSymbol("main");
     SymbolArray *heap = emit_createHeap();
     PROTECT(heap);
-    RegisterSlots registers = {.heap = heap, .slots = newSlotPool()};
-    PROTECT(registers.slots);
-    CEmitterContext *ctx = newCEmitterContext(main, body, builtIns, registers);
+    EmitterContext context = newEmitterContext(main, builtIns, heap);
+    PROTECT(context.slots);
+    CEmitterContext *ctx = newCEmitterContext(body, context);
     REPLACE_PROTECT(save, ctx);
     fprintf(out, "// GENERATED CODE DO NOT EDIT\n");
     fprintf(out, "#include \"minlam_runtime.h\"\n");
@@ -1303,7 +1302,7 @@ void emitCProgram(MinExp *node, BuiltIns *builtIns, FILE *out) {
     fprintf(out, "#  define TRACE(from, target, nargs)\n");
     fprintf(out, "#endif\n");
     emitMinExp(node, ctx);
-    fprintf(out, "#define MAX_REG %d\n", ctx->maxReg);
+    fprintf(out, "#define MAX_REG %d\n", ctx->context.maxReg);
     fprintf(out, "static Value reg[MAX_REG];\n");
     fprintf(out, "\n");
 

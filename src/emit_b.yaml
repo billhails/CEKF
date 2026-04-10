@@ -21,8 +21,6 @@ config:
     description: New byteode emission utilities
     parserInfo: false
     limited_includes:
-      - builtins.h
-      - builtins_debug.h
       - emit.h
       - utils.h
       - emit_debug.h
@@ -32,17 +30,9 @@ structs:
         meta:
             brief: VisitorContext for emitMinExp
         data:
-            currentBinding: HashSymbol
             lambdas: BBufferBag
             body: BBuffer
-            builtIns: BuiltIns
-            slots: SlotPool
-            heap: SymbolArray # minheap
-            activeSlots: int=0
-            totalSlots: int=0
-            maxReg: int=0
-            currentReg: int=0
-            needsUnprotect: bool=false
+            context: EmitterContext
 
     BBuffer:
         meta:
@@ -100,6 +90,5 @@ arrays:
             entries: BComment
 
 external:
-  - !include builtins.yaml
   - !include emit.yaml
   - !include utils.yaml

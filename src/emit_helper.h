@@ -18,12 +18,14 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+// shared slot heap support for emit_b and emit_c branches
+
 #include "emit.h"
 #include "symbol.h"
 
-void emit_addToHeap(RegisterSlots, HashSymbol *);
-HashSymbol *emit_removeFromHeap(RegisterSlots); // can return NULL
+void emit_addToHeap(EmitterContext *, HashSymbol *);
+HashSymbol *emit_removeFromHeap(EmitterContext *); // can return NULL
 SymbolArray *emit_createHeap();
-Integer emit_peekHeap(RegisterSlots);
+Integer emit_peekHeap(EmitterContext *);
 
 #endif

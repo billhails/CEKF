@@ -5,17 +5,9 @@ New byteode emission utilities
 ```mermaid
 flowchart LR
 BBufferBag --entries--> BBuffer
-BEmitterContext --currentBinding--> HashSymbol
 BEmitterContext --lambdas--> BBufferBag
 BEmitterContext --body--> BBuffer
-BEmitterContext --builtIns--> BuiltIns
-BEmitterContext --slots--> SlotPool
-BEmitterContext --heap--> SymbolArray
-BEmitterContext --activeSlots--> int
-BEmitterContext --totalSlots--> int
-BEmitterContext --maxReg--> int
-BEmitterContext --currentReg--> int
-BEmitterContext --needsUnprotect--> bool
+BEmitterContext --context--> EmitterContext
 BBuffer --codes--> UIntArray
 BBuffer --locations--> BLocationArray
 BBuffer --comments--> BCommentArray
