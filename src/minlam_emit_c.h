@@ -19,7 +19,7 @@
  */
 
 #include "builtins.h"
-#include "emit_helper.h"
+#include "emit_c_helper.h"
 #include "minlam.h"
 
 void emitCProgram(MinExp *, BuiltIns *, FILE *);

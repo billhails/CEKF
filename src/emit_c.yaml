@@ -17,7 +17,7 @@
 #
 
 config:
-    name: emit
+    name: emit_c
     description: Code emission utilities
     parserInfo: false
     limited_includes:

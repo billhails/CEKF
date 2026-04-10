@@ -18,7 +18,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "emit.h"
+#include "emit_c.h"
 #include "symbol.h"
 
 void emit_addToHeap(EmitterContext *, HashSymbol *);

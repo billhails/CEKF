@@ -42,7 +42,7 @@ static MinIntCondCases *shakeMinIntCondCases(MinIntCondCases *);
 static MinCharCondCases *shakeMinCharCondCases(MinCharCondCases *);
 static MinMatch *shakeMinMatch(MinMatch *);
 static MinMatchList *shakeMinMatchList(MinMatchList *);
-static MinLetRec *shakeMinLetRec(MinLetRec *);
+static MinExp *shakeMinLetRec(MinExp *);
 static MinBindings *shakeMinBindings(MinBindings *);
 static MinAmb *shakeMinAmb(MinAmb *);
 static MinCondCases *shakeMinCondCases(MinCondCases *);
@@ -259,10 +259,9 @@ static MinMatchList *shakeMinMatchList(MinMatchList *node) {
 }
 
 // Where it all happens
-static MinLetRec *shakeMinLetRec(MinLetRec *node) {
-    if (node == NULL)
-        return NULL;
+static MinExp *shakeMinLetRec(MinExp *exp) {
     ENTER(shakeMinLetRec);
+    MinLetRec *node = getMinExp_LetRec(exp);
     bool changed = false;
     // post-traversal processing, recurse into the body
     // and the bindings first.
@@ -285,9 +284,14 @@ static MinLetRec *shakeMinLetRec(MinLetRec *node) {
     PROTECT(new_bindings);
 
     changed = changed || (new_bindings != node->bindings);
-    MinLetRec *result = node;
+    MinExp *result = exp;
     if (changed) {
-        result = newMinLetRec(CPI(node), new_bindings, new_body);
+        if (new_bindings == NULL)
+            result = new_body;
+        else
+            result = makeMinExp_LetRec(CPI(node), new_bindings, new_body);
+    } else if (new_bindings == NULL) {
+        result = new_body;
     }
     UNPROTECT(save);
     LEAVE(shakeMinLetRec);
@@ -448,12 +452,8 @@ MinExp *shakeMinExp(MinExp *node) {
     }
     case MINEXP_TYPE_LETREC: {
         // MinLetRec
-        MinLetRec *variant = getMinExp_LetRec(node);
-        MinLetRec *new_variant = shakeMinLetRec(variant);
-        if (new_variant != variant) {
-            PROTECT(new_variant);
-            result = newMinExp_LetRec(CPI(node), new_variant);
-        }
+        // can return just the body if the bindings are empty
+        result = shakeMinLetRec(node);
         break;
     }
     case MINEXP_TYPE_MAKEVEC: {

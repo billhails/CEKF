@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "emit_helper.h"
+#include "emit_c_helper.h"
 
 static inline Index parent(Index i) { return i / 2; } // rounds towards zero
 static inline Index left_child(Index i) { return i * 2; }
