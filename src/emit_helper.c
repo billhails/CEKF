@@ -19,6 +19,7 @@
 // shared slot heap support for emit_b and emit_c branches
 
 #include "emit_helper.h"
+#include <math.h>
 
 static inline Index parent(Index i) { return i / 2; } // rounds towards zero
 static inline Index left_child(Index i) { return i * 2; }
@@ -46,7 +47,7 @@ static Integer reg(Index i, EmitterContext *ctx) {
     }
 }
 
-Integer emit_peekHeap(EmitterContext *ctx) {
+Integer emitter_peekHeap(EmitterContext *ctx) {
     SymbolArray *heap = ctx->heap;
 
     if (heap->size < 2) {
@@ -57,7 +58,7 @@ Integer emit_peekHeap(EmitterContext *ctx) {
 }
 
 // hide implementation details
-SymbolArray *emit_createHeap() {
+SymbolArray *emitter_createHeap() {
     SymbolArray *result = newSymbolArray();
     int save = PROTECT(result);
     pushSymbolArray(result, newSymbol("empty")); // we ignore index 0
@@ -65,7 +66,7 @@ SymbolArray *emit_createHeap() {
     return result;
 }
 
-void emit_addToHeap(EmitterContext *ctx, HashSymbol *key) {
+void emitter_addToHeap(EmitterContext *ctx, HashSymbol *key) {
     SymbolArray *heap = ctx->heap;
 
 #ifdef SAFETY_CHECKS
@@ -92,7 +93,7 @@ void emit_addToHeap(EmitterContext *ctx, HashSymbol *key) {
 }
 
 // can return NULL
-HashSymbol *emit_removeFromHeap(EmitterContext *ctx) {
+HashSymbol *emitter_removeFromHeap(EmitterContext *ctx) {
     SymbolArray *heap = ctx->heap;
 
 #ifdef SAFETY_CHECKS
@@ -141,4 +142,103 @@ HashSymbol *emit_removeFromHeap(EmitterContext *ctx) {
     }
 
     return smallest;
+}
+
+#ifdef SAFETY_CHECKS
+void emitter_assertNoLeakedSlots(EmitterContext *ctx, int line) {
+    if (ctx->activeSlots != ctx->currentReg) {
+        cant_happen("slot leak: active %d, expected %d line %d",
+                    ctx->activeSlots, ctx->currentReg, line);
+    }
+}
+#endif
+
+static inline void setMaxReg(EmitterContext *ctx) {
+    ctx->maxReg = MAX(ctx->maxReg, ctx->totalSlots);
+}
+
+BuiltIn *emitter_findBuiltIn(MinApply *node, EmitterContext *ctx) {
+    BuiltIn *bi = NULL;
+    for (Index i = 0; i < ctx->builtIns->size; i++) {
+        if (ctx->builtIns->entries[i]->internalName ==
+            getMinExp_Var(node->function)) {
+            bi = ctx->builtIns->entries[i];
+            break;
+        }
+    }
+    if (bi == NULL) {
+        cant_happen("could not find builtin %s",
+                    getMinExp_Var(node->function)->name);
+    }
+    return bi;
+}
+
+static Slot *createNewSlot(EmitterContext *ctx) {
+    SCharArray *text = newSCharArray();
+    int save = PROTECT(text);
+    char buf[64];
+    sprintf(buf, "reg[%d]", ctx->totalSlots);
+    for (char *c = buf; *c; c++) {
+        pushSCharArray(text, *c);
+    }
+    pushSCharArray(text, '\0');
+    Slot *result = newSlot(false, text, ctx->totalSlots);
+    UNPROTECT(save);
+    return result;
+}
+
+HashSymbol *emitter_claimSlotSymbol(EmitterContext *ctx) {
+    Slot *resultSlot = NULL;
+    HashSymbol *result = emitter_removeFromHeap(ctx);
+    if (result != NULL) {
+        if (getSlotPool(ctx->slots, result, &resultSlot)) {
+            resultSlot->isAvailable = false;
+            ctx->activeSlots++;
+            return result;
+        } else {
+            cant_happen("key \"%s\" from heap not in pool", result->name);
+        }
+    }
+    // no available slots, create a new one
+    result = genSym("tmp_");
+    resultSlot = createNewSlot(ctx);
+    int save = PROTECT(resultSlot);
+    setSlotPool(ctx->slots, result, resultSlot);
+    ctx->activeSlots++;
+    ctx->totalSlots++;
+    setMaxReg(ctx);
+    UNPROTECT(save);
+    return result;
+}
+
+void emitter_releaseSlotSymbol(HashSymbol *temp, EmitterContext *ctx) {
+    Slot *slot = NULL;
+    if (getSlotPool(ctx->slots, temp, &slot)) {
+        if (!slot->isAvailable) {
+            ctx->activeSlots--;
+            slot->isAvailable = true;
+            emitter_addToHeap(ctx, temp);
+        }
+    } else {
+        cant_happen("slot not found");
+    }
+}
+
+Slot *emitter_getSlot(HashSymbol *temp, EmitterContext *ctx) {
+    Slot *slot = NULL;
+    if (getSlotPool(ctx->slots, temp, &slot)) {
+        return slot;
+    } else {
+        cant_happen("slot not found");
+    }
+}
+
+bool emitter_slotsAvailableBelow(int N, EmitterContext *ctx) {
+    if (N == 0)
+        return false;
+    if (ctx->totalSlots < N) // we've never allocated them
+        return true;
+    if (emitter_peekHeap(ctx) < N)
+        return true;
+    return false;
 }

@@ -24,6 +24,7 @@ config:
       - emit.h
       - utils.h
       - emit_debug.h
+      - cekfs_debug.h
 
 structs:
     BEmitterContext:
@@ -57,6 +58,34 @@ structs:
             index: index
             text: SCharArray
 
+    IntCondCase:
+        meta:
+            brief: individual integer case
+        data:
+            const_index: index # index into const table
+            target: index # index into bytecode array
+
+    CharCondCase:
+        meta:
+            brief: individual character case
+        data:
+            codepoint: character
+            target: index # index into bytecode array
+
+    IntCondSwitch:
+        meta:
+            brief: integer switch
+        data:
+            default_target: index
+            cases: IntCondCaseArray
+
+    CharCondSwitch:
+        meta:
+            brief: character switch
+        data:
+            default_target: index
+            cases: CharCondCaseArray
+
 unions:
     EmitBResult:
         meta:
@@ -74,8 +103,6 @@ hashes:
         data:
             entries: BBuffer
 
-primitives: !include primitives.yaml
-
 arrays:
     BResultArray:
         data:
@@ -89,6 +116,71 @@ arrays:
         data:
             entries: BComment
 
+    BConstantArray:
+        data:
+            entries: Value
+
+    IntCondCaseArray:
+        data:
+            entries: IntCondCase
+
+    CharCondCaseArray:
+        data:
+            entries: CharCondCase
+
+    IntCondTable:
+        data:
+            entries: IntCondSwitch
+
+    CharCondTable:
+        data:
+            entries: CharCondSwitch
+
+enums:
+    BBC:
+        meta:
+            brief: New bytecodes for the CPS branch
+        data:
+          - CALL_BUILTIN # builtin_id, dst, argv_reg
+          - CHARCOND # test_reg, table_id
+          - CLOSURE_NEW # dst, lambda_id
+          - CLOSURE_SET_ENV # clo_reg, env_reg
+          - DONE # exit_status
+          - EXT # unpacked modifier for the next instruction
+          - INTCOND # test_reg, table_id
+          - JMP_FALSE # test_reg, target
+          - JMP # target
+          - LOAD_CHAR # dst, codepoint
+          - LOAD_CONST # dst, const_index
+          - LOAD_I32 # dst, imm32
+          - LOAD_NONE # dst
+          - MAKE_VEC # dst, count
+          - MATCH # test_reg, table_id
+          - MOVE # dst, src
+          - PRIM_ADD # dst, left, right
+          - PRIM_CANON # dst, left, right
+          - PRIM_CMP # dst, left, right
+          - PRIM_DIV # dst, left, right
+          - PRIM_EQ # dst, left, right
+          - PRIM_GCD # dst, left, right
+          - PRIM_GE # dst, left, right
+          - PRIM_GT # dst, left, right
+          - PRIM_LCM # dst, left, right
+          - PRIM_LE # dst, left, right
+          - PRIM_LT # dst, left, right
+          - PRIM_MOD # dst, left, right
+          - PRIM_MUL # dst, left, right
+          - PRIM_NE # dst, left, right
+          - PRIM_POW # dst, left, right
+          - PRIM_SUB # dst, left, right
+          - PRIM_VEC # dst, index_reg, vec_reg
+          - TAILCALL # clo_reg
+          - VEC_GET_IMM # dst, index_imm, vec_reg
+          - VEC_SET # vec_reg, index_imm, src
+
+primitives: !include primitives.yaml
+
 external:
   - !include emit.yaml
   - !include utils.yaml
+  - !include cekfs.yaml

@@ -162,7 +162,7 @@ an assembly language which is then assembled into that binary format. The
 important constraint is that the representation crossing the file boundary must
 be fully symbolic or index-based, never pointer-based.
 
-### Recommendation
+### Code Representation Recommendation
 
 Use `uint32_t` code words.
 
@@ -228,29 +228,25 @@ From `minlam_emit_c.c` we know that:
 
 ### Recommended physical representation
 
-Use a dedicated bytecode closure object rather than a general-purpose vector.
-
-For example:
+Use the existing `Vec` representation already used by the C emitter: a 2-element
+vector where `vec[0]` holds the entry and `vec[1]` holds the environment. This
+is already the encoding produced by `emitMakeClosure()`:
 
 ```c
-typedef struct BClo {
-    uint32_t entry;
-    Value env;
-    uint16_t arity;
-} BClo;
+make_vec(2, value_Addr(&&LABEL), value_None())
 ```
 
-This is better than encoding closures as ordinary vectors because:
+For the bytecode runtime the only difference is that `vec[0]` holds a word
+offset (`VALUE_TYPE_STDINT`) instead of a native code pointer. This is already
+the natural entry encoding for a portable bytecode image.
 
-1. entry offsets remain strongly typed.
-2. closure access is cheaper and clearer than repeated `vec(0, clo)` and
-   `vec(1, clo)` extraction.
-3. letrec backpatching becomes explicit and cheap.
-
-This recommendation applies to the in-memory runtime representation. On disk,
-the closure must still be described indirectly, for example by lambda ID or
-entry offset plus whatever environment-building instructions are needed after
-loading.
+This avoids adding a new variant to the `Value` union in `cekfs.yaml`, which is
+shared with the old CEKF interpreter. Introducing a `BClo` type would require
+touching that shared definition and could have unintended consequences for the
+existing machine. Reusing `Vec` costs nothing: `VEC_GET_IMM` already serves as
+the entry and environment accessor, and the two-phase letrec protocol maps
+directly onto `CLOSURE_NEW` (allocate vec, write offset into slot 0, write
+`None` into slot 1) and `CLOSURE_SET_ENV` (overwrite slot 1).
 
 ### Letrec support
 
@@ -290,7 +286,7 @@ These should live in a constant pool.
 
 * big integers.
 * irrationals.
-* complex or rational literals if they survive to emission.
+* complex and rational literals.
 * future larger constants.
 
 Suggested instruction:
@@ -314,7 +310,7 @@ image is instantiated in memory.
 
 The original sketch needed more precision here.
 
-### Recommendation
+### Big Integer Recommendation
 
 Do not inline arbitrary-precision digits into executable code.
 Store big integer literals in a constant pool and load them by index.
@@ -387,6 +383,8 @@ struct MatchTable {
 };
 ```
 
+We can use the `UIntArray` from `utils.yaml` for this.
+
 Suggested instruction:
 
 * `MATCH test_reg, table_id`
@@ -407,11 +405,39 @@ struct IntCondCase {
     uint32_t target;
 };
 
-struct IntCondTable {
+struct IntCondSwitch {
     uint32_t count;
     uint32_t default_target;
     IntCondCase cases[count];
 };
+```
+
+These translate to
+
+```yaml
+structs:
+    IntCondSwitch:
+        meta:
+            brief: integer switch
+        data:
+            default_target: index
+            cases: IntCondCaseArray
+
+    IntCondCase:
+        meta:
+            brief: individual integer case
+        data:
+            const_index: index # index into const table
+            target: index # index into bytecode array
+
+arrays:
+    IntCondCaseArray:
+        data:
+            entries: IntCondCase
+
+    IntCondTable:
+        data:
+            entries: IntCondSwitch
 ```
 
 Suggested instruction:
@@ -440,6 +466,34 @@ struct CharCondTable {
     uint32_t default_target;
     CharCondCase cases[count];
 };
+```
+
+These translate to
+
+```yaml
+structs:
+    CharCondSwitch:
+        meta:
+            brief: character switch
+        data:
+            default_target: index
+            cases: CharCondCaseArray
+
+    CharCondCase:
+        meta:
+            brief: individual character case
+        data:
+            codepoint: character
+            target: index
+
+arrays:
+    CharCondCaseArray:
+        data:
+            entries: CharCondCase
+
+    CharCondTable:
+        data:
+            entries: CharCondSwitch
 ```
 
 Suggested instruction:
@@ -557,8 +611,8 @@ the bytecode image.
 
 ### Control flow
 
-* `JMP target`
-* `JMP_FALSE test_reg, target`
+* `JMP target` (2 words)
+* `JMP_FALSE test_reg, target` (2 words, `test_reg` is packed)
 * `MATCH test_reg, table_id`
 * `INTCOND test_reg, table_id`
 * `CHARCOND test_reg, table_id`
@@ -566,7 +620,7 @@ the bytecode image.
 ### Calls and termination
 
 * `TAILCALL clo_reg`
-* `DONE src`
+* `DONE exit_status`
 
 `TAILCALL` should:
 
@@ -587,6 +641,12 @@ This is the bytecode equivalent of `emitGoto()`.
 
 The stored form of the closure entry is therefore an offset or relocatable code
 label, never a process-local code pointer.
+
+### Operator Extension
+
+A single operator `EXT` should signal that the next operator is completely unpacked
+into separate words, for example when accessing a register, builtin index or table
+index greater than $2^8$.
 
 ## Design Exclusions
 
@@ -695,8 +755,9 @@ design from the start.
 A disassembler that can render the bytecode image as human-readable text should
 be treated as required infrastructure, not an optional extra. It is the primary
 debugging tool during development of both the emitter and the interpreter, and
-it is the natural output format for a `--dump-bytecode` flag parallel to the
-existing `--dump-anf` and `--dump-lambda` flags.
+it is the natural output format for a `--dump-b` flag parallel to the
+existing `--dump-anf` and `--dump-lambda` flags (`--dump-bytecode` is already in
+use on the ANF branch).
 
 The text format should be self-contained: given only the text output, a reader
 should be able to understand the full structure of the program.
@@ -788,3 +849,13 @@ If that discipline is maintained, then:
 * bigint handling stays explicit and correct.
 * letrec patching stays faithful to the current emitter.
 * semantic drift between `--target-c` and `--target-b` is minimized.
+
+## Implementation Notes and Progress
+
+* Re-usable defintions have been moved out of `emit_c.yaml` into a new `emit.yaml`.
+* `emit.yaml` contains the common definitions for slot handling, while `emit_c.yaml` retains the `EmitBuffer` opaque memstream definitions.
+* A new sibling `emit_b.yaml` also uses structures from `emit.yaml` and adds alternative bytecode structures discussed in the document above.
+* `emit.yaml` also defines a common inline `EmitterContext` for common context between implementations, and `emit_b.yaml` and `emit_c.yaml` include that in their respective `BEmitterContext` and `CEmitterContext` visitor contexts.
+* Common slot pool and heap manipulation now lives in `emit_helper.c`.
+* Where possible pointers to the common `EmitterContext` struct are used in preferance to the broader emitter-specific context, and those functions that only require that context have also been moved out of `minlam_emit_c.c` into `emit_helper.c` since they are demonstrably emitter agnostic.
+* No attempt has been made to create any visitor for bytecode emission yet.

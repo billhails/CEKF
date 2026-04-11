@@ -21,11 +21,35 @@
 // shared slot heap support for emit_b and emit_c branches
 
 #include "emit.h"
+#include "minlam.h"
 #include "symbol.h"
+#include <sys/param.h>
 
-void emit_addToHeap(EmitterContext *, HashSymbol *);
-HashSymbol *emit_removeFromHeap(EmitterContext *); // can return NULL
-SymbolArray *emit_createHeap();
-Integer emit_peekHeap(EmitterContext *);
+void emitter_addToHeap(EmitterContext *, HashSymbol *);
+HashSymbol *emitter_removeFromHeap(EmitterContext *); // can return NULL
+SymbolArray *emitter_createHeap();
+Integer emitter_peekHeap(EmitterContext *);
+
+#ifdef SAFETY_CHECKS
+void emitter_assertNoLeakedSlots(EmitterContext *, int);
+#define ASSERT_SLOTS(ctx) emitter_assertNoLeakedSlots(ctx, __LINE__)
+#else
+#define ASSERT_SLOTS(ctx)
+#endif
 
 #endif
+
+static inline void setProtectionStatus(EmitterContext *to,
+                                       EmitterContext *from) {
+    to->needsUnprotect = to->needsUnprotect || from->needsUnprotect;
+}
+
+static inline void retrieveMaxReg(EmitterContext *to, EmitterContext *from) {
+    to->maxReg = MAX(to->maxReg, from->maxReg);
+}
+
+BuiltIn *emitter_findBuiltIn(MinApply *node, EmitterContext *ctx);
+HashSymbol *emitter_claimSlotSymbol(EmitterContext *ctx);
+void emitter_releaseSlotSymbol(HashSymbol *temp, EmitterContext *ctx);
+Slot *emitter_getSlot(HashSymbol *temp, EmitterContext *ctx);
+bool emitter_slotsAvailableBelow(int N, EmitterContext *ctx);
