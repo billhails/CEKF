@@ -44,31 +44,47 @@ typedef struct EmitBuffer {
     size_t size;
 } EmitBuffer;
 
+/////////////////////////////////////////////////////
+// Forward declarations used only in this file
+/////////////////////////////////////////////////////
+
 static bool isConst(MinExp *);
 static bool isAtomic(MinExp *);
 static char *getEmitBuffer(EmitBuffer *);
 static char *resultText(ER *, EC *);
 static char *getPrimOpCName(MinPrimOp);
+static EmitBuffer *newEmitBuffer(void);
+static ER *emitConstant(char *);
+static ER *emitNewAtomic(MinExp *, EC *);
+static int getPrimOpArity(MinPrimOp);
+static void cleanEmitBuffer(void *);
+static void emitAtomic(MinExp *, EC *);
+static void emitAssignPrimOp1(ER *, char *, ER *, EC *);
+static void emitAssignPrimOp2(ER *, char *, ER *, ER *, EC *);
+static void emitMinCharCondCases(MinCharCondCases *, EC *);
+static void emitMinCondCases(MinCondCases *, EC *);
+static void emitMinIntCondCases(MinIntCondCases *, ER *, EC *);
+static void emitMinMatchList(MinMatchList *, EC *);
+static void emitStdint(Integer, EC *);
+static void emitVec(MinExp *, MinExp *, EC *);
+static void printEmitBuffer(FILE *, void *);
+
+/////////////////////////////////////////////////////
+// Forward declarations used by minlam_emit.inc
+/////////////////////////////////////////////////////
+
 static EC *extendContext(EC *);
 static EC *extendContextForLambda(HashSymbol *, EC *);
-static EmitBuffer *newEmitBuffer(void);
 static ER *claimSlot(EC *);
 static ER *emitMakeVec(MinExprList *, EC *);
 static ER *emitSimpleExp(MinExp *, EC *);
-static ER *emitConstant(char *);
-static ER *emitNewAtomic(MinExp *, EC *);
 static ER *emitArg(MinExp *, EC *);
 static ER *emitAddrResult(SCharArray *);
 static ER *emitIntegerResult(Integer);
 static ER *emitCharacterResult(Character);
 static ER *getConstantResult(EC *);
-static int getPrimOpArity(MinPrimOp);
-static void cleanEmitBuffer(void *);
 static void comment(EC *, char *, ...);
-static void emitAtomic(MinExp *, EC *);
 static void emitAssignPrimOp(MinPrimOp, ER *, ER *, ER *, EC *);
-static void emitAssignPrimOp1(ER *, char *, ER *, EC *);
-static void emitAssignPrimOp2(ER *, char *, ER *, ER *, EC *);
 static void emitCallBuiltin(BuiltIn *, ER *, ER *, EC *);
 static void emitCharacter(Character, EC *);
 static void emitClosureNew(ER *, SCharArray *, EC *);
@@ -81,22 +97,15 @@ static void emitMaybeBigInt(MaybeBigInt *, EC *);
 static void emitMinAnnotatedVar(MinAnnotatedVar *, EC *);
 static void emitMinApply(MinApply *, EC *);
 static void emitMinBindings(MinBindings *, Integer, RA *, EC *);
-static void emitMinCharCondCases(MinCharCondCases *, EC *);
-static void emitMinCondCases(MinCondCases *, EC *);
 static void emitMinCond(MinCond *, EC *);
 static void emitMinExp(MinExp *, EC *);
 static void emitMinIff(MinIff *, EC *);
-static void emitMinIntCondCases(MinIntCondCases *, ER *, EC *);
 static void emitMinLam(MinLam *, EC *);
 static void emitMinLetRec(MinLetRec *, EC *);
-static void emitMinMatchList(MinMatchList *, EC *);
 static void emitMinMatch(MinMatch *, EC *);
-static void emitStdint(Integer, EC *);
 static void emitTrace(ER *, RA *, EC *);
 static void emitUnprotect(EC *);
-static void emitVec(MinExp *, MinExp *, EC *);
 static void emitVecGetImm(ER *, ER *, int, EC *);
-static void printEmitBuffer(FILE *, void *);
 static void releaseSlot(ER *, EmitterContext *);
 
 #define EMITLOC(name, node, ctx)                                               \
@@ -131,6 +140,8 @@ static inline FILE *opaqueEmitBufferFh(Opaque *container) {
 static inline FILE *FH(CEmitterContext *ctx) {
     return opaqueEmitBufferFh(ctx->body);
 }
+
+/////////////////////////////////////////////////////
 
 static EmitBuffer *newEmitBuffer() {
     EmitBuffer *result = ALLOCATE(EmitBuffer);
