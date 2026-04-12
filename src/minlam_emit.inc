@@ -36,7 +36,7 @@ static void emitMinCharCondCases(MinCharCondCases *, EC *);
 static void emitMinMatch(MinMatch *, EC *);
 static void emitMinMatchList(MinMatchList *, EC *);
 static void emitMinLetRec(MinLetRec *, EC *);
-static void emitMinBindings(MinBindings *, Integer, CResultArray *, EC *);
+static void emitMinBindings(MinBindings *, Integer, RA *, EC *);
 static void emitMinExp(MinExp *, EC *);
 static void emitMinCondCases(MinCondCases *, EC *);
 static ER *emitMakeVec(MinExprList *, EC *);
@@ -55,33 +55,33 @@ static void releaseSlot(ER *result, EmitterContext *ctx) {
         emitter_releaseSlotSymbol(getEmitCResult_Var(result), ctx);
 }
 
-static void releaseSlots(CResultArray *slots, EmitterContext *ctx) {
+static void releaseSlots(RA *slots, EmitterContext *ctx) {
     for (Index i = 0; i < slots->size; i++) {
         releaseSlot(slots->entries[i], ctx);
     }
 }
 
-static CResultArray *claimSlotsBelow(int N, EC *ctx) {
+static RA *claimSlotsBelow(int N, EC *ctx) {
     comment(ctx, "ensuring reg[0..%d]", N - 1);
-    CResultArray *slots = newCResultArray();
+    RA *slots = newRA();
     int save = PROTECT(slots);
     while (emitter_slotsAvailableBelow(N, &ctx->context)) {
         ER *slot = claimSlot(ctx);
         int save2 = PROTECT(slot);
-        pushCResultArray(slots, slot);
+        pushRA(slots, slot);
         UNPROTECT(save2);
     }
     UNPROTECT(save);
     return slots;
 }
 
-static CResultArray *claimSlots(int N, EC *ctx) {
-    CResultArray *slots = newCResultArray();
+static RA *claimSlots(int N, EC *ctx) {
+    RA *slots = newRA();
     int save = PROTECT(slots);
     for (int i = 0; i < N; ++i) {
         ER *slot = claimSlot(ctx);
         int save2 = PROTECT(slot);
-        pushCResultArray(slots, slot);
+        pushRA(slots, slot);
         UNPROTECT(save2);
     }
     UNPROTECT(save);
@@ -290,20 +290,20 @@ static ER *emitSimpleExp(MinExp *exp, EC *ctx) {
 // prefer to emit right to left because the common case for deeply nested
 // vecs is lists which are right-associative, and by emitting r2l we need
 // only one temp for the entire backbone of the list.
-static CResultArray *emitRL(MinExprList *vecs, EC *ctx) {
+static RA *emitRL(MinExprList *vecs, EC *ctx) {
     if (vecs == NULL)
-        return newCResultArray();
-    CResultArray *results = emitRL(vecs->next, ctx);
+        return newRA();
+    RA *results = emitRL(vecs->next, ctx);
     int save = PROTECT(results);
     ER *result = emitArg(vecs->exp, ctx);
     PROTECT(result);
-    pushCResultArray(results, result);
+    pushRA(results, result);
     UNPROTECT(save);
     return results;
 }
 
 static ER *emitMakeVec(MinExprList *vecs, EC *ctx) {
-    CResultArray *results = emitRL(vecs, ctx);
+    RA *results = emitRL(vecs, ctx);
     int save = PROTECT(results);
     int count = countMinExprList(vecs);
     releaseSlots(results, &ctx->context);
@@ -326,7 +326,7 @@ static void emitMinLam(MinLam *node, EC *ctx) {
 #endif
     int nargs = countSymbolList(node->args);
     comment(ctx, "emitMinLam reserving %d incoming slots", nargs);
-    CResultArray *slots = claimSlots(nargs, ctx);
+    RA *slots = claimSlots(nargs, ctx);
     int save = PROTECT(slots);
     ctx->context.currentReg += nargs;
     ASSERT_SLOTS(&ctx->context);
@@ -337,11 +337,11 @@ static void emitMinLam(MinLam *node, EC *ctx) {
     UNPROTECT(save);
 }
 
-static void emitGoto(ER *target, CResultArray *args, EC *ctx) {
+static void emitGoto(ER *target, RA *args, EC *ctx) {
     comment(ctx, "emitGoto - %u outgoing slots", args->size);
-    CResultArray *sourceSlots = newCResultArray();
+    RA *sourceSlots = newRA();
     int save = PROTECT(sourceSlots);
-    CResultArray *claimedSlots = newCResultArray();
+    RA *claimedSlots = newRA();
     PROTECT(claimedSlots);
 
     for (Index i = 0; i < args->size; i++) {
@@ -350,19 +350,19 @@ static void emitGoto(ER *target, CResultArray *args, EC *ctx) {
         ER *arg = args->entries[i];
         if (isEmitCResult_Buf(arg)) {
             emitAssign(tempSlot, arg, ctx);
-            pushCResultArray(sourceSlots, tempSlot);
+            pushRA(sourceSlots, tempSlot);
         } else {
             // a var has already claimed a safe slot, use it directly for
             // copy-down, likewise if this is a constant expression.
-            pushCResultArray(sourceSlots, arg);
+            pushRA(sourceSlots, arg);
         }
-        pushCResultArray(claimedSlots, tempSlot);
+        pushRA(claimedSlots, tempSlot);
         UNPROTECT(save2);
     }
 
     ER *savedTarget = claimSlot(ctx);
     PROTECT(savedTarget);
-    pushCResultArray(claimedSlots, savedTarget);
+    pushRA(claimedSlots, savedTarget);
     if (isEmitCResult_Buf(target)) {
         emitAssign(savedTarget, target, ctx);
     } else {
@@ -422,8 +422,7 @@ static ER *emitCallBuiltin(BuiltIn *bi, MinExprList *builtinArgs, EC *ctx) {
 static void emitApplyBuiltin(MinApply *node, EC *ctx) {
     EMITLOC("emitApplyBuiltin", node, ctx);
 
-    CResultArray *contArgSlots =
-        claimSlotsBelow(3, ctx); // (3 args: env, result, f)
+    RA *contArgSlots = claimSlotsBelow(3, ctx); // (3 args: env, result, f)
     int save = PROTECT(contArgSlots);
 
     BuiltIn *bi = emitter_findBuiltIn(node, &ctx->context);
@@ -436,13 +435,13 @@ static void emitApplyBuiltin(MinApply *node, EC *ctx) {
     ER *k = emitSimpleExp(continuations->exp, ctx);
     PROTECT(k);
 
-    CResultArray *targetArgs = newCResultArray();
+    RA *targetArgs = newRA();
     PROTECT(targetArgs);
 
     // (env)
     ER *env = emitExtractFromClosure(k, 1, ctx);
     PROTECT(env);
-    pushCResultArray(targetArgs, env);
+    pushRA(targetArgs, env);
 
     ER *target = emitExtractFromClosure(k, 0, ctx);
     PROTECT(target);
@@ -454,14 +453,14 @@ static void emitApplyBuiltin(MinApply *node, EC *ctx) {
     PROTECT(builtinArgs);
     ER *builtinResult = emitCallBuiltin(bi, builtinArgs, ctx);
     PROTECT(builtinResult);
-    pushCResultArray(targetArgs, builtinResult);
+    pushRA(targetArgs, builtinResult);
 
     continuations = continuations->next;
 
     // (env result f)
     ER *f = emitSimpleExp(continuations->exp, ctx);
     PROTECT(f);
-    pushCResultArray(targetArgs, f);
+    pushRA(targetArgs, f);
 
     // (k env result f)
     emitGoto(target, targetArgs, ctx);
@@ -496,7 +495,7 @@ static void emitApplyBuiltin(MinApply *node, EC *ctx) {
 static void emitApplyClosure(MinApply *apply, EC *ctx) {
     EMITLOC("emitApplyClosure", apply, ctx);
 
-    CResultArray *closureArgSlots =
+    RA *closureArgSlots =
         claimSlotsBelow(countMinExprList(apply->args) + 1, // +1 for closure env
                         ctx);
     int save = PROTECT(closureArgSlots);
@@ -513,14 +512,14 @@ static void emitApplyClosure(MinApply *apply, EC *ctx) {
     ER *env = emitExtractFromClosure(closure, 1, ctx);
     PROTECT(env);
 
-    CResultArray *targetArgs = newCResultArray();
+    RA *targetArgs = newRA();
     PROTECT(targetArgs);
-    pushCResultArray(targetArgs, env);
+    pushRA(targetArgs, env);
 
     for (MinExprList *arg = apply->args; arg != NULL; arg = arg->next) {
         ER *result = emitSimpleExp(arg->exp, ctx);
         int save2 = PROTECT(result);
-        pushCResultArray(targetArgs, result);
+        pushRA(targetArgs, result);
         UNPROTECT(save2);
     }
 
@@ -664,8 +663,8 @@ static void emitMinMatchList(MinMatchList *node, EC *ctx) {
 }
 
 // emitMinLetRec -> emitMinBindings -> emitMakeClosure
-static void emitMakeClosure(HashSymbol *var, Integer depth,
-                            CResultArray *bindings, EC *ctx) {
+static void emitMakeClosure(HashSymbol *var, Integer depth, RA *bindings,
+                            EC *ctx) {
     comment(ctx, "emitMakeClosure %d", depth);
     SCharArray *label = makeLambdaLabel(var);
     int save = PROTECT(label);
@@ -675,8 +674,8 @@ static void emitMakeClosure(HashSymbol *var, Integer depth,
 }
 
 // emitMinLetRec -> emitBackpatchBindings -> emitBackpatchClosure
-static void emitBackpatchClosure(MinExprList *exprs, int depth,
-                                 CResultArray *slots, EC *ctx) {
+static void emitBackpatchClosure(MinExprList *exprs, int depth, RA *slots,
+                                 EC *ctx) {
     if (exprs == NULL)
         return; // emitMakeClosure has already assigned the appropriate value
     comment(ctx, "emitBackpatchClosure %d", depth);
@@ -688,8 +687,8 @@ static void emitBackpatchClosure(MinExprList *exprs, int depth,
     UNPROTECT(save);
 }
 
-static void emitMinBindings(MinBindings *node, Integer depth,
-                            CResultArray *bindings, EC *ctx) {
+static void emitMinBindings(MinBindings *node, Integer depth, RA *bindings,
+                            EC *ctx) {
     if (node == NULL)
         return;
     // Use a unique name to avoid CBufferBag hash collisions when the
@@ -709,7 +708,7 @@ static void emitMinBindings(MinBindings *node, Integer depth,
 }
 
 static void emitBackpatchBindings(MinBindings *node, Integer depth,
-                                  CResultArray *bindings, EC *ctx) {
+                                  RA *bindings, EC *ctx) {
     if (node == NULL)
         return;
     MinExprList *makeEnv = extractEnv(node->val);
@@ -721,7 +720,7 @@ static void emitMinLetRec(MinLetRec *node, EC *ctx) {
     EMITLOC("emitMinLetRec", node, ctx);
     ASSERT_SLOTS(&ctx->context);
     int numBindings = countMinBindings(node->bindings);
-    CResultArray *bindings = claimSlots(numBindings, ctx);
+    RA *bindings = claimSlots(numBindings, ctx);
     int save = PROTECT(bindings);
     emitMinBindings(node->bindings, 0, bindings, ctx);
     emitBackpatchBindings(node->bindings, 0, bindings, ctx);

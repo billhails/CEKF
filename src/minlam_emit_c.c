@@ -36,6 +36,10 @@
 
 typedef CEmitterContext EC;
 typedef EmitCResult ER;
+typedef CResultArray RA;
+
+static inline RA *newRA() { return newCResultArray(); }
+static inline void pushRA(RA *ra, ER *r) { pushCResultArray(ra, r); }
 
 typedef struct EmitBuffer {
     FILE *fh;
