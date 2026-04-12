@@ -223,6 +223,10 @@ static EC *extendContext(EC *ctx) {
 // Leaf Emitters
 /////////////////
 
+static void emitDone(int status, EC *ctx) {
+    fprintf(FH(ctx), "exit(%d);\n", status);
+}
+
 static void emitClosureSetEnv(ER *closure, ER *env, EC *ctx) {
     fprintf(FH(ctx), "getValue_Vec(%s)->entries[1] = %s;\n",
             resultText(closure, ctx), resultText(env, ctx));
