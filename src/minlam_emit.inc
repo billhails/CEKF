@@ -18,7 +18,6 @@
 
 #include "memory.h"
 #include "minlam.h"
-#include "minlam_emit_c.h"
 #include "minlam_pp.h"
 #include "symbol.h"
 #include "utils_helper.h"
@@ -26,6 +25,17 @@
 #include <math.h>
 #include <stdarg.h>
 #include <sys/param.h>
+
+#ifndef DISABLE_INNER_TYPEDEFS
+#include "minlam_emit_b.h"
+typedef BEmitterContext EC;
+typedef EmitBResult ER;
+typedef BResultArray RA;
+
+static inline RA *newRA() { return newCResultArray(); }
+static inline void pushRA(RA *ra, ER *r) { pushCResultArray(ra, r); }
+static inline ER *newER_Var(HashSymbol *s) { return newEmitCResult_Var(s); }
+#endif
 
 static void emitMinLam(MinLam *, EC *);
 static void emitMinApply(MinApply *, EC *);
@@ -540,6 +550,9 @@ static void emitMinIff(MinIff *node, EC *ctx) {
     ASSERT_SLOTS(&ctx->context);
 }
 
+// characters are immediate so we can dispatch on them, numbers
+// can be bigints and therefore must be compared individually.
+// ...it might be worth investigating sorting + binary search...
 static void emitMinCond(MinCond *node, EC *ctx) {
     EMITLOC("emitMinCond", node, ctx);
     ER *cond = emitSimpleExp(node->value, ctx);
