@@ -68,10 +68,6 @@ static void emitAssignPrimOp1(ER *target, char *opName, ER *arg1, EC *ctx) {
             resultText(arg1, ctx));
 }
 
-static void emitTextResult(Opaque *buf, char *text) {
-    fprintf(opaqueEmitBufferFh(buf), "%s", text);
-}
-
 static void emitMaybeBigInt(MaybeBigInt *mbi, EC *ctx) {
     switch (mbi->type) {
     case BI_BIG: {
@@ -495,8 +491,8 @@ static ER *emitSimpleExp(MinExp *exp, EC *ctx) {
 
 static ER *emitConstant(char *text) {
     Opaque *buf = newOpaque_EmitBuffer();
-    emitTextResult(buf, text);
     int save = PROTECT(buf);
+    fprintf(opaqueEmitBufferFh(buf), "%s", text);
     ER *target = newEmitCResult_Constant(buf);
     UNPROTECT(save);
     return target;
