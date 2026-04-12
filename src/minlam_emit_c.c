@@ -37,6 +37,8 @@
 typedef CEmitterContext EC;
 typedef EmitCResult ER;
 
+static void emitAtomic(MinExp *exp, EC *ctx);
+
 #define EMITLOC(name, node, ctx)                                               \
     if (node == NULL || CPI(node).lineNo == 0)                                 \
         fprintf(FH(ctx), "// %s\n", name);                                     \
@@ -151,6 +153,14 @@ static void emitCharacter(Character character, EC *ctx) {
 
 static void emitInteger(Integer i, EC *ctx) {
     fprintf(FH(ctx), "value_Stdint(%d)", i);
+}
+
+static void emitVec(MinExp *exp1, MinExp *exp2, EC *ctx) {
+    fprintf(FH(ctx), "vec(");
+    emitAtomic(exp1, ctx);
+    fprintf(FH(ctx), ", ");
+    emitAtomic(exp2, ctx);
+    fprintf(FH(ctx), ")");
 }
 
 #include "minlam_emit.inc"

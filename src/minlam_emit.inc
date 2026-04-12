@@ -44,17 +44,8 @@ static ER *emitMakeVec(MinExprList *, EC *);
 static ER *emitSimpleExp(MinExp *, EC *);
 static EC *extendContext(EC *, Opaque *);
 static void emitMaybeBigInt(MaybeBigInt *, EC *);
-static void emitAtomic(MinExp *exp, EC *ctx);
 static bool isConst(MinExp *exp);
 static char *resultText(ER *data, EC *ctx);
-
-static void emitVec(MinExp *exp1, MinExp *exp2, EC *ctx) {
-    fprintf(FH(ctx), "vec(");
-    emitAtomic(exp1, ctx);
-    fprintf(FH(ctx), ", ");
-    emitAtomic(exp2, ctx);
-    fprintf(FH(ctx), ")");
-}
 
 static void emitAssignPrimOp2(ER *target, char *opName, ER *arg1, ER *arg2,
                               EC *ctx) {
