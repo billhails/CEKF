@@ -68,6 +68,10 @@ static void emitMinMatchList(MinMatchList *, EC *);
 static void emitStdint(Integer, EC *);
 static void emitVec(MinExp *, MinExp *, EC *);
 static void printEmitBuffer(FILE *, void *);
+static inline Opaque *newOpaque_EmitBuffer();
+static inline char *opaqueEmitBufferContent(Opaque *container);
+static inline FILE *opaqueEmitBufferFh(Opaque *container);
+static inline FILE *FH(CEmitterContext *ctx);
 
 /////////////////////////////////////////////////////
 // Forward declarations defined in minlam_emit.inc
@@ -109,10 +113,6 @@ static void emitVecGetImm(ER *, ER *, int, EC *);
 static inline RA *newRA();
 static inline void pushRA(RA *ra, ER *r);
 static inline ER *newResultSlotSymbol(HashSymbol *s);
-static inline Opaque *newOpaque_EmitBuffer();
-static inline char *opaqueEmitBufferContent(Opaque *container);
-static inline FILE *opaqueEmitBufferFh(Opaque *container);
-static inline FILE *FH(CEmitterContext *ctx);
 
 // also used by minlam_emit.inc:
 #define EMITLOC(name, node, ctx)                                               \
