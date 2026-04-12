@@ -232,6 +232,10 @@ static void emitTrace(ER *target, RA *args, EC *ctx) {
             (int)args->size);
 }
 
+static void emitJumpToLambda(ER *target, EC *ctx) {
+    fprintf(FH(ctx), "goto *getValue_Addr(%s);\n", resultText(target, ctx));
+}
+
 static void emitConstructVec(ER *target, int count, CResultArray *results,
                              EC *ctx) {
     fprintf(FH(ctx), "%s = make_vec(%d", resultText(target, ctx), count);

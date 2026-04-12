@@ -380,8 +380,7 @@ static void emitGoto(ER *target, RA *args, EC *ctx) {
     }
 
     emitTrace(savedTarget, args, ctx);
-    fprintf(FH(ctx), "goto *getValue_Addr(%s);\n",
-            resultText(savedTarget, ctx));
+    emitJumpToLambda(savedTarget, ctx);
     releaseSlots(claimedSlots, &ctx->context);
     UNPROTECT(save);
 }
