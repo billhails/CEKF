@@ -37,19 +37,6 @@ static inline void pushRA(RA *ra, ER *r) { pushBResultArray(ra, r); }
 static inline ER *newER_Var(HashSymbol *s) { return newEmitBResult_Var(s); }
 #endif
 
-static void emitMinLam(MinLam *, EC *);
-static void emitMinApply(MinApply *, EC *);
-static void emitMinIff(MinIff *, EC *);
-static void emitMinCond(MinCond *, EC *);
-static void emitMinIntCondCases(MinIntCondCases *, ER *, EC *);
-static void emitMinCharCondCases(MinCharCondCases *, EC *);
-static void emitMinMatch(MinMatch *, EC *);
-static void emitMinMatchList(MinMatchList *, EC *);
-static void emitMinLetRec(MinLetRec *, EC *);
-static void emitMinBindings(MinBindings *, Integer, RA *, EC *);
-static void emitMinCondCases(MinCondCases *, EC *);
-static ER *emitMakeVec(MinExprList *, EC *);
-
 ////////////////////
 // SlotPool Helpers
 ////////////////////
@@ -171,7 +158,7 @@ static ER *emitPrimOp(MinPrimApp *app, EC *ctx) {
     releaseSlot(arg2, &ctx->context);
     ER *target = claimSlot(ctx);
     PROTECT(target);
-    emitAssignPrimOp(app, target, arg1, arg2, ctx);
+    emitAssignPrimOp(app->type, target, arg1, arg2, ctx);
     UNPROTECT(save);
     return target; // the temp register that the caller can refer to
 }
@@ -427,7 +414,7 @@ static void emitApplyBuiltin(MinApply *node, EC *ctx) {
 // The call target is k's code:   vec 0 of reg[3]
 // The call passes:
 //   arg 0 (env):    vec 1 of reg[3]   -- k's captured env
-//   arg 1 (result): a + b             -- the computed value!
+//   arg 1 (result): a + b             -- the computed value
 //   arg 2 (fail):   reg[4]            -- thread the failure cont through
 //
 //  void *target = reg[3].vec[0];   // k's code label
@@ -494,115 +481,6 @@ static void emitMinIff(MinIff *node, EC *ctx) {
     emitIfThenElse(test, node->consequent, node->alternative, ctx);
     UNPROTECT(save);
     ASSERT_SLOTS(&ctx->context);
-}
-
-// characters are immediate so we can dispatch on them, numbers
-// can be bigints and therefore must be compared individually.
-// ...it might be worth investigating sorting + binary search or
-// nested dispatch tables on each consecutive bigint word..
-static void emitMinCond(MinCond *node, EC *ctx) {
-    EMITLOC("emitMinCond", node, ctx);
-    ER *cond = emitSimpleExp(node->value, ctx);
-    int save = PROTECT(cond);
-    releaseSlot(cond, &ctx->context);
-    if (node->cases->type == MINCONDCASES_TYPE_INTEGERS) {
-        emitMinIntCondCases(getMinCondCases_Integers(node->cases), cond, ctx);
-    } else {
-        fprintf(FH(ctx), "switch(getValue_Character(%s)) {\n",
-                resultText(cond, ctx));
-        emitMinCondCases(node->cases, ctx);
-        fprintf(FH(ctx), "}\n");
-    }
-    UNPROTECT(save);
-}
-
-static void emitMinCondCases(MinCondCases *node, EC *ctx) {
-    switch (node->type) {
-    case MINCONDCASES_TYPE_INTEGERS:
-        cant_happen("integer cond cases handled in emitMinCond");
-        break;
-    case MINCONDCASES_TYPE_CHARACTERS: {
-        MinCharCondCases *variant = getMinCondCases_Characters(node);
-        emitMinCharCondCases(variant, ctx);
-        break;
-    }
-    default:
-        cant_happen("unrecognized MinCondCases type %d", node->type);
-    }
-}
-
-static void emitMinIntCondCases(MinIntCondCases *node, ER *cond, EC *ctx) {
-    if (node == NULL) {
-        return;
-    }
-    EMITLOC("emitMinIntCondCases", node, ctx);
-    if (node->constant == NULL) {
-        // default case
-        fprintf(FH(ctx), "{ // default\n");
-    } else {
-        fprintf(FH(ctx), "if (minlam_runtime_cmp(%s, ", resultText(cond, ctx));
-        emitMaybeBigInt(node->constant, ctx);
-        fprintf(FH(ctx), ") == CMP_EQ) {\n");
-    }
-    ASSERT_SLOTS(&ctx->context);
-    emitMinExp(node->body, ctx);
-    if (node->next != NULL) {
-        fprintf(FH(ctx), "} else ");
-        emitMinIntCondCases(node->next, cond, ctx);
-    } else {
-        fprintf(FH(ctx), "}\n");
-    }
-}
-
-static void emitMinCharCondCases(MinCharCondCases *node, EC *ctx) {
-    EMITLOC("emitMinCharCondCases", node, ctx);
-    if (node == NULL) {
-        fprintf(FH(ctx), "default:\n");
-        fprintf(FH(ctx),
-                "fprintf(stderr, \"conditions exhausted in %s\\n\");\n",
-                ctx->context.currentBinding->name);
-        fprintf(FH(ctx), "abort();\n");
-        return;
-    }
-    if (node->isDefault) {
-        fprintf(FH(ctx), "default: \n");
-        ASSERT_SLOTS(&ctx->context);
-        emitMinExp(node->body, ctx);
-        fprintf(FH(ctx), "break;\n");
-        return;
-    }
-    fprintf(FH(ctx), "case %d: \n", (int)(node->constant));
-    ASSERT_SLOTS(&ctx->context);
-    emitMinExp(node->body, ctx);
-    fprintf(FH(ctx), "break;\n");
-    emitMinCharCondCases(node->next, ctx);
-}
-
-static void emitMinMatch(MinMatch *node, EC *ctx) {
-    EMITLOC("emitMinMatch", node, ctx);
-    ER *match = emitSimpleExp(node->index, ctx);
-    int save = PROTECT(match);
-    fprintf(FH(ctx), "switch (getValue_Stdint(%s)) {\n",
-            resultText(match, ctx));
-    releaseSlot(match, &ctx->context);
-    UNPROTECT(save);
-    emitMinMatchList(node->cases, ctx);
-    fprintf(FH(ctx), "}\n");
-}
-
-static void emitMinMatchList(MinMatchList *node, EC *ctx) {
-    if (node == NULL)
-        return;
-    EMITLOC("emitMinMatchList", node, ctx);
-    MinIntList *match = node->matches;
-    while (match != NULL) {
-        fprintf(FH(ctx), "case %d:\n", match->item);
-        match = match->next;
-    }
-    ASSERT_SLOTS(&ctx->context);
-    emitMinExp(node->body, ctx);
-    fprintf(FH(ctx), "break;\n");
-    emitMinMatchList(node->next, ctx);
 }
 
 // emitMinLetRec -> emitMinBindings -> emitMakeClosure
