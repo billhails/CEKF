@@ -302,6 +302,15 @@ static CResultArray *emitRL(MinExprList *vecs, EC *ctx) {
     return results;
 }
 
+static void emitConstructVec(ER *target, int count, CResultArray *results,
+                             EC *ctx) {
+    fprintf(FH(ctx), "%s = make_vec(%d", resultText(target, ctx), count);
+    for (Index i = results->size; i > 0; i--) {
+        fprintf(FH(ctx), ", %s", resultText(results->entries[i - 1], ctx));
+    }
+    fprintf(FH(ctx), ");\n");
+}
+
 static ER *emitMakeVec(MinExprList *vecs, EC *ctx) {
     CResultArray *results = emitRL(vecs, ctx);
     int save = PROTECT(results);
@@ -313,11 +322,7 @@ static ER *emitMakeVec(MinExprList *vecs, EC *ctx) {
     } else {
         target = claimSlot(ctx);
         PROTECT(target);
-        fprintf(FH(ctx), "%s = make_vec(%d", resultText(target, ctx), count);
-        for (Index i = results->size; i > 0; i--) {
-            fprintf(FH(ctx), ", %s", resultText(results->entries[i - 1], ctx));
-        }
-        fprintf(FH(ctx), ");\n");
+        emitConstructVec(target, count, results, ctx);
     }
     UNPROTECT(save);
     return target;
