@@ -375,7 +375,7 @@ static void emitGoto(ER *target, RA *args, EC *ctx) {
     }
 
     if (ctx->context.needsUnprotect) {
-        fprintf(FH(ctx), "minlam_runtime_unprotect();\n");
+        emitUnprotect(ctx);
         ctx->context.needsUnprotect = false;
     }
 

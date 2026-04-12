@@ -222,6 +222,10 @@ static EC *extendContext(EC *ctx) {
 // Leaf Emitters
 /////////////////
 
+static void emitUnprotect(EC *ctx) {
+    fprintf(FH(ctx), "minlam_runtime_unprotect();\n");
+}
+
 static void emitConstructVec(ER *target, int count, CResultArray *results,
                              EC *ctx) {
     fprintf(FH(ctx), "%s = make_vec(%d", resultText(target, ctx), count);
