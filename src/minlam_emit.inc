@@ -651,8 +651,7 @@ static void emitMakeClosure(HashSymbol *var, Integer depth, RA *bindings,
     comment(ctx, "emitMakeClosure %d", depth);
     SCharArray *label = makeLambdaLabel(var);
     int save = PROTECT(label);
-    fprintf(FH(ctx), "%s = make_vec(2, value_Addr(&&%s), value_None());\n",
-            resultText(bindings->entries[depth], ctx), label->entries);
+    emitClosureNew(bindings->entries[depth], label, ctx);
     UNPROTECT(save);
 }
 

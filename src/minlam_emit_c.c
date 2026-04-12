@@ -223,6 +223,11 @@ static EC *extendContext(EC *ctx) {
 // Leaf Emitters
 /////////////////
 
+static void emitClosureNew(ER *target, SCharArray *label, EC *ctx) {
+    fprintf(FH(ctx), "%s = make_vec(2, value_Addr(&&%s), value_None());\n",
+            resultText(target, ctx), label->entries);
+}
+
 static void emitIfThenElse(ER *test, MinExp *con, MinExp *alt, EC *ctx) {
     fprintf(FH(ctx), "if (isTrue(%s)) {\n", resultText(test, ctx));
     emitMinExp(con, ctx);
