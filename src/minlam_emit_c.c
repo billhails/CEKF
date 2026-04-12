@@ -127,6 +127,15 @@ static ER *emitIntegerResult(Integer i) {
     return result;
 }
 
+static ER *emitCharacterResult(Character c) {
+    Opaque *buf = newOpaque_EmitBuffer();
+    int save = PROTECT(buf);
+    fprintf(opaqueEmitBufferFh(buf), "value_Character(%d)", (int)c);
+    ER *result = newEmitCResult_Constant(buf);
+    UNPROTECT(save);
+    return result;
+}
+
 #include "minlam_emit.inc"
 
 //////////////

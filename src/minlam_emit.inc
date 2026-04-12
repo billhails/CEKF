@@ -85,10 +85,6 @@ static void emitAssignPrimOp1(ER *target, char *opName, ER *arg1, EC *ctx) {
             resultText(arg1, ctx));
 }
 
-static void emitCharacterResult(Opaque *buf, Character c) {
-    fprintf(opaqueEmitBufferFh(buf), "value_Character(%d)", (int)c);
-}
-
 static void emitTextResult(Opaque *buf, char *text) {
     fprintf(opaqueEmitBufferFh(buf), "%s", text);
 }
@@ -505,12 +501,7 @@ static ER *emitSimpleExp(MinExp *exp, EC *ctx) {
         return emitIntegerResult(getMinExp_Stdint(exp));
     }
     case MINEXP_TYPE_CHARACTER: {
-        Opaque *buf = newOpaque_EmitBuffer();
-        int save = PROTECT(buf);
-        emitCharacterResult(buf, getMinExp_Character(exp));
-        ER *result = newEmitCResult_Constant(buf);
-        UNPROTECT(save);
-        return result;
+        return emitCharacterResult(getMinExp_Character(exp));
     }
     default:
         ppMinExp(stderr, exp);
