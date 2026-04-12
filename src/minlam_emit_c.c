@@ -136,6 +136,15 @@ static ER *emitCharacterResult(Character c) {
     return result;
 }
 
+static void comment(EC *ctx, char *fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+    fprintf(FH(ctx), "// ");
+    vfprintf(FH(ctx), fmt, args);
+    fprintf(FH(ctx), "\n");
+    va_end(args);
+}
+
 #include "minlam_emit.inc"
 
 //////////////

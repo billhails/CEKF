@@ -47,15 +47,6 @@ static void emitMaybeBigInt(MaybeBigInt *, EC *);
 static bool emitAtomic(MinExp *exp, EC *ctx);
 static char *resultText(ER *data, EC *ctx);
 
-static void comment(EC *ctx, char *fmt, ...) {
-    va_list args;
-    va_start(args, fmt);
-    fprintf(FH(ctx), "// ");
-    vfprintf(FH(ctx), fmt, args);
-    fprintf(FH(ctx), "\n");
-    va_end(args);
-}
-
 static void emitCharacter(Character character, EC *ctx) {
     fprintf(FH(ctx), "value_Character(%d)", (int)character);
 }
@@ -561,7 +552,7 @@ static void emitMinLam(MinLam *node, EC *ctx) {
         cant_happen("NULL MinLam");
 #endif
     int nargs = countSymbolList(node->args);
-    fprintf(FH(ctx), "// emitMinLam reserving %d incoming slots\n", nargs);
+    comment(ctx, "emitMinLam reserving %d incoming slots", nargs);
     CResultArray *slots = claimSlots(nargs, ctx);
     int save = PROTECT(slots);
     ctx->context.currentReg += nargs;
@@ -586,7 +577,7 @@ static inline void emitAssignReg(Index i, ER *value, EC *ctx) {
 }
 
 static void emitGoto(ER *target, CResultArray *args, EC *ctx) {
-    fprintf(FH(ctx), "// emitGoto - %u outgoing slots\n", args->size);
+    comment(ctx, "emitGoto - %u outgoing slots", args->size);
     CResultArray *sourceSlots = newCResultArray();
     int save = PROTECT(sourceSlots);
     CResultArray *claimedSlots = newCResultArray();
@@ -914,7 +905,7 @@ static void emitMinMatchList(MinMatchList *node, EC *ctx) {
 // emitMinLetRec -> emitMinBindings -> emitMakeClosure
 static void emitMakeClosure(HashSymbol *var, Integer depth,
                             CResultArray *bindings, EC *ctx) {
-    fprintf(FH(ctx), "// emitMakeClosure %d\n", depth);
+    comment(ctx, "emitMakeClosure %d", depth);
     SCharArray *label = makeLambdaLabel(var);
     int save = PROTECT(label);
     fprintf(FH(ctx), "%s = make_vec(2, value_Addr(&&%s), value_None());\n",
@@ -927,7 +918,7 @@ static void emitBackpatchClosure(MinExprList *exprs, int depth,
                                  CResultArray *slots, EC *ctx) {
     if (exprs == NULL)
         return; // emitMakeClosure has already assigned the appropriate value
-    fprintf(FH(ctx), "// emitBackpatchClosure %d\n", depth);
+    comment(ctx, "emitBackpatchClosure %d", depth);
     ER *tmp = emitMakeVec(exprs, ctx);
     int save = PROTECT(tmp);
     fprintf(FH(ctx), "getValue_Vec(%s)->entries[1] = %s;\n",
@@ -990,9 +981,7 @@ static void emitMinExp(MinExp *node, EC *ctx) {
     }
     case MINEXP_TYPE_AVAR: {
         // bare variable in tail position is dead code (CPS artifact)
-        fprintf(FH(ctx), "// dead tail: ");
-        emitMinAnnotatedVar(getMinExp_Avar(node), ctx);
-        fprintf(FH(ctx), ";\n");
+        comment(ctx, "dead tail: %s", getMinExp_Avar(node)->var->name);
         break;
     }
     case MINEXP_TYPE_BIGINTEGER: {
