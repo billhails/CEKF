@@ -309,7 +309,7 @@ static ER *emitMakeVec(MinExprList *vecs, EC *ctx) {
     releaseSlots(results, &ctx->context);
     ER *target = NULL;
     if (count == 0) {
-        target = emitConstant("value_None()");
+        target = emitNone();
     } else {
         target = claimSlot(ctx);
         PROTECT(target);
@@ -405,7 +405,7 @@ static ER *emitExtractFromClosure(ER *closure, int index, EC *ctx) {
 static ER *emitCallBuiltin(BuiltIn *bi, MinExprList *builtinArgs, EC *ctx) {
     ER *builtinArg = NULL;
     if (countBuiltInArgs(bi->args) == 0)
-        builtinArg = emitConstant("make_vec(0)"); // just for builtins
+        builtinArg = emitEmptyVec(); // just for builtins
     else
         builtinArg = emitMakeVec(builtinArgs, ctx);
     int save = PROTECT(builtinArg);

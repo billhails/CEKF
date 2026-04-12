@@ -227,6 +227,9 @@ static ER *emitConstant(char *text) {
     return target;
 }
 
+static ER *emitNone(void) { return emitConstant("value_None()"); }
+static ER *emitEmptyVec(void) { return emitConstant("make_vec(0)"); }
+
 static void emitAtomic(MinExp *exp, EC *ctx) {
     switch (exp->type) {
     case MINEXP_TYPE_AVAR:
