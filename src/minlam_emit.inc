@@ -26,15 +26,15 @@
 #include <stdarg.h>
 #include <sys/param.h>
 
+// this is just for the IDE
 #ifndef DISABLE_INNER_TYPEDEFS
 #include "minlam_emit_b.h"
 typedef BEmitterContext EC;
 typedef EmitBResult ER;
 typedef BResultArray RA;
-
-static inline RA *newRA() { return newCResultArray(); }
-static inline void pushRA(RA *ra, ER *r) { pushCResultArray(ra, r); }
-static inline ER *newER_Var(HashSymbol *s) { return newEmitCResult_Var(s); }
+static inline RA *newRA() { return newBResultArray(); }
+static inline void pushRA(RA *ra, ER *r) { pushBResultArray(ra, r); }
+static inline ER *newER_Var(HashSymbol *s) { return newEmitBResult_Var(s); }
 #endif
 
 static void emitMinLam(MinLam *, EC *);
