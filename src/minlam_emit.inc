@@ -125,52 +125,6 @@ static MinExprList *extractEnv(MinExp *closure) {
     return getMinExp_MakeVec(makeVec->exp);
 }
 
-static int getPrimOpArity(MinPrimOp type) {
-    switch (type) {
-    case MINPRIMOP_TYPE_CANON:
-        return 1;
-    default:
-        return 2;
-    }
-}
-
-static char *getPrimOpCName(MinPrimOp type) {
-    switch (type) {
-    case MINPRIMOP_TYPE_VEC:
-        return "vec";
-    case MINPRIMOP_TYPE_MUL:
-        return "nmul";
-    case MINPRIMOP_TYPE_DIV:
-        return "ndiv";
-    case MINPRIMOP_TYPE_CMP:
-        return "cmp";
-    case MINPRIMOP_TYPE_NE:
-        return "ne";
-    case MINPRIMOP_TYPE_LT:
-        return "lt";
-    case MINPRIMOP_TYPE_LE:
-        return "le";
-    case MINPRIMOP_TYPE_EQ:
-        return "eq";
-    case MINPRIMOP_TYPE_GE:
-        return "ge";
-    case MINPRIMOP_TYPE_GT:
-        return "gt";
-    case MINPRIMOP_TYPE_ADD:
-        return "nadd";
-    case MINPRIMOP_TYPE_MOD:
-        return "nmod";
-    case MINPRIMOP_TYPE_POW:
-        return "npow";
-    case MINPRIMOP_TYPE_SUB:
-        return "nsub";
-    case MINPRIMOP_TYPE_CANON:
-        return "ncanon";
-    default:
-        cant_happen("unhandled %s", minPrimOpName(type));
-    }
-}
-
 /////////////////
 // Label Helpers
 /////////////////
@@ -217,15 +171,7 @@ static ER *emitPrimOp(MinPrimApp *app, EC *ctx) {
     releaseSlot(arg2, &ctx->context);
     ER *target = claimSlot(ctx);
     PROTECT(target);
-    char *opName = getPrimOpCName(app->type);
-    int nargs = getPrimOpArity(app->type);
-    // the first thing we emit consumes the released but not yet clobbered
-    // slots.
-    if (nargs == 2) {
-        emitAssignPrimOp2(target, opName, arg1, arg2, ctx);
-    } else {
-        emitAssignPrimOp1(target, opName, arg1, ctx);
-    }
+    emitAssignPrimOp(app, target, arg1, arg2, ctx);
     UNPROTECT(save);
     return target; // the temp register that the caller can refer to
 }

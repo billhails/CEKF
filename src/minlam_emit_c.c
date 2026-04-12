@@ -182,6 +182,52 @@ static bool isAtomic(MinExp *exp) {
     }
 }
 
+static int getPrimOpArity(MinPrimOp type) {
+    switch (type) {
+    case MINPRIMOP_TYPE_CANON:
+        return 1;
+    default:
+        return 2;
+    }
+}
+
+static char *getPrimOpCName(MinPrimOp type) {
+    switch (type) {
+    case MINPRIMOP_TYPE_VEC:
+        return "vec";
+    case MINPRIMOP_TYPE_MUL:
+        return "nmul";
+    case MINPRIMOP_TYPE_DIV:
+        return "ndiv";
+    case MINPRIMOP_TYPE_CMP:
+        return "cmp";
+    case MINPRIMOP_TYPE_NE:
+        return "ne";
+    case MINPRIMOP_TYPE_LT:
+        return "lt";
+    case MINPRIMOP_TYPE_LE:
+        return "le";
+    case MINPRIMOP_TYPE_EQ:
+        return "eq";
+    case MINPRIMOP_TYPE_GE:
+        return "ge";
+    case MINPRIMOP_TYPE_GT:
+        return "gt";
+    case MINPRIMOP_TYPE_ADD:
+        return "nadd";
+    case MINPRIMOP_TYPE_MOD:
+        return "nmod";
+    case MINPRIMOP_TYPE_POW:
+        return "npow";
+    case MINPRIMOP_TYPE_SUB:
+        return "nsub";
+    case MINPRIMOP_TYPE_CANON:
+        return "ncanon";
+    default:
+        cant_happen("unhandled %s", minPrimOpName(type));
+    }
+}
+
 ///////////////////
 // Context Helpers
 ///////////////////
@@ -427,6 +473,17 @@ static void emitAssignPrimOp2(ER *target, char *opName, ER *arg1, ER *arg2,
 static void emitAssignPrimOp1(ER *target, char *opName, ER *arg1, EC *ctx) {
     fprintf(FH(ctx), "%s = %s(%s);\n", resultText(target, ctx), opName,
             resultText(arg1, ctx));
+}
+
+static void emitAssignPrimOp(MinPrimApp *app, ER *target, ER *arg1, ER *arg2,
+                             EC *ctx) {
+    char *opName = getPrimOpCName(app->type);
+    int nargs = getPrimOpArity(app->type);
+    if (nargs == 2) {
+        emitAssignPrimOp2(target, opName, arg1, arg2, ctx);
+    } else {
+        emitAssignPrimOp1(target, opName, arg1, ctx);
+    }
 }
 
 static void emitMaybeBigInt(MaybeBigInt *mbi, EC *ctx) {
