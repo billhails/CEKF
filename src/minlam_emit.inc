@@ -60,8 +60,8 @@ static ER *claimSlot(EC *ctx) {
 }
 
 static void releaseSlot(ER *result, EmitterContext *ctx) {
-    if (isEmitCResult_Var(result))
-        emitter_releaseSlotSymbol(getEmitCResult_Var(result), ctx);
+    if (resultIsVar(result))
+        emitter_releaseSlotSymbol(getResultSlotSymbol(result), ctx);
 }
 
 static void releaseSlots(RA *slots, EmitterContext *ctx) {
@@ -357,7 +357,7 @@ static void emitGoto(ER *target, RA *args, EC *ctx) {
         ER *tempSlot = claimSlot(ctx);
         int save2 = PROTECT(tempSlot);
         ER *arg = args->entries[i];
-        if (isEmitCResult_Buf(arg)) {
+        if (resultNeedsMaterialization(arg)) {
             emitAssign(tempSlot, arg, ctx);
             pushRA(sourceSlots, tempSlot);
         } else {
@@ -372,7 +372,7 @@ static void emitGoto(ER *target, RA *args, EC *ctx) {
     ER *savedTarget = claimSlot(ctx);
     PROTECT(savedTarget);
     pushRA(claimedSlots, savedTarget);
-    if (isEmitCResult_Buf(target)) {
+    if (resultNeedsMaterialization(target)) {
         emitAssign(savedTarget, target, ctx);
     } else {
         savedTarget = target;
@@ -552,7 +552,8 @@ static void emitMinIff(MinIff *node, EC *ctx) {
 
 // characters are immediate so we can dispatch on them, numbers
 // can be bigints and therefore must be compared individually.
-// ...it might be worth investigating sorting + binary search...
+// ...it might be worth investigating sorting + binary search or
+// nested dispatch tables on each consecutive bigint word..
 static void emitMinCond(MinCond *node, EC *ctx) {
     EMITLOC("emitMinCond", node, ctx);
     ER *cond = emitSimpleExp(node->value, ctx);

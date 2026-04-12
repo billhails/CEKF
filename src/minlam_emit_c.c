@@ -220,6 +220,18 @@ static EC *extendContext(EC *ctx) {
     return new;
 }
 
+//////////////////
+// Result Helpers
+//////////////////
+
+static inline bool resultIsVar(ER *result) { return isEmitCResult_Var(result); }
+static inline HashSymbol *getResultSlotSymbol(ER *result) {
+    return getEmitCResult_Var(result);
+}
+static inline bool resultNeedsMaterialization(ER *result) {
+    return isEmitCResult_Buf(result);
+}
+
 /////////////////
 // Leaf Emitters
 /////////////////
