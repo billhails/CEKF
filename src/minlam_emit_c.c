@@ -19,6 +19,89 @@
  * Generated from src/minlam.yaml by tools/generate.py
  */
 
+#include "minlam_emit_c.h"
+#include "memory.h"
+#include "minlam.h"
+#include "minlam_pp.h"
+#include "symbol.h"
+#include "utils_helper.h"
+#include <ctype.h>
+#include <math.h>
+#include <stdarg.h>
+#include <sys/param.h>
+
+///////////////////////
+// Emit Buffer Helpers
+///////////////////////
+
+#define EMITLOC(name, node, ctx)                                               \
+    if (node == NULL || CPI(node).lineNo == 0)                                 \
+        fprintf(FH(ctx), "// %s\n", name);                                     \
+    else                                                                       \
+        fprintf(FH(ctx), "// %s +%d %s\n", name, CPI(node).lineNo,             \
+                CPI(node).fileName)
+
+typedef struct EmitBuffer {
+    FILE *fh;
+    char *buffer;
+    size_t size;
+} EmitBuffer;
+
+static EmitBuffer *newEmitBuffer();
+static char *getEmitBuffer(EmitBuffer *);
+static void cleanEmitBuffer(void *);
+static void printEmitBuffer(FILE *, void *);
+
+static inline Opaque *newOpaque_EmitBuffer() {
+    // no protection as buffer is manually cleaned
+    EmitBuffer *buffer = newEmitBuffer();
+    return newOpaque(buffer, cleanEmitBuffer, printEmitBuffer, NULL);
+}
+
+static inline char *opaqueEmitBufferContent(Opaque *container) {
+    return getEmitBuffer((EmitBuffer *)container->data);
+}
+
+static inline FILE *opaqueEmitBufferFh(Opaque *container) {
+    return ((EmitBuffer *)(container->data))->fh;
+}
+
+static inline FILE *FH(CEmitterContext *ctx) {
+    return opaqueEmitBufferFh(ctx->body);
+}
+
+static EmitBuffer *newEmitBuffer() {
+    EmitBuffer *result = ALLOCATE(EmitBuffer);
+    result->buffer = NULL;
+    result->size = 0;
+    result->fh = open_memstream(&result->buffer, &result->size);
+    return result;
+}
+
+static char *getEmitBuffer(EmitBuffer *buffer) {
+    fflush(buffer->fh);
+    if (buffer->buffer == NULL)
+        return "";
+    else
+        return buffer->buffer;
+}
+
+static void cleanEmitBuffer(void *buffer) {
+    EmitBuffer *b = (EmitBuffer *)buffer;
+    fclose(b->fh);
+    free(b->buffer);
+    FREE(b, EmitBuffer);
+}
+
+static void printEmitBuffer(FILE *fp, void *buffer) {
+    EmitBuffer *b = (EmitBuffer *)buffer;
+    if (b != NULL) {
+        fflush(b->fh);
+        if (b->buffer != NULL)
+            fprintf(fp, "%s", b->buffer);
+    }
+}
+
 #include "minlam_emit.inc"
 
 //////////////
