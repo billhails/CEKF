@@ -5,4 +5,4 @@ let
         (n) { fib(n - 1) + fib(n - 2) }
     }
 in
-    print(fib(4))
+    print(fib(40))

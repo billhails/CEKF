@@ -1102,8 +1102,7 @@ static void emitMinLetRec(MinLetRec *node, CEmitterContext *ctx) {
 static void emitMinExp(MinExp *node, CEmitterContext *ctx) {
     switch (node->type) {
     case MINEXP_TYPE_APPLY: {
-        MinApply *variant = getMinExp_Apply(node);
-        emitMinApply(variant, ctx);
+        emitMinApply(getMinExp_Apply(node), ctx);
         break;
     }
     case MINEXP_TYPE_AVAR: {

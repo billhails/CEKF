@@ -54,6 +54,7 @@
 #include "minlam_cps.h"
 #include "minlam_cpsTrampoline.h"
 #include "minlam_curry.h"
+#include "minlam_emit_b.h"
 #include "minlam_emit_c.h"
 #include "minlam_eta.h"
 #include "minlam_fold.h"
@@ -90,6 +91,7 @@ static int inline_c_flag = 0;
 static int inline_f_flag = 0;
 static int parse_only_flag = 0;
 static int targetCFlag = 0;
+static int targetBFlag = 0;
 #ifdef UNIT_TESTS
 static int test_flag = 0;
 #endif
@@ -215,6 +217,8 @@ static void usage(char *prog, int status) {
 #endif
         "    --target-c[=file]        Output C code instead (to file if "
         "specified).\n"
+        "    --target-b               Run new alternative CPS bytecode "
+        "interpreter\n"
 #ifdef UNIT_TESTS
         "    --test                   Run unit tests.\n"
 #endif
@@ -242,6 +246,7 @@ static int processArgs(int argc, char *argv[]) {
             {"stress-gc", no_argument, &forceGcFlag, 1},
 #endif
             {"target-c", optional_argument, 0, 'T'},
+            {"target-b", no_argument, &targetBFlag, 1},
             {"parse-only", no_argument, &parse_only_flag, 1},
             {"dump-ir", no_argument, &dumpIR, 1},
             {"dump-ast", no_argument, &ast_flag, 1},
@@ -657,7 +662,7 @@ int main(int argc, char *argv[]) {
             exit(0);
         }
 
-        if (targetCFlag) {
+        if (targetBFlag || targetCFlag) {
             ///////
             // CPS
             ///////
@@ -786,19 +791,23 @@ int main(int argc, char *argv[]) {
             //////////
             // Emit C
             //////////
-            FILE *outFile = stdout;
-            int shouldClose = 0;
-            if (target_c_file != NULL) {
-                outFile = fopen(target_c_file, "w");
-                if (outFile == NULL) {
-                    perror(target_c_file);
-                    exit(1);
+            if (targetCFlag) {
+                FILE *outFile = stdout;
+                int shouldClose = 0;
+                if (target_c_file != NULL) {
+                    outFile = fopen(target_c_file, "w");
+                    if (outFile == NULL) {
+                        perror(target_c_file);
+                        exit(1);
+                    }
+                    shouldClose = 1;
                 }
-                shouldClose = 1;
-            }
-            emitCProgram(minExp, builtIns, outFile);
-            if (shouldClose) {
-                fclose(outFile);
+                emitCProgram(minExp, builtIns, outFile);
+                if (shouldClose) {
+                    fclose(outFile);
+                }
+            } else {
+                emitBProgram(minExp, builtIns);
             }
             exit(0);
         }

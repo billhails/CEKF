@@ -64,6 +64,12 @@ hashes:
         data:
             entries: int
 
+    IndexMap:
+        meta:
+            brief: Map from Symbol to Index
+        data:
+            entries: index
+
     SymbolMap:
         meta:
             brief: Map from Symbol to Symbol

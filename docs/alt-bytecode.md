@@ -259,8 +259,10 @@ Suggested operations:
 
 That makes the recursive-closure protocol explicit in the instruction set.
 
-The important detail for persistence is that `lambda_id` must resolve via the
-loaded code image, not via an embedded native address.
+The important detail for persistence is that `lambda_id` is symbolic during
+emission and resolves only after layout of all lambda buffers. `CLOSURE_NEW`
+therefore writes a placeholder operand and records a fixup against the target
+lambda label rather than embedding a native address or guessed code offset.
 
 ## Constants and Values
 
@@ -706,8 +708,51 @@ after layout, just as the C compiler currently resolves labels for the C target.
 
 ## Relocation and Layout
 
-Use symbolic labels during emission and resolve them after all lambdas are laid
-out.
+Do not try to know final code offsets during visitor emission. Emit the top
+level body and each lambda into separate `BBuffer`s, and keep all jump and
+lambda-entry targets symbolic until a later assembly step.
+
+Each `BBuffer` should carry at least:
+
+* emitted code words.
+* label definitions as `(label, buffer_relative_word_offset)` pairs.
+* fixups as `(patch_word_offset, target_label)` pairs.
+* source locations.
+* comments.
+
+The assembly pass then benefits from three explicit assembler-side structures:
+
+* `BAssemblyPlan` containing the set of buffers to assemble, their final order,
+    and the symbolic entry label.
+* `BLayout` containing `bufferBases` and `globalLabels`, both as `IndexMap`s,
+    plus the final numeric entry point.
+* `BLinkedImage` containing the flattened code and rebased metadata after
+    fixups have been applied.
+
+This is the bytecode analogue of what `minlam_emit_c.c` already does. The C
+emitter writes `&&LABEL` into separate memstreams and lets the C compiler
+resolve those names later. The bytecode emitter should instead write placeholder
+words and record the symbolic label references explicitly.
+
+There are two kinds of symbolic target, but they can use the same mechanism:
+
+* basic-block labels within one lambda buffer for `JMP`, `JMP_FALSE`, and case
+  dispatch targets.
+* lambda-entry labels referenced by `CLOSURE_NEW` and by the program entry.
+
+The assembly step is then straightforward:
+
+1. Emit each lambda and the main body into separate buffers, recording label
+    definitions and fixups as you go.
+2. Compute a base word offset for each buffer by prefix-summing their code
+    lengths in final link order.
+3. Build a global label map by adding each buffer base to each buffer-relative
+    label definition.
+4. Rewrite every recorded fixup word using that global label map.
+5. Concatenate code buffers and offset-adjust source locations and comments.
+
+With this scheme, no visitor ever needs to know the final location of any
+lambda while it is still emitting that lambda.
 
 ### Metadata needed per lambda
 
@@ -720,16 +765,21 @@ Keep at least:
 
 ### Fixups you will need
 
-* `CLOSURE_NEW` lambda references.
-* `JMP` and `JMP_FALSE` targets.
+* `CLOSURE_NEW` lambda-entry references.
+* `JMP` and `JMP_FALSE` block targets.
 * dispatch-table targets.
 * entry-point reference.
+
+The switch-table representation should be revisited later. `IntCondSwitch` and
+`CharCondSwitch` currently still store concrete target indices rather than
+symbolic labels, so they do not yet participate in the same fixup path as
+ordinary branches.
 
 If the format supports external builtin references in the stored image, then
 those also need a relocation or name-resolution path at load time.
 
 This is the same problem that `minlam_emit_c.c` solves with C labels, except
-that the assembler now performs the final resolution.
+that the bytecode assembler now performs the final resolution explicitly.
 
 ## Runtime Services Worth Reusing
 
@@ -858,4 +908,30 @@ If that discipline is maintained, then:
 * `emit.yaml` also defines a common inline `EmitterContext` for common context between implementations, and `emit_b.yaml` and `emit_c.yaml` include that in their respective `BEmitterContext` and `CEmitterContext` visitor contexts.
 * Common slot pool and heap manipulation now lives in `emit_helper.c`.
 * Where possible pointers to the common `EmitterContext` struct are used in preferance to the broader emitter-specific context, and those functions that only require that context have also been moved out of `minlam_emit_c.c` into `emit_helper.c` since they are demonstrably emitter agnostic.
+* `emit_b.yaml` now gives `BBuffer` explicit `labels` and `fixups` structures alongside code, source locations and comments, with labels represented as an `IndexMap` from symbol to buffer-relative word offset.
+* `BFixup` records unresolved patch sites so visitor emission can defer final lambda and jump offset resolution until the individual buffers are assembled.
+* `emit_b.yaml` also now defines `BAssemblyPlan`, `BLayout`, and `BLinkedImage` so the separate phases of planning buffer order, computing final offsets, and flattening the final bytecode image are explicit in the type definitions.
+* `IntCondSwitch` and `CharCondSwitch` still use concrete target indices for now and should be revisited later so switch-table targets can participate in the same symbolic layout and fixup path as ordinary branches.
+* `minlam_dump_b.c` now provides a first-pass text dump utility for `BBuffer` and `BLinkedImage`, intended as a development aid before any real bytecode visitor exists.
 * No attempt has been made to create any visitor for bytecode emission yet.
+
+### Refactoring Proposal
+
+> I naively made a start on yet another visitor for `minlam_emit_b.c` but I think I may abandon that as this idea occurred to me:
+
+To keep the two implementations in sync, it's obvious they should share as much code as possible. The challenge
+is how to share the core algorithm and avoid duplicating it from `minlam_emit_c.c` into `minlam_emit_b.c`.
+Here's a possible way to do that.
+
+Throughout this process, the project **must** continue to build and run.
+
+* Move all of the code currently in `minlam_emit_c.c` into a new file `minlam_emit.inc` and have `minlam_emit_c.c` include that.
+* Proceed to make `minlam_emit.inc` emitter-agnostic by a combination of the following strategies:
+  * `#define EMIT_C` in `minlam_emit_c.c` ahead of the `#include "minlam_emit.inc"`.
+  * `typedef CemiiterContext EC;` in `minlam_emit_c.c` and replace `CEmitterContext` with `EC` in `minlam_emit.inc`
+  * Move C-emitter specific code back out of `minlam_emit.inc` into `minlam_emit_c.c`, extracting inline sections where necessary.
+  * Fall back to `#ifdef EMIT_C` sections in `minlam_emit.inc` only if absolutely necessary.
+* Once work can start on `minlam_emit_b.c`, keep all potentially broken code behind an `#ifdef WIP` or similar.
+* `minlam_emit_b.c` obviously then `#include`s the eame `.inc` but supplies alternative typedefs, defines and implementations.
+
+One additional feature of this approach is that `static` definitions can all remain static.

@@ -6,6 +6,7 @@ Common utility structures
 flowchart LR
 SymbolSet --entries--> NULL
 IntMap --entries--> int
+IndexMap --entries--> index
 SymbolMap --entries--> HashSymbol
 SymbolSetMap --entries--> SymbolSet
 BoolMap --entries--> bool

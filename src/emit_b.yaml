@@ -35,13 +35,48 @@ structs:
             body: BBuffer
             context: EmitterContext
 
-    BBuffer:
+    BAssemblyPlan:
         meta:
-            brief: A buffer with code, source locations and comments
+            brief: Inputs to assembly of separate bytecode buffers
+        data:
+            buffers: BBufferBag
+            order: SymbolArray
+            entryLabel: HashSymbol
+
+    BLayout:
+        meta:
+            brief: Final placement of buffers and labels after layout
+        data:
+            bufferBases: IndexMap
+            globalLabels: IndexMap
+            entryPoint: index
+
+    BLinkedImage:
+        meta:
+            brief: Flattened bytecode image after assembly
         data:
             codes: UIntArray
             locations: BLocationArray
             comments: BCommentArray
+            entryPoint: index
+
+    BBuffer:
+        meta:
+            brief: A buffer with code, labels, unresolved fixups, source locations and
+                comments
+        data:
+            codes: UIntArray
+            labels: IndexMap
+            fixups: BFixupArray
+            locations: BLocationArray
+            comments: BCommentArray
+
+    BFixup:
+        meta:
+            brief: A patch site that must be resolved after layout
+        data:
+            index: index # word offset within this buffer to overwrite
+            label: HashSymbol
 
     BLocation:
         meta:
@@ -107,6 +142,10 @@ arrays:
     BResultArray:
         data:
             entries: EmitBResult
+
+    BFixupArray:
+        data:
+            entries: BFixup
 
     BLocationArray:
         data:
