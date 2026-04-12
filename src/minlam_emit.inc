@@ -37,7 +37,6 @@ static void emitMinMatch(MinMatch *, EC *);
 static void emitMinMatchList(MinMatchList *, EC *);
 static void emitMinLetRec(MinLetRec *, EC *);
 static void emitMinBindings(MinBindings *, Integer, RA *, EC *);
-static void emitMinExp(MinExp *, EC *);
 static void emitMinCondCases(MinCondCases *, EC *);
 static ER *emitMakeVec(MinExprList *, EC *);
 
@@ -535,15 +534,10 @@ static void emitMinIff(MinIff *node, EC *ctx) {
     EMITLOC("emitMinIff", node, ctx);
     ER *test = emitSimpleExp(node->condition, ctx);
     int save = PROTECT(test);
-    fprintf(FH(ctx), "if (isTrue(%s)) {\n", resultText(test, ctx));
     releaseSlot(test, &ctx->context);
+    emitIfThenElse(test, node->consequent, node->alternative, ctx);
     UNPROTECT(save);
     ASSERT_SLOTS(&ctx->context);
-    emitMinExp(node->consequent, ctx);
-    fprintf(FH(ctx), "} else {\n");
-    ASSERT_SLOTS(&ctx->context);
-    emitMinExp(node->alternative, ctx);
-    fprintf(FH(ctx), "}\n");
 }
 
 static void emitMinCond(MinCond *node, EC *ctx) {

@@ -61,6 +61,7 @@ static void emitMaybeBigInt(MaybeBigInt *, EC *);
 static void emitVec(MinExp *exp1, MinExp *exp2, EC *ctx);
 static void emitInteger(Integer i, EC *ctx);
 static void emitCharacter(Character character, EC *ctx);
+static void emitMinExp(MinExp *, EC *);
 
 #define EMITLOC(name, node, ctx)                                               \
     if (node == NULL || CPI(node).lineNo == 0)                                 \
@@ -221,6 +222,14 @@ static EC *extendContext(EC *ctx) {
 /////////////////
 // Leaf Emitters
 /////////////////
+
+static void emitIfThenElse(ER *test, MinExp *con, MinExp *alt, EC *ctx) {
+    fprintf(FH(ctx), "if (isTrue(%s)) {\n", resultText(test, ctx));
+    emitMinExp(con, ctx);
+    fprintf(FH(ctx), "} else {\n");
+    emitMinExp(alt, ctx);
+    fprintf(FH(ctx), "}\n");
+}
 
 static void emitCallBuiltin(BuiltIn *bi, ER *target, ER *arg, EC *ctx) {
     fprintf(FH(ctx), "extern Value %s(Vec *);\n", bi->linkerName->name);
