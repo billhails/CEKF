@@ -85,8 +85,13 @@ static void emitAssignPrimOp1(ER *target, char *opName, ER *arg1, EC *ctx) {
             resultText(arg1, ctx));
 }
 
-static void emitIntegerResult(Opaque *buf, Integer i) {
+static ER *emitIntegerResult(Integer i) {
+    Opaque *buf = newOpaque_EmitBuffer();
+    int save = PROTECT(buf);
     fprintf(opaqueEmitBufferFh(buf), "value_Stdint(%d)", i);
+    ER *result = newEmitCResult_Constant(buf);
+    UNPROTECT(save);
+    return result;
 }
 
 static void emitCharacterResult(Opaque *buf, Character c) {
@@ -506,12 +511,7 @@ static ER *emitSimpleExp(MinExp *exp, EC *ctx) {
         return result;
     }
     case MINEXP_TYPE_STDINT: {
-        Opaque *buf = newOpaque_EmitBuffer();
-        int save = PROTECT(buf);
-        emitIntegerResult(buf, getMinExp_Stdint(exp));
-        ER *result = newEmitCResult_Constant(buf);
-        UNPROTECT(save);
-        return result;
+        return emitIntegerResult(getMinExp_Stdint(exp));
     }
     case MINEXP_TYPE_CHARACTER: {
         Opaque *buf = newOpaque_EmitBuffer();
