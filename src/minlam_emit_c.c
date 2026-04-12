@@ -37,7 +37,18 @@
 typedef CEmitterContext EC;
 typedef EmitCResult ER;
 
+typedef struct EmitBuffer {
+    FILE *fh;
+    char *buffer;
+    size_t size;
+} EmitBuffer;
+
 static void emitAtomic(MinExp *exp, EC *ctx);
+static char *resultText(ER *data, EC *ctx);
+static EmitBuffer *newEmitBuffer();
+static char *getEmitBuffer(EmitBuffer *);
+static void cleanEmitBuffer(void *);
+static void printEmitBuffer(FILE *, void *);
 
 #define EMITLOC(name, node, ctx)                                               \
     if (node == NULL || CPI(node).lineNo == 0)                                 \
@@ -45,17 +56,6 @@ static void emitAtomic(MinExp *exp, EC *ctx);
     else                                                                       \
         fprintf(FH(ctx), "// %s +%d %s\n", name, CPI(node).lineNo,             \
                 CPI(node).fileName)
-
-typedef struct EmitBuffer {
-    FILE *fh;
-    char *buffer;
-    size_t size;
-} EmitBuffer;
-
-static EmitBuffer *newEmitBuffer();
-static char *getEmitBuffer(EmitBuffer *);
-static void cleanEmitBuffer(void *);
-static void printEmitBuffer(FILE *, void *);
 
 static inline Opaque *newOpaque_EmitBuffer() {
     // no protection as buffer is manually cleaned
@@ -104,6 +104,20 @@ static void printEmitBuffer(FILE *fp, void *buffer) {
         fflush(b->fh);
         if (b->buffer != NULL)
             fprintf(fp, "%s", b->buffer);
+    }
+}
+
+static char *resultText(ER *data, EC *ctx) {
+    switch (data->type) {
+    case EMITCRESULT_TYPE_BUF:
+        return opaqueEmitBufferContent(getEmitCResult_Buf(data));
+    case EMITCRESULT_TYPE_CONSTANT:
+        return opaqueEmitBufferContent(getEmitCResult_Constant(data));
+    case EMITCRESULT_TYPE_VAR:
+        return emitter_getSlot(getEmitCResult_Var(data), &ctx->context)
+            ->text->entries;
+    default:
+        cant_happen("unrecognised %s", emitCResultTypeName(data->type));
     }
 }
 
@@ -161,6 +175,65 @@ static void emitVec(MinExp *exp1, MinExp *exp2, EC *ctx) {
     fprintf(FH(ctx), ", ");
     emitAtomic(exp2, ctx);
     fprintf(FH(ctx), ")");
+}
+
+static void emitAssignPrimOp2(ER *target, char *opName, ER *arg1, ER *arg2,
+                              EC *ctx) {
+    fprintf(FH(ctx), "%s = %s(%s, %s);\n", resultText(target, ctx), opName,
+            resultText(arg1, ctx), resultText(arg2, ctx));
+}
+
+static void emitAssignPrimOp1(ER *target, char *opName, ER *arg1, EC *ctx) {
+    fprintf(FH(ctx), "%s = %s(%s);\n", resultText(target, ctx), opName,
+            resultText(arg1, ctx));
+}
+
+static void emitMaybeBigInt(MaybeBigInt *mbi, EC *ctx) {
+    switch (mbi->type) {
+    case BI_BIG: {
+        if (mbi->imag) {
+            fprintf(FH(ctx), "value_Bigint_imag(");
+        } else {
+            fprintf(FH(ctx), "value_Bigint(");
+        }
+        bigint bi = mbi->big;
+        fprintf(FH(ctx), "minlam_runtime_BigInt(%d, %d, %d", bi.size,
+                bi.capacity, bi.neg);
+        for (int i = 0; i < bi.capacity; i++) {
+            fprintf(FH(ctx), ", %u", bi.words[i]);
+        }
+        fprintf(FH(ctx), "))");
+        // minlam_runtime_BigInt will have done a PROTECT that needs restoring
+        ctx->context.needsUnprotect = true;
+        break;
+    }
+    case BI_SMALL: {
+        if (mbi->imag) {
+            fprintf(FH(ctx), "value_Stdint_imag(%d)", mbi->small);
+        } else {
+            fprintf(FH(ctx), "value_Stdint(%d)", mbi->small);
+        }
+        break;
+    }
+    case BI_IRRATIONAL: {
+        if (mbi->imag) {
+            if (isnan(mbi->irrational)) {
+                fprintf(FH(ctx), "value_Irrational_imag(NAN)");
+            } else {
+                fprintf(FH(ctx), "value_Irrational_imag(%f)", mbi->irrational);
+            }
+        } else {
+            if (isnan(mbi->irrational)) {
+                fprintf(FH(ctx), "value_Irrational(NAN)");
+            } else {
+                fprintf(FH(ctx), "value_Irrational(%f)", mbi->irrational);
+            }
+        }
+        break;
+    }
+    default:
+        cant_happen("unhandled numeric type %d", mbi->type);
+    }
 }
 
 #include "minlam_emit.inc"
