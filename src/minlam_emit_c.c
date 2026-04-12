@@ -222,6 +222,12 @@ static EC *extendContext(EC *ctx) {
 // Leaf Emitters
 /////////////////
 
+static void emitCallBuiltin(BuiltIn *bi, ER *target, ER *arg, EC *ctx) {
+    fprintf(FH(ctx), "extern Value %s(Vec *);\n", bi->linkerName->name);
+    fprintf(FH(ctx), "%s = %s(getValue_Vec(%s));\n", resultText(target, ctx),
+            bi->linkerName->name, resultText(arg, ctx));
+}
+
 static void emitVecGetImm(ER *target, ER *closure, int index, EC *ctx) {
     fprintf(FH(ctx), "%s = vec(value_Stdint(%d), %s);\n",
             resultText(target, ctx), index, resultText(closure, ctx));

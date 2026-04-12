@@ -394,22 +394,19 @@ static ER *emitExtractFromClosure(ER *closure, int index, EC *ctx) {
     return target;
 }
 
-static ER *emitCallBuiltin(BuiltIn *bi, MinExprList *builtinArgs, EC *ctx) {
-    ER *builtinArg = NULL;
+static ER *emitBuiltin(BuiltIn *bi, MinExprList *builtinArgs, EC *ctx) {
+    ER *arg = NULL;
     if (countBuiltInArgs(bi->args) == 0)
-        builtinArg = emitEmptyVec(); // just for builtins
+        arg = emitEmptyVec(); // just for builtins
     else
-        builtinArg = emitMakeVec(builtinArgs, ctx);
-    int save = PROTECT(builtinArg);
-    ER *builtinResult = claimSlot(ctx);
-    PROTECT(builtinResult);
-    fprintf(FH(ctx), "extern Value %s(Vec *);\n", bi->linkerName->name);
-    fprintf(FH(ctx), "%s = %s(getValue_Vec(%s));\n",
-            resultText(builtinResult, ctx), bi->linkerName->name,
-            resultText(builtinArg, ctx));
-    releaseSlot(builtinArg, &ctx->context);
+        arg = emitMakeVec(builtinArgs, ctx);
+    int save = PROTECT(arg);
+    ER *target = claimSlot(ctx);
+    PROTECT(target);
+    emitCallBuiltin(bi, target, arg, ctx);
+    releaseSlot(arg, &ctx->context);
     UNPROTECT(save);
-    return builtinResult;
+    return target;
 }
 
 // (builtin arg_1 ... arg_n k f)
@@ -447,7 +444,7 @@ static void emitApplyBuiltin(MinApply *node, EC *ctx) {
     // (env result)
     MinExprList *builtinArgs = takeMinExprList(node->args, numBuiltinArgs);
     PROTECT(builtinArgs);
-    ER *builtinResult = emitCallBuiltin(bi, builtinArgs, ctx);
+    ER *builtinResult = emitBuiltin(bi, builtinArgs, ctx);
     PROTECT(builtinResult);
     pushRA(targetArgs, builtinResult);
 
