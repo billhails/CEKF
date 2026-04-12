@@ -85,8 +85,13 @@ static void emitAssignPrimOp1(ER *target, char *opName, ER *arg1, EC *ctx) {
             resultText(arg1, ctx));
 }
 
-static void emitAddrResult(Opaque *buf, SCharArray *label) {
+static ER *emitAddrResult(SCharArray *label) {
+    Opaque *buf = newOpaque_EmitBuffer();
+    int save = PROTECT(buf);
     fprintf(opaqueEmitBufferFh(buf), "value_Addr(&&%s)", label->entries);
+    ER *result = newEmitCResult_Buf(buf);
+    UNPROTECT(save);
+    return result;
 }
 
 static void emitIntegerResult(Opaque *buf, Integer i) {
@@ -466,10 +471,7 @@ static ER *emitAnonymousLambda(MinLam *lambda, EC *ctx) {
     retrieveMaxReg(&ctx->context, &lamContext->context);
     SCharArray *label = makeLambdaLabel(name);
     PROTECT(label);
-    Opaque *buf = newOpaque_EmitBuffer();
-    PROTECT(buf);
-    emitAddrResult(buf, label);
-    ER *result = newEmitCResult_Buf(buf);
+    ER *result = emitAddrResult(label);
     UNPROTECT(save);
     return result;
 }
