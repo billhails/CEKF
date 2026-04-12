@@ -36,6 +36,14 @@ typedef EmitBResult ER;
 typedef BResultArray RA;
 #endif
 
+static ER *claimSlot(EC *);
+static ER *emitMakeVec(MinExprList *, EC *);
+static void emitMinApply(MinApply *, EC *);
+static void emitMinBindings(MinBindings *, Integer, RA *, EC *);
+static void emitMinIff(MinIff *, EC *);
+static void emitMinLam(MinLam *, EC *);
+static void emitMinLetRec(MinLetRec *, EC *);
+
 ////////////////////
 // SlotPool Helpers
 ////////////////////

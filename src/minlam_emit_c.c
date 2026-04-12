@@ -45,7 +45,7 @@ typedef struct EmitBuffer {
 } EmitBuffer;
 
 /////////////////////////////////////////////////////
-// Forward declarations used only in this file
+// Forward declarations only used in this file
 /////////////////////////////////////////////////////
 
 static bool isConst(MinExp *);
@@ -70,14 +70,20 @@ static void emitVec(MinExp *, MinExp *, EC *);
 static void printEmitBuffer(FILE *, void *);
 
 /////////////////////////////////////////////////////
+// Forward declarations defined in minlam_emit.inc
+// and used in this file
+/////////////////////////////////////////////////////
+
+static ER *emitSimpleExp(MinExp *, EC *);
+static void emitMinExp(MinExp *, EC *);
+static void releaseSlot(ER *, EmitterContext *);
+
+/////////////////////////////////////////////////////
 // Forward declarations used by minlam_emit.inc
 /////////////////////////////////////////////////////
 
 static EC *extendContext(EC *);
 static EC *extendContextForLambda(HashSymbol *, EC *);
-static ER *claimSlot(EC *);
-static ER *emitMakeVec(MinExprList *, EC *);
-static ER *emitSimpleExp(MinExp *, EC *);
 static ER *emitArg(MinExp *, EC *);
 static ER *emitAddrResult(SCharArray *);
 static ER *emitIntegerResult(Integer);
@@ -95,18 +101,11 @@ static void emitIfThenElse(ER *, MinExp *, MinExp *, EC *);
 static void emitJumpToLambda(ER *, EC *);
 static void emitMaybeBigInt(MaybeBigInt *, EC *);
 static void emitMinAnnotatedVar(MinAnnotatedVar *, EC *);
-static void emitMinApply(MinApply *, EC *);
-static void emitMinBindings(MinBindings *, Integer, RA *, EC *);
 static void emitMinCond(MinCond *, EC *);
-static void emitMinExp(MinExp *, EC *);
-static void emitMinIff(MinIff *, EC *);
-static void emitMinLam(MinLam *, EC *);
-static void emitMinLetRec(MinLetRec *, EC *);
 static void emitMinMatch(MinMatch *, EC *);
 static void emitTrace(ER *, RA *, EC *);
 static void emitUnprotect(EC *);
 static void emitVecGetImm(ER *, ER *, int, EC *);
-static void releaseSlot(ER *, EmitterContext *);
 
 #define EMITLOC(name, node, ctx)                                               \
     if (node == NULL || CPI(node).lineNo == 0)                                 \
