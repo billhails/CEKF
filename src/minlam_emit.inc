@@ -27,29 +27,27 @@
 #include <stdarg.h>
 #include <sys/param.h>
 
-static void emitMinLam(MinLam *, CEmitterContext *);
-static void emitMinAnnotatedVar(MinAnnotatedVar *, CEmitterContext *);
-static void emitMinApply(MinApply *, CEmitterContext *);
-static void emitMinIff(MinIff *, CEmitterContext *);
-static void emitMinCond(MinCond *, CEmitterContext *);
-static void emitMinIntCondCases(MinIntCondCases *, const char *,
-                                CEmitterContext *);
-static void emitMinCharCondCases(MinCharCondCases *, CEmitterContext *);
-static void emitMinMatch(MinMatch *, CEmitterContext *);
-static void emitMinMatchList(MinMatchList *, CEmitterContext *);
-static void emitMinLetRec(MinLetRec *, CEmitterContext *);
-static void emitMinBindings(MinBindings *, Integer, CResultArray *,
-                            CEmitterContext *);
-static void emitMinExp(MinExp *, CEmitterContext *);
-static void emitMinCondCases(MinCondCases *, CEmitterContext *);
-static EmitCResult *emitMakeVec(MinExprList *, CEmitterContext *);
-static EmitCResult *emitSimpleExp(MinExp *, CEmitterContext *);
-static CEmitterContext *extendContext(CEmitterContext *, Opaque *);
-static void emitMaybeBigInt(MaybeBigInt *, CEmitterContext *);
-static bool emitAtomic(MinExp *exp, CEmitterContext *ctx);
-static char *resultText(EmitCResult *data, CEmitterContext *ctx);
+static void emitMinLam(MinLam *, EC *);
+static void emitMinAnnotatedVar(MinAnnotatedVar *, EC *);
+static void emitMinApply(MinApply *, EC *);
+static void emitMinIff(MinIff *, EC *);
+static void emitMinCond(MinCond *, EC *);
+static void emitMinIntCondCases(MinIntCondCases *, const char *, EC *);
+static void emitMinCharCondCases(MinCharCondCases *, EC *);
+static void emitMinMatch(MinMatch *, EC *);
+static void emitMinMatchList(MinMatchList *, EC *);
+static void emitMinLetRec(MinLetRec *, EC *);
+static void emitMinBindings(MinBindings *, Integer, CResultArray *, EC *);
+static void emitMinExp(MinExp *, EC *);
+static void emitMinCondCases(MinCondCases *, EC *);
+static EmitCResult *emitMakeVec(MinExprList *, EC *);
+static EmitCResult *emitSimpleExp(MinExp *, EC *);
+static EC *extendContext(EC *, Opaque *);
+static void emitMaybeBigInt(MaybeBigInt *, EC *);
+static bool emitAtomic(MinExp *exp, EC *ctx);
+static char *resultText(EmitCResult *data, EC *ctx);
 
-static void comment(CEmitterContext *ctx, char *fmt, ...) {
+static void comment(EC *ctx, char *fmt, ...) {
     va_list args;
     va_start(args, fmt);
     fprintf(FH(ctx), "// ");
@@ -58,15 +56,15 @@ static void comment(CEmitterContext *ctx, char *fmt, ...) {
     va_end(args);
 }
 
-static void emitCharacter(Character character, CEmitterContext *ctx) {
+static void emitCharacter(Character character, EC *ctx) {
     fprintf(FH(ctx), "value_Character(%d)", (int)character);
 }
 
-static void emitInteger(Integer i, CEmitterContext *ctx) {
+static void emitInteger(Integer i, EC *ctx) {
     fprintf(FH(ctx), "value_Stdint(%d)", i);
 }
 
-static bool emitVec(MinExp *exp1, MinExp *exp2, CEmitterContext *ctx) {
+static bool emitVec(MinExp *exp1, MinExp *exp2, EC *ctx) {
     bool isConst = true;
     fprintf(FH(ctx), "vec(");
     isConst = isConst && emitAtomic(exp1, ctx);
@@ -77,14 +75,13 @@ static bool emitVec(MinExp *exp1, MinExp *exp2, CEmitterContext *ctx) {
 }
 
 static void emitAssignPrimOp2(EmitCResult *target, char *opName,
-                              EmitCResult *arg1, EmitCResult *arg2,
-                              CEmitterContext *ctx) {
+                              EmitCResult *arg1, EmitCResult *arg2, EC *ctx) {
     fprintf(FH(ctx), "%s = %s(%s, %s);\n", resultText(target, ctx), opName,
             resultText(arg1, ctx), resultText(arg2, ctx));
 }
 
 static void emitAssignPrimOp1(EmitCResult *target, char *opName,
-                              EmitCResult *arg1, CEmitterContext *ctx) {
+                              EmitCResult *arg1, EC *ctx) {
     fprintf(FH(ctx), "%s = %s(%s);\n", resultText(target, ctx), opName,
             resultText(arg1, ctx));
 }
@@ -105,7 +102,7 @@ static void emitTextResult(Opaque *buf, char *text) {
     fprintf(opaqueEmitBufferFh(buf), "%s", text);
 }
 
-static void emitMaybeBigInt(MaybeBigInt *mbi, CEmitterContext *ctx) {
+static void emitMaybeBigInt(MaybeBigInt *mbi, EC *ctx) {
     switch (mbi->type) {
     case BI_BIG: {
         if (mbi->imag) {
@@ -157,8 +154,7 @@ static void emitMaybeBigInt(MaybeBigInt *mbi, CEmitterContext *ctx) {
 // Context Helpers
 ///////////////////
 
-static CEmitterContext *extendContextForLambda(HashSymbol *var,
-                                               CEmitterContext *ctx) {
+static EC *extendContextForLambda(HashSymbol *var, EC *ctx) {
     // create a new memstream for the lambda body
     Opaque *body = newOpaque_EmitBuffer();
     int save = PROTECT(body);
@@ -174,7 +170,7 @@ static CEmitterContext *extendContextForLambda(HashSymbol *var,
     context.totalSlots = 0;
     context.currentReg = 0;
     context.needsUnprotect = false;
-    CEmitterContext *new = newCEmitterContext(body, context);
+    EC *new = newCEmitterContext(body, context);
     PROTECT(new);
     new->lambdas = ctx->lambdas;
     UNPROTECT(save);
@@ -182,8 +178,8 @@ static CEmitterContext *extendContextForLambda(HashSymbol *var,
 }
 
 // only for atomics: sub-context must not allocate slots
-static CEmitterContext *extendContext(CEmitterContext *ctx, Opaque *body) {
-    CEmitterContext *new = newCEmitterContext(body, ctx->context);
+static EC *extendContext(EC *ctx, Opaque *body) {
+    EC *new = newCEmitterContext(body, ctx->context);
     int save = PROTECT(new);
     new->lambdas = ctx->lambdas;
     UNPROTECT(save);
@@ -194,7 +190,7 @@ static CEmitterContext *extendContext(CEmitterContext *ctx, Opaque *body) {
 // SlotPool Helpers
 ////////////////////
 
-static EmitCResult *claimSlot(CEmitterContext *ctx) {
+static EmitCResult *claimSlot(EC *ctx) {
     HashSymbol *symbol = emitter_claimSlotSymbol(&ctx->context);
     return newEmitCResult_Var(symbol);
 }
@@ -210,7 +206,7 @@ static void releaseSlots(CResultArray *slots, EmitterContext *ctx) {
     }
 }
 
-static CResultArray *claimSlotsBelow(int N, CEmitterContext *ctx) {
+static CResultArray *claimSlotsBelow(int N, EC *ctx) {
     comment(ctx, "ensuring reg[0..%d]", N - 1);
     CResultArray *slots = newCResultArray();
     int save = PROTECT(slots);
@@ -224,7 +220,7 @@ static CResultArray *claimSlotsBelow(int N, CEmitterContext *ctx) {
     return slots;
 }
 
-static CResultArray *claimSlots(int N, CEmitterContext *ctx) {
+static CResultArray *claimSlots(int N, EC *ctx) {
     CResultArray *slots = newCResultArray();
     int save = PROTECT(slots);
     for (int i = 0; i < N; ++i) {
@@ -237,7 +233,7 @@ static CResultArray *claimSlots(int N, CEmitterContext *ctx) {
     return slots;
 }
 
-static char *resultText(EmitCResult *data, CEmitterContext *ctx) {
+static char *resultText(EmitCResult *data, EC *ctx) {
     switch (data->type) {
     case EMITCRESULT_TYPE_BUF:
         return opaqueEmitBufferContent(getEmitCResult_Buf(data));
@@ -379,7 +375,7 @@ static SCharArray *makeLambdaLabel(HashSymbol *symbol) {
 // Emitters
 ////////////
 
-static bool emitAtomic(MinExp *exp, CEmitterContext *ctx) {
+static bool emitAtomic(MinExp *exp, EC *ctx) {
     switch (exp->type) {
     case MINEXP_TYPE_AVAR:
         emitMinAnnotatedVar(getMinExp_Avar(exp), ctx);
@@ -410,10 +406,10 @@ static bool emitAtomic(MinExp *exp, CEmitterContext *ctx) {
     }
 }
 
-static EmitCResult *emitNewAtomic(MinExp *exp, CEmitterContext *ctx) {
+static EmitCResult *emitNewAtomic(MinExp *exp, EC *ctx) {
     Opaque *buffer = newOpaque_EmitBuffer();
     int save = PROTECT(buffer);
-    CEmitterContext *atomicContext = extendContext(ctx, buffer);
+    EC *atomicContext = extendContext(ctx, buffer);
     PROTECT(atomicContext);
     bool isConst = emitAtomic(exp, atomicContext);
     setProtectionStatus(&ctx->context, &atomicContext->context);
@@ -423,7 +419,7 @@ static EmitCResult *emitNewAtomic(MinExp *exp, CEmitterContext *ctx) {
     return result;
 }
 
-static EmitCResult *emitArg(MinExp *arg, CEmitterContext *ctx) {
+static EmitCResult *emitArg(MinExp *arg, EC *ctx) {
     if (isAtomic(arg)) {
         return emitNewAtomic(arg, ctx);
     } else {
@@ -431,7 +427,7 @@ static EmitCResult *emitArg(MinExp *arg, CEmitterContext *ctx) {
     }
 }
 
-static EmitCResult *emitPrimOp(MinPrimApp *app, CEmitterContext *ctx) {
+static EmitCResult *emitPrimOp(MinPrimApp *app, EC *ctx) {
     EmitCResult *arg1 = emitArg(app->exp1, ctx);
     int save = PROTECT(arg1);
     EmitCResult *arg2 = emitArg(app->exp2, ctx);
@@ -457,11 +453,11 @@ static EmitCResult *emitPrimOp(MinPrimApp *app, CEmitterContext *ctx) {
     return target; // the temp register that the caller can refer to
 }
 
-static EmitCResult *emitAnonymousLambda(MinLam *lambda, CEmitterContext *ctx) {
+static EmitCResult *emitAnonymousLambda(MinLam *lambda, EC *ctx) {
     EMITLOC("emitAnonymousLambda", lambda, ctx);
     // emit the lambda to the prelude, this then reduces to &&LABEL
     HashSymbol *name = genSym("anon");
-    CEmitterContext *lamContext = extendContextForLambda(name, ctx);
+    EC *lamContext = extendContextForLambda(name, ctx);
     int save = PROTECT(lamContext);
     SCharArray *containing_label = makeLambdaLabel(ctx->context.currentBinding);
     PROTECT(containing_label);
@@ -479,7 +475,7 @@ static EmitCResult *emitAnonymousLambda(MinLam *lambda, CEmitterContext *ctx) {
     return result;
 }
 
-static EmitCResult *emitSimpleExp(MinExp *exp, CEmitterContext *ctx) {
+static EmitCResult *emitSimpleExp(MinExp *exp, EC *ctx) {
     switch (exp->type) {
     case MINEXP_TYPE_PRIM: {
         MinPrimApp *app = getMinExp_Prim(exp);
@@ -489,7 +485,7 @@ static EmitCResult *emitSimpleExp(MinExp *exp, CEmitterContext *ctx) {
         MinAnnotatedVar *avar = getMinExp_Avar(exp);
         Opaque *buf = newOpaque_EmitBuffer();
         int save = PROTECT(buf);
-        CEmitterContext *aVarContext = extendContext(ctx, buf);
+        EC *aVarContext = extendContext(ctx, buf);
         setProtectionStatus(&ctx->context, &aVarContext->context);
         PROTECT(aVarContext);
         emitMinAnnotatedVar(avar, aVarContext);
@@ -509,7 +505,7 @@ static EmitCResult *emitSimpleExp(MinExp *exp, CEmitterContext *ctx) {
         MaybeBigInt *mbi = getMinExp_BigInteger(exp);
         Opaque *buf = newOpaque_EmitBuffer();
         int save = PROTECT(buf);
-        CEmitterContext *biContext = extendContext(ctx, buf);
+        EC *biContext = extendContext(ctx, buf);
         PROTECT(biContext);
         emitMaybeBigInt(mbi, biContext);
         EmitCResult *result = newEmitCResult_Constant(buf);
@@ -552,7 +548,7 @@ static EmitCResult *emitConstant(char *text) {
 // prefer to emit right to left because the common case for deeply nested
 // vecs is lists which are right-associative, and by emitting r2l we need
 // only one temp for the entire backbone of the list.
-static CResultArray *emitRL(MinExprList *vecs, CEmitterContext *ctx) {
+static CResultArray *emitRL(MinExprList *vecs, EC *ctx) {
     if (vecs == NULL)
         return newCResultArray();
     CResultArray *results = emitRL(vecs->next, ctx);
@@ -564,7 +560,7 @@ static CResultArray *emitRL(MinExprList *vecs, CEmitterContext *ctx) {
     return results;
 }
 
-static EmitCResult *emitMakeVec(MinExprList *vecs, CEmitterContext *ctx) {
+static EmitCResult *emitMakeVec(MinExprList *vecs, EC *ctx) {
     CResultArray *results = emitRL(vecs, ctx);
     int save = PROTECT(results);
     int count = countMinExprList(vecs);
@@ -585,7 +581,7 @@ static EmitCResult *emitMakeVec(MinExprList *vecs, CEmitterContext *ctx) {
     return target;
 }
 
-static void emitMinLam(MinLam *node, CEmitterContext *ctx) {
+static void emitMinLam(MinLam *node, EC *ctx) {
 #ifdef SAFETY_CHECKS
     if (node == NULL)
         cant_happen("NULL MinLam");
@@ -603,22 +599,19 @@ static void emitMinLam(MinLam *node, CEmitterContext *ctx) {
     UNPROTECT(save);
 }
 
-static void emitMinAnnotatedVar(MinAnnotatedVar *node, CEmitterContext *ctx) {
+static void emitMinAnnotatedVar(MinAnnotatedVar *node, EC *ctx) {
     fprintf(FH(ctx), "reg[%d] /* %s */", node->position, node->var->name);
 }
 
-static inline void emitAssign(EmitCResult *to, EmitCResult *from,
-                              CEmitterContext *ctx) {
+static inline void emitAssign(EmitCResult *to, EmitCResult *from, EC *ctx) {
     fprintf(FH(ctx), "%s = %s;\n", resultText(to, ctx), resultText(from, ctx));
 }
 
-static inline void emitAssignReg(Index i, EmitCResult *value,
-                                 CEmitterContext *ctx) {
+static inline void emitAssignReg(Index i, EmitCResult *value, EC *ctx) {
     fprintf(FH(ctx), "reg[%d] = %s;\n", (int)i, resultText(value, ctx));
 }
 
-static void emitGoto(EmitCResult *target, CResultArray *args,
-                     CEmitterContext *ctx) {
+static void emitGoto(EmitCResult *target, CResultArray *args, EC *ctx) {
     fprintf(FH(ctx), "// emitGoto - %u outgoing slots\n", args->size);
     CResultArray *sourceSlots = newCResultArray();
     int save = PROTECT(sourceSlots);
@@ -670,7 +663,7 @@ static void emitGoto(EmitCResult *target, CResultArray *args,
 }
 
 static EmitCResult *emitExtractFromClosure(EmitCResult *closure, int index,
-                                           CEmitterContext *ctx) {
+                                           EC *ctx) {
     // this must never write to slots except this one
     EmitCResult *result = claimSlot(ctx);
     int save = PROTECT(result);
@@ -681,7 +674,7 @@ static EmitCResult *emitExtractFromClosure(EmitCResult *closure, int index,
 }
 
 static EmitCResult *emitCallBuiltin(BuiltIn *bi, MinExprList *builtinArgs,
-                                    CEmitterContext *ctx) {
+                                    EC *ctx) {
     EmitCResult *builtinArg = NULL;
     if (countBuiltInArgs(bi->args) == 0)
         builtinArg = emitConstant("make_vec(0)"); // just for builtins
@@ -702,7 +695,7 @@ static EmitCResult *emitCallBuiltin(BuiltIn *bi, MinExprList *builtinArgs,
 // (builtin arg_1 ... arg_n k f)
 // basically: "give the result of calling the builtin to k, passing f along"
 // Where k itself is a closure (2-vec)
-static void emitApplyBuiltin(MinApply *node, CEmitterContext *ctx) {
+static void emitApplyBuiltin(MinApply *node, EC *ctx) {
     EMITLOC("emitApplyBuiltin", node, ctx);
 
     CResultArray *contArgSlots =
@@ -776,7 +769,7 @@ static void emitApplyBuiltin(MinApply *node, CEmitterContext *ctx) {
 //  reg[2] = fail;      // callee's param 2: fail cont
 //  goto *target;       // jump to k's code
 
-static void emitApplyClosure(MinApply *apply, CEmitterContext *ctx) {
+static void emitApplyClosure(MinApply *apply, EC *ctx) {
     EMITLOC("emitApplyClosure", apply, ctx);
 
     CResultArray *closureArgSlots =
@@ -814,7 +807,7 @@ static void emitApplyClosure(MinApply *apply, CEmitterContext *ctx) {
     UNPROTECT(save);
 }
 
-static void emitMinApply(MinApply *node, CEmitterContext *ctx) {
+static void emitMinApply(MinApply *node, EC *ctx) {
     if (node->isBuiltin) {
         emitApplyBuiltin(node, ctx);
     } else {
@@ -822,7 +815,7 @@ static void emitMinApply(MinApply *node, CEmitterContext *ctx) {
     }
 }
 
-static void emitMinIff(MinIff *node, CEmitterContext *ctx) {
+static void emitMinIff(MinIff *node, EC *ctx) {
     EMITLOC("emitMinIff", node, ctx);
     EmitCResult *test = emitSimpleExp(node->condition, ctx);
     int save = PROTECT(test);
@@ -837,7 +830,7 @@ static void emitMinIff(MinIff *node, CEmitterContext *ctx) {
     fprintf(FH(ctx), "}\n");
 }
 
-static void emitMinCond(MinCond *node, CEmitterContext *ctx) {
+static void emitMinCond(MinCond *node, EC *ctx) {
     EMITLOC("emitMinCond", node, ctx);
     EmitCResult *cond = emitSimpleExp(node->value, ctx);
     int save = PROTECT(cond);
@@ -856,7 +849,7 @@ static void emitMinCond(MinCond *node, CEmitterContext *ctx) {
     UNPROTECT(save);
 }
 
-static void emitMinCondCases(MinCondCases *node, CEmitterContext *ctx) {
+static void emitMinCondCases(MinCondCases *node, EC *ctx) {
     switch (node->type) {
     case MINCONDCASES_TYPE_INTEGERS:
         cant_happen("integer cond cases handled in emitMinCond");
@@ -872,7 +865,7 @@ static void emitMinCondCases(MinCondCases *node, CEmitterContext *ctx) {
 }
 
 static void emitMinIntCondCases(MinIntCondCases *node, const char *condText,
-                                CEmitterContext *ctx) {
+                                EC *ctx) {
     if (node == NULL) {
         return;
     }
@@ -895,7 +888,7 @@ static void emitMinIntCondCases(MinIntCondCases *node, const char *condText,
     }
 }
 
-static void emitMinCharCondCases(MinCharCondCases *node, CEmitterContext *ctx) {
+static void emitMinCharCondCases(MinCharCondCases *node, EC *ctx) {
     EMITLOC("emitMinCharCondCases", node, ctx);
     if (node == NULL) {
         fprintf(FH(ctx), "default:\n");
@@ -919,7 +912,7 @@ static void emitMinCharCondCases(MinCharCondCases *node, CEmitterContext *ctx) {
     emitMinCharCondCases(node->next, ctx);
 }
 
-static void emitMinMatch(MinMatch *node, CEmitterContext *ctx) {
+static void emitMinMatch(MinMatch *node, EC *ctx) {
     EMITLOC("emitMinMatch", node, ctx);
     EmitCResult *match = emitSimpleExp(node->index, ctx);
     int save = PROTECT(match);
@@ -931,7 +924,7 @@ static void emitMinMatch(MinMatch *node, CEmitterContext *ctx) {
     fprintf(FH(ctx), "}\n");
 }
 
-static void emitMinMatchList(MinMatchList *node, CEmitterContext *ctx) {
+static void emitMinMatchList(MinMatchList *node, EC *ctx) {
     if (node == NULL)
         return;
     EMITLOC("emitMinMatchList", node, ctx);
@@ -948,7 +941,7 @@ static void emitMinMatchList(MinMatchList *node, CEmitterContext *ctx) {
 
 // emitMinLetRec -> emitMinBindings -> emitMakeClosure
 static void emitMakeClosure(HashSymbol *var, Integer depth,
-                            CResultArray *bindings, CEmitterContext *ctx) {
+                            CResultArray *bindings, EC *ctx) {
     fprintf(FH(ctx), "// emitMakeClosure %d\n", depth);
     SCharArray *label = makeLambdaLabel(var);
     int save = PROTECT(label);
@@ -959,7 +952,7 @@ static void emitMakeClosure(HashSymbol *var, Integer depth,
 
 // emitMinLetRec -> emitBackpatchBindings -> emitBackpatchClosure
 static void emitBackpatchClosure(MinExprList *exprs, int depth,
-                                 CResultArray *slots, CEmitterContext *ctx) {
+                                 CResultArray *slots, EC *ctx) {
     if (exprs == NULL)
         return; // emitMakeClosure has already assigned the appropriate value
     fprintf(FH(ctx), "// emitBackpatchClosure %d\n", depth);
@@ -972,13 +965,13 @@ static void emitBackpatchClosure(MinExprList *exprs, int depth,
 }
 
 static void emitMinBindings(MinBindings *node, Integer depth,
-                            CResultArray *bindings, CEmitterContext *ctx) {
+                            CResultArray *bindings, EC *ctx) {
     if (node == NULL)
         return;
     // Use a unique name to avoid CBufferBag hash collisions when the
     // same binding name (e.g. h1$0) appears in multiple letrecs.
     HashSymbol *uniqueName = genSym(node->var->name);
-    CEmitterContext *lamContext = extendContextForLambda(uniqueName, ctx);
+    EC *lamContext = extendContextForLambda(uniqueName, ctx);
     int save = PROTECT(lamContext);
     lamContext->context.currentBinding = uniqueName;
     MinLam *lambda = extractLambda(node->val);
@@ -992,8 +985,7 @@ static void emitMinBindings(MinBindings *node, Integer depth,
 }
 
 static void emitBackpatchBindings(MinBindings *node, Integer depth,
-                                  CResultArray *bindings,
-                                  CEmitterContext *ctx) {
+                                  CResultArray *bindings, EC *ctx) {
     if (node == NULL)
         return;
     MinExprList *makeEnv = extractEnv(node->val);
@@ -1001,7 +993,7 @@ static void emitBackpatchBindings(MinBindings *node, Integer depth,
     emitBackpatchBindings(node->next, depth + 1, bindings, ctx);
 }
 
-static void emitMinLetRec(MinLetRec *node, CEmitterContext *ctx) {
+static void emitMinLetRec(MinLetRec *node, EC *ctx) {
     EMITLOC("emitMinLetRec", node, ctx);
     ASSERT_SLOTS(&ctx->context);
     int numBindings = countMinBindings(node->bindings);
@@ -1018,7 +1010,7 @@ static void emitMinLetRec(MinLetRec *node, CEmitterContext *ctx) {
     UNPROTECT(save);
 }
 
-static void emitMinExp(MinExp *node, CEmitterContext *ctx) {
+static void emitMinExp(MinExp *node, EC *ctx) {
     switch (node->type) {
     case MINEXP_TYPE_APPLY: {
         emitMinApply(getMinExp_Apply(node), ctx);

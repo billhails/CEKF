@@ -34,6 +34,8 @@
 // Emit Buffer Helpers
 ///////////////////////
 
+typedef CEmitterContext EC;
+
 #define EMITLOC(name, node, ctx)                                               \
     if (node == NULL || CPI(node).lineNo == 0)                                 \
         fprintf(FH(ctx), "// %s\n", name);                                     \
