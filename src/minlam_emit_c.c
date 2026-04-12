@@ -223,6 +223,11 @@ static EC *extendContext(EC *ctx) {
 // Leaf Emitters
 /////////////////
 
+static void emitClosureSetEnv(ER *closure, ER *env, EC *ctx) {
+    fprintf(FH(ctx), "getValue_Vec(%s)->entries[1] = %s;\n",
+            resultText(closure, ctx), resultText(env, ctx));
+}
+
 static void emitClosureNew(ER *target, SCharArray *label, EC *ctx) {
     fprintf(FH(ctx), "%s = make_vec(2, value_Addr(&&%s), value_None());\n",
             resultText(target, ctx), label->entries);

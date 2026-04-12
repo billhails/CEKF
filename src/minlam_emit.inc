@@ -663,8 +663,7 @@ static void emitBackpatchClosure(MinExprList *exprs, int depth, RA *slots,
     comment(ctx, "emitBackpatchClosure %d", depth);
     ER *tmp = emitMakeVec(exprs, ctx);
     int save = PROTECT(tmp);
-    fprintf(FH(ctx), "getValue_Vec(%s)->entries[1] = %s;\n",
-            resultText(slots->entries[depth], ctx), resultText(tmp, ctx));
+    emitClosureSetEnv(slots->entries[depth], tmp, ctx);
     releaseSlot(tmp, &ctx->context);
     UNPROTECT(save);
 }
