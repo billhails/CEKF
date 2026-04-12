@@ -927,11 +927,8 @@ Throughout this process, the project **must** continue to build and run.
 
 * Move all of the code currently in `minlam_emit_c.c` into a new file `minlam_emit.inc` and have `minlam_emit_c.c` include that.
 * Proceed to make `minlam_emit.inc` emitter-agnostic by a combination of the following strategies:
-  * `#define EMIT_C` in `minlam_emit_c.c` ahead of the `#include "minlam_emit.inc"`.
   * `typedef CemiiterContext EC;` in `minlam_emit_c.c` and replace `CEmitterContext` with `EC` in `minlam_emit.inc`
   * Move C-emitter specific code back out of `minlam_emit.inc` into `minlam_emit_c.c`, extracting inline sections where necessary.
-  * Fall back to `#ifdef EMIT_C` sections in `minlam_emit.inc` only if absolutely necessary.
-* Once work can start on `minlam_emit_b.c`, keep all potentially broken code behind an `#ifdef WIP` or similar.
-* `minlam_emit_b.c` obviously then `#include`s the eame `.inc` but supplies alternative typedefs, defines and implementations.
+* `minlam_emit_b.c` obviously then `#include`s the same `.inc` but supplies alternative typedefs and implementations.
 
 One additional feature of this approach is that `static` definitions can all remain static.
