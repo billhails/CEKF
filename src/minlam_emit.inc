@@ -46,7 +46,7 @@ static ER *emitMakeVec(MinExprList *, EC *);
 
 static ER *claimSlot(EC *ctx) {
     HashSymbol *symbol = emitter_claimSlotSymbol(&ctx->context);
-    return newEmitCResult_Var(symbol);
+    return newER_Var(symbol);
 }
 
 static void releaseSlot(ER *result, EmitterContext *ctx) {
@@ -758,7 +758,7 @@ static void emitMinExp(MinExp *node, EC *ctx) {
         break;
     }
     case MINEXP_TYPE_STDINT: {
-        fprintf(FH(ctx), "%d", getMinExp_Stdint(node));
+        emitInt(getMinExp_Stdint(node), ctx);
         break;
     }
     default:

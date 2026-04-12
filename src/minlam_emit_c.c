@@ -40,6 +40,7 @@ typedef CResultArray RA;
 
 static inline RA *newRA() { return newCResultArray(); }
 static inline void pushRA(RA *ra, ER *r) { pushCResultArray(ra, r); }
+static inline ER *newER_Var(HashSymbol *s) { return newEmitCResult_Var(s); }
 
 typedef struct EmitBuffer {
     FILE *fh;
@@ -59,7 +60,7 @@ static ER *emitSimpleExp(MinExp *, EC *);
 static void emitMinAnnotatedVar(MinAnnotatedVar *, EC *);
 static void emitMaybeBigInt(MaybeBigInt *, EC *);
 static void emitVec(MinExp *exp1, MinExp *exp2, EC *ctx);
-static void emitInteger(Integer i, EC *ctx);
+static void emitStdint(Integer i, EC *ctx);
 static void emitCharacter(Character character, EC *ctx);
 static void emitMinExp(MinExp *, EC *);
 
@@ -291,6 +292,10 @@ static ER *emitConstant(char *text) {
 static ER *emitNone(void) { return emitConstant("value_None()"); }
 static ER *emitEmptyVec(void) { return emitConstant("make_vec(0)"); }
 
+// this and related code looks like it should belong in the
+// generic minlam_emit.inc base but in fact it is concerned
+// with optimisations using chained C function calls to avoid
+// the overhead of registers.
 static void emitAtomic(MinExp *exp, EC *ctx) {
     switch (exp->type) {
     case MINEXP_TYPE_AVAR:
@@ -303,7 +308,7 @@ static void emitAtomic(MinExp *exp, EC *ctx) {
         emitCharacter(getMinExp_Character(exp), ctx);
         break;
     case MINEXP_TYPE_STDINT:
-        emitInteger(getMinExp_Stdint(exp), ctx);
+        emitStdint(getMinExp_Stdint(exp), ctx);
         break;
     case MINEXP_TYPE_PRIM: {
         MinPrimApp *prim = getMinExp_Prim(exp);
@@ -387,9 +392,11 @@ static void emitCharacter(Character character, EC *ctx) {
     fprintf(FH(ctx), "value_Character(%d)", (int)character);
 }
 
-static void emitInteger(Integer i, EC *ctx) {
+static void emitStdint(Integer i, EC *ctx) {
     fprintf(FH(ctx), "value_Stdint(%d)", i);
 }
+
+static void emitInt(int i, EC *ctx) { fprintf(FH(ctx), "%d", i); }
 
 static void emitVec(MinExp *exp1, MinExp *exp2, EC *ctx) {
     fprintf(FH(ctx), "vec(");
