@@ -145,6 +145,14 @@ static void comment(EC *ctx, char *fmt, ...) {
     va_end(args);
 }
 
+static void emitCharacter(Character character, EC *ctx) {
+    fprintf(FH(ctx), "value_Character(%d)", (int)character);
+}
+
+static void emitInteger(Integer i, EC *ctx) {
+    fprintf(FH(ctx), "value_Stdint(%d)", i);
+}
+
 #include "minlam_emit.inc"
 
 //////////////

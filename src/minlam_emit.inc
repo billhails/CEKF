@@ -47,14 +47,6 @@ static void emitMaybeBigInt(MaybeBigInt *, EC *);
 static bool emitAtomic(MinExp *exp, EC *ctx);
 static char *resultText(ER *data, EC *ctx);
 
-static void emitCharacter(Character character, EC *ctx) {
-    fprintf(FH(ctx), "value_Character(%d)", (int)character);
-}
-
-static void emitInteger(Integer i, EC *ctx) {
-    fprintf(FH(ctx), "value_Stdint(%d)", i);
-}
-
 static bool emitVec(MinExp *exp1, MinExp *exp2, EC *ctx) {
     bool isConst = true;
     fprintf(FH(ctx), "vec(");
