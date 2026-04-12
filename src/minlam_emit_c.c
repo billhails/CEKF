@@ -49,6 +49,14 @@ static EmitBuffer *newEmitBuffer();
 static char *getEmitBuffer(EmitBuffer *);
 static void cleanEmitBuffer(void *);
 static void printEmitBuffer(FILE *, void *);
+static bool isConst(MinExp *exp);
+static EC *extendContext(EC *, Opaque *);
+static ER *emitSimpleExp(MinExp *, EC *);
+static void emitMinAnnotatedVar(MinAnnotatedVar *, EC *);
+static void emitMaybeBigInt(MaybeBigInt *, EC *);
+static void emitVec(MinExp *exp1, MinExp *exp2, EC *ctx);
+static void emitInteger(Integer i, EC *ctx);
+static void emitCharacter(Character character, EC *ctx);
 
 #define EMITLOC(name, node, ctx)                                               \
     if (node == NULL || CPI(node).lineNo == 0)                                 \
@@ -121,9 +129,108 @@ static char *resultText(ER *data, EC *ctx) {
     }
 }
 
+static bool isConst(MinExp *exp) {
+    switch (exp->type) {
+    case MINEXP_TYPE_AVAR:
+        return false;
+    case MINEXP_TYPE_BIGINTEGER:
+        return true;
+    case MINEXP_TYPE_CHARACTER:
+        return true;
+    case MINEXP_TYPE_STDINT:
+        return true;
+    case MINEXP_TYPE_PRIM: {
+        bool res = true;
+        MinPrimApp *prim = getMinExp_Prim(exp);
+        if (prim->type == MINPRIMOP_TYPE_VEC) {
+            res = isConst(prim->exp1) && isConst(prim->exp2);
+        } else {
+            cant_happen("isConst passed non-atomic %s",
+                        minExpTypeName(exp->type));
+        }
+        return res;
+    }
+    default:
+        cant_happen("isConst passed non-atomic %s", minExpTypeName(exp->type));
+    }
+}
+
+// an expression is atomic if it causes no memory allocation
+static bool isAtomic(MinExp *exp) {
+    switch (exp->type) {
+    case MINEXP_TYPE_AVAR:
+    case MINEXP_TYPE_BIGINTEGER: // not true, but there is a workaround
+    case MINEXP_TYPE_CHARACTER:
+    case MINEXP_TYPE_STDINT:
+        return true;
+    case MINEXP_TYPE_PRIM: {
+        MinPrimApp *prim = getMinExp_Prim(exp);
+        if (prim->type == MINPRIMOP_TYPE_VEC) {
+            return isAtomic(prim->exp1) && isAtomic(prim->exp2);
+        } else {
+            return false;
+        }
+    }
+    default:
+        return false;
+    }
+}
+
 /////////////////
 // Leaf Emitters
 /////////////////
+
+static void emitAtomic(MinExp *exp, EC *ctx) {
+    switch (exp->type) {
+    case MINEXP_TYPE_AVAR:
+        emitMinAnnotatedVar(getMinExp_Avar(exp), ctx);
+        break;
+    case MINEXP_TYPE_BIGINTEGER:
+        emitMaybeBigInt(getMinExp_BigInteger(exp), ctx);
+        break;
+    case MINEXP_TYPE_CHARACTER:
+        emitCharacter(getMinExp_Character(exp), ctx);
+        break;
+    case MINEXP_TYPE_STDINT:
+        emitInteger(getMinExp_Stdint(exp), ctx);
+        break;
+    case MINEXP_TYPE_PRIM: {
+        MinPrimApp *prim = getMinExp_Prim(exp);
+        if (prim->type == MINPRIMOP_TYPE_VEC) {
+            emitVec(prim->exp1, prim->exp2, ctx);
+        } else {
+            cant_happen("emitAtomic passed non-atomic %s",
+                        minExpTypeName(exp->type));
+        }
+        break;
+    }
+    default:
+        cant_happen("emitAtomic passed non-atomic %s",
+                    minExpTypeName(exp->type));
+    }
+}
+
+static ER *emitNewAtomic(MinExp *exp, EC *ctx) {
+    Opaque *buffer = newOpaque_EmitBuffer();
+    int save = PROTECT(buffer);
+    EC *atomicContext = extendContext(ctx, buffer);
+    PROTECT(atomicContext);
+    bool ic = isConst(exp);
+    emitAtomic(exp, atomicContext);
+    setProtectionStatus(&ctx->context, &atomicContext->context);
+    ER *result =
+        ic ? newEmitCResult_Constant(buffer) : newEmitCResult_Buf(buffer);
+    UNPROTECT(save);
+    return result;
+}
+
+static ER *emitArg(MinExp *arg, EC *ctx) {
+    if (isAtomic(arg)) {
+        return emitNewAtomic(arg, ctx);
+    } else {
+        return emitSimpleExp(arg, ctx);
+    }
+}
 
 static ER *emitAddrResult(SCharArray *label) {
     Opaque *buf = newOpaque_EmitBuffer();
