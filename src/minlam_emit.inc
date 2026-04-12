@@ -287,15 +287,6 @@ static ER *emitSimpleExp(MinExp *exp, EC *ctx) {
     }
 }
 
-static ER *emitConstant(char *text) {
-    Opaque *buf = newOpaque_EmitBuffer();
-    int save = PROTECT(buf);
-    fprintf(opaqueEmitBufferFh(buf), "%s", text);
-    ER *target = newEmitCResult_Constant(buf);
-    UNPROTECT(save);
-    return target;
-}
-
 // prefer to emit right to left because the common case for deeply nested
 // vecs is lists which are right-associative, and by emitting r2l we need
 // only one temp for the entire backbone of the list.

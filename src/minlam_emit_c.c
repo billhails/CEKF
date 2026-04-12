@@ -218,6 +218,15 @@ static EC *extendContext(EC *ctx) {
 // Leaf Emitters
 /////////////////
 
+static ER *emitConstant(char *text) {
+    Opaque *buf = newOpaque_EmitBuffer();
+    int save = PROTECT(buf);
+    fprintf(opaqueEmitBufferFh(buf), "%s", text);
+    ER *target = newEmitCResult_Constant(buf);
+    UNPROTECT(save);
+    return target;
+}
+
 static void emitAtomic(MinExp *exp, EC *ctx) {
     switch (exp->type) {
     case MINEXP_TYPE_AVAR:
