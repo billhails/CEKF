@@ -106,13 +106,23 @@ static void emitMinMatch(MinMatch *, EC *);
 static void emitTrace(ER *, RA *, EC *);
 static void emitUnprotect(EC *);
 static void emitVecGetImm(ER *, ER *, int, EC *);
+static inline RA *newRA();
+static inline void pushRA(RA *ra, ER *r);
+static inline ER *newResultSlotSymbol(HashSymbol *s);
+static inline Opaque *newOpaque_EmitBuffer();
+static inline char *opaqueEmitBufferContent(Opaque *container);
+static inline FILE *opaqueEmitBufferFh(Opaque *container);
+static inline FILE *FH(CEmitterContext *ctx);
 
+// also used by minlam_emit.inc:
 #define EMITLOC(name, node, ctx)                                               \
     if (node == NULL || CPI(node).lineNo == 0)                                 \
         fprintf(FH(ctx), "// %s\n", name);                                     \
     else                                                                       \
         fprintf(FH(ctx), "// %s +%d %s\n", name, CPI(node).lineNo,             \
                 CPI(node).fileName)
+
+/////////////////////////////////////////////////////
 
 static inline RA *newRA() { return newCResultArray(); }
 
@@ -121,9 +131,7 @@ static inline void pushRA(RA *ra, ER *r) { pushCResultArray(ra, r); }
 static inline ER *newResultSlotSymbol(HashSymbol *s) {
     return newEmitCResult_Var(s);
 }
-
 static inline Opaque *newOpaque_EmitBuffer() {
-    // no protection as buffer is manually cleaned
     EmitBuffer *buffer = newEmitBuffer();
     return newOpaque(buffer, cleanEmitBuffer, printEmitBuffer, NULL);
 }
@@ -139,8 +147,6 @@ static inline FILE *opaqueEmitBufferFh(Opaque *container) {
 static inline FILE *FH(CEmitterContext *ctx) {
     return opaqueEmitBufferFh(ctx->body);
 }
-
-/////////////////////////////////////////////////////
 
 static EmitBuffer *newEmitBuffer() {
     EmitBuffer *result = ALLOCATE(EmitBuffer);
