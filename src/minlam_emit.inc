@@ -44,17 +44,16 @@ static ER *emitMakeVec(MinExprList *, EC *);
 static ER *emitSimpleExp(MinExp *, EC *);
 static EC *extendContext(EC *, Opaque *);
 static void emitMaybeBigInt(MaybeBigInt *, EC *);
-static bool emitAtomic(MinExp *exp, EC *ctx);
+static void emitAtomic(MinExp *exp, EC *ctx);
+static bool isConst(MinExp *exp);
 static char *resultText(ER *data, EC *ctx);
 
-static bool emitVec(MinExp *exp1, MinExp *exp2, EC *ctx) {
-    bool isConst = true;
+static void emitVec(MinExp *exp1, MinExp *exp2, EC *ctx) {
     fprintf(FH(ctx), "vec(");
-    isConst = isConst && emitAtomic(exp1, ctx);
+    emitAtomic(exp1, ctx);
     fprintf(FH(ctx), ", ");
-    isConst = isConst && emitAtomic(exp2, ctx);
+    emitAtomic(exp2, ctx);
     fprintf(FH(ctx), ")");
-    return isConst;
 }
 
 static void emitAssignPrimOp2(ER *target, char *opName, ER *arg1, ER *arg2,
@@ -341,30 +340,55 @@ static SCharArray *makeLambdaLabel(HashSymbol *symbol) {
 // Emitters
 ////////////
 
-static bool emitAtomic(MinExp *exp, EC *ctx) {
+static bool isConst(MinExp *exp) {
+    switch (exp->type) {
+    case MINEXP_TYPE_AVAR:
+        return false;
+    case MINEXP_TYPE_BIGINTEGER:
+        return true;
+    case MINEXP_TYPE_CHARACTER:
+        return true;
+    case MINEXP_TYPE_STDINT:
+        return true;
+    case MINEXP_TYPE_PRIM: {
+        bool res = true;
+        MinPrimApp *prim = getMinExp_Prim(exp);
+        if (prim->type == MINPRIMOP_TYPE_VEC) {
+            res = isConst(prim->exp1) && isConst(prim->exp2);
+        } else {
+            cant_happen("isConst passed non-atomic %s",
+                        minExpTypeName(exp->type));
+        }
+        return res;
+    }
+    default:
+        cant_happen("isConst passed non-atomic %s", minExpTypeName(exp->type));
+    }
+}
+
+static void emitAtomic(MinExp *exp, EC *ctx) {
     switch (exp->type) {
     case MINEXP_TYPE_AVAR:
         emitMinAnnotatedVar(getMinExp_Avar(exp), ctx);
-        return false;
+        break;
     case MINEXP_TYPE_BIGINTEGER:
         emitMaybeBigInt(getMinExp_BigInteger(exp), ctx);
-        return true;
+        break;
     case MINEXP_TYPE_CHARACTER:
         emitCharacter(getMinExp_Character(exp), ctx);
-        return true;
+        break;
     case MINEXP_TYPE_STDINT:
         emitInteger(getMinExp_Stdint(exp), ctx);
-        return true;
+        break;
     case MINEXP_TYPE_PRIM: {
-        bool isConst = true;
         MinPrimApp *prim = getMinExp_Prim(exp);
         if (prim->type == MINPRIMOP_TYPE_VEC) {
-            isConst = isConst && emitVec(prim->exp1, prim->exp2, ctx);
+            emitVec(prim->exp1, prim->exp2, ctx);
         } else {
             cant_happen("emitAtomic passed non-atomic %s",
                         minExpTypeName(exp->type));
         }
-        return isConst;
+        break;
     }
     default:
         cant_happen("emitAtomic passed non-atomic %s",
@@ -377,10 +401,11 @@ static ER *emitNewAtomic(MinExp *exp, EC *ctx) {
     int save = PROTECT(buffer);
     EC *atomicContext = extendContext(ctx, buffer);
     PROTECT(atomicContext);
-    bool isConst = emitAtomic(exp, atomicContext);
+    bool ic = isConst(exp);
+    emitAtomic(exp, atomicContext);
     setProtectionStatus(&ctx->context, &atomicContext->context);
     ER *result =
-        isConst ? newEmitCResult_Constant(buffer) : newEmitCResult_Buf(buffer);
+        ic ? newEmitCResult_Constant(buffer) : newEmitCResult_Buf(buffer);
     UNPROTECT(save);
     return result;
 }
