@@ -176,6 +176,42 @@ static bool isAtomic(MinExp *exp) {
     }
 }
 
+///////////////////
+// Context Helpers
+///////////////////
+
+static EC *extendContextForLambda(HashSymbol *var, EC *ctx) {
+    // create a new memstream for the lambda body
+    Opaque *body = newOpaque_EmitBuffer();
+    int save = PROTECT(body);
+    // add it to the global set of lambdas
+    setCBufferBag(ctx->lambdas, var, body);
+    SymbolArray *heap = emitter_createHeap();
+    PROTECT(heap);
+    EmitterContext context = ctx->context;
+    context.heap = heap;
+    context.slots = newSlotPool();
+    PROTECT(context.slots);
+    context.activeSlots = 0;
+    context.totalSlots = 0;
+    context.currentReg = 0;
+    context.needsUnprotect = false;
+    EC *new = newCEmitterContext(body, context);
+    PROTECT(new);
+    new->lambdas = ctx->lambdas;
+    UNPROTECT(save);
+    return new;
+}
+
+// only for atomics: sub-context must not allocate slots
+static EC *extendContext(EC *ctx, Opaque *body) {
+    EC *new = newCEmitterContext(body, ctx->context);
+    int save = PROTECT(new);
+    new->lambdas = ctx->lambdas;
+    UNPROTECT(save);
+    return new;
+}
+
 /////////////////
 // Leaf Emitters
 /////////////////
