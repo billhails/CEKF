@@ -354,18 +354,6 @@ static void emitMinLam(MinLam *node, EC *ctx) {
     UNPROTECT(save);
 }
 
-static void emitMinAnnotatedVar(MinAnnotatedVar *node, EC *ctx) {
-    fprintf(FH(ctx), "reg[%d] /* %s */", node->position, node->var->name);
-}
-
-static inline void emitAssign(ER *to, ER *from, EC *ctx) {
-    fprintf(FH(ctx), "%s = %s;\n", resultText(to, ctx), resultText(from, ctx));
-}
-
-static inline void emitAssignReg(Index i, ER *value, EC *ctx) {
-    fprintf(FH(ctx), "reg[%d] = %s;\n", (int)i, resultText(value, ctx));
-}
-
 static void emitGoto(ER *target, CResultArray *args, EC *ctx) {
     comment(ctx, "emitGoto - %u outgoing slots", args->size);
     CResultArray *sourceSlots = newCResultArray();

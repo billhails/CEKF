@@ -379,7 +379,21 @@ static void emitMaybeBigInt(MaybeBigInt *mbi, EC *ctx) {
     }
 }
 
+static void emitMinAnnotatedVar(MinAnnotatedVar *node, EC *ctx) {
+    fprintf(FH(ctx), "reg[%d] /* %s */", node->position, node->var->name);
+}
+
+static inline void emitAssign(ER *to, ER *from, EC *ctx) {
+    fprintf(FH(ctx), "%s = %s;\n", resultText(to, ctx), resultText(from, ctx));
+}
+
+static inline void emitAssignReg(Index i, ER *value, EC *ctx) {
+    fprintf(FH(ctx), "reg[%d] = %s;\n", (int)i, resultText(value, ctx));
+}
+
+//////////////////////////////////////////////////////////////////
 #include "minlam_emit.inc"
+//////////////////////////////////////////////////////////////////
 
 //////////////
 // Public API
