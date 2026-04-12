@@ -35,6 +35,7 @@
 ///////////////////////
 
 typedef CEmitterContext EC;
+typedef EmitCResult ER;
 
 #define EMITLOC(name, node, ctx)                                               \
     if (node == NULL || CPI(node).lineNo == 0)                                 \
