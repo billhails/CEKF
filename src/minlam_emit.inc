@@ -34,9 +34,6 @@
 typedef BEmitterContext EC;
 typedef EmitBResult ER;
 typedef BResultArray RA;
-static inline RA *newRA() { return newBResultArray(); }
-static inline void pushRA(RA *ra, ER *r) { pushBResultArray(ra, r); }
-static inline ER *newER_Var(HashSymbol *s) { return newEmitBResult_Var(s); }
 #endif
 
 ////////////////////
@@ -45,7 +42,7 @@ static inline ER *newER_Var(HashSymbol *s) { return newEmitBResult_Var(s); }
 
 static ER *claimSlot(EC *ctx) {
     HashSymbol *symbol = emitter_claimSlotSymbol(&ctx->context);
-    return newER_Var(symbol);
+    return newResultSlotSymbol(symbol);
 }
 
 static void releaseSlot(ER *result, EmitterContext *ctx) {

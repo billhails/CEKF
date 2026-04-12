@@ -38,45 +38,66 @@ typedef CEmitterContext EC;
 typedef EmitCResult ER;
 typedef CResultArray RA;
 
-static inline RA *newRA() { return newCResultArray(); }
-static inline void pushRA(RA *ra, ER *r) { pushCResultArray(ra, r); }
-static inline ER *newER_Var(HashSymbol *s) { return newEmitCResult_Var(s); }
-
 typedef struct EmitBuffer {
     FILE *fh;
     char *buffer;
     size_t size;
 } EmitBuffer;
 
-static void emitAtomic(MinExp *exp, EC *ctx);
-static char *resultText(ER *data, EC *ctx);
-static EmitBuffer *newEmitBuffer();
+static bool isConst(MinExp *);
+static bool isAtomic(MinExp *);
 static char *getEmitBuffer(EmitBuffer *);
-static void cleanEmitBuffer(void *);
-static void printEmitBuffer(FILE *, void *);
-static bool isConst(MinExp *exp);
+static char *resultText(ER *, EC *);
+static char *getPrimOpCName(MinPrimOp);
 static EC *extendContext(EC *);
-static ER *emitSimpleExp(MinExp *, EC *);
-static void emitMinAnnotatedVar(MinAnnotatedVar *, EC *);
-static void emitMaybeBigInt(MaybeBigInt *, EC *);
-static void emitVec(MinExp *exp1, MinExp *exp2, EC *ctx);
-static void emitStdint(Integer i, EC *ctx);
-static void emitCharacter(Character character, EC *ctx);
-static void emitMinExp(MinExp *, EC *);
-static void emitMinLam(MinLam *, EC *);
-static void emitMinApply(MinApply *, EC *);
-static void emitMinIff(MinIff *, EC *);
-static void emitMinCond(MinCond *, EC *);
-static void emitMinIntCondCases(MinIntCondCases *, ER *, EC *);
-static void emitMinCharCondCases(MinCharCondCases *, EC *);
-static void emitMinMatch(MinMatch *, EC *);
-static void emitMinMatchList(MinMatchList *, EC *);
-static void emitMinLetRec(MinLetRec *, EC *);
-static void emitMinBindings(MinBindings *, Integer, RA *, EC *);
-static void emitMinCondCases(MinCondCases *, EC *);
+static EC *extendContextForLambda(HashSymbol *, EC *);
+static EmitBuffer *newEmitBuffer(void);
+static ER *claimSlot(EC *);
 static ER *emitMakeVec(MinExprList *, EC *);
-static ER *claimSlot(EC *ctx);
-static void releaseSlot(ER *result, EmitterContext *ctx);
+static ER *emitSimpleExp(MinExp *, EC *);
+static ER *emitConstant(char *);
+static ER *emitNewAtomic(MinExp *, EC *);
+static ER *emitArg(MinExp *, EC *);
+static ER *emitAddrResult(SCharArray *);
+static ER *emitIntegerResult(Integer);
+static ER *emitCharacterResult(Character);
+static ER *getConstantResult(EC *);
+static int getPrimOpArity(MinPrimOp);
+static void cleanEmitBuffer(void *);
+static void comment(EC *, char *, ...);
+static void emitAtomic(MinExp *, EC *);
+static void emitAssignPrimOp(MinPrimOp, ER *, ER *, ER *, EC *);
+static void emitAssignPrimOp1(ER *, char *, ER *, EC *);
+static void emitAssignPrimOp2(ER *, char *, ER *, ER *, EC *);
+static void emitCallBuiltin(BuiltIn *, ER *, ER *, EC *);
+static void emitCharacter(Character, EC *);
+static void emitClosureNew(ER *, SCharArray *, EC *);
+static void emitClosureSetEnv(ER *, ER *, EC *);
+static void emitConstructVec(ER *, int, CResultArray *, EC *);
+static void emitDone(int, EC *);
+static void emitIfThenElse(ER *, MinExp *, MinExp *, EC *);
+static void emitJumpToLambda(ER *, EC *);
+static void emitMaybeBigInt(MaybeBigInt *, EC *);
+static void emitMinAnnotatedVar(MinAnnotatedVar *, EC *);
+static void emitMinApply(MinApply *, EC *);
+static void emitMinBindings(MinBindings *, Integer, RA *, EC *);
+static void emitMinCharCondCases(MinCharCondCases *, EC *);
+static void emitMinCondCases(MinCondCases *, EC *);
+static void emitMinCond(MinCond *, EC *);
+static void emitMinExp(MinExp *, EC *);
+static void emitMinIff(MinIff *, EC *);
+static void emitMinIntCondCases(MinIntCondCases *, ER *, EC *);
+static void emitMinLam(MinLam *, EC *);
+static void emitMinLetRec(MinLetRec *, EC *);
+static void emitMinMatchList(MinMatchList *, EC *);
+static void emitMinMatch(MinMatch *, EC *);
+static void emitStdint(Integer, EC *);
+static void emitTrace(ER *, RA *, EC *);
+static void emitUnprotect(EC *);
+static void emitVec(MinExp *, MinExp *, EC *);
+static void emitVecGetImm(ER *, ER *, int, EC *);
+static void printEmitBuffer(FILE *, void *);
+static void releaseSlot(ER *, EmitterContext *);
 
 #define EMITLOC(name, node, ctx)                                               \
     if (node == NULL || CPI(node).lineNo == 0)                                 \
@@ -84,6 +105,14 @@ static void releaseSlot(ER *result, EmitterContext *ctx);
     else                                                                       \
         fprintf(FH(ctx), "// %s +%d %s\n", name, CPI(node).lineNo,             \
                 CPI(node).fileName)
+
+static inline RA *newRA() { return newCResultArray(); }
+
+static inline void pushRA(RA *ra, ER *r) { pushCResultArray(ra, r); }
+
+static inline ER *newResultSlotSymbol(HashSymbol *s) {
+    return newEmitCResult_Var(s);
+}
 
 static inline Opaque *newOpaque_EmitBuffer() {
     // no protection as buffer is manually cleaned
