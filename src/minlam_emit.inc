@@ -85,15 +85,6 @@ static void emitAssignPrimOp1(ER *target, char *opName, ER *arg1, EC *ctx) {
             resultText(arg1, ctx));
 }
 
-static ER *emitIntegerResult(Integer i) {
-    Opaque *buf = newOpaque_EmitBuffer();
-    int save = PROTECT(buf);
-    fprintf(opaqueEmitBufferFh(buf), "value_Stdint(%d)", i);
-    ER *result = newEmitCResult_Constant(buf);
-    UNPROTECT(save);
-    return result;
-}
-
 static void emitCharacterResult(Opaque *buf, Character c) {
     fprintf(opaqueEmitBufferFh(buf), "value_Character(%d)", (int)c);
 }

@@ -118,6 +118,15 @@ static ER *emitAddrResult(SCharArray *label) {
     return result;
 }
 
+static ER *emitIntegerResult(Integer i) {
+    Opaque *buf = newOpaque_EmitBuffer();
+    int save = PROTECT(buf);
+    fprintf(opaqueEmitBufferFh(buf), "value_Stdint(%d)", i);
+    ER *result = newEmitCResult_Constant(buf);
+    UNPROTECT(save);
+    return result;
+}
+
 #include "minlam_emit.inc"
 
 //////////////
