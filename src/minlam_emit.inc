@@ -31,7 +31,7 @@ static void emitMinLam(MinLam *, EC *);
 static void emitMinApply(MinApply *, EC *);
 static void emitMinIff(MinIff *, EC *);
 static void emitMinCond(MinCond *, EC *);
-static void emitMinIntCondCases(MinIntCondCases *, const char *, EC *);
+static void emitMinIntCondCases(MinIntCondCases *, ER *, EC *);
 static void emitMinCharCondCases(MinCharCondCases *, EC *);
 static void emitMinMatch(MinMatch *, EC *);
 static void emitMinMatchList(MinMatchList *, EC *);
@@ -545,10 +545,8 @@ static void emitMinCond(MinCond *node, EC *ctx) {
     ER *cond = emitSimpleExp(node->value, ctx);
     int save = PROTECT(cond);
     if (node->cases->type == MINCONDCASES_TYPE_INTEGERS) {
-        const char *condText = resultText(cond, ctx);
         releaseSlot(cond, &ctx->context);
-        emitMinIntCondCases(getMinCondCases_Integers(node->cases), condText,
-                            ctx);
+        emitMinIntCondCases(getMinCondCases_Integers(node->cases), cond, ctx);
     } else {
         fprintf(FH(ctx), "switch(getValue_Character(%s)) {\n",
                 resultText(cond, ctx));
@@ -574,8 +572,7 @@ static void emitMinCondCases(MinCondCases *node, EC *ctx) {
     }
 }
 
-static void emitMinIntCondCases(MinIntCondCases *node, const char *condText,
-                                EC *ctx) {
+static void emitMinIntCondCases(MinIntCondCases *node, ER *cond, EC *ctx) {
     if (node == NULL) {
         return;
     }
@@ -584,7 +581,7 @@ static void emitMinIntCondCases(MinIntCondCases *node, const char *condText,
         // default case
         fprintf(FH(ctx), "{ // default\n");
     } else {
-        fprintf(FH(ctx), "if (minlam_runtime_cmp(%s, ", condText);
+        fprintf(FH(ctx), "if (minlam_runtime_cmp(%s, ", resultText(cond, ctx));
         emitMaybeBigInt(node->constant, ctx);
         fprintf(FH(ctx), ") == CMP_EQ) {\n");
     }
@@ -592,7 +589,7 @@ static void emitMinIntCondCases(MinIntCondCases *node, const char *condText,
     emitMinExp(node->body, ctx);
     if (node->next != NULL) {
         fprintf(FH(ctx), "} else ");
-        emitMinIntCondCases(node->next, condText, ctx);
+        emitMinIntCondCases(node->next, cond, ctx);
     } else {
         fprintf(FH(ctx), "}\n");
     }
