@@ -730,12 +730,11 @@ static void emitMinExp(MinExp *node, EC *ctx) {
         break;
     }
     case MINEXP_TYPE_CHARACTER: {
-        fprintf(FH(ctx), "value_Character(%d)", (int)getMinExp_Character(node));
+        emitCharacter(getMinExp_Character(node), ctx);
         break;
     }
     case MINEXP_TYPE_COND: {
-        MinCond *variant = getMinExp_Cond(node);
-        emitMinCond(variant, ctx);
+        emitMinCond(getMinExp_Cond(node), ctx);
         break;
     }
     case MINEXP_TYPE_DONE: {
@@ -743,23 +742,19 @@ static void emitMinExp(MinExp *node, EC *ctx) {
         break;
     }
     case MINEXP_TYPE_IFF: {
-        MinIff *variant = getMinExp_Iff(node);
-        emitMinIff(variant, ctx);
+        emitMinIff(getMinExp_Iff(node), ctx);
         break;
     }
     case MINEXP_TYPE_LAM: {
-        MinLam *variant = getMinExp_Lam(node);
-        emitMinLam(variant, ctx);
+        emitMinLam(getMinExp_Lam(node), ctx);
         break;
     }
     case MINEXP_TYPE_LETREC: {
-        MinLetRec *variant = getMinExp_LetRec(node);
-        emitMinLetRec(variant, ctx);
+        emitMinLetRec(getMinExp_LetRec(node), ctx);
         break;
     }
     case MINEXP_TYPE_MATCH: {
-        MinMatch *variant = getMinExp_Match(node);
-        emitMinMatch(variant, ctx);
+        emitMinMatch(getMinExp_Match(node), ctx);
         break;
     }
     case MINEXP_TYPE_STDINT: {
