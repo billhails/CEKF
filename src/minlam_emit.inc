@@ -240,40 +240,36 @@ static ER *emitAnonymousLambda(MinLam *lambda, EC *ctx) {
     return result;
 }
 
+static ER *emitAnnotatedVarResult(MinAnnotatedVar *avar, EC *ctx) {
+    EC *aVarContext = extendContext(ctx);
+    setProtectionStatus(&ctx->context, &aVarContext->context);
+    int save = PROTECT(aVarContext);
+    emitMinAnnotatedVar(avar, aVarContext);
+    ER *result = getBufResult(aVarContext);
+    UNPROTECT(save);
+    return result;
+}
+
 static ER *emitSimpleExp(MinExp *exp, EC *ctx) {
     switch (exp->type) {
     case MINEXP_TYPE_PRIM: {
-        MinPrimApp *app = getMinExp_Prim(exp);
-        return emitPrimOp(app, ctx);
+        return emitPrimOp(getMinExp_Prim(exp), ctx);
     }
     case MINEXP_TYPE_AVAR: {
-        MinAnnotatedVar *avar = getMinExp_Avar(exp);
-        Opaque *buf = newOpaque_EmitBuffer();
-        int save = PROTECT(buf);
-        EC *aVarContext = extendContext(ctx, buf);
-        setProtectionStatus(&ctx->context, &aVarContext->context);
-        PROTECT(aVarContext);
-        emitMinAnnotatedVar(avar, aVarContext);
-        ER *result = newEmitCResult_Buf(buf);
-        UNPROTECT(save);
-        return result;
+        return emitAnnotatedVarResult(getMinExp_Avar(exp), ctx);
     }
     case MINEXP_TYPE_MAKEVEC: {
-        MinExprList *vecs = getMinExp_MakeVec(exp);
-        return emitMakeVec(vecs, ctx);
+        return emitMakeVec(getMinExp_MakeVec(exp), ctx);
     }
     case MINEXP_TYPE_LAM: {
-        MinLam *lambda = getMinExp_Lam(exp);
-        return emitAnonymousLambda(lambda, ctx);
+        return emitAnonymousLambda(getMinExp_Lam(exp), ctx);
     }
     case MINEXP_TYPE_BIGINTEGER: {
         MaybeBigInt *mbi = getMinExp_BigInteger(exp);
-        Opaque *buf = newOpaque_EmitBuffer();
-        int save = PROTECT(buf);
-        EC *biContext = extendContext(ctx, buf);
-        PROTECT(biContext);
+        EC *biContext = extendContext(ctx);
+        int save = PROTECT(biContext);
         emitMaybeBigInt(mbi, biContext);
-        ER *result = newEmitCResult_Constant(buf);
+        ER *result = getConstantResult(biContext);
         setProtectionStatus(&ctx->context, &biContext->context);
         UNPROTECT(save);
         return result;

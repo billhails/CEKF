@@ -50,7 +50,7 @@ static char *getEmitBuffer(EmitBuffer *);
 static void cleanEmitBuffer(void *);
 static void printEmitBuffer(FILE *, void *);
 static bool isConst(MinExp *exp);
-static EC *extendContext(EC *, Opaque *);
+static EC *extendContext(EC *);
 static ER *emitSimpleExp(MinExp *, EC *);
 static void emitMinAnnotatedVar(MinAnnotatedVar *, EC *);
 static void emitMaybeBigInt(MaybeBigInt *, EC *);
@@ -204,9 +204,11 @@ static EC *extendContextForLambda(HashSymbol *var, EC *ctx) {
 }
 
 // only for atomics: sub-context must not allocate slots
-static EC *extendContext(EC *ctx, Opaque *body) {
+static EC *extendContext(EC *ctx) {
+    Opaque *body = newOpaque_EmitBuffer();
+    int save = PROTECT(body);
     EC *new = newCEmitterContext(body, ctx->context);
-    int save = PROTECT(new);
+    PROTECT(new);
     new->lambdas = ctx->lambdas;
     UNPROTECT(save);
     return new;
@@ -246,16 +248,20 @@ static void emitAtomic(MinExp *exp, EC *ctx) {
     }
 }
 
+static ER *getConstantResult(EC *ctx) {
+    return newEmitCResult_Constant(ctx->body);
+}
+
+static ER *getBufResult(EC *ctx) { return newEmitCResult_Buf(ctx->body); }
+
 static ER *emitNewAtomic(MinExp *exp, EC *ctx) {
-    Opaque *buffer = newOpaque_EmitBuffer();
-    int save = PROTECT(buffer);
-    EC *atomicContext = extendContext(ctx, buffer);
-    PROTECT(atomicContext);
+    EC *atomicContext = extendContext(ctx);
+    int save = PROTECT(atomicContext);
     bool ic = isConst(exp);
     emitAtomic(exp, atomicContext);
     setProtectionStatus(&ctx->context, &atomicContext->context);
     ER *result =
-        ic ? newEmitCResult_Constant(buffer) : newEmitCResult_Buf(buffer);
+        ic ? getConstantResult(atomicContext) : getBufResult(atomicContext);
     UNPROTECT(save);
     return result;
 }
