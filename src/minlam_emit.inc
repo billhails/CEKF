@@ -1,3 +1,5 @@
+#ifndef cekf_minlam_emit_inc
+#define cekf_minlam_emit_inc
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2026  Bill Hails
@@ -603,3 +605,4 @@ static void emitMinExp(MinExp *node, EC *ctx) {
         cant_happen("unexpected MinExp type %s", minExpTypeName(node->type));
     }
 }
+#endif
