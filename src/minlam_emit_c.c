@@ -226,6 +226,12 @@ static void emitUnprotect(EC *ctx) {
     fprintf(FH(ctx), "minlam_runtime_unprotect();\n");
 }
 
+static void emitTrace(ER *target, RA *args, EC *ctx) {
+    fprintf(FH(ctx), "TRACE(\"%s\", getValue_Addr(%s), %d);\n",
+            ctx->context.currentBinding->name, resultText(target, ctx),
+            (int)args->size);
+}
+
 static void emitConstructVec(ER *target, int count, CResultArray *results,
                              EC *ctx) {
     fprintf(FH(ctx), "%s = make_vec(%d", resultText(target, ctx), count);

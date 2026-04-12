@@ -379,9 +379,7 @@ static void emitGoto(ER *target, RA *args, EC *ctx) {
         ctx->context.needsUnprotect = false;
     }
 
-    fprintf(FH(ctx), "TRACE(\"%s\", getValue_Addr(%s), %d);\n",
-            ctx->context.currentBinding->name, resultText(savedTarget, ctx),
-            (int)args->size);
+    emitTrace(savedTarget, args, ctx);
     fprintf(FH(ctx), "goto *getValue_Addr(%s);\n",
             resultText(savedTarget, ctx));
     releaseSlots(claimedSlots, &ctx->context);
