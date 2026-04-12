@@ -544,13 +544,12 @@ static void emitMinCond(MinCond *node, EC *ctx) {
     EMITLOC("emitMinCond", node, ctx);
     ER *cond = emitSimpleExp(node->value, ctx);
     int save = PROTECT(cond);
+    releaseSlot(cond, &ctx->context);
     if (node->cases->type == MINCONDCASES_TYPE_INTEGERS) {
-        releaseSlot(cond, &ctx->context);
         emitMinIntCondCases(getMinCondCases_Integers(node->cases), cond, ctx);
     } else {
         fprintf(FH(ctx), "switch(getValue_Character(%s)) {\n",
                 resultText(cond, ctx));
-        releaseSlot(cond, &ctx->context);
         emitMinCondCases(node->cases, ctx);
         fprintf(FH(ctx), "}\n");
     }
