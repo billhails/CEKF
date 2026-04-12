@@ -387,12 +387,11 @@ static void emitGoto(ER *target, RA *args, EC *ctx) {
 
 static ER *emitExtractFromClosure(ER *closure, int index, EC *ctx) {
     // this must never write to slots except this one
-    ER *result = claimSlot(ctx);
-    int save = PROTECT(result);
-    fprintf(FH(ctx), "%s = vec(value_Stdint(%d), %s);\n",
-            resultText(result, ctx), index, resultText(closure, ctx));
+    ER *target = claimSlot(ctx);
+    int save = PROTECT(target);
+    emitVecGetImm(target, closure, index, ctx);
     UNPROTECT(save);
-    return result;
+    return target;
 }
 
 static ER *emitCallBuiltin(BuiltIn *bi, MinExprList *builtinArgs, EC *ctx) {

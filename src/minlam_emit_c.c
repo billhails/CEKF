@@ -222,6 +222,11 @@ static EC *extendContext(EC *ctx) {
 // Leaf Emitters
 /////////////////
 
+static void emitVecGetImm(ER *target, ER *closure, int index, EC *ctx) {
+    fprintf(FH(ctx), "%s = vec(value_Stdint(%d), %s);\n",
+            resultText(target, ctx), index, resultText(closure, ctx));
+}
+
 static void emitUnprotect(EC *ctx) {
     fprintf(FH(ctx), "minlam_runtime_unprotect();\n");
 }
