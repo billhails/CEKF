@@ -218,6 +218,15 @@ static EC *extendContext(EC *ctx) {
 // Leaf Emitters
 /////////////////
 
+static void emitConstructVec(ER *target, int count, CResultArray *results,
+                             EC *ctx) {
+    fprintf(FH(ctx), "%s = make_vec(%d", resultText(target, ctx), count);
+    for (Index i = results->size; i > 0; i--) {
+        fprintf(FH(ctx), ", %s", resultText(results->entries[i - 1], ctx));
+    }
+    fprintf(FH(ctx), ");\n");
+}
+
 static ER *emitConstant(char *text) {
     Opaque *buf = newOpaque_EmitBuffer();
     int save = PROTECT(buf);
