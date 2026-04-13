@@ -24,19 +24,19 @@ $$
 
 $$
 \begin{align*}
-\mathcal{F}\mathtt{C} &= \set{}
+\mathcal{F}\mathtt{C} &= \{\ \}
 \\
-\mathcal{F}x &= \set{x}
+\mathcal{F}x &= \{\ x\ \}
 \\
 \mathcal{F}(e_0\;e_1) &= \mathcal{F}e_0\cup \mathcal{F}e_1
 \\
-\mathcal{F}(\lambda x.e) &= \mathcal{F}(e) - \set{x}
+\mathcal{F}(\lambda x.e) &= \mathcal{F}(e) - \{\ x\ \}
 \\
 \mathcal{F}(\mathtt{letrec}\;(\llbracket x_0\;\lambda_0\rrbracket\dots\llbracket x_n\;\lambda_n\rrbracket)\;e)
 &=
 \Big(\bigcup_{i=0}^{i=n}\mathcal{F}\lambda_i
 \cup \mathcal{F}(e)\Big)
-- \set{x_0\dots x_n}
+- \{\ x_0\dots x_n\ \}
 \\
 \end{align*}
 $$
