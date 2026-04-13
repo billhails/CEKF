@@ -32,7 +32,7 @@ $$
 \\
 \mathcal{F}(\lambda x.e) &= \mathcal{F}(e) - \{\ x\ \}
 \\
-\mathcal{F}(\mathtt{letrec}\ (\llbracket x_0\ \lambda_0\llbracket\dots\llbracket x_n\ \lambda_n\rrbracket)\ e)
+\mathcal{F}(\mathtt{letrec}\ ([ x_0\ \lambda_0[\dots[ x_n\ \lambda_n\rrbracket)\ e)
 &=
 \Big(\bigcup_{i=0}^{i=n}\mathcal{F}\lambda_i
 \cup \mathcal{F}(e)\Big)
@@ -58,10 +58,10 @@ $$
 \mathcal{S}[x/e](\mathtt{letrec}\ (b_0\dots b_n)\ e) &=
 (\mathtt{letrec}\ (\mathcal{S}[x/e]b_0\dots \mathcal{S}[x/e]b_n)\ \mathcal{S}[x/e]e)
 \\
-\mathcal{S}[x/e]\llbracket a\ \lambda b.e\rrbracket &= \begin{cases}
-\llbracket a\ \lambda b.\mathcal{S}[z/e]e\rrbracket &\text{if } x \not \in \set{a,b}
+\mathcal{S}[x/e][ a\ \lambda b.e\rrbracket &= \begin{cases}
+[ a\ \lambda b.\mathcal{S}[z/e]e\rrbracket &\text{if } x \not \in \set{a,b}
 \\
-\llbracket a\ \lambda b.e\rrbracket &\text{otherwise}
+[ a\ \lambda b.e\rrbracket &\text{otherwise}
 \end{cases}
 
 \end{align*}
@@ -83,7 +83,7 @@ $$
 \\
 \beta (\mathtt{letrec}\ (b_0\dots b_n)\  e) &= (\mathtt{letrec}\ (\beta b_0 \dots \beta b_n)\ \beta e)
 \\
-\beta \llbracket x\ \lambda y.e \rrbracket &= \llbracket x\  \lambda y . \beta e \rrbracket
+\beta [ x\ \lambda y.e \rrbracket &= [ x\  \lambda y . \beta e \rrbracket
 \end{align*}
 $$
 
@@ -107,7 +107,7 @@ $$
 \\
 \eta (\mathtt{letrec}\ (b_0\dots b_n)\  e) &= (\mathtt{letrec}\ (\eta b_0 \dots \eta b_n)\ \eta e)
 \\
-\eta \llbracket x\ \lambda y.e \rrbracket &= \llbracket x\  \lambda y . \eta e \rrbracket
+\eta [ x\ \lambda y.e \rrbracket &= [ x\  \lambda y . \eta e \rrbracket
 \end{align*}
 $$
 
@@ -125,8 +125,8 @@ $$
 \\
 \mathcal{T}(\mathtt{letrec}\ (\ )\ e) &= \mathcal{T}e
 \\[-1em]
-\mathcal{T}(\mathtt{letrec}\ (\llbracket x_0\ \lambda_0\rrbracket\dots \llbracket x_n\ \lambda_n\rrbracket)\ e) &=
-(\mathtt{letrec}\ (\set{\llbracket x_j\ \mathcal{T}\lambda_j\rrbracket| x_j \not \in
+\mathcal{T}(\mathtt{letrec}\ ([ x_0\ \lambda_0\rrbracket\dots [ x_n\ \lambda_n\rrbracket)\ e) &=
+(\mathtt{letrec}\ (\set{[ x_j\ \mathcal{T}\lambda_j\rrbracket| x_j \not \in
 \bigcup_{i=0}^{i=n}\mathcal{F}\mathcal{T}\lambda_i \cup \mathcal{F}\mathcal{T}e
 })\ \mathcal{T}e)
 \end{align*}
