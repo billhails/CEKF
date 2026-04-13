@@ -16,7 +16,7 @@ $$
 \\
 & (\mathtt{letrec}\;(b_0\dots b_n)\;e) & \texttt{[letrec]}
 \\
-& b_i = \llbracket x\;\lambda y.e\rrbracket & \texttt{[letrec binding]}
+& b_i = [ x\;\lambda y.e ] & \texttt{[letrec binding]}
 \end{align*}
 $$
 
