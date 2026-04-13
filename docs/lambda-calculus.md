@@ -4,40 +4,36 @@
 
 $$
 \begin{align*}
-& e & \texttt{[expression]}
+e &\mathtt{::=\ } \mathtt{C} & \texttt{[constant]}
 \\
-& \mathtt{C} & \texttt{[constant]}
+&\mathtt{|\ \ \ \ } x & \texttt{[variable]}
 \\
-& x & \texttt{[variable]}
+&\mathtt{|\ \ \ \ } (e\ e) & \texttt{[application]}
 \\
-& (e\ e) & \texttt{[application]}
+&\mathtt{|\ \ \ \ } (\lambda x.e) & \texttt{[lambda]}
 \\
-& (\lambda x.e) & \texttt{[lambda]}
+&\mathtt{|\ \ \ \ } (\mathtt{letrec}\ (b_0\dots b_n)\ e) & \texttt{[letrec]}
 \\
-& (\mathtt{letrec}\ (b_0\dots b_n)\ e) & \texttt{[letrec]}
-\\
-& b_i = [ x\ \lambda y.e ] & \texttt{[letrec binding]}
+b &\mathtt{::=\ } \lbrace x\ \lambda y.e \rbrace & \texttt{[letrec binding]}
 \end{align*}
 $$
 
 ## Free variables $\mathcal{F}$
 
+A variable is free in an expression if it is present in a scope where it is not bound.
+
 $$
 \begin{align*}
-\mathcal{F}\mathtt{C} &= \{\ \}
+\mathcal{F}\mathtt{C} &= \set{}
 \\
-\mathcal{F}x &= \{\ x\ \}
+\mathcal{F}x &= \set{x}
 \\
 \mathcal{F}(e_0\ e_1) &= \mathcal{F}e_0\cup \mathcal{F}e_1
 \\
-\mathcal{F}(\lambda x.e) &= \mathcal{F}(e) - \{\ x\ \}
+\mathcal{F}(\lambda x.e) &= \mathcal{F}(e) - \set{ x }
 \\
-\mathcal{F}(\mathtt{letrec}\ ([ x_0\ \lambda_0[\dots[ x_n\ \lambda_n\rrbracket)\ e)
-&=
-\Big(\bigcup_{i=0}^{i=n}\mathcal{F}\lambda_i
-\cup \mathcal{F}(e)\Big)
-- \{\ x_0\dots x_n\ \}
-\\
+\mathcal{F}(\mathtt{letrec}\ (\lbrace x_0\ \lambda_0\rbrace\dots\lbrace x_n\ \lambda_n\rbrace)\ e) &=
+\Big(\bigcup_{i=0}^{i=n}\mathcal{F}\lambda_i \cup \mathcal{F}(e)\Big) - \set{x_0\dots x_n}
 \end{align*}
 $$
 
@@ -58,12 +54,10 @@ $$
 \mathcal{S}[x/e](\mathtt{letrec}\ (b_0\dots b_n)\ e) &=
 (\mathtt{letrec}\ (\mathcal{S}[x/e]b_0\dots \mathcal{S}[x/e]b_n)\ \mathcal{S}[x/e]e)
 \\
-\mathcal{S}[x/e][ a\ \lambda b.e\rrbracket &= \begin{cases}
-[ a\ \lambda b.\mathcal{S}[z/e]e\rrbracket &\text{if } x \not \in \set{a,b}
+\mathcal{S}[x/e]\lbrace a\ \lambda b.e\rbrace &= \begin{cases} \lbrace a\ \lambda b.\mathcal{S}[x/e]e\rbrace &\text{if } x \not \in \set{a,b}
 \\
-[ a\ \lambda b.e\rrbracket &\text{otherwise}
+\lbrace a\ \lambda b.e\rbrace &\text{otherwise}
 \end{cases}
-
 \end{align*}
 $$
 
@@ -83,7 +77,7 @@ $$
 \\
 \beta (\mathtt{letrec}\ (b_0\dots b_n)\  e) &= (\mathtt{letrec}\ (\beta b_0 \dots \beta b_n)\ \beta e)
 \\
-\beta [ x\ \lambda y.e \rrbracket &= [ x\  \lambda y . \beta e \rrbracket
+\beta \lbrace x\ \lambda y.e \rbrace &= \lbrace x\  \lambda y . \beta e \rbrace
 \end{align*}
 $$
 
@@ -107,7 +101,7 @@ $$
 \\
 \eta (\mathtt{letrec}\ (b_0\dots b_n)\  e) &= (\mathtt{letrec}\ (\eta b_0 \dots \eta b_n)\ \eta e)
 \\
-\eta [ x\ \lambda y.e \rrbracket &= [ x\  \lambda y . \eta e \rrbracket
+\eta \lbrace x\ \lambda y.e \rbrace &= \lbrace x\  \lambda y . \eta e \rbrace
 \end{align*}
 $$
 
@@ -124,9 +118,9 @@ $$
 \mathcal{T}(\lambda x . e) &= (\lambda x.\mathcal{T}e)
 \\
 \mathcal{T}(\mathtt{letrec}\ (\ )\ e) &= \mathcal{T}e
-\\[-1em]
-\mathcal{T}(\mathtt{letrec}\ ([ x_0\ \lambda_0\rrbracket\dots [ x_n\ \lambda_n\rrbracket)\ e) &=
-(\mathtt{letrec}\ (\set{[ x_j\ \mathcal{T}\lambda_j\rrbracket| x_j \not \in
+\\
+\mathcal{T}(\mathtt{letrec}\ (\lbrace x_0\ \lambda_0\rbrace\dots \lbrace x_n\ \lambda_n\rbrace)\ e) &=
+(\mathtt{letrec}\ (\set{\lbrace x_j\ \mathcal{T}\lambda_j\rbrace | x_j \not \in
 \bigcup_{i=0}^{i=n}\mathcal{F}\mathcal{T}\lambda_i \cup \mathcal{F}\mathcal{T}e
 })\ \mathcal{T}e)
 \end{align*}
