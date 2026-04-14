@@ -67,9 +67,11 @@ $$
 \\
 \mathcal{S}[x/e](e_0\ e_1) &= (\mathcal{S}[x/e]e_0\ \mathcal{S}[x/e]e_1)
 \\
-\mathcal{S}[x/e](\lambda x.e_0) &= (\lambda x.e_0)
+\mathcal{S}[x/e](\lambda y.e_0) &= \begin{cases}
+(\lambda y.e_0) &\text{if }x = y
 \\
-\mathcal{S}[x/e](\lambda y.e_0) &= (\lambda y.\mathcal{S}[x/e]e_0)
+(\lambda y.\mathcal{S}[x/e]e_0)&\text{otherwise}
+\end{cases}
 \\
 \mathcal{S}[x/e](\mathtt{letrec}\ (b_0\dots b_n)\ e) &=
 (\mathtt{letrec}\ (\mathcal{S}[x/e]b_0\dots \mathcal{S}[x/e]b_n)\ \mathcal{S}[x/e]e)
