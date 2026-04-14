@@ -189,11 +189,11 @@ $$
 \mathcal{I}(\lambda x.e) &= (\lambda x.\mathcal{I}e)
 \\
 \mathcal{I}(\mathtt{letrec}\ ((x_0:\ \lambda_0)\dots(x_n:\ \lambda_n))\ e) &=
-    (\mathtt{letrec}\ ((x_0:\ \mathcal{S^*I}\lambda_0)\dots(x_n:\ \mathcal{S^*I}\lambda_n)\ \mathcal{S^*I}e)
+    (\mathtt{letrec}\ ((x_0:\ \mathcal{S^{\ast}I}\lambda_0)\dots(x_n:\ \mathcal{S^{\ast}I}\lambda_n)\ \mathcal{S^{\ast}I}e)
 \\
 \text{where}
 \\
-\mathcal{S^*}y &= \mathcal{Scs}[x_i/\lambda_i]y\ \forall(x_i:\ \lambda_i) \in R
+\mathcal{S^{\ast}}y &= \mathcal{Scs}[x_i/\lambda_i]y\ \forall(x_i:\ \lambda_i) \in R
 \\
 R &= \set{(x_i:\ \lambda_i) \in \set{(x_0:\ \lambda_0)\dots(x_n:\ \lambda_n)}| \text{safe}\ \lambda_i}
 \\
