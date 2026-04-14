@@ -104,6 +104,7 @@ $$
 ## Eta Reduction $\eta$
 
 `fn a(x) { b(x) } == b`, basically.
+
 $$
 \begin{align*}
 \eta\mathtt{C} &= \mathtt{C}
@@ -116,8 +117,7 @@ $$
 \\
 \eta (e_0\ e_1) &= (\eta e_0\  \eta e_1)
 \\
-\eta(\lambda x.(e\ x)) &= \begin{cases}
-\eta e &\text{iff } x \not \in \mathcal{F}e
+\eta(\lambda x.(e\ x)) &= \begin{cases}\eta e &\text{iff } x \not \in \mathcal{F}e
 \\
 (\lambda x .\eta(e\ x)) &\text{otherwise}
 \end{cases}
@@ -194,6 +194,7 @@ $$
 * Only `letrec` can bind recursive functions.
 
 Given
+
 $$
 \begin{align*}
 l &= (\mathtt{letrec}\ (b_0\dots b_n)\ e)
