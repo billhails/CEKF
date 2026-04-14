@@ -163,13 +163,45 @@ $$
 \end{align*}
 $$
 
-## Inlining
+## Inline $\mathcal{I}$
 
 A function is safe to inline if:
 
 1. it is below a (tunable) size limit.
 2. it is not recursive.
 3. it only occurs once, and that occurrence is at a call site.
+
+Once a function $x$ is determined to be safe, inlining is just $\mathcal{S}[x/\lambda y.e]$.
+
+$$
+\begin{align*}
+\mathcal{I}\mathtt{C} &= \mathtt{C}
+\\
+\mathcal{I}x &= x
+\\
+\mathcal{I}(\mathtt{if}\ e_0\ e_1\ e_2) &=
+    (\mathtt{if}\ \mathcal{I}e_0\ \mathcal{I}e_1\ \mathcal{I}e_2)
+\\
+\mathcal{I}(\circ\ e_0\ e_1) &= (\circ\ \mathcal{I}e_0\ \mathcal{I}e_1)
+\\
+\mathcal{I}(e_0\ e_1) &= (\mathcal{I}e_0\ \mathcal{I}e_1)
+\\
+\mathcal{I}(\lambda x.e) &= (\lambda x.\mathcal{I}e)
+\\
+\mathcal{I}(\mathtt{letrec}\ ((x_0:\ \lambda_0)\dots(x_n:\ \lambda_n))\ e) &=
+    (\mathtt{letrec}\ ((x_0:\ \mathcal{S^*I}\lambda_0)\dots(x_n:\ \mathcal{S^*I}\lambda_n)\ \mathcal{S^*I}e)
+\\
+\text{where}
+\\
+\mathcal{S^*}y &= \mathcal{Scs}[x_i/\lambda_i]y\ \forall(x_i:\ \lambda_i) \in R
+\\
+R &= \set{(x_i:\ \lambda_i) \in \set{(x_0:\ \lambda_0)\dots(x_n:\ \lambda_n)}| \text{safe}\ \lambda_i}
+\\
+\text{safe}\ \lambda &= \mathcal{Z}\lambda < \mathtt{MAX} \land \lnot\mathcal{R}\lambda
+\end{align*}
+$$
+
+Except the decision of whether to substitute based on number of occurrences is left to a variant of $\mathcal{S}$ $\mathcal{Scs}$.
 
 ### Size $\mathcal{Z}$
 
@@ -195,10 +227,12 @@ $$
 \end{align*}
 $$
 
-### Non-Recursive
+### Recursive $\mathcal{R}$
 
 Only `letrec` can bind recursive functions, and even mutual recursion is limited
-to the scope of a single `letrec`. So given:
+to the bindings of a single `letrec`.
+
+So given:
 
 $$
 \begin{align*}
@@ -209,11 +243,16 @@ B &= \set{b_0\dots b_n} = \set{(x_0:\ \lambda y_0.e_0)\dots(x_n:\ \lambda y_n.e_
 K &= \set{x_0\dots x_n}
 \\
 M &= \set{x_i \mapsto x_j | x_j \in \mathcal{FV}(\lambda y_i.e_i) \cap K}\ \forall (x_i:\ \lambda y_i.e_i)\in B
-\\
 \end{align*}
 $$
 
-Then an $x$ bound by $l$ is recursive iff $(x \mapsto x) \in M^+$.
+Then
+
+$$
+\mathcal{R}x = (x \mapsto x) \in M^+
+$$
+
+($M^+$ is the transitive closure of $M$).
 
 ### Count $\mathcal{C}_x$
 
