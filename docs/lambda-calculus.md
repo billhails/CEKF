@@ -1,6 +1,12 @@
 # Essential Lambda Calculus
 
+Just a little digression, I think it's interesting
+how much of the transformational logic in the pipeline
+can be reduced to pure math on a lambda calculus.
+
 ## Our grammar
+
+This is basically the lambda calculus, with added `constant`, `conditional`, `primapp` and `letrec`.
 
 $$
 \begin{align*}
@@ -10,7 +16,7 @@ e\ &\mathtt{::=\ } \mathtt{C} & \texttt{[constant]}
 \\
 &\mathtt{|\ \ \ \ } (\mathtt{if}\ e\ e\ e) & \texttt{[conditional]}
 \\
-&\mathtt{|\ \ \ \ } (\oplus\ e\ e) & \texttt{[primitive application]}
+&\mathtt{|\ \ \ \ } (\oplus\ e\ e) & \texttt{[primapp]}
 \\
 &\mathtt{|\ \ \ \ } (e\ e) & \texttt{[application]}
 \\
