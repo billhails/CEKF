@@ -46,6 +46,7 @@ MinExp *makeDoneCont(ParserInfo PI, int status, bool hasArg) {
     return lambda;
 }
 
+// returns the the free variables in exp that are in keys
 SymbolSet *computeRoots(SymbolSet *keys, MinExp *exp) {
     SymbolSet *free = newSymbolSet();
     int save = PROTECT(free);
@@ -55,6 +56,7 @@ SymbolSet *computeRoots(SymbolSet *keys, MinExp *exp) {
     return free;
 }
 
+// returns the binding keys
 SymbolSet *getAllKeys(MinBindings *bindings) {
     if (bindings == NULL)
         return newSymbolSet();
@@ -65,6 +67,8 @@ SymbolSet *getAllKeys(MinBindings *bindings) {
     return set;
 }
 
+// returns a map from binding symbol to references to
+// binding symbols (what calls what)
 SymbolSetMap *buildDependencyGraph(MinBindings *bindings, SymbolSet *keys) {
     if (bindings == NULL) {
         return newSymbolSetMap();
