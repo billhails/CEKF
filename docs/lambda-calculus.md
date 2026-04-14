@@ -44,10 +44,10 @@ $$
 \\
 \mathcal{F}(e_0\ e_1) &= \mathcal{F}e_0\cup \mathcal{F}e_1
 \\
-\mathcal{F}(\lambda x.e) &= \mathcal{F}(e) - \set{ x }
+\mathcal{F}(\lambda x.e) &= \mathcal{F}e - \set{ x }
 \\
 \mathcal{F}(\mathtt{letrec}\ (( x_0:\ \lambda_0)\dots( x_n:\ \lambda_n))\ e) &=
-\Big(\bigcup_{i=0}^{i=n}\mathcal{F}\lambda_i \cup \mathcal{F}(e)\Big) - \set{x_0\dots x_n}
+\Big( \mathcal{F}e\cup\bigcup_{i=0}^{i=n}\mathcal{F}\lambda_i\Big) - \set{x_0\dots x_n}
 \end{align*}
 $$
 
@@ -109,7 +109,7 @@ $$
 
 ## Eta Reduction $\eta$
 
-`fn a(x) { b(x) } == b`, basically.
+$\lambda x.(e x) = e$, basically.
 
 $$
 \begin{align*}
@@ -163,7 +163,7 @@ $$
 \end{align*}
 $$
 
-## Safety
+## Inlining
 
 A function is safe to inline if:
 
@@ -173,7 +173,7 @@ A function is safe to inline if:
 
 ### Size $\mathcal{Z}$
 
-Actually this is pretty arbitrary.
+This is totally arbitrary, though more refined approaches may exist.
 
 $$
 \begin{align*}
@@ -189,7 +189,7 @@ $$
 \\
 \mathcal{Z}(\lambda x.e) &= 1 + \mathcal{Z}e
 \\
-\mathcal{Z}(\mathtt{letrec}\ (b_0\dots b_n)\ e) &= 1 + \Sigma_{i=0}^{i=n}\mathcal{Z}b_i + \mathcal{Z}e
+\mathcal{Z}(\mathtt{letrec}\ (b_0\dots b_n)\ e) &= 1 + \sum_{i=0}^{i=n}\mathcal{Z}b_i + \mathcal{Z}e
 \\
 \mathcal{Z}(x:\ \lambda y.e) &= 1+ \mathcal{Z}e
 \end{align*}
@@ -197,9 +197,8 @@ $$
 
 ### Non-Recursive
 
-* Only `letrec` can bind recursive functions.
-
-Given
+Only `letrec` can bind recursive functions, and even mutual recursion is limited
+to the scope of a single `letrec`. So given:
 
 $$
 \begin{align*}
@@ -209,12 +208,12 @@ B &= \set{b_0\dots b_n} = \set{(x_0:\ \lambda y_0.e_0)\dots(x_n:\ \lambda y_n.e_
 \\
 K &= \set{x_0\dots x_n}
 \\
-M &= \set{x_i \mapsto x_j | x_j \in \mathcal{FV}(\lambda y_i.e_i) \cap K}\ \forall b_i\in B
+M &= \set{x_i \mapsto x_j | x_j \in \mathcal{FV}(\lambda y_i.e_i) \cap K}\ \forall (x_i:\ \lambda y_i.e_i)\in B
 \\
 \end{align*}
 $$
 
-Then $x$ is recursive if $(x \mapsto x) \in M^+$.
+Then an $x$ bound by $l$ is recursive iff $(x \mapsto x) \in M^+$.
 
 ### Count $\mathcal{C}_x$
 
@@ -247,7 +246,7 @@ $$
 \mathcal{C}_x e &\text{otherwise}
 \end{cases}
 \\
-\mathcal{C}_x(\mathtt{letrec}\ (b_0\dots b_n)\ e) &= \mathcal{C}_x e + \Sigma_{i=0}^{i=n}\mathcal{C}_x b_i
+\mathcal{C}_x(\mathtt{letrec}\ (b_0\dots b_n)\ e) &= \mathcal{C}_x e + \sum_{i=0}^{i=n}\mathcal{C}_x b_i
 \\
 \mathcal{C}_x(y:\ \lambda z.e) &= \begin{cases}
 0 & \text{if } x = y \text{ (shadowing)}
