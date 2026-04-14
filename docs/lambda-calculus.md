@@ -12,19 +12,19 @@ $$
 \begin{align*}
 e\ &\mathtt{::=\ } \mathtt{C} & \texttt{[constant]}
 \\
-&\mathtt{|\ \ \ \ } x & \texttt{[variable]}
+&\mathtt{|\ \ \ \ \ } x & \texttt{[variable]}
 \\
-&\mathtt{|\ \ \ \ } (\mathtt{if}\ e\ e\ e) & \texttt{[conditional]}
+&\mathtt{|\ \ \ \ \ } (\mathtt{if}\ e\ e\ e) & \texttt{[conditional]}
 \\
-&\mathtt{|\ \ \ \ } (\oplus\ e\ e) & \texttt{[primapp]}
+&\mathtt{|\ \ \ \ \ } (\circ\ e\ e) & \texttt{[primapp]}
 \\
-&\mathtt{|\ \ \ \ } (e\ e) & \texttt{[application]}
+&\mathtt{|\ \ \ \ \ } (e\ e) & \texttt{[application]}
 \\
-&\mathtt{|\ \ \ \ } (\lambda x.e) & \texttt{[lambda]}
+&\mathtt{|\ \ \ \ \ } (\lambda x.e) & \texttt{[lambda]}
 \\
-&\mathtt{|\ \ \ \ } (\mathtt{letrec}\ (b_0\dots b_n)\ e) & \texttt{[letrec]}
+&\mathtt{|\ \ \ \ \ } (\mathtt{letrec}\ (b_0\dots b_n)\ e) & \texttt{[letrec]}
 \\
-b\ &\mathtt{::=\ } ( x\ \lambda y.e ) & \texttt{[letrec binding]}
+b\ &\mathtt{::=\ } ( x:\ \lambda y.e ) & \texttt{[letrec binding]}
 \end{align*}
 $$
 
@@ -40,13 +40,13 @@ $$
 \\
 \mathcal{F}(\mathtt{if}\ e_0\ e_1\ e_2) &= \mathcal{F}e_0\cup \mathcal{F}e_1\cup \mathcal{F}e_2
 \\
-\mathcal{F}(\oplus\ e_0\ e_1) &= \mathcal{F}e_0\cup \mathcal{F}e_1
+\mathcal{F}(\circ\ e_0\ e_1) &= \mathcal{F}e_0\cup \mathcal{F}e_1
 \\
 \mathcal{F}(e_0\ e_1) &= \mathcal{F}e_0\cup \mathcal{F}e_1
 \\
 \mathcal{F}(\lambda x.e) &= \mathcal{F}(e) - \set{ x }
 \\
-\mathcal{F}(\mathtt{letrec}\ (( x_0\ \lambda_0)\dots( x_n\ \lambda_n))\ e) &=
+\mathcal{F}(\mathtt{letrec}\ (( x_0:\ \lambda_0)\dots( x_n:\ \lambda_n))\ e) &=
 \Big(\bigcup_{i=0}^{i=n}\mathcal{F}\lambda_i \cup \mathcal{F}(e)\Big) - \set{x_0\dots x_n}
 \end{align*}
 $$
@@ -63,7 +63,7 @@ $$
 \\
 \mathcal{S}[x/e](\mathtt{if}\ e_0\ e_1\ e_2) &= (\mathtt{if}\ \mathcal{S}[x/e]e_0\ \mathcal{S}[x/e]e_1\ \mathcal{S}[x/e]e_2)
 \\
-\mathcal{S}[x/e](\oplus\ e_0\ e_1) &= (\oplus\ \mathcal{S}[x/e]e_0\ \mathcal{S}[x/e]e_1)
+\mathcal{S}[x/e](\circ\ e_0\ e_1) &= (\circ\ \mathcal{S}[x/e]e_0\ \mathcal{S}[x/e]e_1)
 \\
 \mathcal{S}[x/e](e_0\ e_1) &= (\mathcal{S}[x/e]e_0\ \mathcal{S}[x/e]e_1)
 \\
@@ -74,9 +74,9 @@ $$
 \mathcal{S}[x/e](\mathtt{letrec}\ (b_0\dots b_n)\ e) &=
 (\mathtt{letrec}\ (\mathcal{S}[x/e]b_0\dots \mathcal{S}[x/e]b_n)\ \mathcal{S}[x/e]e)
 \\
-\mathcal{S}[x/e]( y\ \lambda z.e) &= \begin{cases} ( y\ \lambda z.\mathcal{S}[x/e]e) &\text{if } x \not \in \set{y,z}
+\mathcal{S}[x/e]( y:\ \lambda z.e) &= \begin{cases} ( y:\ \lambda z.\mathcal{S}[x/e]e) &\text{if } x \not \in \set{y,z}
 \\
-( y\ \lambda z.e) &\text{otherwise}
+( y:\ \lambda z.e) &\text{otherwise}
 \end{cases}
 \end{align*}
 $$
@@ -93,7 +93,7 @@ $$
 \\
 \beta (\mathtt{if}\ e_0\ e_1\ e_2) &= (\mathtt{if}\ \beta e_0\ \beta e_1\ \beta e_2)
 \\
-\beta (\oplus\ e_0\ e_1) &= (\oplus\ \beta e_0\ \beta e_1)
+\beta (\circ\ e_0\ e_1) &= (\circ\ \beta e_0\ \beta e_1)
 \\
 \beta((\lambda x.e_0)\ e_1) &= \mathcal{S}[x/\beta e_1]\beta e_0
 \\
@@ -103,7 +103,7 @@ $$
 \\
 \beta (\mathtt{letrec}\ (b_0\dots b_n)\  e) &= (\mathtt{letrec}\ (\beta b_0 \dots \beta b_n)\ \beta e)
 \\
-\beta ( x\ \lambda y.e ) &= ( x\  \lambda y . \beta e )
+\beta ( x:\ \lambda y.e ) &= ( x:\  \lambda y . \beta e )
 \end{align*}
 $$
 
@@ -119,7 +119,7 @@ $$
 \\
 \eta (\mathtt{if}\ e_0\ e_1\ e_2) &= (\mathtt{if}\ \eta e_0\  \eta e_1\ e_2)
 \\
-\eta (\oplus\ e_0\ e_1) &= (\oplus\ \eta e_0\  \eta e_1)
+\eta (\circ\ e_0\ e_1) &= (\circ\ \eta e_0\  \eta e_1)
 \\
 \eta (e_0\ e_1) &= (\eta e_0\  \eta e_1)
 \\
@@ -132,7 +132,7 @@ $$
 \\
 \eta (\mathtt{letrec}\ (b_0\dots b_n)\  e) &= (\mathtt{letrec}\ (\eta b_0 \dots \eta b_n)\ \eta e)
 \\
-\eta ( x\ \lambda y.e ) &= ( x\  \lambda y . \eta e )
+\eta ( x:\ \lambda y.e ) &= ( x:\  \lambda y . \eta e )
 \end{align*}
 $$
 
@@ -148,14 +148,14 @@ $$
 \\
 \mathcal{T}(\mathtt{if}\ e_0\ e_1\ e_2) &= (\mathtt{if}\ \mathcal{T}e_0\ \mathcal{T}e_1\ \mathcal{T}e_2)
 \\
-\mathcal{T}(\oplus\ e_0\ e_1) &= (\oplus\ \mathcal{T}e_0\ \mathcal{T}e_1)
+\mathcal{T}(\circ\ e_0\ e_1) &= (\circ\ \mathcal{T}e_0\ \mathcal{T}e_1)
 \\
 \mathcal{T}(e_0\ e_1) &= (\mathcal{T}e_0\ \mathcal{T}e_1)
 \\
 \mathcal{T}(\lambda x . e) &= (\lambda x.\mathcal{T}e)
 \\
-\mathcal{T}(\mathtt{letrec}\ (( x_0\ \lambda_0)\dots ( x_n\ \lambda_n))\ e) &=
-(\mathtt{letrec}\ (\set{(x_j\ \mathcal{T}\lambda_j) | x_j \not \in
+\mathcal{T}(\mathtt{letrec}\ (( x_0:\ \lambda_0)\dots ( x_n:\ \lambda_n))\ e) &=
+(\mathtt{letrec}\ (\set{(x_j:\ \mathcal{T}\lambda_j) | x_j \not \in
 \bigcup_{i=0}^{i=n}\mathcal{F}\mathcal{T}\lambda_i \cup \mathcal{F}\mathcal{T}e
 })\ \mathcal{T}e)
 \\
@@ -183,7 +183,7 @@ $$
 \\
 \mathcal{Z}(\mathtt{if}\ e_0\ e_1\ e_2) &= 1 + \mathcal{Z}e_0 + \mathcal{Z}e_1 + \mathcal{Z}e_2
 \\
-\mathcal{Z}(\oplus\ e_0\ e_1) &= 1 + \mathcal{Z}e_0 + \mathcal{Z}e_1
+\mathcal{Z}(\circ\ e_0\ e_1) &= 1 + \mathcal{Z}e_0 + \mathcal{Z}e_1
 \\
 \mathcal{Z}(e_0\ e_1) &= 1 + \mathcal{Z}e_0 + \mathcal{Z}e_1
 \\
@@ -191,7 +191,7 @@ $$
 \\
 \mathcal{Z}(\mathtt{letrec}\ (b_0\dots b_n)\ e) &= 1 + \Sigma_{i=0}^{i=n}\mathcal{Z}b_i + \mathcal{Z}e
 \\
-\mathcal{Z}(x\ \lambda y.e) &= 1+ \mathcal{Z}e
+\mathcal{Z}(x:\ \lambda y.e) &= 1+ \mathcal{Z}e
 \end{align*}
 $$
 
@@ -205,7 +205,7 @@ $$
 \begin{align*}
 l &= (\mathtt{letrec}\ (b_0\dots b_n)\ e)
 \\
-B &= \set{b_0\dots b_n} = \set{(x_0\ \lambda y_0.e_0)\dots(x_n\ \lambda y_n.e_n)}
+B &= \set{b_0\dots b_n} = \set{(x_0:\ \lambda y_0.e_0)\dots(x_n:\ \lambda y_n.e_n)}
 \\
 K &= \set{x_0\dots x_n}
 \\
@@ -232,7 +232,7 @@ $$
 \\
 \mathcal{C}_x(\mathtt{if}\ e_0\ e_1\ e_2) &= \mathcal{C}_xe_0 +\mathcal{C}_xe_1 +  \mathcal{C}_xe_2
 \\
-\mathcal{C}_x(\oplus\ e_0\ e_1) &= \mathcal{C}_xe_0 + \mathcal{C}_xe_1
+\mathcal{C}_x(\circ\ e_0\ e_1) &= \mathcal{C}_xe_0 + \mathcal{C}_xe_1
 \\
 \mathcal{C}_x(e_0\ e_1) &=\begin{cases}
  1 + \mathcal{C}_x e_1 &\text{if }x=e_0
@@ -249,7 +249,7 @@ $$
 \\
 \mathcal{C}_x(\mathtt{letrec}\ (b_0\dots b_n)\ e) &= \mathcal{C}_x e + \Sigma_{i=0}^{i=n}\mathcal{C}_x b_i
 \\
-\mathcal{C}_x(y\ \lambda z.e) &= \begin{cases}
+\mathcal{C}_x(y:\ \lambda z.e) &= \begin{cases}
 0 & \text{if } x = y \text{ (shadowing)}
 \\
 \mathcal{C}_x\lambda z.e &\text{otherwise}
