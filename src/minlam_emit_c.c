@@ -71,20 +71,19 @@ static void printEmitBuffer(FILE *, void *);
 static inline Opaque *newOpaque_EmitBuffer();
 static inline char *opaqueEmitBufferContent(Opaque *container);
 static inline FILE *opaqueEmitBufferFh(Opaque *container);
-static inline FILE *FH(CEmitterContext *ctx);
+static inline FILE *FH(EC *ctx);
 
-/////////////////////////////////////////////////////
-// Forward declarations defined in minlam_emit.inc
-// and used in this file
-/////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////
+// Procedures defined in minlam_emit.inc and used in this file
+///////////////////////////////////////////////////////////////
 
 static ER *emitSimpleExp(MinExp *, EC *);
 static void emitMinExp(MinExp *, EC *);
 static void releaseSlot(ER *, EmitterContext *);
 
-/////////////////////////////////////////////////////
-// Forward declarations used by minlam_emit.inc
-/////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////
+// Procedures defined in this file and used by minlam_emit.inc
+///////////////////////////////////////////////////////////////
 
 static EC *extendContext(EC *);
 static EC *extendContextForLambda(HashSymbol *, EC *);
@@ -99,7 +98,7 @@ static void emitCallBuiltin(BuiltIn *, ER *, ER *, EC *);
 static void emitCharacter(Character, EC *);
 static void emitClosureNew(ER *, SCharArray *, EC *);
 static void emitClosureSetEnv(ER *, ER *, EC *);
-static void emitConstructVec(ER *, int, CResultArray *, EC *);
+static void emitConstructVec(ER *, int, RA *, EC *);
 static void emitDone(int, EC *);
 static void emitIfThenElse(ER *, MinExp *, MinExp *, EC *);
 static void emitJumpToLambda(ER *, EC *);
@@ -123,6 +122,8 @@ static inline ER *newResultSlotSymbol(HashSymbol *s);
                 CPI(node).fileName)
 
 /////////////////////////////////////////////////////
+// END Forward Declarations
+/////////////////////////////////////////////////////
 
 static inline RA *newRA() { return newCResultArray(); }
 
@@ -144,9 +145,7 @@ static inline FILE *opaqueEmitBufferFh(Opaque *container) {
     return ((EmitBuffer *)(container->data))->fh;
 }
 
-static inline FILE *FH(CEmitterContext *ctx) {
-    return opaqueEmitBufferFh(ctx->body);
-}
+static inline FILE *FH(EC *ctx) { return opaqueEmitBufferFh(ctx->body); }
 
 static EmitBuffer *newEmitBuffer() {
     EmitBuffer *result = ALLOCATE(EmitBuffer);
@@ -388,8 +387,7 @@ static void emitJumpToLambda(ER *target, EC *ctx) {
     fprintf(FH(ctx), "goto *getValue_Addr(%s);\n", resultText(target, ctx));
 }
 
-static void emitConstructVec(ER *target, int count, CResultArray *results,
-                             EC *ctx) {
+static void emitConstructVec(ER *target, int count, RA *results, EC *ctx) {
     fprintf(FH(ctx), "%s = make_vec(%d", resultText(target, ctx), count);
     for (Index i = results->size; i > 0; i--) {
         fprintf(FH(ctx), ", %s", resultText(results->entries[i - 1], ctx));
@@ -736,7 +734,7 @@ void emitCProgram(MinExp *node, BuiltIns *builtIns, FILE *out) {
     PROTECT(heap);
     EmitterContext context = newEmitterContext(main, builtIns, heap);
     PROTECT(context.slots);
-    CEmitterContext *ctx = newCEmitterContext(body, context);
+    EC *ctx = newCEmitterContext(body, context);
     REPLACE_PROTECT(save, ctx);
     fprintf(out, "// GENERATED CODE DO NOT EDIT\n");
     fprintf(out, "#include \"minlam_runtime.h\"\n");
