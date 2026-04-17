@@ -188,7 +188,7 @@ K &= \set{x_0\dots x_n} &\text{(2)}
 \\
 B &= \mathcal{F}\mathcal{T}e \cap K &\text{(4)}
 \\
-L &= B \cup \bigcup_{n=j}^{n=k} \vec{D}^{+}_n(B) &\text{(5)}
+L &= B \cup \bigcup_{x\in B} \vec{D}^{+}(x) &\text{(5)}
 \\
 \mathcal{T}l &=
 (\mathtt{letrec}\ (\set{(x_i:\ \mathcal{T}\lambda_i) | x_i \in L}) \mathcal{T}e)
@@ -201,9 +201,9 @@ The preliminaries are just navigating to the `letrec`. Having got there:
 
 1. Let $l$ be a `letrec` with keys $x_0\dots x_n$, lambdas $\lambda_0\dots\lambda_n$ and body $e$.
 2. Let $K$ be the set of just the keys of $l$.
-3. Let $\vec{D}$ be the relation of each $x_i$ in $K$ to other $x_j\dots x_k$ in $K$ where $x_j\dots x_k$ are free in $x_i$'s associated tree-shook lambda $\mathcal{T}\lambda_i$.
+3. Let $\vec{D}$ be the relation of each $x_i$ in $K$ to a set of other $\set{x_j\dots x_k}$ in $K$ where $x_j\dots x_k$ are free in $x_i$'s associated tree-shook lambda $\mathcal{T}\lambda_i$. Essentially a map from the lambda name to any letrec bound variables in its body.
 4. Let $B$ be the set of elements of $K$ that are free in the tree-shook body $\mathcal{T}e$.
-5. Let $L$ be the set of live variables: those $x_i$ in $K$ that are reachable from $e$ either directly or via the transitive closure $\vec{D}^{+}$.
+5. Let $L$ be the set of live variables: those $x_i$ in $K$ that are reachable from $e$ either directly or via the transitive closure of $\vec{D}$.
 
 Then $\mathcal{T}l$ is the tree-shook letrec $l$, With bindings restricted to members of $L$.
 
