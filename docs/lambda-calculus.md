@@ -156,7 +156,6 @@ $$
 \\
 \mathcal{T}(\lambda x . e) &= (\lambda x.\mathcal{T}e)
 \\
-L &=
 \mathcal{T}(\mathtt{letrec}\ (( x_0:\ \lambda_0)\dots ( x_n:\ \lambda_n))\ e) &=
 (\mathtt{letrec}\ (\set{(x_j:\ \mathcal{T}\lambda_j) | x_j \in
 \bigcup_{i=0}^{i=n}\mathcal{F}\mathcal{T}\lambda_i \cup \mathcal{F}\mathcal{T}e
