@@ -51,46 +51,46 @@ $$
 \end{align*}
 $$
 
-1. the free variables in a lambda are the free variables in its body minus its argument.
-2. The free variablers in a `letrec` are the free variables in its lambdas (1) plus the free variables in its body, minus the letrec bindings.
+1. The free variables in a lambda are the free variables in its body minus its argument.
+2. The free variablers in a `letrec` are the free variables in its lambdas (1) plus the free variables in its body, minus the variables bound by the letrec itself.
 
-## Substitution $\mathcal{S}[x/e]$
+## Substitution $\mathcal{S}_{[x/e]}$
 
 Substitution only replaces free variables.
 
 $$
 \begin{align*}
-\mathcal{S}[x/e]\mathtt{C} &= \mathtt{C}
+\mathcal{S}_{[x/e]}\mathtt{C} &= \mathtt{C}
 \\
-\mathcal{S}[x/e]x &= \begin{cases}
+\mathcal{S}_{[x/e]}x &= \begin{cases}
 x&\text{if we are only substituting at call sites} &\text(1)
 \\
 e&\text{otherwise}
 \end{cases}
 \\
-\mathcal{S}[x/e](\mathtt{if}\ e_0\ e_1\ e_2) &= (\mathtt{if}\ \mathcal{S}[x/e]e_0\ \mathcal{S}[x/e]e_1\ \mathcal{S}[x/e]e_2)
+\mathcal{S}_{[x/e]}(\mathtt{if}\ e_0\ e_1\ e_2) &= (\mathtt{if}\ \mathcal{S}_{[x/e]}e_0\ \mathcal{S}_{[x/e]}e_1\ \mathcal{S}_{[x/e]}e_2)
 \\
-\mathcal{S}[x/e](\circ\ e_0\ e_1) &= (\circ\ \mathcal{S}[x/e]e_0\ \mathcal{S}[x/e]e_1)
+\mathcal{S}_{[x/e]}(\circ\ e_0\ e_1) &= (\circ\ \mathcal{S}_{[x/e]}e_0\ \mathcal{S}_{[x/e]}e_1)
 \\
-\mathcal{S}[x/e](e_0\ e_1) &= \begin{cases}
-(e\ \mathcal{S}[x/e]e_1) &\text{if }x = e_0 &\text{(2)}
+\mathcal{S}_{[x/e]}(e_0\ e_1) &= \begin{cases}
+(e\ \mathcal{S}_{[x/e]}e_1) &\text{if }x = e_0 &\text{(2)}
 \\
-(\mathcal{S}[x/e]e_0\ \mathcal{S}[x/e]e_1) &\text{otherwise}
+(\mathcal{S}_{[x/e]}e_0\ \mathcal{S}_{[x/e]}e_1) &\text{otherwise}
 \end{cases}
 \\
-\mathcal{S}[x/e](\lambda y.e_0) &= \begin{cases}
+\mathcal{S}_{[x/e]}(\lambda y.e_0) &= \begin{cases}
 (\lambda y.e_0) &\text{if }x = y &\text{(3)}
 \\
-(\lambda y.\mathcal{S}[x/e]e_0)&\text{otherwise}
+(\lambda y.\mathcal{S}_{[x/e]}e_0)&\text{otherwise}
 \end{cases}
 \\
-\mathcal{S}[x/e](\mathtt{letrec}\ (b_0\dots b_n)\ e) &=
-(\mathtt{letrec}\ (\mathcal{S}[x/e]b_0\dots \mathcal{S}[x/e]b_n)\ \mathcal{S}[x/e]e)
+\mathcal{S}_{[x/e]}(\mathtt{letrec}\ (b_0\dots b_n)\ e) &=
+(\mathtt{letrec}\ (\mathcal{S}_{[x/e]}b_0\dots \mathcal{S}_{[x/e]}b_n)\ \mathcal{S}_{[x/e]}e)
 \\
-\mathcal{S}[x/e]( y:\ \lambda z.e) &= \begin{cases}
+\mathcal{S}_{[x/e]}( y:\ \lambda z.e) &= \begin{cases}
 ( y:\ \lambda z.e) &\text{if } x \in \set{y,z_0\dots z_n} &\text{(4)}
 \\
-( y_i:\ \lambda z.\mathcal{S}[x/e]e) &\text{otherwise}
+( y_i:\ \lambda z.\mathcal{S}_{[x/e]}e) &\text{otherwise}
 \end{cases}
 \end{align*}
 $$
@@ -114,7 +114,7 @@ $$
 \\
 \beta (\circ\ e_0\ e_1) &= (\circ\ \beta e_0\ \beta e_1)
 \\
-\beta((\lambda x.e_0)\ e_1) &= \mathcal{S}[x/\beta e_1]\beta e_0 &\text{(1)}
+\beta((\lambda x.e_0)\ e_1) &= \mathcal{S}_{[x/\beta e_1]}\beta e_0 &\text{(1)}
 \\
 \beta (e_0\ e_1) &= (\beta e_0\ \beta e_1)
 \\
@@ -219,7 +219,7 @@ A function is safe to inline if:
 2. it is not recursive.
 3. it only occurs once, and that occurrence is at a call site.
 
-Once a function $x$ is determined to be safe, inlining is just $\mathcal{S}[x/\lambda y.e]$.
+Once a function $x$ is determined to be safe, inlining is just $\mathcal{S}_{[x/\lambda y.e]}$.
 
 $$
 \begin{align*}
@@ -241,7 +241,7 @@ $$
 \\
 \text{where}
 \\
-\mathcal{S^{\ast}}y &= \mathcal{Scs}[x_i/\lambda_i]y\ \forall(x_i:\ \lambda_i) \in R
+\mathcal{S^{\ast}}y &= \mathcal{Scs}_{[x_i/\lambda_i]}y\ \forall(x_i:\ \lambda_i) \in R
 \\
 R &= \set{(x_i:\ \lambda_i) \in \set{(x_0:\ \lambda_0)\dots(x_n:\ \lambda_n)}| \text{safe}\ \lambda_i}
 \\
