@@ -44,12 +44,15 @@ $$
 \\
 \mathcal{F}(e_0\ e_1) &= \mathcal{F}e_0\cup \mathcal{F}e_1
 \\
-\mathcal{F}(\lambda x.e) &= \mathcal{F}e - \set{ x }
+\mathcal{F}(\lambda x.e) &= \mathcal{F}e - \set{ x } &\text{(1)}
 \\
 \mathcal{F}(\mathtt{letrec}\ (( x_0:\ \lambda_0)\dots( x_n:\ \lambda_n))\ e) &=
-\Big( \mathcal{F}e\cup\bigcup_{i=0}^{i=n}\mathcal{F}\lambda_i\Big) - \set{x_0\dots x_n}
+\Big( \mathcal{F}e\cup\bigcup_{i=0}^{i=n}\mathcal{F}\lambda_i\Big) - \set{x_0\dots x_n} &\text(2)
 \end{align*}
 $$
+
+1. the free variables in a lambda are the free variables in its body minus its argument.
+2. The free variablers in a `letrec` are the free variables in its lambdas (1) plus the free variables in its body, minus the letrec bindings.
 
 ## Substitution $\mathcal{S}[x/e]$
 
@@ -59,16 +62,24 @@ $$
 \begin{align*}
 \mathcal{S}[x/e]\mathtt{C} &= \mathtt{C}
 \\
-\mathcal{S}[x/e]x &= e
+\mathcal{S}[x/e]x &= \begin{cases}
+x&\text{if we are only substituting at call sites} &\text(1)
+\\
+e&\text{otherwise}
+\end{cases}
 \\
 \mathcal{S}[x/e](\mathtt{if}\ e_0\ e_1\ e_2) &= (\mathtt{if}\ \mathcal{S}[x/e]e_0\ \mathcal{S}[x/e]e_1\ \mathcal{S}[x/e]e_2)
 \\
 \mathcal{S}[x/e](\circ\ e_0\ e_1) &= (\circ\ \mathcal{S}[x/e]e_0\ \mathcal{S}[x/e]e_1)
 \\
-\mathcal{S}[x/e](e_0\ e_1) &= (\mathcal{S}[x/e]e_0\ \mathcal{S}[x/e]e_1)
+\mathcal{S}[x/e](e_0\ e_1) &= \begin{cases}
+(e\ \mathcal{S}[x/e]e_1) &\text{if }x = e_0 &\text{(2)}
+\\
+(\mathcal{S}[x/e]e_0\ \mathcal{S}[x/e]e_1) &\text{otherwise}
+\end{cases}
 \\
 \mathcal{S}[x/e](\lambda y.e_0) &= \begin{cases}
-(\lambda y.e_0) &\text{if }x = y
+(\lambda y.e_0) &\text{if }x = y &\text{(3)}
 \\
 (\lambda y.\mathcal{S}[x/e]e_0)&\text{otherwise}
 \end{cases}
@@ -76,12 +87,18 @@ $$
 \mathcal{S}[x/e](\mathtt{letrec}\ (b_0\dots b_n)\ e) &=
 (\mathtt{letrec}\ (\mathcal{S}[x/e]b_0\dots \mathcal{S}[x/e]b_n)\ \mathcal{S}[x/e]e)
 \\
-\mathcal{S}[x/e]( y:\ \lambda z.e) &= \begin{cases} ( y:\ \lambda z.\mathcal{S}[x/e]e) &\text{if } x \not \in \set{y,z}
+\mathcal{S}[x/e]( y:\ \lambda z.e) &= \begin{cases}
+( y:\ \lambda z.e) &\text{if } x \in \set{y,z_0\dots z_n} &\text{(4)}
 \\
-( y:\ \lambda z.e) &\text{otherwise}
+( y_i:\ \lambda z.\mathcal{S}[x/e]e) &\text{otherwise}
 \end{cases}
 \end{align*}
 $$
+
+1. The specific rule for application (2) handles call sites.
+2. We always substitute in this case.
+3. If $y$ is shadowing then don't substitute.
+4. All $z_0\dots z_n$ and $y$ are shadowing for a letrec binding.
 
 ## Beta Reduction $\beta$
 
@@ -97,7 +114,7 @@ $$
 \\
 \beta (\circ\ e_0\ e_1) &= (\circ\ \beta e_0\ \beta e_1)
 \\
-\beta((\lambda x.e_0)\ e_1) &= \mathcal{S}[x/\beta e_1]\beta e_0
+\beta((\lambda x.e_0)\ e_1) &= \mathcal{S}[x/\beta e_1]\beta e_0 &\text{(1)}
 \\
 \beta (e_0\ e_1) &= (\beta e_0\ \beta e_1)
 \\
@@ -108,6 +125,9 @@ $$
 \beta ( x:\ \lambda y.e ) &= ( x:\  \lambda y . \beta e )
 \end{align*}
 $$
+
+1. everything else is navigation, this is the only substitution $\mathcal{S}$
+in the specific case where the function is an anonymous lambda.
 
 ## Eta Reduction $\eta$
 
@@ -125,7 +145,8 @@ $$
 \\
 \eta (e_0\ e_1) &= (\eta e_0\  \eta e_1)
 \\
-\eta(\lambda x.(e\ x)) &= \begin{cases}\eta e &\text{iff } x \not \in \mathcal{F}e
+\eta(\lambda x.(e\ x)) &= \begin{cases}
+\eta e &\text{iff } x \not \in \mathcal{F}e &\text{(1)}
 \\
 (\lambda x .\eta(e\ x)) &\text{otherwise}
 \end{cases}
@@ -137,6 +158,8 @@ $$
 \eta ( x:\ \lambda y.e ) &= ( x:\  \lambda y . \eta e )
 \end{align*}
 $$
+
+1. The wrinkle is that we can only do the reduction if $x$ is not free in $e$.
 
 ## Tree Shaking $\mathcal{T}$
 
@@ -174,7 +197,7 @@ L &= B \cup \bigcup_{n=j}^{n=k} \vec{D}^{+}_n(B) &\text{(5)}
 \end{align*}
 $$
 
-The preeliminaries are just navigating to the `letrec`. Having got there:
+The preliminaries are just navigating to the `letrec`. Having got there:
 
 1. Let $l$ be a `letrec` with keys $x_0\dots x_n$, lambdas $\lambda_0\dots\lambda_n$ and body $e$.
 2. Let $K$ be the set of just the keys of $l$.
