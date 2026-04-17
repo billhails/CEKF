@@ -5,6 +5,7 @@
 * [CODEGEN](CODEGEN.md) Notes on the code generator utility.
 * [CPS COMPLETE GUIDE](CPS_COMPLETE_GUIDE.md) CPS transformation notes and optimization staging.
 * [ENV](ENV.md) Abandoned plan to have first-class environments.
+* [LANGUAGE IMPLEMENTATION ROADMAP](LANGUAGE_IMPLEMENTATION_ROADMAP.md) Priorities for making F♮ better suited to writing compilers, interpreters and other languages.
 * [LEXICAL ADDRESSING](LEXICAL_ADDRESSING.md) De-Bruijn indexing for fast variable look up.
 * [MACROS](MACROS.md) Initial thoughts on a simple macro system.
 * [MATCH](MATCH.md) Initial notes on the `match` and `cond` internal (lambda) constructs.
