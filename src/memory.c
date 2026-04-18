@@ -183,7 +183,15 @@ void initProtection(void) {
 /**
  * invoked by the REPLACE_PROTECT macro
  */
-void replaceProtect(Index i, Header *obj) { protected->stack[i] = obj; }
+void replaceProtect(Index i, Header *obj) {
+#ifdef SAFETY_CHECKS
+    if (i >= protected->sp) {
+        cant_happen("invalid REPLACE_PROTECT index %d (sp=%d)", i,
+                    protected->sp);
+    }
+#endif
+    protected->stack[i] = obj;
+}
 
 /**
  * Invoked by the PROTECT macro.

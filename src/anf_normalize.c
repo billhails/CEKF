@@ -269,14 +269,17 @@ static AnfExp *normalizeMakeVec(ParserInfo PI, MinExprList *minMakeVec,
     int save = PROTECT(replacements);
     DEBUG("calling replaceMinArgs");
     AexpList *args = replaceMinArgs(minMakeVec, replacements);
-    int save2 = PROTECT(args);
+    int save2 = STARTPROTECT();
+    if (args != NULL)
+        PROTECT(args);
     Aexp *aexp = makeAexp_MakeVec(PI, countAexpList(args), args);
-    REPLACE_PROTECT(save2, aexp);
+    PROTECT(aexp);
     AnfExp *exp = wrapAexp(aexp);
-    REPLACE_PROTECT(save2, exp);
+    PROTECT(exp);
     exp = wrapTail(exp, tail);
-    REPLACE_PROTECT(save2, exp);
+    PROTECT(exp);
     AnfExp *res = letBind(exp, replacements);
+    UNPROTECT(save2);
     UNPROTECT(save);
     LEAVE(normalizeMakeVec);
     return res;
@@ -587,7 +590,7 @@ static CexpCondCases *normalizeCondCases(MinCondCases *cases) {
         return NULL;
     }
     CexpCondCases *res = NULL;
-    int save = PROTECT(NULL);
+    int save = STARTPROTECT();
     switch (cases->type) {
     case MINCONDCASES_TYPE_INTEGERS: {
         CexpIntCondCases *intCases =

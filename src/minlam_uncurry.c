@@ -532,7 +532,7 @@ static MinCondCases *uncurryMinCondCases(MinCondCases *node, IntMap *context) {
         LEAVE(uncurryMinCondCases);
         return NULL;
     }
-    int save = PROTECT(NULL);
+    int save = STARTPROTECT();
     MinCondCases *result = node;
     switch (node->type) {
     case MINCONDCASES_TYPE_INTEGERS: {
@@ -728,7 +728,7 @@ static MinExp *uncurryMinExp(MinExp *node, IntMap *context) {
         LEAVE(uncurryMinExp);
         return NULL;
     }
-    int save = PROTECT(NULL);
+    int save = STARTPROTECT();
     MinExp *result = node;
     switch (node->type) {
     case MINEXP_TYPE_AMB: {

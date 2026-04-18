@@ -396,7 +396,7 @@ MinExp *substCsMinExp(MinExp *node, MinExpTable *context) {
     if (node == NULL)
         return NULL;
     ENTER(substCsMinExp);
-    int save = PROTECT(NULL);
+    int save = STARTPROTECT();
     MinExp *result = node;
     switch (node->type) {
     case MINEXP_TYPE_AMB: {
@@ -576,7 +576,7 @@ static MinCondCases *substCsMinCondCases(MinCondCases *node,
     if (node == NULL)
         return NULL;
     ENTER(substCsMinCondCases);
-    int save = PROTECT(NULL);
+    int save = STARTPROTECT();
     MinCondCases *result = node;
     switch (node->type) {
     case MINCONDCASES_TYPE_INTEGERS: {

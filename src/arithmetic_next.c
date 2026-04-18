@@ -481,7 +481,7 @@ static Value n_add_big(Value left, Value right) {
     ASSERT(IS_BIGINT(left) || IS_BIGINT(right));
 
     BigInt *sum;
-    int save = PROTECT(NULL);
+    int save = STARTPROTECT();
     if (IS_BIGINT(left)) {
         if (IS_BIGINT(right)) {
             sum = addBigInt(getValue_Bigint(left), getValue_Bigint(right));
@@ -601,7 +601,7 @@ static Value n_sub_big(Value left, Value right) {
     ASSERT(IS_BIGINT(left) || IS_BIGINT(right));
 
     BigInt *difference;
-    int save = PROTECT(NULL);
+    int save = STARTPROTECT();
     if (IS_BIGINT(left)) {
         if (IS_BIGINT(right)) {
             difference =
@@ -724,7 +724,7 @@ static Value n_mul_big(Value left, Value right) {
     ASSERT(IS_BIGINT(left) || IS_BIGINT(right));
 
     BigInt *product;
-    int save = PROTECT(NULL);
+    int save = STARTPROTECT();
     if (IS_BIGINT(left)) {
         if (IS_BIGINT(right)) {
             product = mulBigInt(getValue_Bigint(left), getValue_Bigint(right));
@@ -845,7 +845,7 @@ static Value n_div_big(Value left, Value right) {
     ASSERT_INT(right);
     ASSERT(IS_BIGINT(left) || IS_BIGINT(right));
 
-    int save = PROTECT(NULL);
+    int save = STARTPROTECT();
     BigInt *remainder;
     BigInt *quotient;
     if (IS_BIGINT(left)) {
@@ -1017,7 +1017,7 @@ static Value n_mod_big(Value left, Value right) {
     ASSERT_INT(right);
     ASSERT(IS_BIGINT(left) || IS_BIGINT(right));
 
-    int save = PROTECT(NULL);
+    int save = STARTPROTECT();
     BigInt *mod;
     if (IS_BIGINT(left)) {
         if (IS_BIGINT(right)) {
@@ -1149,7 +1149,7 @@ static Value n_gcd_big(Value left, Value right) {
     ASSERT(IS_BIGINT(left) || IS_BIGINT(right));
 
     BigInt *gcd;
-    int save = PROTECT(NULL);
+    int save = STARTPROTECT();
     if (IS_BIGINT(left)) {
         if (IS_BIGINT(right)) {
             gcd = gcdBigInt(getValue_Bigint(left), getValue_Bigint(right));
@@ -1438,7 +1438,7 @@ static Value n_gcd_gaussian(Value left, Value right) {
             return n_gcd_not_supported(left, right);
         }
 
-        int save = PROTECT(NULL);
+        int save = STARTPROTECT();
         protectValue(arRat);
         protectValue(aiRat);
         protectValue(brRat);
@@ -1483,7 +1483,7 @@ static Value n_gcd_gaussian(Value left, Value right) {
         return res;
     }
 
-    int save = PROTECT(NULL);
+    int save = STARTPROTECT();
     protectValue(aReal);
     protectValue(aImag);
     protectValue(bReal);
@@ -1937,7 +1937,7 @@ static Value powIntInt(Value left, Value right) {
         return value_Stdint(1);
     }
 
-    int save = PROTECT(NULL);
+    int save = STARTPROTECT();
     bool isNegative = false;
     BigInt *absExponent = powAbsExponent(right, &isNegative);
     PROTECT(absExponent);
@@ -1974,7 +1974,7 @@ static Value powRealRat(Value base, Value exponent) {
     ASSERT_REAL(base);
     ASSERT_RATIONAL(exponent);
 
-    int save = PROTECT(NULL);
+    int save = STARTPROTECT();
     if (realIsNegative(base)) {
         Value posBase = n_mul(base, value_Stdint(-1));
         protectValue(posBase);

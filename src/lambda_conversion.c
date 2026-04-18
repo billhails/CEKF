@@ -1903,7 +1903,7 @@ static LamLam *convertCompositeBodies(ParserInfo PI, int nArgs,
     }
     LamExp **actions = NEW_ARRAY(LamExp *, nBodies);
     AstFargList **argLists = NEW_ARRAY(AstFargList *, nBodies);
-    int p = PROTECT(NULL);
+    int p = STARTPROTECT();
     AstCompositeFunction *f = fun;
     for (int i = 0; i < nBodies; i++, f = f->next) {
         AstFunction *func = f->function;
