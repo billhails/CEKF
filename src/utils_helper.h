@@ -49,6 +49,7 @@ SymbolArray *symbolSetToArray(SymbolSet *set);
 
 void psprintf(SCharArray *, const char *, ...)
     __attribute__((format(printf, 2, 3)));
+void vpsprintf(SCharArray *, const char *, va_list);
 
 #define SET_OBJECTMAP(map, key, value) setObjectMap(map, key, (Header *)(value))
 

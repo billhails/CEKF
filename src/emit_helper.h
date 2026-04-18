@@ -37,8 +37,6 @@ void emitter_assertNoLeakedSlots(EmitterContext *, int);
 #define ASSERT_SLOTS(ctx)
 #endif
 
-#endif
-
 static inline void setProtectionStatus(EmitterContext *to,
                                        EmitterContext *from) {
     to->needsUnprotect = to->needsUnprotect || from->needsUnprotect;
@@ -48,8 +46,11 @@ static inline void retrieveMaxReg(EmitterContext *to, EmitterContext *from) {
     to->maxReg = MAX(to->maxReg, from->maxReg);
 }
 
+Integer slotIndex(HashSymbol *key, EmitterContext *ctx);
 BuiltIn *emitter_findBuiltIn(MinApply *node, EmitterContext *ctx);
 HashSymbol *emitter_claimSlotSymbol(EmitterContext *ctx);
 void emitter_releaseSlotSymbol(HashSymbol *temp, EmitterContext *ctx);
 Slot *emitter_getSlot(HashSymbol *temp, EmitterContext *ctx);
 bool emitter_slotsAvailableBelow(int N, EmitterContext *ctx);
+
+#endif

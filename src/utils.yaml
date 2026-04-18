@@ -137,6 +137,12 @@ arrays:
         data:
             entries: uint
 
+    IndexArray:
+        meta:
+            brief: index array
+        data:
+            entries: index
+
 vectors:
     SCharVec:
         meta:

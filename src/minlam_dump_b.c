@@ -55,8 +55,11 @@ static void dumpFixupsAt(FILE *out, BFixupArray *fixups, Index index) {
 
     for (Index i = 0; i < countBFixupArray(fixups); i++) {
         BFixup *fixup = fixups->entries[i];
-        if (fixup->index == index) {
-            fprintf(out, "        ; fixup -> %s\n", fixup->label->name);
+        if (isBFixup_Code(fixup)) {
+            if (getBFixup_Code(fixup)->location == index) {
+                fprintf(out, "        ; fixup -> %s\n",
+                        getBFixup_Code(fixup)->label->name);
+            }
         }
     }
 }

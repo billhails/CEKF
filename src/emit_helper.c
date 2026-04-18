@@ -30,6 +30,16 @@ static inline void swap(Index a, Index b, EmitterContext *ctx) {
     ctx->heap->entries[b] = temp;
 }
 
+Integer slotIndex(HashSymbol *key, EmitterContext *ctx) {
+    Slot *slot = NULL;
+
+    if (getSlotPool(ctx->slots, key, &slot)) {
+        return slot->index;
+    } else {
+        cant_happen("unrecognised %s", key->name);
+    }
+}
+
 // returns the register number of the slot
 static Integer reg(Index i, EmitterContext *ctx) {
 #ifdef SAFETY_CHECKS
@@ -38,13 +48,7 @@ static Integer reg(Index i, EmitterContext *ctx) {
 #endif
 
     HashSymbol *key = ctx->heap->entries[i];
-    Slot *slot = NULL;
-
-    if (getSlotPool(ctx->slots, key, &slot)) {
-        return slot->index;
-    } else {
-        cant_happen("unrecognised %s at index %u", key->name, i);
-    }
+    return slotIndex(key, ctx);
 }
 
 Integer emitter_peekHeap(EmitterContext *ctx) {

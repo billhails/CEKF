@@ -28,7 +28,7 @@
 #include <stdarg.h>
 #include <sys/param.h>
 
-// this is just for the IDE
+// this is just so the IDE doesn't highlight undefined types
 #ifndef DISABLE_INNER_TYPEDEFS
 #include "minlam_emit_b.h"
 typedef BEmitterContext EC;
@@ -53,12 +53,12 @@ static ER *claimSlot(EC *ctx) {
     return newResultSlotSymbol(symbol);
 }
 
-static void releaseSlot(ER *result, EmitterContext *ctx) {
+static void releaseSlot(ER *result, EC *ctx) {
     if (resultIsVar(result))
-        emitter_releaseSlotSymbol(getResultSlotSymbol(result), ctx);
+        emitter_releaseSlotSymbol(getResultSlotSymbol(result), &ctx->context);
 }
 
-static void releaseSlots(RA *slots, EmitterContext *ctx) {
+static void releaseSlots(RA *slots, EC *ctx) {
     for (Index i = 0; i < slots->size; i++) {
         releaseSlot(slots->entries[i], ctx);
     }
@@ -123,7 +123,7 @@ static MinExprList *extractEnv(MinExp *closure) {
 // Label Helpers
 /////////////////
 
-static SCharArray *makeLabel(char *prefix, HashSymbol *symbol) {
+static HashSymbol *makeLabel(char *prefix, HashSymbol *symbol) {
     SCharArray *label = newSCharArray();
     int save = PROTECT(label);
     static char buffer[128];
@@ -140,11 +140,12 @@ static SCharArray *makeLabel(char *prefix, HashSymbol *symbol) {
         }
     }
     pushSCharArray(label, '\0');
+    HashSymbol *result = newSymbol(label->entries);
     UNPROTECT(save);
-    return label;
+    return result;
 }
 
-static SCharArray *makeLambdaLabel(HashSymbol *symbol) {
+static HashSymbol *makeLambdaLabel(HashSymbol *symbol) {
     return makeLabel("LAMBDA_", symbol);
 }
 
@@ -161,8 +162,8 @@ static ER *emitPrimOp(MinPrimApp *app, EC *ctx) {
     // allows i.e. `reg[1] = op(reg[1], reg[2]);` as long as we don't emit
     // anything that could clobber the released slots before we are done
     // with them.
-    releaseSlot(arg1, &ctx->context);
-    releaseSlot(arg2, &ctx->context);
+    releaseSlot(arg1, ctx);
+    releaseSlot(arg2, ctx);
     ER *target = claimSlot(ctx);
     PROTECT(target);
     emitAssignPrimOp(app->type, target, arg1, arg2, ctx);
@@ -172,29 +173,19 @@ static ER *emitPrimOp(MinPrimApp *app, EC *ctx) {
 
 static ER *emitAnonymousLambda(MinLam *lambda, EC *ctx) {
     EMITLOC("emitAnonymousLambda", lambda, ctx);
-    // emit the lambda to the prelude, this then reduces to &&LABEL
+    // emit the lambda to the prelude, this then reduces to LABEL
     HashSymbol *name = genSym("anon");
     EC *lamContext = extendContextForLambda(name, ctx);
     int save = PROTECT(lamContext);
-    SCharArray *containing_label = makeLambdaLabel(ctx->context.currentBinding);
+    HashSymbol *containing_label = makeLambdaLabel(ctx->context.currentBinding);
     PROTECT(containing_label);
-    comment(lamContext, "inside %s, %d args", containing_label->entries,
+    comment(lamContext, "inside %s, %d args", containing_label->name,
             countSymbolList(lambda->args));
     emitMinLam(lambda, lamContext);
     retrieveMaxReg(&ctx->context, &lamContext->context);
-    SCharArray *label = makeLambdaLabel(name);
+    HashSymbol *label = makeLambdaLabel(name);
     PROTECT(label);
-    ER *result = emitAddrResult(label);
-    UNPROTECT(save);
-    return result;
-}
-
-static ER *emitAnnotatedVarResult(MinAnnotatedVar *avar, EC *ctx) {
-    EC *aVarContext = extendContext(ctx);
-    setProtectionStatus(&ctx->context, &aVarContext->context);
-    int save = PROTECT(aVarContext);
-    emitMinAnnotatedVar(avar, aVarContext);
-    ER *result = getBufResult(aVarContext);
+    ER *result = emitAddrResult(label, ctx);
     UNPROTECT(save);
     return result;
 }
@@ -214,20 +205,13 @@ static ER *emitSimpleExp(MinExp *exp, EC *ctx) {
         return emitAnonymousLambda(getMinExp_Lam(exp), ctx);
     }
     case MINEXP_TYPE_BIGINTEGER: {
-        MaybeBigInt *mbi = getMinExp_BigInteger(exp);
-        EC *biContext = extendContext(ctx);
-        int save = PROTECT(biContext);
-        emitMaybeBigInt(mbi, biContext);
-        ER *result = getConstantResult(biContext);
-        setProtectionStatus(&ctx->context, &biContext->context);
-        UNPROTECT(save);
-        return result;
+        return emitMaybeBigInt(getMinExp_BigInteger(exp), ctx);
     }
     case MINEXP_TYPE_STDINT: {
-        return emitIntegerResult(getMinExp_Stdint(exp));
+        return emitIntegerResult(getMinExp_Stdint(exp), ctx);
     }
     case MINEXP_TYPE_CHARACTER: {
-        return emitCharacterResult(getMinExp_Character(exp));
+        return emitCharacterResult(getMinExp_Character(exp), ctx);
     }
     default:
         ppMinExp(stderr, exp);
@@ -255,10 +239,10 @@ static ER *emitMakeVec(MinExprList *vecs, EC *ctx) {
     RA *results = emitRL(vecs, ctx);
     int save = PROTECT(results);
     int count = countMinExprList(vecs);
-    releaseSlots(results, &ctx->context);
+    releaseSlots(results, ctx);
     ER *target = NULL;
     if (count == 0) {
-        target = emitNone();
+        target = emitNone(ctx);
     } else {
         target = claimSlot(ctx);
         PROTECT(target);
@@ -281,7 +265,7 @@ static void emitMinLam(MinLam *node, EC *ctx) {
     ASSERT_SLOTS(&ctx->context);
     if (node->exp != NULL)
         emitMinExp(node->exp, ctx);
-    releaseSlots(slots, &ctx->context);
+    releaseSlots(slots, ctx);
     ctx->context.currentReg -= nargs;
     UNPROTECT(save);
 }
@@ -330,7 +314,7 @@ static void emitGoto(ER *target, RA *args, EC *ctx) {
 
     emitTrace(savedTarget, args, ctx);
     emitJumpToLambda(savedTarget, ctx);
-    releaseSlots(claimedSlots, &ctx->context);
+    releaseSlots(claimedSlots, ctx);
     UNPROTECT(save);
 }
 
@@ -346,14 +330,14 @@ static ER *emitExtractFromClosure(ER *closure, int index, EC *ctx) {
 static ER *emitBuiltin(BuiltIn *bi, MinExprList *builtinArgs, EC *ctx) {
     ER *arg = NULL;
     if (countBuiltInArgs(bi->args) == 0)
-        arg = emitEmptyVec(); // just for builtins
+        arg = emitEmptyVec(ctx); // just for builtins
     else
         arg = emitMakeVec(builtinArgs, ctx);
     int save = PROTECT(arg);
     ER *target = claimSlot(ctx);
     PROTECT(target);
     emitCallBuiltin(bi, target, arg, ctx);
-    releaseSlot(arg, &ctx->context);
+    releaseSlot(arg, ctx);
     UNPROTECT(save);
     return target;
 }
@@ -388,7 +372,7 @@ static void emitApplyBuiltin(MinApply *node, EC *ctx) {
     ER *target = emitExtractFromClosure(k, 0, ctx);
     PROTECT(target);
 
-    releaseSlot(k, &ctx->context);
+    releaseSlot(k, ctx);
 
     // (env result)
     MinExprList *builtinArgs = takeMinExprList(node->args, numBuiltinArgs);
@@ -406,9 +390,9 @@ static void emitApplyBuiltin(MinApply *node, EC *ctx) {
 
     // (k env result f)
     emitGoto(target, targetArgs, ctx);
-    releaseSlots(targetArgs, &ctx->context);
-    releaseSlots(contArgSlots, &ctx->context);
-    releaseSlot(target, &ctx->context);
+    releaseSlots(targetArgs, ctx);
+    releaseSlots(contArgSlots, ctx);
+    releaseSlot(target, ctx);
     UNPROTECT(save);
     return;
 }
@@ -449,7 +433,7 @@ static void emitApplyClosure(MinApply *apply, EC *ctx) {
     PROTECT(target);
     // deliberate early release allows for behaviour like
     // tmp_1 = vec(..., tmp_1);
-    releaseSlot(closure, &ctx->context);
+    releaseSlot(closure, ctx);
 
     ER *env = emitExtractFromClosure(closure, 1, ctx);
     PROTECT(env);
@@ -466,9 +450,9 @@ static void emitApplyClosure(MinApply *apply, EC *ctx) {
     }
 
     emitGoto(target, targetArgs, ctx);
-    releaseSlot(target, &ctx->context);
-    releaseSlots(targetArgs, &ctx->context);
-    releaseSlots(closureArgSlots, &ctx->context);
+    releaseSlot(target, ctx);
+    releaseSlots(targetArgs, ctx);
+    releaseSlots(closureArgSlots, ctx);
     UNPROTECT(save);
 }
 
@@ -484,7 +468,7 @@ static void emitMinIff(MinIff *node, EC *ctx) {
     EMITLOC("emitMinIff", node, ctx);
     ER *test = emitSimpleExp(node->condition, ctx);
     int save = PROTECT(test);
-    releaseSlot(test, &ctx->context);
+    releaseSlot(test, ctx);
     emitIfThenElse(test, node->consequent, node->alternative, ctx);
     UNPROTECT(save);
     ASSERT_SLOTS(&ctx->context);
@@ -494,7 +478,7 @@ static void emitMinIff(MinIff *node, EC *ctx) {
 static void emitMakeClosure(HashSymbol *var, Integer depth, RA *bindings,
                             EC *ctx) {
     comment(ctx, "emitMakeClosure %d", depth);
-    SCharArray *label = makeLambdaLabel(var);
+    HashSymbol *label = makeLambdaLabel(var);
     int save = PROTECT(label);
     emitClosureNew(bindings->entries[depth], label, ctx);
     UNPROTECT(save);
@@ -509,7 +493,7 @@ static void emitBackpatchClosure(MinExprList *exprs, int depth, RA *slots,
     ER *tmp = emitMakeVec(exprs, ctx);
     int save = PROTECT(tmp);
     emitClosureSetEnv(slots->entries[depth], tmp, ctx);
-    releaseSlot(tmp, &ctx->context);
+    releaseSlot(tmp, ctx);
     UNPROTECT(save);
 }
 
@@ -554,7 +538,7 @@ static void emitMinLetRec(MinLetRec *node, EC *ctx) {
     ASSERT_SLOTS(&ctx->context);
     emitMinExp(node->body, ctx);
     ctx->context.currentReg -= numBindings;
-    releaseSlots(bindings, &ctx->context);
+    releaseSlots(bindings, ctx);
     ASSERT_SLOTS(&ctx->context);
     UNPROTECT(save);
 }
@@ -563,19 +547,6 @@ static void emitMinExp(MinExp *node, EC *ctx) {
     switch (node->type) {
     case MINEXP_TYPE_APPLY: {
         emitMinApply(getMinExp_Apply(node), ctx);
-        break;
-    }
-    case MINEXP_TYPE_AVAR: {
-        // bare variable in tail position is dead code (CPS artifact)
-        comment(ctx, "dead tail: %s", getMinExp_Avar(node)->var->name);
-        break;
-    }
-    case MINEXP_TYPE_BIGINTEGER: {
-        emitMaybeBigInt(getMinExp_BigInteger(node), ctx);
-        break;
-    }
-    case MINEXP_TYPE_CHARACTER: {
-        emitCharacter(getMinExp_Character(node), ctx);
         break;
     }
     case MINEXP_TYPE_COND: {
@@ -600,10 +571,6 @@ static void emitMinExp(MinExp *node, EC *ctx) {
     }
     case MINEXP_TYPE_MATCH: {
         emitMinMatch(getMinExp_Match(node), ctx);
-        break;
-    }
-    case MINEXP_TYPE_STDINT: {
-        emitInt(getMinExp_Stdint(node), ctx);
         break;
     }
     default:

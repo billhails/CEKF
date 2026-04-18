@@ -34,6 +34,7 @@ structs:
             lambdas: BBufferBag
             body: BBuffer
             context: EmitterContext
+            constants: BConstantArray
 
     BAssemblyPlan:
         meta:
@@ -70,13 +71,9 @@ structs:
             fixups: BFixupArray
             locations: BLocationArray
             comments: BCommentArray
-
-    BFixup:
-        meta:
-            brief: A patch site that must be resolved after layout
-        data:
-            index: index # word offset within this buffer to overwrite
-            label: HashSymbol
+            intConds: IntCondTable
+            charConds: CharCondTable
+            matches: MatchTable
 
     BLocation:
         meta:
@@ -121,17 +118,51 @@ structs:
             default_target: index
             cases: CharCondCaseArray
 
+    CondFixup:
+        meta:
+            description: >
+                lookup information for a cond fixup
+        data:
+            label: HashSymbol
+            tableId: index # finds the table
+            tableIndex: index # finds the entry in the table
+
+    CodeFixup:
+        meta:
+            description: >
+                lookup information for a code fixup
+        data:
+            label: HashSymbol
+            location: index
+
+    TableFixup:
+        meta:
+            description: >
+                information for fixing up a table id for a MATCH
+        data:
+            tableId: index
+            location: index
+
 unions:
     EmitBResult:
         meta:
             description: >
-                Either a symbol from the slot pool, or a BBuffer containing an
-                immediate expression which can be a constant or text that refers
-                to other registers.
+                Either a symbol from the slot pool, or a constant.
         data:
-            var: HashSymbol
-            buf: BBuffer
-            constant: BBuffer
+            slot: HashSymbol
+            immediate: int
+
+    BFixup:
+        meta:
+            brief: A patch site to be resolved
+        data:
+            code: CodeFixup
+            charTable: TableFixup
+            intTable: TableFixup
+            matchTable: TableFixup
+            charCond: CondFixup
+            intCond: CondFixup
+            matchCond: CondFixup
 
 hashes:
     BBufferBag:
@@ -175,6 +206,10 @@ arrays:
         data:
             entries: CharCondSwitch
 
+    MatchTable:
+        data:
+            entries: IndexArray
+
 enums:
     BBC:
         meta:
@@ -187,8 +222,10 @@ enums:
           - DONE # exit_status
           - EXT # unpacked modifier for the next instruction
           - INTCOND # test_reg, table_id
-          - JMP_FALSE # test_reg, target
-          - JMP # target
+          - JMP_FALSE # test_reg, imm target
+          - JMP_REG # reg target
+          - JMP # imm target
+          - LOAD_ADDR # dst, imm32 # 32-bit addr
           - LOAD_CHAR # dst, codepoint
           - LOAD_CONST # dst, const_index
           - LOAD_I32 # dst, imm32
@@ -213,6 +250,7 @@ enums:
           - PRIM_POW # dst, left, right
           - PRIM_SUB # dst, left, right
           - PRIM_VEC # dst, index_reg, vec_reg
+          - UNPROTECT # if a bigint was protected by minlam_runtime
           - TAILCALL # clo_reg
           - VEC_GET_IMM # dst, index_imm, vec_reg
           - VEC_SET # vec_reg, index_imm, src

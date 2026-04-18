@@ -47,6 +47,7 @@ MinExp *makeDoneCont(ParserInfo PI, int status, bool hasArg) {
 }
 
 // returns the the free variables in exp that are in keys
+// { x in keys : x in FV(exp) }
 SymbolSet *computeRoots(SymbolSet *keys, MinExp *exp) {
     SymbolSet *free = newSymbolSet();
     int save = PROTECT(free);

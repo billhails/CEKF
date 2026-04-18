@@ -44,61 +44,112 @@ $$
 \\
 \mathcal{F}(e_0\ e_1) &= \mathcal{F}e_0\cup \mathcal{F}e_1
 \\
-\mathcal{F}(\lambda x.e) &= \mathcal{F}e - \set{ x } &\text{(1)}
+\mathcal{F}(\lambda x.e) &= \mathcal{F}e - \set{ x } && \text{(1)}
 \\
 \mathcal{F}(\mathtt{letrec}\ (( x_0:\ \lambda_0)\dots( x_n:\ \lambda_n))\ e) &=
-\Big( \mathcal{F}e\cup\bigcup_{i=0}^{i=n}\mathcal{F}\lambda_i\Big) - \set{x_0\dots x_n} &\text(2)
+\Big( \mathcal{F}e\cup\bigcup_{i=0}^{i=n}\mathcal{F}\lambda_i\Big) - \set{x_0\dots x_n} && \text{(2)}
 \end{align*}
 $$
 
 1. The free variables in a lambda are the free variables in its body minus its argument.
-2. The free variablers in a `letrec` are the free variables in its lambdas (1) plus the free variables in its body, minus the variables bound by the letrec itself.
+2. The free variables in a `letrec` are the free variables in its lambdas (1) plus the free variables in its body, minus the variables bound by the letrec itself.
 
-## Substitution $\mathcal{S}_{[x/e]}$
+## Substitution $\mathcal{S}_{[x/r]}$
 
-Substitution only replaces free variables.
+Substitution only replaces free variables, and is understood to be capture-avoiding: before descending under a binder, alpha-rename any bound variable that would otherwise capture a free variable of the replacement term. This is a rather subtle point: if $r$ contains a variable that is bound by a scope it is substituting within, that would produce an unsound result.
+
+Write $e_0[y'/y]_{\alpha}$ for the result of alpha-renaming the bound occurrences of $y$ in $e_0$ to a fresh variable $y'$.
 
 $$
 \begin{align*}
-\mathcal{S}_{[x/e]}\mathtt{C} &= \mathtt{C}
+\mathcal{S}_{[x/r]}\mathtt{C} &= \mathtt{C}
 \\
-\mathcal{S}_{[x/e]}x &= \begin{cases}
-x&\text{if we are only substituting at call sites} &\text(1)
+\mathcal{S}_{[x/r]}y &= \begin{cases}
+r &\text{if } x = y
 \\
-e&\text{otherwise}
+y &\text{otherwise}
 \end{cases}
 \\
-\mathcal{S}_{[x/e]}(\mathtt{if}\ e_0\ e_1\ e_2) &= (\mathtt{if}\ \mathcal{S}_{[x/e]}e_0\ \mathcal{S}_{[x/e]}e_1\ \mathcal{S}_{[x/e]}e_2)
+\mathcal{S}_{[x/r]}(\mathtt{if}\ e_0\ e_1\ e_2) &= (\mathtt{if}\ \mathcal{S}_{[x/r]}e_0\ \mathcal{S}_{[x/r]}e_1\ \mathcal{S}_{[x/r]}e_2)
 \\
-\mathcal{S}_{[x/e]}(\circ\ e_0\ e_1) &= (\circ\ \mathcal{S}_{[x/e]}e_0\ \mathcal{S}_{[x/e]}e_1)
+\mathcal{S}_{[x/r]}(\circ\ e_0\ e_1) &= (\circ\ \mathcal{S}_{[x/r]}e_0\ \mathcal{S}_{[x/r]}e_1)
 \\
-\mathcal{S}_{[x/e]}(e_0\ e_1) &= \begin{cases}
-(e\ \mathcal{S}_{[x/e]}e_1) &\text{if }x = e_0 &\text{(2)}
+\mathcal{S}_{[x/r]}(e_0\ e_1) &= (\mathcal{S}_{[x/r]}e_0\ \mathcal{S}_{[x/r]}e_1)
 \\
-(\mathcal{S}_{[x/e]}e_0\ \mathcal{S}_{[x/e]}e_1) &\text{otherwise}
-\end{cases}
+\mathcal{S}_{[x/r]}(\lambda y.e_0) &=
+\left\{
+\begin{aligned}
+(\lambda y.e_0) &\quad \text{if } x = y && \text{(1)}
 \\
-\mathcal{S}_{[x/e]}(\lambda y.e_0) &= \begin{cases}
-(\lambda y.e_0) &\text{if }x = y &\text{(3)}
+(\lambda y.\mathcal{S}_{[x/r]}e_0) &\quad \text{if } y \notin \mathcal{F}r
 \\
-(\lambda y.\mathcal{S}_{[x/e]}e_0)&\text{otherwise}
-\end{cases}
+(\lambda y'.\mathcal{S}_{[x/r]}(e_0[y'/y]_{\alpha})) &\quad \text{otherwise, where } y' \notin \mathcal{F}r \cup \mathcal{F}e_0 \cup \set{x}
+\end{aligned}
+\right.
 \\
-\mathcal{S}_{[x/e]}(\mathtt{letrec}\ (b_0\dots b_n)\ e) &=
-(\mathtt{letrec}\ (\mathcal{S}_{[x/e]}b_0\dots \mathcal{S}_{[x/e]}b_n)\ \mathcal{S}_{[x/e]}e)
+l &= (\mathtt{letrec}\ B\ e)
 \\
-\mathcal{S}_{[x/e]}( y:\ \lambda z.e) &= \begin{cases}
-( y:\ \lambda z.e) &\text{if } x \in \set{y,z_0\dots z_n} &\text{(4)}
+\mathcal{S}_{[x/r]}l &=
+\left\{
+\begin{aligned}
+l &\quad \text{if } x \in K && \text{(2)}
 \\
-( y_i:\ \lambda z.\mathcal{S}_{[x/e]}e) &\text{otherwise}
-\end{cases}
+l' &\quad \text{if } (K \cup Z) \cap \mathcal{F}r = \set{}
+\\
+\widehat{l}' &\quad \text{otherwise} && \text{(3)}
+\end{aligned}
+\right.
 \end{align*}
 $$
 
-1. The specific rule for application (2) handles call sites.
-2. We always substitute in this case.
-3. If $y$ is shadowing then don't substitute.
-4. All $z_0\dots z_n$ and $y$ are shadowing for a letrec binding.
+where
+
+$$
+\begin{align*}
+B &= ((y_i:\ \lambda z_i.e_i))_{i=0}^n
+\\
+K &= \set{y_i \mid 0 \le i \le n}
+\\
+Z &= \set{z_i \mid 0 \le i \le n}
+\\
+B' &= ((y_i:\ \lambda z_i.\mathcal{S}_{[x/r]}e_i))_{i=0}^n
+\\
+\widehat{B}' &= ((y'_i:\ \lambda z'_i.\mathcal{S}_{[x/r]}\widehat{e}_i))_{i=0}^n
+\\
+e' &= \mathcal{S}_{[x/r]}e
+\\
+\widehat{e}' &= \mathcal{S}_{[x/r]}\widehat{e}
+\\
+l' &= (\mathtt{letrec}\ B'\ e')
+\\
+\widehat{l}' &= (\mathtt{letrec}\ \widehat{B}'\ \widehat{e}')
+\end{align*}
+$$
+
+1. If $y$ shadows $x$, substitution stops at that lambda.
+2. A letrec-bound name shadows $x$ throughout every binding and the letrec body.
+3. $\widehat{e}_0,\dots,\widehat{e}_n,\widehat{e}$ are obtained by alpha-renaming the letrec-bound names $y_i$ and the formal parameters $z_i$ consistently to fresh names $y'_i, z'_i$, with every $y'_i, z'_i \notin \mathcal{F}r$.
+
+For inlining we also use a call-site-only variant $\mathcal{S}^{cs}_{[x/r]}$, defined by
+
+$$
+\begin{align*}
+\mathcal{S}^{cs}_{[x/r]}y &= y
+\\
+\mathcal{S}^{cs}_{[x/r]}(e_0\ e_1) &=
+\left\{
+\begin{aligned}
+(r\ \mathcal{S}^{cs}_{[x/r]}e_1) &\quad \text{if } e_0 = x && \text{(4)}
+\\
+(\mathcal{S}^{cs}_{[x/r]}e_0\ \mathcal{S}^{cs}_{[x/r]}e_1) &\quad \text{otherwise}
+\end{aligned}
+\right.
+\end{align*}
+$$
+
+All other clauses of $\mathcal{S}^{cs}$, including the same alpha-renaming side conditions, are the same as $\mathcal{S}$.
+
+In (4), this variant only replaces occurrences of $x$ in function position.
 
 ## Beta Reduction $\beta$
 
@@ -114,7 +165,7 @@ $$
 \\
 \beta (\circ\ e_0\ e_1) &= (\circ\ \beta e_0\ \beta e_1)
 \\
-\beta((\lambda x.e_0)\ e_1) &= \mathcal{S}_{[x/\beta e_1]}\beta e_0 &\text{(1)}
+\beta((\lambda x.e_0)\ e_1) &= \mathcal{S}_{[x/\beta e_1]}\beta e_0 && \text{(1)}
 \\
 \beta (e_0\ e_1) &= (\beta e_0\ \beta e_1)
 \\
@@ -139,17 +190,20 @@ $$
 \\
 \eta x &= x
 \\
-\eta (\mathtt{if}\ e_0\ e_1\ e_2) &= (\mathtt{if}\ \eta e_0\  \eta e_1\ e_2)
+\eta (\mathtt{if}\ e_0\ e_1\ e_2) &= (\mathtt{if}\ \eta e_0\ \eta e_1\ \eta e_2)
 \\
 \eta (\circ\ e_0\ e_1) &= (\circ\ \eta e_0\  \eta e_1)
 \\
 \eta (e_0\ e_1) &= (\eta e_0\  \eta e_1)
 \\
-\eta(\lambda x.(e\ x)) &= \begin{cases}
-\eta e &\text{iff } x \not \in \mathcal{F}e &\text{(1)}
+\eta(\lambda x.(e\ x)) &=
+\left\{
+\begin{aligned}
+\eta e &\quad \text{iff } x \not \in \mathcal{F}e && \text{(1)}
 \\
-(\lambda x .\eta(e\ x)) &\text{otherwise}
-\end{cases}
+(\lambda x .\eta(e\ x)) &\quad \text{otherwise}
+\end{aligned}
+\right.
 \\
 \eta(\lambda x.e) &= (\lambda x.\eta e)
 \\
@@ -179,19 +233,18 @@ $$
 \\
 \mathcal{T}(\lambda x . e) &= (\lambda x.\mathcal{T}e)
 \\
-l &= (\mathtt{letrec}\ (( x_0:\ \lambda_0)\dots ( x_n:\ \lambda_n))\ e)
-&\text{(1)}
+l &= (\mathtt{letrec}\ (( x_0:\ \lambda_0)\dots ( x_n:\ \lambda_n))\ e) && \text{(1)}
 \\
-K &= \set{x_0\dots x_n} &\text{(2)}
+K &= \set{x_0\dots x_n} && \text{(2)}
 \\
-\vec{D} &= \set{x_i \mapsto \  \set{x_j\dots x_k} | x_i \in K,\ x_j\dots x_k \in K \cap \mathcal{F}\mathcal{T}\lambda_i} &\text{(3)}
+\vec{D} &= \set{x_i \mapsto \  \set{x_j\dots x_k} | x_i \in K,\ x_j\dots x_k \in K \cap \mathcal{F}\mathcal{T}\lambda_i} && \text{(3)}
 \\
-B &= \mathcal{F}\mathcal{T}e \cap K &\text{(4)}
+B &= \mathcal{F}\mathcal{T}e \cap K && \text{(4)}
 \\
-L &= \bigcup_{x\in B} \vec{D}^{\ast}(x) &\text{(5)}
+L &= \bigcup_{x\in B} \vec{D}^{\ast}(x) && \text{(5)}
 \\
 \mathcal{T}l &=
-(\mathtt{letrec}\ (\set{(x_i:\ \mathcal{T}\lambda_i) | x_i \in L}) \mathcal{T}e)
+(\mathtt{letrec}\ (\set{(x_i:\ \mathcal{T}\lambda_i) | x_i \in L})\ \mathcal{T}e)
 \\
 \mathcal{T}(\mathtt{letrec}\ (\ )\ e) &= \mathcal{T}e
 \end{align*}
@@ -205,7 +258,7 @@ The preliminaries are just navigating to the `letrec`. Having got there:
 4. Let $B$ be the set of elements of $K$ that are free in the tree-shook body $\mathcal{T}e$.
 5. Let $L$ be the set of live variables: those $x_i$ in $K$ that are reachable from $e$ via zero or more applications of $\vec{D}$.
 
-Then $\mathcal{T}l$ is the tree-shook letrec $l$, With bindings restricted to members of $L$.
+Then $\mathcal{T}l$ is the tree-shook letrec $l$, With bindings restricted to those whose keys are members of $L$.
 
 Finally, though not properly part of tree shaking,
 if the result is a `letrec` with no bindings it reduces
@@ -219,7 +272,7 @@ A function is safe to inline if:
 2. it is not recursive.
 3. it only occurs once, and that occurrence is at a call site.
 
-Once a function $x$ is determined to be safe, inlining is just $\mathcal{S}_{[x/\lambda y.e]}$.
+Once a function $x$ is determined to be safe, inlining is just $\mathcal{S}^{cs}_{[x/\lambda y.e]}$.
 
 $$
 \begin{align*}
@@ -236,20 +289,21 @@ $$
 \\
 \mathcal{I}(\lambda x.e) &= (\lambda x.\mathcal{I}e)
 \\
-\mathcal{I}(\mathtt{letrec}\ ((x_0:\ \lambda_0)\dots(x_n:\ \lambda_n))\ e) &=
-    (\mathtt{letrec}\ ((x_0:\ \mathcal{S^{\ast}I}\lambda_0)\dots(x_n:\ \mathcal{S^{\ast}I}\lambda_n)\ \mathcal{S^{\ast}I}e)
+l &= (\mathtt{letrec}\ ((x_0:\ \lambda_0)\dots(x_n:\ \lambda_n))\ e)
+\\
+\mathcal{I}l &= (\mathtt{letrec}\ ((x_0:\ \mathcal{S}_{cs}^{\ast}\mathcal{I}\lambda_0)\dots(x_n:\ \mathcal{S}_{cs}^{\ast}\mathcal{I}\lambda_n))\ \mathcal{S}_{cs}^{\ast}\mathcal{I}e)
 \\
 \text{where}
 \\
-\mathcal{S^{\ast}}y &= \mathcal{Scs}_{[x_i/\lambda_i]}y\ \forall(x_i:\ \lambda_i) \in R
+\mathcal{S}_{cs}^{\ast}y &= \mathcal{S}^{cs}_{[x_0/\lambda_0]}\dots\mathcal{S}^{cs}_{[x_m/\lambda_m]}y
 \\
-R &= \set{(x_i:\ \lambda_i) \in \set{(x_0:\ \lambda_0)\dots(x_n:\ \lambda_n)}| \text{safe}\ \lambda_i}
+R &= \set{(x_i:\ \lambda_i) \in \set{(x_0:\ \lambda_0)\dots(x_n:\ \lambda_n)} | \operatorname{safe}(x_i, \lambda_i, l)} = \set{(x_0:\ \lambda_0)\dots(x_m:\ \lambda_m)}
 \\
-\text{safe}\ \lambda &= \mathcal{Z}\lambda < \mathtt{MAX} \land \lnot\mathcal{R}\lambda
+\operatorname{safe}(x_i, \lambda_i, l) &= \mathcal{Z}\lambda_i < \mathtt{MAX} \land \lnot\mathcal{R}x_i \land \mathcal{C}_{x_i}l = 1 \land \mathcal{C}^{cs}_{x_i}l = 1
 \end{align*}
 $$
 
-Except the decision of whether to substitute based on number of occurrences is left to a variant of $\mathcal{S}$ $\mathcal{Scs}$.
+Except the decision of whether to substitute based on number and position of occurrences is left to the call-site substitution variant $\mathcal{S}^{cs}$.
 
 ### Size $\mathcal{Z}$
 
@@ -306,14 +360,14 @@ $$
 
 ### Count $\mathcal{C}_x$
 
-Count all free occurences of $x$, or only occurences at call sites.
+Count all free occurrences of $x$, or only occurrences at call sites.
 
 $$
 \begin{align*}
 \mathcal{C}_x\mathtt{C} &= 0
 \\
 \mathcal{C}_xy &=\begin{cases}
-1 &\text{if } x = y \text{ and we're counting all occurences}
+1 &\text{if } x = y
 \\
 0 &\text{otherwise}
 \end{cases}
@@ -322,12 +376,7 @@ $$
 \\
 \mathcal{C}_x(\circ\ e_0\ e_1) &= \mathcal{C}_xe_0 + \mathcal{C}_xe_1
 \\
-\mathcal{C}_x(e_0\ e_1) &=\begin{cases}
- 1 + \mathcal{C}_x e_1 &\text{if }x=e_0
-\\
-\mathcal{C}_xe_0 + \mathcal{C}_xe_1 &\text{otherwise}
-\\
-\end{cases}
+\mathcal{C}_x(e_0\ e_1) &= \mathcal{C}_xe_0 + \mathcal{C}_xe_1
 \\
 \mathcal{C}_x(\lambda y.e) &= \begin{cases}
 0 & \text{if } x = y\text{ (shadowing)}
@@ -335,12 +384,26 @@ $$
 \mathcal{C}_x e &\text{otherwise}
 \end{cases}
 \\
-\mathcal{C}_x(\mathtt{letrec}\ (b_0\dots b_n)\ e) &= \mathcal{C}_x e + \sum_{i=0}^{i=n}\mathcal{C}_x b_i
+\mathcal{C}_x(\mathtt{letrec}\ ((y_0:\ \lambda z_0.e_0)\dots(y_n:\ \lambda z_n.e_n))\ e) &= \begin{cases}
+0 & \text{if } x \in \set{y_0\dots y_n}
 \\
-\mathcal{C}_x(y:\ \lambda z.e) &= \begin{cases}
-0 & \text{if } x = y \text{ (shadowing)}
-\\
-\mathcal{C}_x\lambda z.e &\text{otherwise}
+\mathcal{C}_x e + \sum_{i=0}^{i=n}\mathcal{C}_x(\lambda z_i.e_i) &\text{otherwise}
 \end{cases}
 \end{align*}
 $$
+
+For the call-site-only count used by inlining, define $\mathcal{C}^{cs}_x$ by
+
+$$
+\begin{align*}
+\mathcal{C}^{cs}_xy &= 0
+\\
+\mathcal{C}^{cs}_x(e_0\ e_1) &= \begin{cases}
+1 + \mathcal{C}^{cs}_x e_1 &\text{if } e_0 = x
+\\
+\mathcal{C}^{cs}_x e_0 + \mathcal{C}^{cs}_x e_1 &\text{otherwise}
+\end{cases}
+\end{align*}
+$$
+
+All other clauses of $\mathcal{C}^{cs}$ are the same as $\mathcal{C}$.

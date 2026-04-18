@@ -8,6 +8,7 @@ BBufferBag --entries--> BBuffer
 BEmitterContext --lambdas--> BBufferBag
 BEmitterContext --body--> BBuffer
 BEmitterContext --context--> EmitterContext
+BEmitterContext --constants--> BConstantArray
 BAssemblyPlan --buffers--> BBufferBag
 BAssemblyPlan --order--> SymbolArray
 BAssemblyPlan --entryLabel--> HashSymbol
@@ -23,8 +24,9 @@ BBuffer --labels--> IndexMap
 BBuffer --fixups--> BFixupArray
 BBuffer --locations--> BLocationArray
 BBuffer --comments--> BCommentArray
-BFixup --index--> index
-BFixup --label--> HashSymbol
+BBuffer --intConds--> IntCondTable
+BBuffer --charConds--> CharCondTable
+BBuffer --matches--> MatchTable
 BLocation --index--> index
 BLocation --fileName--> string
 BLocation --lineNo--> int
@@ -38,9 +40,22 @@ IntCondSwitch --default_target--> index
 IntCondSwitch --cases--> IntCondCaseArray
 CharCondSwitch --default_target--> index
 CharCondSwitch --cases--> CharCondCaseArray
-EmitBResult --var--> HashSymbol
-EmitBResult --buf--> BBuffer
-EmitBResult --constant--> BBuffer
+CondFixup --label--> HashSymbol
+CondFixup --tableId--> index
+CondFixup --tableIndex--> index
+CodeFixup --label--> HashSymbol
+CodeFixup --location--> index
+TableFixup --tableId--> index
+TableFixup --location--> index
+EmitBResult --slot--> HashSymbol
+EmitBResult --immediate--> int
+BFixup --code--> CodeFixup
+BFixup --charTable--> TableFixup
+BFixup --intTable--> TableFixup
+BFixup --matchTable--> TableFixup
+BFixup --charCond--> CondFixup
+BFixup --intCond--> CondFixup
+BFixup --matchCond--> CondFixup
 BBC["enum BBC"]
 BResultArray["BResultArray[]"] --entries--> EmitBResult
 BFixupArray["BFixupArray[]"] --entries--> BFixup
@@ -51,6 +66,7 @@ IntCondCaseArray["IntCondCaseArray[]"] --entries--> IntCondCase
 CharCondCaseArray["CharCondCaseArray[]"] --entries--> CharCondCase
 IntCondTable["IntCondTable[]"] --entries--> IntCondSwitch
 CharCondTable["CharCondTable[]"] --entries--> CharCondSwitch
+MatchTable["MatchTable[]"] --entries--> IndexArray
 ```
 
 > Generated from src/emit_b.yaml by tools/generate.py

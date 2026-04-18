@@ -44,10 +44,6 @@ typedef struct EmitBuffer {
     size_t size;
 } EmitBuffer;
 
-/////////////////////////////////////////////////////
-// Forward declarations only used in this file
-/////////////////////////////////////////////////////
-
 static bool isConst(MinExp *);
 static bool isAtomic(MinExp *);
 static char *getEmitBuffer(EmitBuffer *);
@@ -72,46 +68,10 @@ static inline Opaque *newOpaque_EmitBuffer();
 static inline char *opaqueEmitBufferContent(Opaque *container);
 static inline FILE *opaqueEmitBufferFh(Opaque *container);
 static inline FILE *FH(EC *ctx);
+static void emitMinAnnotatedVar(MinAnnotatedVar *node, EC *ctx);
+static void emitCharacter(Character character, EC *ctx);
 
-///////////////////////////////////////////////////////////////
-// Procedures defined in minlam_emit.inc and used in this file
-///////////////////////////////////////////////////////////////
-
-static ER *emitSimpleExp(MinExp *, EC *);
-static void emitMinExp(MinExp *, EC *);
-static void releaseSlot(ER *, EmitterContext *);
-
-///////////////////////////////////////////////////////////////
-// Procedures defined in this file and used by minlam_emit.inc
-///////////////////////////////////////////////////////////////
-
-static EC *extendContext(EC *);
-static EC *extendContextForLambda(HashSymbol *, EC *);
-static ER *emitArg(MinExp *, EC *);
-static ER *emitAddrResult(SCharArray *);
-static ER *emitIntegerResult(Integer);
-static ER *emitCharacterResult(Character);
-static ER *getConstantResult(EC *);
-static void comment(EC *, char *, ...);
-static void emitAssignPrimOp(MinPrimOp, ER *, ER *, ER *, EC *);
-static void emitCallBuiltin(BuiltIn *, ER *, ER *, EC *);
-static void emitCharacter(Character, EC *);
-static void emitClosureNew(ER *, SCharArray *, EC *);
-static void emitClosureSetEnv(ER *, ER *, EC *);
-static void emitConstructVec(ER *, int, RA *, EC *);
-static void emitDone(int, EC *);
-static void emitIfThenElse(ER *, MinExp *, MinExp *, EC *);
-static void emitJumpToLambda(ER *, EC *);
-static void emitMaybeBigInt(MaybeBigInt *, EC *);
-static void emitMinAnnotatedVar(MinAnnotatedVar *, EC *);
-static void emitMinCond(MinCond *, EC *);
-static void emitMinMatch(MinMatch *, EC *);
-static void emitTrace(ER *, RA *, EC *);
-static void emitUnprotect(EC *);
-static void emitVecGetImm(ER *, ER *, int, EC *);
-static inline RA *newRA();
-static inline void pushRA(RA *ra, ER *r);
-static inline ER *newResultSlotSymbol(HashSymbol *s);
+#include "minlam_emit_contract.h"
 
 // also used by minlam_emit.inc:
 #define EMITLOC(name, node, ctx)                                               \
@@ -120,10 +80,6 @@ static inline ER *newResultSlotSymbol(HashSymbol *s);
     else                                                                       \
         fprintf(FH(ctx), "// %s +%d %s\n", name, CPI(node).lineNo,             \
                 CPI(node).fileName)
-
-/////////////////////////////////////////////////////
-// END Forward Declarations
-/////////////////////////////////////////////////////
 
 static inline RA *newRA() { return newCResultArray(); }
 
@@ -349,9 +305,9 @@ static void emitClosureSetEnv(ER *closure, ER *env, EC *ctx) {
             resultText(closure, ctx), resultText(env, ctx));
 }
 
-static void emitClosureNew(ER *target, SCharArray *label, EC *ctx) {
+static void emitClosureNew(ER *target, HashSymbol *label, EC *ctx) {
     fprintf(FH(ctx), "%s = make_vec(2, value_Addr(&&%s), value_None());\n",
-            resultText(target, ctx), label->entries);
+            resultText(target, ctx), label->name);
 }
 
 static void emitIfThenElse(ER *test, MinExp *con, MinExp *alt, EC *ctx) {
@@ -404,8 +360,12 @@ static ER *emitConstant(char *text) {
     return target;
 }
 
-static ER *emitNone(void) { return emitConstant("value_None()"); }
-static ER *emitEmptyVec(void) { return emitConstant("make_vec(0)"); }
+static ER *emitNone(EC *ctx __attribute__((unused))) {
+    return emitConstant("value_None()");
+}
+static ER *emitEmptyVec(EC *ctx __attribute__((unused))) {
+    return emitConstant("make_vec(0)");
+}
 
 // this and related code looks like it should belong in the
 // generic minlam_emit.inc base but in fact it is concerned
@@ -416,9 +376,12 @@ static void emitAtomic(MinExp *exp, EC *ctx) {
     case MINEXP_TYPE_AVAR:
         emitMinAnnotatedVar(getMinExp_Avar(exp), ctx);
         break;
-    case MINEXP_TYPE_BIGINTEGER:
-        emitMaybeBigInt(getMinExp_BigInteger(exp), ctx);
+    case MINEXP_TYPE_BIGINTEGER: {
+        ER *bi = emitMaybeBigInt(getMinExp_BigInteger(exp), ctx);
+        fprintf(FH(ctx), "%s",
+                opaqueEmitBufferContent(getEmitCResult_Constant(bi)));
         break;
+    }
     case MINEXP_TYPE_CHARACTER:
         emitCharacter(getMinExp_Character(exp), ctx);
         break;
@@ -467,16 +430,16 @@ static ER *emitArg(MinExp *arg, EC *ctx) {
     }
 }
 
-static ER *emitAddrResult(SCharArray *label) {
+static ER *emitAddrResult(HashSymbol *label, EC *ctx __attribute__((unused))) {
     Opaque *buf = newOpaque_EmitBuffer();
     int save = PROTECT(buf);
-    fprintf(opaqueEmitBufferFh(buf), "value_Addr(&&%s)", label->entries);
+    fprintf(opaqueEmitBufferFh(buf), "value_Addr(&&%s)", label->name);
     ER *result = newEmitCResult_Buf(buf);
     UNPROTECT(save);
     return result;
 }
 
-static ER *emitIntegerResult(Integer i) {
+static ER *emitIntegerResult(Integer i, EC *ctx __attribute__((unused))) {
     Opaque *buf = newOpaque_EmitBuffer();
     int save = PROTECT(buf);
     fprintf(opaqueEmitBufferFh(buf), "value_Stdint(%d)", i);
@@ -485,7 +448,7 @@ static ER *emitIntegerResult(Integer i) {
     return result;
 }
 
-static ER *emitCharacterResult(Character c) {
+static ER *emitCharacterResult(Character c, EC *ctx __attribute__((unused))) {
     Opaque *buf = newOpaque_EmitBuffer();
     int save = PROTECT(buf);
     fprintf(opaqueEmitBufferFh(buf), "value_Character(%d)", (int)c);
@@ -510,8 +473,6 @@ static void emitCharacter(Character character, EC *ctx) {
 static void emitStdint(Integer i, EC *ctx) {
     fprintf(FH(ctx), "value_Stdint(%d)", i);
 }
-
-static void emitInt(int i, EC *ctx) { fprintf(FH(ctx), "%d", i); }
 
 static void emitVec(MinExp *exp1, MinExp *exp2, EC *ctx) {
     fprintf(FH(ctx), "vec(");
@@ -543,7 +504,9 @@ static void emitAssignPrimOp(MinPrimOp type, ER *target, ER *arg1, ER *arg2,
     }
 }
 
-static void emitMaybeBigInt(MaybeBigInt *mbi, EC *ctx) {
+static ER *emitMaybeBigInt(MaybeBigInt *mbi, EC *oldCtx) {
+    EC *ctx = extendContext(oldCtx);
+    int save = PROTECT(ctx);
     switch (mbi->type) {
     case BI_BIG: {
         if (mbi->imag) {
@@ -589,6 +552,10 @@ static void emitMaybeBigInt(MaybeBigInt *mbi, EC *ctx) {
     default:
         cant_happen("unhandled numeric type %d", mbi->type);
     }
+    ER *result = getConstantResult(ctx);
+    setProtectionStatus(&oldCtx->context, &ctx->context);
+    UNPROTECT(save);
+    return result;
 }
 
 static void emitMinAnnotatedVar(MinAnnotatedVar *node, EC *ctx) {
@@ -603,6 +570,16 @@ static inline void emitAssignReg(Index i, ER *value, EC *ctx) {
     fprintf(FH(ctx), "reg[%d] = %s;\n", (int)i, resultText(value, ctx));
 }
 
+static ER *emitAnnotatedVarResult(MinAnnotatedVar *avar, EC *ctx) {
+    EC *aVarContext = extendContext(ctx);
+    setProtectionStatus(&ctx->context, &aVarContext->context); // ?
+    int save = PROTECT(aVarContext);
+    emitMinAnnotatedVar(avar, aVarContext);
+    ER *result = getBufResult(aVarContext);
+    UNPROTECT(save);
+    return result;
+}
+
 // characters are immediate so we can dispatch on them, numbers
 // can be bigints and therefore must be compared individually.
 // ...it might be worth investigating sorting + binary search or
@@ -611,7 +588,7 @@ static void emitMinCond(MinCond *node, EC *ctx) {
     EMITLOC("emitMinCond", node, ctx);
     ER *cond = emitSimpleExp(node->value, ctx);
     int save = PROTECT(cond);
-    releaseSlot(cond, &ctx->context);
+    releaseSlot(cond, ctx);
     if (node->cases->type == MINCONDCASES_TYPE_INTEGERS) {
         emitMinIntCondCases(getMinCondCases_Integers(node->cases), cond, ctx);
     } else {
@@ -648,7 +625,9 @@ static void emitMinIntCondCases(MinIntCondCases *node, ER *cond, EC *ctx) {
         fprintf(FH(ctx), "{ // default\n");
     } else {
         fprintf(FH(ctx), "if (minlam_runtime_cmp(%s, ", resultText(cond, ctx));
-        emitMaybeBigInt(node->constant, ctx);
+        ER *bi = emitMaybeBigInt(node->constant, ctx);
+        fprintf(FH(ctx), "%s",
+                opaqueEmitBufferContent(getEmitCResult_Constant(bi)));
         fprintf(FH(ctx), ") == CMP_EQ) {\n");
     }
     ASSERT_SLOTS(&ctx->context);
@@ -691,7 +670,7 @@ static void emitMinMatch(MinMatch *node, EC *ctx) {
     int save = PROTECT(match);
     fprintf(FH(ctx), "switch (getValue_Stdint(%s)) {\n",
             resultText(match, ctx));
-    releaseSlot(match, &ctx->context);
+    releaseSlot(match, ctx);
     UNPROTECT(save);
     emitMinMatchList(node->cases, ctx);
     fprintf(FH(ctx), "}\n");
@@ -763,8 +742,8 @@ void emitCProgram(MinExp *node, BuiltIns *builtIns, FILE *out) {
     Opaque *buf = NULL;
     i = 0;
     while ((label = iterateCBufferBag(ctx->lambdas, &i, &buf)) != NULL) {
-        SCharArray *l = makeLambdaLabel(label);
-        fprintf(out, "%s:\n", l->entries);
+        HashSymbol *l = makeLambdaLabel(label);
+        fprintf(out, "%s:\n", l->name);
         fprintf(out, "%s\n", opaqueEmitBufferContent(buf));
     }
     fprintf(out, "\nENTRY:\n");

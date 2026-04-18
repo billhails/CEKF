@@ -148,7 +148,8 @@ void pushNewBuiltIn(BuiltIns *registry, char *name, TcType *ret,
     HashSymbol *internal = newSymbol(internalC);
     FREE_ARRAY(char, internalC, strlen(internalC) + 1);
     HashSymbol *cname = newSymbol(linkerName);
-    BuiltIn *decl = newBuiltIn(external, internal, cname, ret, args, impl);
+    BuiltIn *decl =
+        newBuiltIn(external, internal, cname, ret, args, impl, registry->size);
     int save = PROTECT(decl);
     pushBuiltIns(registry, decl);
     UNPROTECT(save);

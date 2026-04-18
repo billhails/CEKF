@@ -2160,6 +2160,8 @@ static LamArgs *convertExpressions(AstExpressions *expressions,
                                    LamContext *env) {
     if (expressions == NULL)
         return NULL;
+    if (expressions == expressions->next)
+        cant_happen("recursive expression loop");
     LamArgs *next = convertExpressions(expressions->next, env);
     int save = PROTECT(next);
     LamExp *exp = convertExpression(expressions->expression, env);

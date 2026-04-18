@@ -11,6 +11,7 @@ BuiltIn --linkerName--> HashSymbol
 BuiltIn --result--> TcType
 BuiltIn --args--> BuiltInArgs
 BuiltIn --implementation--> void_ptr
+BuiltIn --id--> index
 BuiltInImplementation --name--> HashSymbol
 BuiltInImplementation --implementation--> void_ptr
 BuiltInImplementation --nArgs--> int
