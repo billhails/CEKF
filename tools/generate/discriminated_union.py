@@ -135,7 +135,7 @@ class DiscriminatedUnion(SimpleStruct):
         output.append(f"    if (node == NULL)\n")
         output.append(f"        return NULL;\n")
         output.append(f"    ENTER({target}{myName});\n")
-        output.append(f"    int save = PROTECT(NULL);\n")
+        output.append(f"    int save = STARTPROTECT();\n")
         output.append(f"    {myName} *result = node;\n")
         output.append(f"    switch (node->type) {{\n")
         

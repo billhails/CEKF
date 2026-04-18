@@ -178,13 +178,11 @@ static ER *emitAnonymousLambda(MinLam *lambda, EC *ctx) {
     EC *lamContext = extendContextForLambda(name, ctx);
     int save = PROTECT(lamContext);
     HashSymbol *containing_label = makeLambdaLabel(ctx->context.currentBinding);
-    PROTECT(containing_label);
     comment(lamContext, "inside %s, %d args", containing_label->name,
             countSymbolList(lambda->args));
     emitMinLam(lambda, lamContext);
     retrieveMaxReg(&ctx->context, &lamContext->context);
     HashSymbol *label = makeLambdaLabel(name);
-    PROTECT(label);
     ER *result = emitAddrResult(label, ctx);
     UNPROTECT(save);
     return result;
@@ -479,9 +477,7 @@ static void emitMakeClosure(HashSymbol *var, Integer depth, RA *bindings,
                             EC *ctx) {
     comment(ctx, "emitMakeClosure %d", depth);
     HashSymbol *label = makeLambdaLabel(var);
-    int save = PROTECT(label);
     emitClosureNew(bindings->entries[depth], label, ctx);
-    UNPROTECT(save);
 }
 
 // emitMinLetRec -> emitBackpatchBindings -> emitBackpatchClosure

@@ -30,7 +30,7 @@ void minlam_runtime_init(Value *reg, int max_reg, int argc, char **argv) {
     builtin_args_cargc = 1;
     builtin_args_argv = argv;
     initAll();
-    minlam_runtime_save = PROTECT(NULL);
+    minlam_runtime_save = STARTPROTECT();
 }
 
 void minlam_runtime_unprotect() { UNPROTECT(minlam_runtime_save); }
