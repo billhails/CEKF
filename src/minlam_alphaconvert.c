@@ -645,7 +645,7 @@ static MinCondCases *visitMinCondCases(MinCondCases *node,
     if (node == NULL)
         return NULL;
 
-    int save = PROTECT(NULL);
+    int save = STARTPROTECT();
     MinCondCases *result = node;
 
     switch (node->type) {

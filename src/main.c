@@ -54,6 +54,7 @@
 #include "minlam_cps.h"
 #include "minlam_cpsTrampoline.h"
 #include "minlam_curry.h"
+#include "minlam_dump_b.h"
 #include "minlam_emit_b.h"
 #include "minlam_emit_c.h"
 #include "minlam_eta.h"
@@ -807,7 +808,12 @@ int main(int argc, char *argv[]) {
                     fclose(outFile);
                 }
             } else {
-                emitBProgram(minExp, builtIns);
+                BBuffer *buffer = emitBProgram(minExp, builtIns);
+                int save5 = PROTECT(buffer);
+                if (dump_bytecode_flag) {
+                    dumpBBuffer(stdout, buffer);
+                }
+                UNPROTECT(save5);
             }
             exit(0);
         }

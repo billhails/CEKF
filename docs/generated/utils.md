@@ -28,6 +28,7 @@ SCharArray["SCharArray[]"] --entries--> schar
 SymbolArray["SymbolArray[]"] --entries--> HashSymbol
 IntArray["IntArray[]"] --entries--> int
 UIntArray["UIntArray[]"] --entries--> uint
+IndexArray["IndexArray[]"] --entries--> index
 ```
 
 > Generated from src/utils.yaml by tools/generate.py

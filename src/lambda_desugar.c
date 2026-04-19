@@ -626,7 +626,7 @@ static MinCondCases *desugarLamCondCases(LamCondCases *node) {
         return NULL;
     }
 
-    int save = PROTECT(NULL);
+    int save = STARTPROTECT();
     MinCondCases *result = NULL;
 
     switch (node->type) {
@@ -665,7 +665,7 @@ static MinExp *_desugarLamExp(LamExp *node) {
         return NULL;
     }
     MinExp *result = NULL;
-    int save = PROTECT(NULL);
+    int save = STARTPROTECT();
     switch (node->type) {
     case LAMEXP_TYPE_AMB: {
         MinAmb *new = desugarLamAmb(getLamExp_Amb(node));

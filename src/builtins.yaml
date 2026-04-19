@@ -36,6 +36,7 @@ structs:
             result: TcType
             args: BuiltInArgs
             implementation: void_ptr
+            id: index
 
     BuiltInImplementation:
         meta:

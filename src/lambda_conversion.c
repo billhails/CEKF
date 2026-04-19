@@ -1903,7 +1903,7 @@ static LamLam *convertCompositeBodies(ParserInfo PI, int nArgs,
     }
     LamExp **actions = NEW_ARRAY(LamExp *, nBodies);
     AstFargList **argLists = NEW_ARRAY(AstFargList *, nBodies);
-    int p = PROTECT(NULL);
+    int p = STARTPROTECT();
     AstCompositeFunction *f = fun;
     for (int i = 0; i < nBodies; i++, f = f->next) {
         AstFunction *func = f->function;
@@ -2160,6 +2160,8 @@ static LamArgs *convertExpressions(AstExpressions *expressions,
                                    LamContext *env) {
     if (expressions == NULL)
         return NULL;
+    if (expressions == expressions->next)
+        cant_happen("recursive expression loop");
     LamArgs *next = convertExpressions(expressions->next, env);
     int save = PROTECT(next);
     LamExp *exp = convertExpression(expressions->expression, env);

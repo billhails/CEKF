@@ -351,7 +351,7 @@ static PrattParser *makePrattParser(void) {
 static AstCompositeFunction *
 makeAstCompositeFunction(AstAltFunction *functions,
                          AstCompositeFunction *rest) {
-    int save = PROTECT(NULL);
+    int save = STARTPROTECT();
     for (AstAltArgs *args = functions->altArgs; args != NULL;
          args = args->next) {
         AstNest *copy = copyAstNest(functions->nest);

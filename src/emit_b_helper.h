@@ -20,4 +20,20 @@
 
 #include "emit_b.h"
 
+Index bemitter_buffer_pos(BBuffer *);
+Index bemitter_pos(BEmitterContext *);
+void bemit_comment(BEmitterContext *, SCharArray *);
+void bemit_word(BEmitterContext *, UInteger);
+void bemit_code(BEmitterContext *, BBC, int, int, int);
+void bemit_location(BEmitterContext *, ParserInfo);
+void bemit_buffer_label(BBuffer *, HashSymbol *, Index);
+void bemit_label(BEmitterContext *, HashSymbol *, Index);
+BBuffer *bemitter_newBuffer();
+BEmitterContext *bemitter_newContext(EmitterContext);
+void bemitter_append(BBuffer *to, BBuffer *from, Index bufferId);
+void bemit_fixup_code(BEmitterContext *, HashSymbol *label, Index loc);
+void bemit_fixup_inttable(BEmitterContext *, Index tableId, Index loc);
+void bemit_fixup_chartable(BEmitterContext *, Index tableId, Index loc);
+void bemit_fixup_matchtable(BEmitterContext *, Index tableId, Index loc);
+
 #endif

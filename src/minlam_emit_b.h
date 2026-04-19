@@ -19,9 +19,10 @@
  */
 
 #include "builtins.h"
+#include "emit_b.h"
 #include "emit_b_helper.h"
 #include "minlam.h"
 
-void emitBProgram(MinExp *, BuiltIns *);
+BBuffer *emitBProgram(MinExp *, BuiltIns *);
 
 #endif

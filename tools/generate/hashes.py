@@ -197,7 +197,10 @@ class SimpleHash(Base):
         myName = self.getName()
         self.printBaseDocumentation()
         print(f'typedef struct {myName} {{ {c}')
-        print(f'    struct HashTable wrapped; {c}')
+        print(f'    union {{ {c}')
+        print(f'        struct HashTable wrapped; {c}')
+        print(f'        struct Header header; {c}') # HashTables start with a header
+        print(f'    }}; {c}')
         print(f'}} {myName}; {c}')
         print('')
 

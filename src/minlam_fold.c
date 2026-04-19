@@ -338,7 +338,7 @@ MinExp *foldMinExp(MinExp *node) {
     if (node == NULL)
         return NULL;
 
-    int save = PROTECT(NULL);
+    int save = STARTPROTECT();
     MinExp *result = node;
 
     switch (node->type) {
@@ -483,7 +483,7 @@ static MinCondCases *foldMinCondCases(MinCondCases *node) {
     if (node == NULL)
         return NULL;
 
-    int save = PROTECT(NULL);
+    int save = STARTPROTECT();
     MinCondCases *result = node;
 
     switch (node->type) {

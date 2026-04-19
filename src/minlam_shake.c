@@ -271,15 +271,19 @@ static MinExp *shakeMinLetRec(MinExp *exp) {
     MinBindings *new_bindings = shakeMinBindings(node->bindings);
     PROTECT(new_bindings);
 
-    // main algorithm
+    // keys = { x_0 ... x_n }
     SymbolSet *keys = getAllKeys(node->bindings);
     PROTECT(keys);
+    // deps = { x_i -> x_j | x_i in FV(\_i) intersection keys }
     SymbolSetMap *deps = buildDependencyGraph(node->bindings, keys);
     PROTECT(deps);
+    // rootSet = { keys intersection FV(body) }
     SymbolSet *rootSet = computeRoots(keys, new_body);
     PROTECT(rootSet);
+    // live = rootSet intersect deps+
     SymbolSet *live = computeLiveBindings(deps, rootSet);
     PROTECT(live);
+    // new_bindings = { x_i: \_i | x_i in live }
     new_bindings = retainOnlyLive(new_bindings, live);
     PROTECT(new_bindings);
 
@@ -347,7 +351,7 @@ MinExp *shakeMinExp(MinExp *node) {
     if (node == NULL)
         return NULL;
     ENTER(shakeMinExp);
-    int save = PROTECT(NULL);
+    int save = STARTPROTECT();
     MinExp *result = node;
     switch (node->type) {
     case MINEXP_TYPE_AMB: {
@@ -516,7 +520,7 @@ static MinCondCases *shakeMinCondCases(MinCondCases *node) {
     if (node == NULL)
         return NULL;
     ENTER(shakeMinCondCases);
-    int save = PROTECT(NULL);
+    int save = STARTPROTECT();
     MinCondCases *result = node;
     switch (node->type) {
     case MINCONDCASES_TYPE_INTEGERS: {

@@ -1,7 +1,7 @@
 .PHONY: all clean realclean deps profile leak-check check-grammar \
 list-cores test indent indent-src indent-generated docs \
 install-sqlite3 coverage extracov view-coverage \
-coverage-target test-c test-big-c help \
+coverage-target test-c test-b test-big-c help \
 establish-baseline test-refactoring update-baseline clean-baseline \
 scratch
 
@@ -178,6 +178,10 @@ irs: $(TEST_FN_SFILES) tmp/test_harness.scm
 
 test-big-c: all tmp/test_harness
 	tmp/test_harness
+
+test-b: all
+	@for t in $(TEST_FN_FILES) ; do set -x; $(TARGET) $(TARGET_ARGS) --target-b $$t || exit 1 ; done
+	@echo All B-code tests pass
 
 tmp/test_harness: tmp/test_harness.o $(ALL_OBJ)
 	$(LAXCC) -o $@ $< $(ALL_OBJ) $(LIBS)
