@@ -21,6 +21,7 @@
 #include "cekfs_debug.h"
 #include "hash.h"
 #include <ctype.h>
+#include <string.h>
 
 static const char *opcodeDisplayName(BBC opcode) {
     const char *name = bBCName(opcode);
@@ -37,6 +38,44 @@ static void printCodepoint(FILE *out, UInteger codepoint) {
     fprintf(out, "U+%04X", (unsigned int)codepoint);
     if (codepoint <= 0x7f && isprint((int)codepoint)) {
         fprintf(out, " ('%c')", (int)codepoint);
+    }
+}
+
+static void dumpInlineConstantSummary(FILE *out, BConstantArray *constants,
+                                      UInteger constIndex) {
+    if (constants == NULL || constIndex >= (UInteger)constants->size) {
+        return;
+    }
+
+    Value value = constants->entries[constIndex];
+    fprintf(out, " -> ");
+    switch (value.type) {
+    case VALUE_TYPE_NONE:
+        fprintf(out, "none");
+        break;
+    case VALUE_TYPE_STDINT:
+        fprintf(out, "%d", getValue_Stdint(value));
+        break;
+    case VALUE_TYPE_STDINT_IMAG:
+        fprintf(out, "%di", getValue_Stdint_imag(value));
+        break;
+    case VALUE_TYPE_CHARACTER:
+        printCodepoint(out, getValue_Character(value));
+        break;
+    case VALUE_TYPE_IRRATIONAL:
+        fprintf(out, "%g", getValue_Irrational(value));
+        break;
+    case VALUE_TYPE_IRRATIONAL_IMAG:
+        fprintf(out, "%gi", getValue_Irrational_imag(value));
+        break;
+    default: {
+        const char *typeName = valueTypeName(value.type);
+        if (typeName != NULL && strncmp(typeName, "VALUE_TYPE_", 11) == 0) {
+            typeName += 11;
+        }
+        fprintf(out, "%s", typeName);
+        break;
+    }
     }
 }
 
@@ -140,7 +179,8 @@ static void dumpRawWordLine(FILE *out, Index index, UInteger word,
 }
 
 static void dumpInstructionOperands(FILE *out, BBC opcode, UInteger a1,
-                                    UInteger a2, UInteger a3) {
+                                    UInteger a2, UInteger a3,
+                                    BConstantArray *constants) {
     switch (opcode) {
     case BBC_TYPE_CALL_BUILTIN:
         fprintf(out, " builtin=%u dst=", (unsigned int)a1);
@@ -194,6 +234,7 @@ static void dumpInstructionOperands(FILE *out, BBC opcode, UInteger a1,
         fprintf(out, " dst=");
         printReg(out, a1);
         fprintf(out, " const=%u", (unsigned int)a2);
+        dumpInlineConstantSummary(out, constants, a2);
         break;
     case BBC_TYPE_LOAD_I32:
         fprintf(out, " dst=");
@@ -262,13 +303,14 @@ static void dumpInstructionOperands(FILE *out, BBC opcode, UInteger a1,
 
 static void dumpInstructionLine(FILE *out, Index index, UInteger word,
                                 BBC opcode, UInteger a1, UInteger a2,
-                                UInteger a3, bool unpacked) {
+                                UInteger a3, bool unpacked,
+                                BConstantArray *constants) {
     fprintf(out, "%04u: .inst 0x%08x    ; %s", index, (unsigned int)word,
             opcodeDisplayName(opcode));
     if (unpacked) {
         fprintf(out, " [EXT]");
     }
-    dumpInstructionOperands(out, opcode, a1, a2, a3);
+    dumpInstructionOperands(out, opcode, a1, a2, a3, constants);
     fprintf(out, "\n");
 }
 
@@ -450,7 +492,8 @@ static void dumpCommentsAt(FILE *out, BCommentArray *comments, Index index) {
     }
 }
 
-static void dumpCodeWords(FILE *out, UIntArray *codes, IndexMap *labels,
+static void dumpCodeWords(FILE *out, UIntArray *codes,
+                          BConstantArray *constants, IndexMap *labels,
                           BFixupArray *fixups, BLocationArray *locations,
                           BCommentArray *comments) {
     if (codes == NULL) {
@@ -516,7 +559,8 @@ static void dumpCodeWords(FILE *out, UIntArray *codes, IndexMap *labels,
         }
 
         extraWords = opcodeTrailingWords(opcode);
-        dumpInstructionLine(out, i, word, opcode, a1, a2, a3, unpacked);
+        dumpInstructionLine(out, i, word, opcode, a1, a2, a3, unpacked,
+                            constants);
         dumpMetadataAt(out, fixups, locations, comments, i);
 
         if (unpacked) {
@@ -630,8 +674,8 @@ void dumpBBuffer(FILE *out, BBuffer *buffer) {
     }
 
     fprintf(out, "; BBuffer\n");
-    dumpCodeWords(out, buffer->codes, buffer->labels, buffer->fixups,
-                  buffer->locations, buffer->comments);
+    dumpCodeWords(out, buffer->codes, buffer->constants, buffer->labels,
+                  buffer->fixups, buffer->locations, buffer->comments);
     dumpConstants(out, buffer->constants);
     dumpIntCondTables(out, buffer);
     dumpCharCondTables(out, buffer);
@@ -645,7 +689,7 @@ void dumpBLinkedImage(FILE *out, BLinkedImage *image) {
     }
 
     fprintf(out, "; BLinkedImage entry=%u\n", image->entryPoint);
-    dumpCodeWords(out, image->codes, NULL, NULL, image->locations,
-                  image->comments);
+    dumpCodeWords(out, image->codes, image->constants, NULL, NULL,
+                  image->locations, image->comments);
     dumpConstants(out, image->constants);
 }
