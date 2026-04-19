@@ -65,7 +65,13 @@ static void emitMinMatchList(MinMatchList *, EC *, IndexArray *, HashSymbol *);
     } while (0)
 
 static inline int IX(ER *r, EC *c) {
-    return slotIndex(getEmitBResult_Slot(r), &c->context);
+    if (isEmitBResult_Slot(r)) {
+        return slotIndex(getEmitBResult_Slot(r), &c->context);
+    }
+    if (isEmitBResult_Immediate(r)) {
+        return getEmitBResult_Immediate(r);
+    }
+    cant_happen("unrecognised EmitBResult");
 }
 
 static inline RA *newRA() { return newBResultArray(); }
@@ -157,7 +163,10 @@ static Index addToConstants(MaybeBigInt *bi, EC *ctx) {
     Value v;
     switch (bi->type) {
     case BI_BIG: {
-        BigInt *big = newBigInt(bi->big);
+        bigint owned;
+        bigint_init(&owned);
+        bigint_cpy(&owned, &bi->big);
+        BigInt *big = newBigInt(owned);
         if (bi->imag)
             v = value_Bigint_imag(big);
         else
@@ -207,7 +216,8 @@ static inline HashSymbol *getResultSlotSymbol(ER *result) {
 }
 
 static inline bool resultNeedsMaterialization(ER *result) {
-    return isEmitBResult_Immediate(result);
+    (void)result;
+    return false;
 }
 
 /////////////////
@@ -362,7 +372,7 @@ static ER *emitCharacterResult(Character c, EC *ctx) {
 
 static ER *emitAnnotatedVarResult(MinAnnotatedVar *avar,
                                   EC *ctx __attribute__((unused))) {
-    return newEmitBResult_Slot(avar->var);
+    return newEmitBResult_Immediate(avar->position);
 }
 
 static ER *emitMaybeBigInt(MaybeBigInt *mbi, EC *ctx) {
@@ -484,7 +494,10 @@ static void emitMinMatchList(MinMatchList *node, EC *ctx, IndexArray *indexes,
         if (match->item < 0)
             cant_happen("negative tag");
 
-        extendIndexArray(indexes, (Index)match->item + 1);
+        if (indexes->size <= (Index)match->item) {
+            pushnIndexArray(indexes,
+                            (int)((Index)match->item + 1 - indexes->size), 0);
+        }
         pokeIndexArray(indexes, match->item, bemitter_pos(ctx));
         match = match->next;
     }
@@ -534,6 +547,7 @@ void emitBProgram(MinExp *node, BuiltIns *builtIns) {
     HashSymbol *label = NULL;
     BBuffer *buf = NULL;
     BBuffer *final = bemitter_newBuffer();
+    PROTECT(final);
     while ((label = iterateBBufferBag(ctx->lambdas, &i, &buf)) != NULL) {
         HashSymbol *l = makeLambdaLabel(label);
         bemit_buffer_label(final, l, bemitter_buffer_pos(final));

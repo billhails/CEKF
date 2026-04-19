@@ -204,7 +204,7 @@ HashSymbol *emitter_claimSlotSymbol(EmitterContext *ctx) {
         }
     }
     // no available slots, create a new one
-    result = genSym("tmp_");
+    result = genSym("slot");
     resultSlot = createNewSlot(ctx);
     int save = PROTECT(resultSlot);
     setSlotPool(ctx->slots, result, resultSlot);
