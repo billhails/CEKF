@@ -87,32 +87,6 @@ static Index resolveGlobalLabel(BLayout *layout, HashSymbol *label) {
     return target;
 }
 
-/** Patches one code operand with its resolved label address. */
-static void patchCodeFixup(BBuffer *buffer, BLayout *layout, CodeFixup *fixup) {
-    pokeUIntArray(buffer->codes, fixup->location,
-                  (UInteger)resolveGlobalLabel(layout, fixup->label));
-}
-
-/** Finds which source buffer owns a flattened code location. */
-static HashSymbol *findBufferLabelForLocation(BAssemblyPlan *plan,
-                                              BLayout *layout, Index location) {
-    for (Index i = 0; i < countSymbolArray(plan->order); i++) {
-        HashSymbol *label = getSymbolArray(plan->order, i);
-        BBuffer *buffer = getPlanBuffer(plan, label);
-        Index base = 0;
-
-        if (!getIndexMap(layout->bufferBases, label, &base)) {
-            cant_happen("missing buffer base for %s in BLayout", label->name);
-        }
-        if (location >= base &&
-            location < base + countUIntArray(buffer->codes)) {
-            return label;
-        }
-    }
-
-    cant_happen("missing owner buffer for code location %u", location);
-}
-
 /** Returns the number of tables of one family in a buffer. */
 static Index countTableFamily(BBuffer *buffer, BFixupType type) {
     switch (type) {
@@ -146,60 +120,143 @@ static Index getTableBase(BAssemblyPlan *plan, HashSymbol *bufferLabel,
     cant_happen("missing buffer %s in BAssemblyPlan order", bufferLabel->name);
 }
 
-/** Resolves a local table id to its final global index. */
-static Index resolveGlobalTableId(BAssemblyPlan *plan, BLayout *layout,
-                                  Index location, Index localTableId,
-                                  BFixupType type) {
-    HashSymbol *bufferLabel =
-        findBufferLabelForLocation(plan, layout, location);
-
-    return getTableBase(plan, bufferLabel, type) + localTableId;
+/** Appends a buffer's code words to the linked image. */
+static void appendBufferCodes(BLinkedImage *image, BBuffer *buffer) {
+    for (Index i = 0; i < countUIntArray(buffer->codes); i++) {
+        pushUIntArray(image->codes, getUIntArray(buffer->codes, i));
+    }
 }
 
-/** Patches one INTCOND table operand to its global table index. */
-static void patchIntTableFixup(BAssemblyPlan *plan, BBuffer *buffer,
-                               BLayout *layout, TableFixup *fixup) {
-    pokeUIntArray(buffer->codes, fixup->location,
-                  (UInteger)resolveGlobalTableId(plan, layout, fixup->location,
-                                                 fixup->tableId,
-                                                 BFIXUP_TYPE_INTTABLE));
+/** Appends rebased source locations to the linked image. */
+static void appendBufferLocations(BLinkedImage *image, BBuffer *buffer,
+                                  Index codeBase) {
+    for (Index i = 0; i < countBLocationArray(buffer->locations); i++) {
+        BLocation *location =
+            copyBLocation(getBLocationArray(buffer->locations, i));
+        int save = PROTECT(location);
+        location->index += codeBase;
+        pushBLocationArray(image->locations, location);
+        UNPROTECT(save);
+    }
 }
 
-/** Patches one CHARCOND table operand to its global table index. */
-static void patchCharTableFixup(BAssemblyPlan *plan, BBuffer *buffer,
-                                BLayout *layout, TableFixup *fixup) {
-    pokeUIntArray(buffer->codes, fixup->location,
-                  (UInteger)resolveGlobalTableId(plan, layout, fixup->location,
-                                                 fixup->tableId,
-                                                 BFIXUP_TYPE_CHARTABLE));
+/** Appends rebased comments to the linked image. */
+static void appendBufferComments(BLinkedImage *image, BBuffer *buffer,
+                                 Index codeBase) {
+    for (Index i = 0; i < countBCommentArray(buffer->comments); i++) {
+        BComment *comment = copyBComment(getBCommentArray(buffer->comments, i));
+        int save = PROTECT(comment);
+        comment->index += codeBase;
+        pushBCommentArray(image->comments, comment);
+        UNPROTECT(save);
+    }
 }
 
-/** Patches one MATCH table operand to its global table index. */
-static void patchMatchTableFixup(BAssemblyPlan *plan, BBuffer *buffer,
-                                 BLayout *layout, TableFixup *fixup) {
-    pokeUIntArray(buffer->codes, fixup->location,
-                  (UInteger)resolveGlobalTableId(plan, layout, fixup->location,
-                                                 fixup->tableId,
-                                                 BFIXUP_TYPE_MATCHTABLE));
+/** Appends rebased integer cond tables to the linked image. */
+static void appendBufferIntConds(BLinkedImage *image, BBuffer *buffer,
+                                 Index codeBase) {
+    for (Index i = 0; i < countIntCondTable(buffer->intConds); i++) {
+        IntCondSwitch *table =
+            copyIntCondSwitch(getIntCondTable(buffer->intConds, i));
+        int save = PROTECT(table);
+        table->default_target += codeBase;
+        for (Index j = 0; j < countIntCondCaseArray(table->cases); j++) {
+            getIntCondCaseArray(table->cases, j)->target += codeBase;
+        }
+        pushIntCondTable(image->intConds, table);
+        UNPROTECT(save);
+    }
 }
 
-/** Applies the currently supported fixups to the flattened buffer. */
-static void patchFixups(BAssemblyPlan *plan, BBuffer *buffer, BLayout *layout) {
+/** Appends rebased character cond tables to the linked image. */
+static void appendBufferCharConds(BLinkedImage *image, BBuffer *buffer,
+                                  Index codeBase) {
+    for (Index i = 0; i < countCharCondTable(buffer->charConds); i++) {
+        CharCondSwitch *table =
+            copyCharCondSwitch(getCharCondTable(buffer->charConds, i));
+        int save = PROTECT(table);
+        table->default_target += codeBase;
+        for (Index j = 0; j < countCharCondCaseArray(table->cases); j++) {
+            getCharCondCaseArray(table->cases, j)->target += codeBase;
+        }
+        pushCharCondTable(image->charConds, table);
+        UNPROTECT(save);
+    }
+}
+
+/** Appends rebased match tables to the linked image. */
+static void appendBufferMatches(BLinkedImage *image, BBuffer *buffer,
+                                Index codeBase) {
+    for (Index i = 0; i < countMatchTable(buffer->matches); i++) {
+        IndexArray *table = copyIndexArray(getMatchTable(buffer->matches, i));
+        int save = PROTECT(table);
+        for (Index j = 0; j < countIndexArray(table); j++) {
+            pokeIndexArray(table, j, getIndexArray(table, j) + codeBase);
+        }
+        pushMatchTable(image->matches, table);
+        UNPROTECT(save);
+    }
+}
+
+/** Patches one code operand with its resolved label address. */
+static void patchCodeFixup(BLinkedImage *image, BLayout *layout, Index codeBase,
+                           CodeFixup *fixup) {
+    pokeUIntArray(image->codes, codeBase + fixup->location,
+                  (UInteger)resolveGlobalLabel(layout, fixup->label));
+}
+
+/** Patches one table operand in the linked image. */
+static void patchTableFixup(BAssemblyPlan *plan, BLinkedImage *image,
+                            HashSymbol *bufferLabel, Index codeBase,
+                            TableFixup *fixup, BFixupType type) {
+    Index tableId = getTableBase(plan, bufferLabel, type) + fixup->tableId;
+    pokeUIntArray(image->codes, codeBase + fixup->location, (UInteger)tableId);
+}
+
+/** Patches fixups for one source buffer in the linked image. */
+static void patchBufferFixups(BAssemblyPlan *plan, BLayout *layout,
+                              BLinkedImage *image, HashSymbol *bufferLabel,
+                              BBuffer *buffer, Index codeBase) {
     for (Index i = 0; i < countBFixupArray(buffer->fixups); i++) {
         BFixup *fixup = getBFixupArray(buffer->fixups, i);
 
         if (isBFixup_Code(fixup)) {
-            patchCodeFixup(buffer, layout, getBFixup_Code(fixup));
+            patchCodeFixup(image, layout, codeBase, getBFixup_Code(fixup));
         } else if (isBFixup_IntTable(fixup)) {
-            patchIntTableFixup(plan, buffer, layout, getBFixup_IntTable(fixup));
+            patchTableFixup(plan, image, bufferLabel, codeBase,
+                            getBFixup_IntTable(fixup), BFIXUP_TYPE_INTTABLE);
         } else if (isBFixup_CharTable(fixup)) {
-            patchCharTableFixup(plan, buffer, layout,
-                                getBFixup_CharTable(fixup));
+            patchTableFixup(plan, image, bufferLabel, codeBase,
+                            getBFixup_CharTable(fixup), BFIXUP_TYPE_CHARTABLE);
         } else if (isBFixup_MatchTable(fixup)) {
-            patchMatchTableFixup(plan, buffer, layout,
-                                 getBFixup_MatchTable(fixup));
+            patchTableFixup(plan, image, bufferLabel, codeBase,
+                            getBFixup_MatchTable(fixup),
+                            BFIXUP_TYPE_MATCHTABLE);
         }
     }
+}
+
+/** Appends one source buffer into the final linked image. */
+static void appendBufferToImage(BAssemblyPlan *plan, BLayout *layout,
+                                BLinkedImage *image, HashSymbol *bufferLabel) {
+    BBuffer *buffer = getPlanBuffer(plan, bufferLabel);
+    Index codeBase = 0;
+
+    if (!getIndexMap(layout->bufferBases, bufferLabel, &codeBase)) {
+        cant_happen("missing buffer base for %s in BLayout", bufferLabel->name);
+    }
+    if (countUIntArray(image->codes) != codeBase) {
+        cant_happen("unexpected code base for %s during assembly",
+                    bufferLabel->name);
+    }
+
+    appendBufferCodes(image, buffer);
+    appendBufferLocations(image, buffer, codeBase);
+    appendBufferComments(image, buffer, codeBase);
+    appendBufferIntConds(image, buffer, codeBase);
+    appendBufferCharConds(image, buffer, codeBase);
+    appendBufferMatches(image, buffer, codeBase);
+    patchBufferFixups(plan, layout, image, bufferLabel, buffer, codeBase);
 }
 
 /** Builds the code layout used for later patching. */
@@ -221,8 +278,8 @@ BLayout *layoutBAssemblyPlan(BAssemblyPlan *plan) {
     return layout;
 }
 
-/** Flattens the plan buffers and patches resolved operands. */
-BBuffer *assembleBAssemblyPlan(BAssemblyPlan *plan) {
+/** Flattens the plan buffers into a linked bytecode image. */
+BLinkedImage *assembleBAssemblyPlan(BAssemblyPlan *plan) {
     if (plan == NULL) {
         return NULL;
     }
@@ -230,20 +287,28 @@ BBuffer *assembleBAssemblyPlan(BAssemblyPlan *plan) {
     int save = STARTPROTECT();
     BLayout *layout = layoutBAssemblyPlan(plan);
     PROTECT(layout);
-    BBuffer *final = bemitter_newBuffer();
-    PROTECT(final);
-    final->constants = plan->constants;
+    UIntArray *codes = newUIntArray();
+    PROTECT(codes);
+    BLocationArray *locations = newBLocationArray();
+    PROTECT(locations);
+    BCommentArray *comments = newBCommentArray();
+    PROTECT(comments);
+    IntCondTable *intConds = newIntCondTable();
+    PROTECT(intConds);
+    CharCondTable *charConds = newCharCondTable();
+    PROTECT(charConds);
+    MatchTable *matches = newMatchTable();
+    PROTECT(matches);
+    BLinkedImage *image =
+        newBLinkedImage(codes, plan->constants, locations, comments, intConds,
+                        charConds, matches, layout->entryPoint);
+    PROTECT(image);
 
     for (Index i = 0; i < countSymbolArray(plan->order); i++) {
-        HashSymbol *label = getSymbolArray(plan->order, i);
-        BBuffer *buffer = getPlanBuffer(plan, label);
-
-        bemit_buffer_label(final, label, bemitter_buffer_pos(final));
-        bemitter_append(final, buffer, 0);
+        appendBufferToImage(plan, layout, image,
+                            getSymbolArray(plan->order, i));
     }
 
-    patchFixups(plan, final, layout);
-
     UNPROTECT(save);
-    return final;
+    return image;
 }

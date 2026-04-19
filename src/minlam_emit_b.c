@@ -524,7 +524,7 @@ static void emitMinMatchList(MinMatchList *node, EC *ctx, IndexArray *indexes,
 // Public API
 //////////////
 
-BBuffer *emitBProgram(MinExp *node, BuiltIns *builtIns) {
+BLinkedImage *emitBProgram(MinExp *node, BuiltIns *builtIns) {
     HashSymbol *main = newSymbol("main");
     SymbolArray *heap = emitter_createHeap();
     int save = PROTECT(heap);
@@ -558,7 +558,7 @@ BBuffer *emitBProgram(MinExp *node, BuiltIns *builtIns) {
     setBBufferBag(plan->buffers, main, ctx->body);
     pushSymbolArray(plan->order, main);
 
-    BBuffer *final = assembleBAssemblyPlan(plan);
+    BLinkedImage *final = assembleBAssemblyPlan(plan);
     UNPROTECT(save);
     return final;
 }

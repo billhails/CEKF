@@ -23,6 +23,6 @@
 #include "emit_b_helper.h"
 #include "minlam.h"
 
-BBuffer *emitBProgram(MinExp *, BuiltIns *);
+BLinkedImage *emitBProgram(MinExp *, BuiltIns *);
 
 #endif

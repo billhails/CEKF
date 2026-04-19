@@ -570,23 +570,23 @@ static void dumpConstants(FILE *out, BConstantArray *constants) {
     }
 }
 
-static void dumpIntCondTables(FILE *out, BBuffer *buffer) {
-    if (buffer->intConds == NULL || buffer->intConds->size == 0) {
+static void dumpIntCondTables(FILE *out, BConstantArray *constants,
+                              IntCondTable *tables) {
+    if (tables == NULL || tables->size == 0) {
         return;
     }
 
     fprintf(out, "\n; intConds\n");
-    for (Index i = 0; i < buffer->intConds->size; i++) {
-        IntCondSwitch *table = buffer->intConds->entries[i];
+    for (Index i = 0; i < tables->size; i++) {
+        IntCondSwitch *table = tables->entries[i];
         fprintf(out, ".intcond %u default=%u\n", i, table->default_target);
         for (Index j = 0; j < table->cases->size; j++) {
             IntCondCase *condCase = table->cases->entries[j];
             fprintf(out, "    case[%u] const=%u", j, condCase->const_index);
-            if (buffer->constants != NULL &&
-                condCase->const_index < buffer->constants->size) {
+            if (constants != NULL && condCase->const_index < constants->size) {
                 fprintf(out, " (");
-                dumpConstantValue(
-                    out, buffer->constants->entries[condCase->const_index]);
+                dumpConstantValue(out,
+                                  constants->entries[condCase->const_index]);
                 fprintf(out, ")");
             }
             fprintf(out, " -> %u\n", condCase->target);
@@ -594,14 +594,14 @@ static void dumpIntCondTables(FILE *out, BBuffer *buffer) {
     }
 }
 
-static void dumpCharCondTables(FILE *out, BBuffer *buffer) {
-    if (buffer->charConds == NULL || buffer->charConds->size == 0) {
+static void dumpCharCondTables(FILE *out, CharCondTable *tables) {
+    if (tables == NULL || tables->size == 0) {
         return;
     }
 
     fprintf(out, "\n; charConds\n");
-    for (Index i = 0; i < buffer->charConds->size; i++) {
-        CharCondSwitch *table = buffer->charConds->entries[i];
+    for (Index i = 0; i < tables->size; i++) {
+        CharCondSwitch *table = tables->entries[i];
         fprintf(out, ".charcond %u default=%u\n", i, table->default_target);
         for (Index j = 0; j < table->cases->size; j++) {
             CharCondCase *condCase = table->cases->entries[j];
@@ -611,14 +611,14 @@ static void dumpCharCondTables(FILE *out, BBuffer *buffer) {
     }
 }
 
-static void dumpMatchTables(FILE *out, BBuffer *buffer) {
-    if (buffer->matches == NULL || buffer->matches->size == 0) {
+static void dumpMatchTables(FILE *out, MatchTable *tables) {
+    if (tables == NULL || tables->size == 0) {
         return;
     }
 
     fprintf(out, "\n; matches\n");
-    for (Index i = 0; i < buffer->matches->size; i++) {
-        IndexArray *table = buffer->matches->entries[i];
+    for (Index i = 0; i < tables->size; i++) {
+        IndexArray *table = tables->entries[i];
         fprintf(out, ".match %u\n", i);
         for (Index j = 0; j < table->size; j++) {
             fprintf(out, "    tag[%u] -> %u\n", j, table->entries[j]);
@@ -636,9 +636,9 @@ void dumpBBuffer(FILE *out, BBuffer *buffer) {
     dumpCodeWords(out, buffer->codes, buffer->constants, buffer->labels,
                   buffer->fixups, buffer->locations, buffer->comments);
     dumpConstants(out, buffer->constants);
-    dumpIntCondTables(out, buffer);
-    dumpCharCondTables(out, buffer);
-    dumpMatchTables(out, buffer);
+    dumpIntCondTables(out, buffer->constants, buffer->intConds);
+    dumpCharCondTables(out, buffer->charConds);
+    dumpMatchTables(out, buffer->matches);
 }
 
 void dumpBLinkedImage(FILE *out, BLinkedImage *image) {
@@ -651,4 +651,7 @@ void dumpBLinkedImage(FILE *out, BLinkedImage *image) {
     dumpCodeWords(out, image->codes, image->constants, NULL, NULL,
                   image->locations, image->comments);
     dumpConstants(out, image->constants);
+    dumpIntCondTables(out, image->constants, image->intConds);
+    dumpCharCondTables(out, image->charConds);
+    dumpMatchTables(out, image->matches);
 }

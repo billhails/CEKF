@@ -20,6 +20,9 @@ BLinkedImage --codes--> UIntArray
 BLinkedImage --constants--> BConstantArray
 BLinkedImage --locations--> BLocationArray
 BLinkedImage --comments--> BCommentArray
+BLinkedImage --intConds--> IntCondTable
+BLinkedImage --charConds--> CharCondTable
+BLinkedImage --matches--> MatchTable
 BLinkedImage --entryPoint--> index
 BBuffer --codes--> UIntArray
 BBuffer --constants--> BConstantArray

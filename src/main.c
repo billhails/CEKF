@@ -808,10 +808,10 @@ int main(int argc, char *argv[]) {
                     fclose(outFile);
                 }
             } else {
-                BBuffer *buffer = emitBProgram(minExp, builtIns);
-                int save5 = PROTECT(buffer);
+                BLinkedImage *image = emitBProgram(minExp, builtIns);
+                int save5 = PROTECT(image);
                 if (dump_bytecode_flag) {
-                    dumpBBuffer(stdout, buffer);
+                    dumpBLinkedImage(stdout, image);
                 }
                 UNPROTECT(save5);
             }

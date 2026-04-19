@@ -21,6 +21,6 @@
 #include "emit_b.h"
 
 BLayout *layoutBAssemblyPlan(BAssemblyPlan *);
-BBuffer *assembleBAssemblyPlan(BAssemblyPlan *);
+BLinkedImage *assembleBAssemblyPlan(BAssemblyPlan *);
 
 #endif
