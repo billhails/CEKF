@@ -23,6 +23,8 @@
 #include <ctype.h>
 #include <string.h>
 
+static void ppad(FILE *out) { fprintf(out, "%*s; ", 23, ""); }
+
 static const char *opcodeDisplayName(BBC opcode) {
     const char *name = bBCName(opcode);
 
@@ -173,7 +175,8 @@ static void dumpRawWordLine(FILE *out, Index index, UInteger word,
                             const char *note) {
     fprintf(out, "%04u: .word 0x%08x", index, (unsigned int)word);
     if (note != NULL) {
-        fprintf(out, "    ; %s", note);
+        ppad(out);
+        fprintf(out, "%s", note);
     }
     fprintf(out, "\n");
 }
@@ -305,7 +308,7 @@ static void dumpInstructionLine(FILE *out, Index index, UInteger word,
                                 BBC opcode, UInteger a1, UInteger a2,
                                 UInteger a3, bool unpacked,
                                 BConstantArray *constants) {
-    fprintf(out, "%04u: .inst 0x%08x    ; %s", index, (unsigned int)word,
+    fprintf(out, "%04u: .inst 0x%08x %s", index, (unsigned int)word,
             opcodeDisplayName(opcode));
     if (unpacked) {
         fprintf(out, " [EXT]");
@@ -320,27 +323,26 @@ static void dumpTrailingWordLine(FILE *out, Index index, BBC opcode,
     case BBC_TYPE_CHARCOND:
     case BBC_TYPE_INTCOND:
     case BBC_TYPE_MATCH:
-        fprintf(out, "%04u: .word 0x%08x    ; table=%u\n", index,
+        fprintf(out, "%04u: .word 0x%08x ; table=%u\n", index,
                 (unsigned int)word, (unsigned int)word);
         break;
     case BBC_TYPE_CLOSURE_NEW:
     case BBC_TYPE_LOAD_ADDR:
-        fprintf(out, "%04u: .word 0x%08x    ; addr\n", index,
-                (unsigned int)word);
+        fprintf(out, "%04u: .word 0x%08x ; addr\n", index, (unsigned int)word);
         break;
     case BBC_TYPE_JMP_FALSE:
     case BBC_TYPE_JMP:
-        fprintf(out, "%04u: .word 0x%08x    ; target=%u\n", index,
+        fprintf(out, "%04u: .word 0x%08x ; target=%u\n", index,
                 (unsigned int)word, (unsigned int)word);
         break;
     case BBC_TYPE_LOAD_CHAR:
-        fprintf(out, "%04u: .word 0x%08x    ; codepoint=", index,
+        fprintf(out, "%04u: .word 0x%08x ; codepoint=", index,
                 (unsigned int)word);
         printCodepoint(out, word);
         fprintf(out, "\n");
         break;
     case BBC_TYPE_LOAD_I32:
-        fprintf(out, "%04u: .word 0x%08x    ; imm32=%d\n", index,
+        fprintf(out, "%04u: .word 0x%08x ; imm32=%d\n", index,
                 (unsigned int)word, (int)word);
         break;
     default:
@@ -356,7 +358,8 @@ static void dumpConstantValue(FILE *out, Value value) {
 static void dumpTableFixupAt(FILE *out, const char *name, TableFixup *fixup,
                              Index index) {
     if (fixup->location == index) {
-        fprintf(out, "        ; table fixup -> %s[%u]\n", name, fixup->tableId);
+        ppad(out);
+        fprintf(out, "table fixup -> %s[%u]\n", name, fixup->tableId);
     }
 }
 
@@ -398,8 +401,8 @@ static void dumpFixupsAt(FILE *out, BFixupArray *fixups, Index index) {
         switch (fixup->type) {
         case BFIXUP_TYPE_CODE:
             if (fixup->val.code->location == index) {
-                fprintf(out, "        ; fixup -> %s\n",
-                        fixup->val.code->label->name);
+                ppad(out);
+                fprintf(out, "fixup -> %s\n", fixup->val.code->label->name);
             }
             break;
         case BFIXUP_TYPE_CHARTABLE:
@@ -433,8 +436,8 @@ static void dumpLocationsAt(FILE *out, BLocationArray *locations, Index index) {
     for (Index i = 0; i < locations->size; i++) {
         BLocation *location = locations->entries[i];
         if (location->index == index) {
-            fprintf(out, "        ; loc %s:%d\n", location->fileName,
-                    location->lineNo);
+            ppad(out);
+            fprintf(out, "loc %s:%d\n", location->fileName, location->lineNo);
         }
     }
 }
@@ -447,7 +450,7 @@ static void dumpCommentsAt(FILE *out, BCommentArray *comments, Index index) {
     for (Index i = 0; i < comments->size; i++) {
         BComment *comment = comments->entries[i];
         if (comment->index == index) {
-            fprintf(out, "        ; ");
+            ppad(out);
             printCommentText(out, comment->text);
             fprintf(out, "\n");
         }
@@ -543,7 +546,8 @@ static void dumpCodeWords(FILE *out, UIntArray *codes,
         for (Index j = 0; j < extraWords; j++) {
             Index operandIndex = i + 1 + payloadWords + j;
             if (operandIndex >= codes->size) {
-                fprintf(out, "        ; truncated %s word\n",
+                ppad(out);
+                fprintf(out, "truncated %s word\n",
                         opcodeTrailingWordName(opcode));
                 break;
             }
