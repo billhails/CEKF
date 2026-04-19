@@ -186,6 +186,75 @@ static void patchMatchTableFixup(BAssemblyPlan *plan, BBuffer *buffer,
                                                  BFIXUP_TYPE_MATCHTABLE));
 }
 
+/** Patches one entry in an integer cond table. */
+static void patchIntCondFixup(BBuffer *buffer, BLayout *layout, Index tableBase,
+                              CondFixup *fixup) {
+    IntCondSwitch *table =
+        getIntCondTable(buffer->intConds, tableBase + fixup->tableId);
+    Index caseCount = countIntCondCaseArray(table->cases);
+    Index target = resolveGlobalLabel(layout, fixup->label);
+
+    if (fixup->tableIndex < caseCount) {
+        getIntCondCaseArray(table->cases, fixup->tableIndex)->target = target;
+        return;
+    }
+    if (fixup->tableIndex == caseCount) {
+        table->default_target = target;
+        return;
+    }
+
+    cant_happen("int cond index %u out of range for table %u",
+                fixup->tableIndex, tableBase + fixup->tableId);
+}
+
+/** Patches one entry in a character cond table. */
+static void patchCharCondFixup(BBuffer *buffer, BLayout *layout,
+                               Index tableBase, CondFixup *fixup) {
+    CharCondSwitch *table =
+        getCharCondTable(buffer->charConds, tableBase + fixup->tableId);
+    Index caseCount = countCharCondCaseArray(table->cases);
+    Index target = resolveGlobalLabel(layout, fixup->label);
+
+    if (fixup->tableIndex < caseCount) {
+        getCharCondCaseArray(table->cases, fixup->tableIndex)->target = target;
+        return;
+    }
+    if (fixup->tableIndex == caseCount) {
+        table->default_target = target;
+        return;
+    }
+
+    cant_happen("char cond index %u out of range for table %u",
+                fixup->tableIndex, tableBase + fixup->tableId);
+}
+
+/** Patches MATCHCOND fixups from one appended buffer. */
+static void patchCondFixups(BBuffer *buffer, BLayout *layout, Index fixupBase,
+                            Index intBase, Index charBase, Index matchBase) {
+    for (Index i = fixupBase; i < countBFixupArray(buffer->fixups); i++) {
+        BFixup *fixup = getBFixupArray(buffer->fixups, i);
+
+        if (isBFixup_IntCond(fixup)) {
+            patchIntCondFixup(buffer, layout, intBase,
+                              getBFixup_IntCond(fixup));
+        } else if (isBFixup_CharCond(fixup)) {
+            patchCharCondFixup(buffer, layout, charBase,
+                               getBFixup_CharCond(fixup));
+        } else if (isBFixup_MatchCond(fixup)) {
+            CondFixup *condFixup = getBFixup_MatchCond(fixup);
+            Index tableId = matchBase + condFixup->tableId;
+            IndexArray *table = getMatchTable(buffer->matches, tableId);
+
+            if (condFixup->tableIndex >= countIndexArray(table)) {
+                cant_happen("match table index %u out of range for table %u",
+                            condFixup->tableIndex, tableId);
+            }
+            pokeIndexArray(table, condFixup->tableIndex,
+                           resolveGlobalLabel(layout, condFixup->label));
+        }
+    }
+}
+
 /** Applies the currently supported fixups to the flattened buffer. */
 static void patchFixups(BAssemblyPlan *plan, BBuffer *buffer, BLayout *layout) {
     for (Index i = 0; i < countBFixupArray(buffer->fixups); i++) {
@@ -240,8 +309,14 @@ BBuffer *assembleBAssemblyPlan(BAssemblyPlan *plan) {
     for (Index i = 0; i < countSymbolArray(plan->order); i++) {
         HashSymbol *label = getSymbolArray(plan->order, i);
         BBuffer *buffer = getPlanBuffer(plan, label);
+        Index fixupBase = countBFixupArray(final->fixups);
+        Index intBase = countIntCondTable(final->intConds);
+        Index charBase = countCharCondTable(final->charConds);
+        Index matchBase = countMatchTable(final->matches);
+
         bemit_buffer_label(final, label, bemitter_buffer_pos(final));
         bemitter_append(final, buffer, 0);
+        patchCondFixups(final, layout, fixupBase, intBase, charBase, matchBase);
     }
 
     patchFixups(plan, final, layout);

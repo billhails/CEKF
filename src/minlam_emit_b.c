@@ -483,8 +483,6 @@ static void emitMinMatch(MinMatch *node, EC *ctx) {
     UNPROTECT(save);
 }
 
-//////// NOT YET CONVERTED ////////
-
 static void emitMinMatchList(MinMatchList *node, EC *ctx, IndexArray *indexes,
                              HashSymbol *end) {
     if (node == NULL)
