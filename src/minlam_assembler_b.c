@@ -20,6 +20,7 @@
 
 #include "emit_b_helper.h"
 
+/** Returns the buffer assigned to a plan label. */
 static BBuffer *getPlanBuffer(BAssemblyPlan *plan, HashSymbol *label) {
     BBuffer *buffer = NULL;
     if (!getBBufferBag(plan->buffers, label, &buffer)) {
@@ -28,6 +29,7 @@ static BBuffer *getPlanBuffer(BAssemblyPlan *plan, HashSymbol *label) {
     return buffer;
 }
 
+/** Records a rebased label in the global label map. */
 static void addGlobalLabel(BLayout *layout, HashSymbol *label, Index location) {
     if (getIndexMap(layout->globalLabels, label, NULL)) {
         cant_happen("duplicate global label %s in BLayout", label->name);
@@ -35,6 +37,7 @@ static void addGlobalLabel(BLayout *layout, HashSymbol *label, Index location) {
     setIndexMap(layout->globalLabels, label, location);
 }
 
+/** Computes the starting code offset for each buffer in plan order. */
 static void layoutBufferBases(BAssemblyPlan *plan, BLayout *layout) {
     Index offset = 0;
 
@@ -50,6 +53,7 @@ static void layoutBufferBases(BAssemblyPlan *plan, BLayout *layout) {
     }
 }
 
+/** Rewrites buffer-local labels into final code coordinates. */
 static void layoutGlobalLabels(BAssemblyPlan *plan, BLayout *layout) {
     for (Index i = 0; i < countSymbolArray(plan->order); i++) {
         HashSymbol *bufferLabel = getSymbolArray(plan->order, i);
@@ -73,15 +77,23 @@ static void layoutGlobalLabels(BAssemblyPlan *plan, BLayout *layout) {
     }
 }
 
-static void patchCodeFixup(BBuffer *buffer, BLayout *layout, CodeFixup *fixup) {
+/** Resolves a label to its final code address. */
+static Index resolveGlobalLabel(BLayout *layout, HashSymbol *label) {
     Index target = 0;
 
-    if (!getIndexMap(layout->globalLabels, fixup->label, &target)) {
-        cant_happen("missing global label %s in BLayout", fixup->label->name);
+    if (!getIndexMap(layout->globalLabels, label, &target)) {
+        cant_happen("missing global label %s in BLayout", label->name);
     }
-    pokeUIntArray(buffer->codes, fixup->location, (UInteger)target);
+    return target;
 }
 
+/** Patches one code operand with its resolved label address. */
+static void patchCodeFixup(BBuffer *buffer, BLayout *layout, CodeFixup *fixup) {
+    pokeUIntArray(buffer->codes, fixup->location,
+                  (UInteger)resolveGlobalLabel(layout, fixup->label));
+}
+
+/** Finds which source buffer owns a flattened code location. */
 static HashSymbol *findBufferLabelForLocation(BAssemblyPlan *plan,
                                               BLayout *layout, Index location) {
     for (Index i = 0; i < countSymbolArray(plan->order); i++) {
@@ -101,7 +113,27 @@ static HashSymbol *findBufferLabelForLocation(BAssemblyPlan *plan,
     cant_happen("missing owner buffer for code location %u", location);
 }
 
-static Index getIntCondBase(BAssemblyPlan *plan, HashSymbol *bufferLabel) {
+/** Returns the number of tables of one family in a buffer. */
+static Index countTableFamily(BBuffer *buffer, BFixupType type) {
+    switch (type) {
+    case BFIXUP_TYPE_INTTABLE:
+    case BFIXUP_TYPE_INTCOND:
+        return countIntCondTable(buffer->intConds);
+    case BFIXUP_TYPE_CHARTABLE:
+    case BFIXUP_TYPE_CHARCOND:
+        return countCharCondTable(buffer->charConds);
+    case BFIXUP_TYPE_MATCHTABLE:
+    case BFIXUP_TYPE_MATCHCOND:
+        return countMatchTable(buffer->matches);
+    default:
+        cant_happen("unexpected fixup type %s in countTableFamily",
+                    bFixupTypeName(type));
+    }
+}
+
+/** Computes the global base for one table family in one buffer. */
+static Index getTableBase(BAssemblyPlan *plan, HashSymbol *bufferLabel,
+                          BFixupType type) {
     Index base = 0;
 
     for (Index i = 0; i < countSymbolArray(plan->order); i++) {
@@ -111,21 +143,50 @@ static Index getIntCondBase(BAssemblyPlan *plan, HashSymbol *bufferLabel) {
         if (label == bufferLabel) {
             return base;
         }
-        base += countIntCondTable(buffer->intConds);
+        base += countTableFamily(buffer, type);
     }
 
     cant_happen("missing buffer %s in BAssemblyPlan order", bufferLabel->name);
 }
 
-static void patchIntTableFixup(BAssemblyPlan *plan, BBuffer *buffer,
-                               BLayout *layout, TableFixup *fixup) {
+/** Resolves a local table id to its final global index. */
+static Index resolveGlobalTableId(BAssemblyPlan *plan, BLayout *layout,
+                                  Index location, Index localTableId,
+                                  BFixupType type) {
     HashSymbol *bufferLabel =
-        findBufferLabelForLocation(plan, layout, fixup->location);
-    Index tableId = getIntCondBase(plan, bufferLabel) + fixup->tableId;
+        findBufferLabelForLocation(plan, layout, location);
 
-    pokeUIntArray(buffer->codes, fixup->location, (UInteger)tableId);
+    return getTableBase(plan, bufferLabel, type) + localTableId;
 }
 
+/** Patches one INTCOND table operand to its global table index. */
+static void patchIntTableFixup(BAssemblyPlan *plan, BBuffer *buffer,
+                               BLayout *layout, TableFixup *fixup) {
+    pokeUIntArray(buffer->codes, fixup->location,
+                  (UInteger)resolveGlobalTableId(plan, layout, fixup->location,
+                                                 fixup->tableId,
+                                                 BFIXUP_TYPE_INTTABLE));
+}
+
+/** Patches one CHARCOND table operand to its global table index. */
+static void patchCharTableFixup(BAssemblyPlan *plan, BBuffer *buffer,
+                                BLayout *layout, TableFixup *fixup) {
+    pokeUIntArray(buffer->codes, fixup->location,
+                  (UInteger)resolveGlobalTableId(plan, layout, fixup->location,
+                                                 fixup->tableId,
+                                                 BFIXUP_TYPE_CHARTABLE));
+}
+
+/** Patches one MATCH table operand to its global table index. */
+static void patchMatchTableFixup(BAssemblyPlan *plan, BBuffer *buffer,
+                                 BLayout *layout, TableFixup *fixup) {
+    pokeUIntArray(buffer->codes, fixup->location,
+                  (UInteger)resolveGlobalTableId(plan, layout, fixup->location,
+                                                 fixup->tableId,
+                                                 BFIXUP_TYPE_MATCHTABLE));
+}
+
+/** Applies the currently supported fixups to the flattened buffer. */
 static void patchFixups(BAssemblyPlan *plan, BBuffer *buffer, BLayout *layout) {
     for (Index i = 0; i < countBFixupArray(buffer->fixups); i++) {
         BFixup *fixup = getBFixupArray(buffer->fixups, i);
@@ -134,10 +195,17 @@ static void patchFixups(BAssemblyPlan *plan, BBuffer *buffer, BLayout *layout) {
             patchCodeFixup(buffer, layout, getBFixup_Code(fixup));
         } else if (isBFixup_IntTable(fixup)) {
             patchIntTableFixup(plan, buffer, layout, getBFixup_IntTable(fixup));
+        } else if (isBFixup_CharTable(fixup)) {
+            patchCharTableFixup(plan, buffer, layout,
+                                getBFixup_CharTable(fixup));
+        } else if (isBFixup_MatchTable(fixup)) {
+            patchMatchTableFixup(plan, buffer, layout,
+                                 getBFixup_MatchTable(fixup));
         }
     }
 }
 
+/** Builds the code layout used for later patching. */
 BLayout *layoutBAssemblyPlan(BAssemblyPlan *plan) {
     if (plan == NULL) {
         return NULL;
@@ -156,6 +224,7 @@ BLayout *layoutBAssemblyPlan(BAssemblyPlan *plan) {
     return layout;
 }
 
+/** Flattens the plan buffers and patches resolved operands. */
 BBuffer *assembleBAssemblyPlan(BAssemblyPlan *plan) {
     if (plan == NULL) {
         return NULL;
