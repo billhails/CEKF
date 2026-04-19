@@ -43,9 +43,6 @@ IntCondSwitch --default_target--> index
 IntCondSwitch --cases--> IntCondCaseArray
 CharCondSwitch --default_target--> index
 CharCondSwitch --cases--> CharCondCaseArray
-CondFixup --label--> HashSymbol
-CondFixup --tableId--> index
-CondFixup --tableIndex--> index
 CodeFixup --label--> HashSymbol
 CodeFixup --location--> index
 TableFixup --tableId--> index
@@ -56,9 +53,6 @@ BFixup --code--> CodeFixup
 BFixup --charTable--> TableFixup
 BFixup --intTable--> TableFixup
 BFixup --matchTable--> TableFixup
-BFixup --charCond--> CondFixup
-BFixup --intCond--> CondFixup
-BFixup --matchCond--> CondFixup
 BBC["enum BBC"]
 BResultArray["BResultArray[]"] --entries--> EmitBResult
 BFixupArray["BFixupArray[]"] --entries--> BFixup

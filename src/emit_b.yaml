@@ -121,15 +121,6 @@ structs:
             default_target: index
             cases: CharCondCaseArray
 
-    CondFixup:
-        meta:
-            description: >
-                lookup information for a cond fixup
-        data:
-            label: HashSymbol
-            tableId: index # finds the table
-            tableIndex: index # finds the entry in the table
-
     CodeFixup:
         meta:
             description: >
@@ -141,7 +132,7 @@ structs:
     TableFixup:
         meta:
             description: >
-                information for fixing up a table id for a MATCH
+                information for fixing up a table id operand
         data:
             tableId: index
             location: index
@@ -163,9 +154,6 @@ unions:
             charTable: TableFixup
             intTable: TableFixup
             matchTable: TableFixup
-            charCond: CondFixup
-            intCond: CondFixup
-            matchCond: CondFixup
 
 hashes:
     BBufferBag:

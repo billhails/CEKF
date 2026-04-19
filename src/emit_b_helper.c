@@ -146,15 +146,6 @@ static void fixUpFix(BFixup *fixup, Index start, Index bufferId) {
     case BFIXUP_TYPE_CODE:
         getBFixup_Code(fixup)->location += start;
         break;
-    case BFIXUP_TYPE_CHARCOND:
-        getBFixup_CharCond(fixup)->tableId += bufferId;
-        break;
-    case BFIXUP_TYPE_INTCOND:
-        getBFixup_IntCond(fixup)->tableId += bufferId;
-        break;
-    case BFIXUP_TYPE_MATCHCOND:
-        getBFixup_MatchCond(fixup)->tableId += bufferId;
-        break;
     case BFIXUP_TYPE_CHARTABLE:
         getBFixup_CharTable(fixup)->location += start;
         getBFixup_CharTable(fixup)->tableId += bufferId;

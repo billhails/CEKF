@@ -360,40 +360,6 @@ static void dumpTableFixupAt(FILE *out, const char *name, TableFixup *fixup,
     }
 }
 
-static void dumpCondFixupsForTable(FILE *out, BFixupArray *fixups,
-                                   BFixupType type, Index tableId) {
-    if (fixups == NULL) {
-        return;
-    }
-
-    for (Index i = 0; i < fixups->size; i++) {
-        BFixup *fixup = fixups->entries[i];
-        if (fixup->type != type) {
-            continue;
-        }
-
-        CondFixup *condFixup = NULL;
-        switch (type) {
-        case BFIXUP_TYPE_CHARCOND:
-            condFixup = fixup->val.charCond;
-            break;
-        case BFIXUP_TYPE_INTCOND:
-            condFixup = fixup->val.intCond;
-            break;
-        case BFIXUP_TYPE_MATCHCOND:
-            condFixup = fixup->val.matchCond;
-            break;
-        default:
-            cant_happen("unexpected cond fixup type %d", type);
-        }
-
-        if (condFixup->tableId == tableId) {
-            fprintf(out, "    ; fixup target[%u] -> %s\n",
-                    condFixup->tableIndex, condFixup->label->name);
-        }
-    }
-}
-
 static void printCommentText(FILE *out, SCharArray *text) {
     if (text == NULL) {
         return;
@@ -444,10 +410,6 @@ static void dumpFixupsAt(FILE *out, BFixupArray *fixups, Index index) {
             break;
         case BFIXUP_TYPE_MATCHTABLE:
             dumpTableFixupAt(out, "matches", fixup->val.matchTable, index);
-            break;
-        case BFIXUP_TYPE_CHARCOND:
-        case BFIXUP_TYPE_INTCOND:
-        case BFIXUP_TYPE_MATCHCOND:
             break;
         default:
             cant_happen("unrecognised BFixup type %d", fixup->type);
@@ -629,7 +591,6 @@ static void dumpIntCondTables(FILE *out, BBuffer *buffer) {
             }
             fprintf(out, " -> %u\n", condCase->target);
         }
-        dumpCondFixupsForTable(out, buffer->fixups, BFIXUP_TYPE_INTCOND, i);
     }
 }
 
@@ -647,7 +608,6 @@ static void dumpCharCondTables(FILE *out, BBuffer *buffer) {
             fprintf(out, "    case[%u] char=%d -> %u\n", j,
                     (int)condCase->codepoint, condCase->target);
         }
-        dumpCondFixupsForTable(out, buffer->fixups, BFIXUP_TYPE_CHARCOND, i);
     }
 }
 
@@ -663,7 +623,6 @@ static void dumpMatchTables(FILE *out, BBuffer *buffer) {
         for (Index j = 0; j < table->size; j++) {
             fprintf(out, "    tag[%u] -> %u\n", j, table->entries[j]);
         }
-        dumpCondFixupsForTable(out, buffer->fixups, BFIXUP_TYPE_MATCHCOND, i);
     }
 }
 
