@@ -61,6 +61,7 @@
 #include "minlam_fold.h"
 #include "minlam_inline.h"
 #include "minlam_pp.h"
+#include "minlam_run_b.h"
 #include "minlam_shake.h"
 #include "minlam_uncurry.h"
 #include "pratt.h"
@@ -812,7 +813,9 @@ int main(int argc, char *argv[]) {
                 int save5 = PROTECT(image);
                 if (dump_bytecode_flag) {
                     dumpBLinkedImage(stdout, image);
+                    exit(0);
                 }
+                brun(image, builtIns);
                 UNPROTECT(save5);
             }
             exit(0);

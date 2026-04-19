@@ -44,6 +44,7 @@ structs:
             order: SymbolArray
             entryLabel: HashSymbol
             constants: BConstantArray
+            maxReg: int
 
     BLayout:
         meta:
@@ -65,6 +66,7 @@ structs:
             charConds: CharCondTable
             matches: MatchTable
             entryPoint: index
+            maxReg: int
 
     BBuffer:
         meta:

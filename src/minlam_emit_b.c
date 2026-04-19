@@ -344,6 +344,7 @@ void comment(BEmitterContext *context, char *fmt, ...) {
 static ER *emitArg(MinExp *arg, EC *ctx) { return emitSimpleExp(arg, ctx); }
 
 static ER *emitAddrResult(HashSymbol *label, EC *ctx) {
+    comment(ctx, "emitAddrResult");
     ER *target = claimSlot(ctx);
     int save = PROTECT(target);
     bemit_code(ctx, BBC_TYPE_LOAD_ADDR, IX(target, ctx), 0, 0);
@@ -532,10 +533,6 @@ BLinkedImage *emitBProgram(MinExp *node, BuiltIns *builtIns) {
     PROTECT(context.slots);
     EC *ctx = bemitter_newContext(context);
     REPLACE_PROTECT(save, ctx);
-    bemit_code(ctx, BBC_TYPE_JMP, 0, 0, 0);
-    comment(ctx, "%s", main->name);
-    bemit_fixup_code(ctx, main, bemitter_pos(ctx));
-    bemit_word(ctx, 0);
 
     emitMinExp(node, ctx);
     // fprintf(out, "#define MAX_REG %d\n", ctx->context.maxReg);
@@ -543,7 +540,8 @@ BLinkedImage *emitBProgram(MinExp *node, BuiltIns *builtIns) {
     // fprintf(out, "minlam_runtime_init(reg, MAX_REG, argc, argv);\n");
     SymbolArray *order = newSymbolArray();
     PROTECT(order);
-    BAssemblyPlan *plan = newBAssemblyPlan(order, main, ctx->constants);
+    BAssemblyPlan *plan =
+        newBAssemblyPlan(order, main, ctx->constants, ctx->context.maxReg);
     PROTECT(plan);
 
     Index i = 0;

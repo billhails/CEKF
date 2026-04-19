@@ -301,7 +301,7 @@ BLinkedImage *assembleBAssemblyPlan(BAssemblyPlan *plan) {
     PROTECT(matches);
     BLinkedImage *image =
         newBLinkedImage(codes, plan->constants, locations, comments, intConds,
-                        charConds, matches, layout->entryPoint);
+                        charConds, matches, layout->entryPoint, plan->maxReg);
     PROTECT(image);
 
     for (Index i = 0; i < countSymbolArray(plan->order); i++) {

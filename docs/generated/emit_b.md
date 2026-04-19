@@ -13,6 +13,7 @@ BAssemblyPlan --buffers--> BBufferBag
 BAssemblyPlan --order--> SymbolArray
 BAssemblyPlan --entryLabel--> HashSymbol
 BAssemblyPlan --constants--> BConstantArray
+BAssemblyPlan --maxReg--> int
 BLayout --bufferBases--> IndexMap
 BLayout --globalLabels--> IndexMap
 BLayout --entryPoint--> index
@@ -24,6 +25,7 @@ BLinkedImage --intConds--> IntCondTable
 BLinkedImage --charConds--> CharCondTable
 BLinkedImage --matches--> MatchTable
 BLinkedImage --entryPoint--> index
+BLinkedImage --maxReg--> int
 BBuffer --codes--> UIntArray
 BBuffer --constants--> BConstantArray
 BBuffer --labels--> IndexMap

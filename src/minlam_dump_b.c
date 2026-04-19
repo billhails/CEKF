@@ -651,7 +651,8 @@ void dumpBLinkedImage(FILE *out, BLinkedImage *image) {
         return;
     }
 
-    fprintf(out, "; BLinkedImage entry=%u\n", image->entryPoint);
+    fprintf(out, "; BLinkedImage entry=%u, MAX_REG=%d\n", image->entryPoint,
+            image->maxReg);
     dumpCodeWords(out, image->codes, image->constants, NULL, NULL,
                   image->locations, image->comments);
     dumpConstants(out, image->constants);
