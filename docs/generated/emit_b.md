@@ -16,10 +16,12 @@ BLayout --bufferBases--> IndexMap
 BLayout --globalLabels--> IndexMap
 BLayout --entryPoint--> index
 BLinkedImage --codes--> UIntArray
+BLinkedImage --constants--> BConstantArray
 BLinkedImage --locations--> BLocationArray
 BLinkedImage --comments--> BCommentArray
 BLinkedImage --entryPoint--> index
 BBuffer --codes--> UIntArray
+BBuffer --constants--> BConstantArray
 BBuffer --labels--> IndexMap
 BBuffer --fixups--> BFixupArray
 BBuffer --locations--> BLocationArray

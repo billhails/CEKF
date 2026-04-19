@@ -525,7 +525,7 @@ static void emitMinMatchList(MinMatchList *node, EC *ctx, IndexArray *indexes,
 // Public API
 //////////////
 
-void emitBProgram(MinExp *node, BuiltIns *builtIns) {
+BBuffer *emitBProgram(MinExp *node, BuiltIns *builtIns) {
     HashSymbol *main = newSymbol("main");
     SymbolArray *heap = emitter_createHeap();
     int save = PROTECT(heap);
@@ -553,6 +553,9 @@ void emitBProgram(MinExp *node, BuiltIns *builtIns) {
         bemit_buffer_label(final, l, bemitter_buffer_pos(final));
         bemitter_append(final, buf, 0);
     }
+    final->constants = ctx->constants;
     bemit_buffer_label(final, entry, bemitter_buffer_pos(final));
     bemitter_append(final, ctx->body, 0);
+    UNPROTECT(save);
+    return final;
 }

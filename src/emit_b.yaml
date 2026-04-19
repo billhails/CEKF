@@ -57,6 +57,7 @@ structs:
             brief: Flattened bytecode image after assembly
         data:
             codes: UIntArray
+            constants: BConstantArray
             locations: BLocationArray
             comments: BCommentArray
             entryPoint: index
@@ -67,6 +68,7 @@ structs:
                 comments
         data:
             codes: UIntArray
+            constants: BConstantArray
             labels: IndexMap
             fixups: BFixupArray
             locations: BLocationArray

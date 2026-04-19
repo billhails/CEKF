@@ -111,6 +111,8 @@ void bemit_fixup_matchtable(BEmitterContext *context, Index tableId,
 BBuffer *bemitter_newBuffer() {
     UIntArray *codes = newUIntArray();
     int save = PROTECT(codes);
+    BConstantArray *constants = newBConstantArray();
+    PROTECT(constants);
     BFixupArray *fixups = newBFixupArray();
     PROTECT(fixups);
     BLocationArray *locations = newBLocationArray();
@@ -123,8 +125,8 @@ BBuffer *bemitter_newBuffer() {
     PROTECT(charConds);
     MatchTable *matches = newMatchTable();
     PROTECT(matches);
-    BBuffer *body = newBBuffer(codes, fixups, locations, comments, intConds,
-                               charConds, matches);
+    BBuffer *body = newBBuffer(codes, constants, fixups, locations, comments,
+                               intConds, charConds, matches);
     UNPROTECT(save);
     return body;
 }
@@ -132,9 +134,7 @@ BBuffer *bemitter_newBuffer() {
 BEmitterContext *bemitter_newContext(EmitterContext ec) {
     BBuffer *body = bemitter_newBuffer();
     int save = PROTECT(body);
-    BConstantArray *constants = newBConstantArray();
-    PROTECT(constants);
-    BEmitterContext *context = newBEmitterContext(body, ec, constants);
+    BEmitterContext *context = newBEmitterContext(body, ec, body->constants);
     UNPROTECT(save);
     return context;
 }
