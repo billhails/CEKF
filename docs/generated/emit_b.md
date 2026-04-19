@@ -12,6 +12,7 @@ BEmitterContext --constants--> BConstantArray
 BAssemblyPlan --buffers--> BBufferBag
 BAssemblyPlan --order--> SymbolArray
 BAssemblyPlan --entryLabel--> HashSymbol
+BAssemblyPlan --constants--> BConstantArray
 BLayout --bufferBases--> IndexMap
 BLayout --globalLabels--> IndexMap
 BLayout --entryPoint--> index

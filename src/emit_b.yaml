@@ -43,6 +43,7 @@ structs:
             buffers: BBufferBag
             order: SymbolArray
             entryLabel: HashSymbol
+            constants: BConstantArray
 
     BLayout:
         meta:

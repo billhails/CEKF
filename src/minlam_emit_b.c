@@ -24,6 +24,7 @@
 #include "emit_helper.h"
 #include "memory.h"
 #include "minlam.h"
+#include "minlam_assembler_b.h"
 #include "minlam_pp.h"
 #include "minlam_runtime.h"
 #include "symbol.h"
@@ -533,29 +534,33 @@ BBuffer *emitBProgram(MinExp *node, BuiltIns *builtIns) {
     PROTECT(context.slots);
     EC *ctx = bemitter_newContext(context);
     REPLACE_PROTECT(save, ctx);
-    HashSymbol *entry = newSymbol("ENTRY");
     bemit_code(ctx, BBC_TYPE_JMP, 0, 0, 0);
-    comment(ctx, "ENTRY");
-    bemit_fixup_code(ctx, entry, bemitter_pos(ctx));
+    comment(ctx, "%s", main->name);
+    bemit_fixup_code(ctx, main, bemitter_pos(ctx));
     bemit_word(ctx, 0);
 
     emitMinExp(node, ctx);
     // fprintf(out, "#define MAX_REG %d\n", ctx->context.maxReg);
     // fprintf(out, "static Value reg[MAX_REG];\n");
     // fprintf(out, "minlam_runtime_init(reg, MAX_REG, argc, argv);\n");
+    SymbolArray *order = newSymbolArray();
+    PROTECT(order);
+    BAssemblyPlan *plan = newBAssemblyPlan(order, main, ctx->constants);
+    PROTECT(plan);
+
     Index i = 0;
     HashSymbol *label = NULL;
     BBuffer *buf = NULL;
-    BBuffer *final = bemitter_newBuffer();
-    PROTECT(final);
     while ((label = iterateBBufferBag(ctx->lambdas, &i, &buf)) != NULL) {
-        HashSymbol *l = makeLambdaLabel(label);
-        bemit_buffer_label(final, l, bemitter_buffer_pos(final));
-        bemitter_append(final, buf, 0);
+        HashSymbol *lambdaLabel = makeLambdaLabel(label);
+        setBBufferBag(plan->buffers, lambdaLabel, buf);
+        pushSymbolArray(plan->order, lambdaLabel);
     }
-    final->constants = ctx->constants;
-    bemit_buffer_label(final, entry, bemitter_buffer_pos(final));
-    bemitter_append(final, ctx->body, 0);
+
+    setBBufferBag(plan->buffers, main, ctx->body);
+    pushSymbolArray(plan->order, main);
+
+    BBuffer *final = assembleBAssemblyPlan(plan);
     UNPROTECT(save);
     return final;
 }
