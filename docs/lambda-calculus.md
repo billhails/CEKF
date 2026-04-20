@@ -355,7 +355,7 @@ B &= \set{b_0\dots b_n} = \set{(x_0:\ \lambda y_0.e_0)\dots(x_n:\ \lambda y_n.e_
 \\
 K &= \set{x_0\dots x_n}
 \\
-M &= \set{x_i \mapsto x_j | x_j \in \mathcal{F}(\lambda y_i.e_i) \cap K}\ \forall (x_i:\ \lambda y_i.e_i)\in B
+M &= \set{x_i \mapsto x_j | x_j \in \mathcal{F}\lambda_i \cap K}\ \forall (x_i:\ \lambda_i)\in B
 \\
 x &\in K
 \end{align*}
