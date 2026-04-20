@@ -54,6 +54,52 @@ $$
 1. The free variables in a lambda are the free variables in its body minus its argument.
 2. The free variables in a `letrec` are the free variables in its lambdas (1) plus the free variables in its body, minus the variables bound by the letrec itself.
 
+## Alpha Conversion $\mathcal{A}_{\rho}$
+
+Alpha conversion renames binders to fresh names and rewrites bound occurrences to match.
+
+The implementation in `minlam_alphoconvert.c` is environment-based, so we specify it that way here. Let:
+
+- $\rho$ be an environment mapping source names to their current alpha-converted names.
+- $\rho[x \mapsto x']$ be the environment obtained by extending $\rho$ with a fresh binding for $x$.
+- $\rho[x_0 \mapsto x'_0,\dots,x_n \mapsto x'_n]$ be the simultaneous extension used for `letrec`.
+- $\mathrm{fresh}(x)$ be a globally fresh symbol derived from $x$.
+
+The initial environment $\rho_0$ maps every built-in name to itself. Variable lookup always searches from the innermost environment outward. If a variable is not found, alpha conversion is undefined.
+
+$$
+\begin{align*}
+\mathcal{A}_{\rho}\mathtt{C} &= \mathtt{C}
+\\
+\mathcal{A}_{\rho}x &= \rho(x) && \text{(1)}
+\\
+\mathcal{A}_{\rho}(\mathtt{if}\ e_0\ e_1\ e_2) &= (\mathtt{if}\ \mathcal{A}_{\rho}e_0\ \mathcal{A}_{\rho}e_1\ \mathcal{A}_{\rho}e_2)
+\\
+\mathcal{A}_{\rho}(\circ\ e_0\ e_1) &= (\circ\ \mathcal{A}_{\rho}e_0\ \mathcal{A}_{\rho}e_1)
+\\
+\mathcal{A}_{\rho}(e_0\ e_1) &= (\mathcal{A}_{\rho}e_0\ \mathcal{A}_{\rho}e_1)
+\\
+\mathcal{A}_{\rho}(\lambda x.e) &= (\lambda x'.\mathcal{A}_{\rho[x \mapsto x']}e)
+&& \text{where } x' = \mathrm{fresh}(x) && \text{(2)}
+\\
+l &= (\mathtt{letrec}\ ((x_0:\ \lambda y_0.e_0)\dots(x_n:\ \lambda y_n.e_n))\ e)
+&& && \text{(3)}
+\\
+\rho' &= \rho[x_0 \mapsto x'_0,\dots,x_n \mapsto x'_n]
+&& \text{where } x'_i = \mathrm{fresh}(x_i) && \text{(4)}
+\\
+\mathcal{A}_{\rho}l &=
+(\mathtt{letrec}\ ((x'_0:\ \lambda y'_0.\mathcal{A}_{\rho'[y_0 \mapsto y'_0]}e_0)\dots(x'_n:\ \lambda y'_n.\mathcal{A}_{\rho'[y_n \mapsto y'_n]}e_n))\ \mathcal{A}_{\rho'}e)
+&& \text{where } y'_i = \mathrm{fresh}(y_i) && \text{(5)}
+\end{align*}
+$$
+
+1. Every variable occurrence is rewritten by environment lookup. In the implementation, failure to find a mapping is an internal error.
+2. A lambda allocates a fresh name for its argument, extends the environment, then visits the body in that extended environment.
+3. For `letrec`, we first name the whole expression $l$ only to state the helper equations below it.
+4. All `letrec` binding names are added to the environment before any binding body is visited. This is the crucial step that preserves mutual recursion and mirrors `visitLetRecVariables` in the implementation.
+5. Each binding body is then visited in the shared `letrec` environment $\rho'$, further extended with a fresh name for that binding's formal argument. The `letrec` body itself is visited in $\rho'$.
+
 ## Substitution $\mathcal{S}_{[x/r]}$
 
 Substitution only replaces free variables.
