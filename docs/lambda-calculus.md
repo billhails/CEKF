@@ -56,9 +56,11 @@ $$
 
 ## Substitution $\mathcal{S}_{[x/r]}$
 
-Substitution only replaces free variables, and is understood to be capture-avoiding: before descending under a binder, alpha-rename any bound variable that would otherwise capture a free variable of the replacement term. This is a rather subtle point: if $r$ contains a variable that is bound by a scope it is substituting within, that would produce an unsound result.
+Substitution only replaces free variables.
 
-Write $e_0[y'/y]_{\alpha}$ for the result of alpha-renaming the bound occurrences of $y$ in $e_0$ to a fresh variable $y'$.
+In general, substitution is capture-avoiding: if a binder in the target expression would capture a free variable of the replacement term $r$, that binder must first be alpha-renamed.
+
+For the rest of this note we use the simpler convention that the input to substitution has already been alpha-converted enough to rule that out. Concretely, when forming $\mathcal{S}_{[x/r]}e$, assume no variable bound anywhere in $e$ appears free in $r$. Under that convention, substitution reduces to the following shadowing-only definition.
 
 $$
 \begin{align*}
@@ -79,50 +81,21 @@ y &\text{otherwise}
 \mathcal{S}_{[x/r]}(\lambda y.e_0) &= \begin{cases}
 (\lambda y.e_0) &\text{if } x = y\ \mathrm{(1)}
 \\
-(\lambda y.\mathcal{S}_{[x/r]}e_0) &\text{if } y \notin \mathcal{F}r
-\\
-(\lambda y'.\mathcal{S}_{[x/r]}(e_0[y'/y]_{\alpha})) &\text{otherwise, where } y' \notin \mathcal{F}r \cup \mathcal{F}e_0 \cup \set{x}
+(\lambda y.\mathcal{S}_{[x/r]}e_0) &\text{otherwise}
 \end{cases}
 \\
-l &= (\mathtt{letrec}\ B\ e)
+l &= (\mathtt{letrec}\ ((y_0:\ \lambda z_0.e_0)\dots(y_n:\ \lambda z_n.e_n))\ e)
 \\
 \mathcal{S}_{[x/r]}l &= \begin{cases}
-l &\text{if } x \in K\ \mathrm{(2)}
+l &\text{if } x \in \set{y_0\dots y_n}\ \mathrm{(2)}
 \\
-l' &\text{if } (K \cup Z) \cap \mathcal{F}r = \set{}
-\\
-\widehat{l}' &\text{otherwise}\ \mathrm{(3)}
+(\mathtt{letrec}\ ((y_0:\ \lambda z_0.\mathcal{S}_{[x/r]}e_0)\dots(y_n:\ \lambda z_n.\mathcal{S}_{[x/r]}e_n))\ \mathcal{S}_{[x/r]}e) &\text{otherwise}
 \end{cases}
-\end{align*}
-$$
-
-where
-
-$$
-\begin{align*}
-B &= ((y_i:\ \lambda z_i.e_i))_{i=0}^n
-\\
-K &= \set{y_i \mid 0 \le i \le n}
-\\
-Z &= \set{z_i \mid 0 \le i \le n}
-\\
-B' &= ((y_i:\ \lambda z_i.\mathcal{S}_{[x/r]}e_i))_{i=0}^n
-\\
-\widehat{B}' &= ((y'_i:\ \lambda z'_i.\mathcal{S}_{[x/r]}\widehat{e}_i))_{i=0}^n
-\\
-e' &= \mathcal{S}_{[x/r]}e
-\\
-\widehat{e}' &= \mathcal{S}_{[x/r]}\widehat{e}
-\\
-l' &= (\mathtt{letrec}\ B'\ e')
-\\
-\widehat{l}' &= (\mathtt{letrec}\ \widehat{B}'\ \widehat{e}')
 \end{align*}
 $$
 
 1. If $y$ shadows $x$, substitution stops at that lambda.
 2. A letrec-bound name shadows $x$ throughout every binding and the letrec body.
-3. $\widehat{e}_0,\dots,\widehat{e}_n,\widehat{e}$ are obtained by alpha-renaming the letrec-bound names $y_i$ and the formal parameters $z_i$ consistently to fresh names $y'_i, z'_i$, with every $y'_i, z'_i \notin \mathcal{F}r$.
 
 For inlining we also use a call-site-only variant $\mathcal{S}^{cs}_{[x/r]}$, defined by
 
@@ -131,16 +104,16 @@ $$
 \mathcal{S}^{cs}_{[x/r]}y &= y
 \\
 \mathcal{S}^{cs}_{[x/r]}(e_0\ e_1) &= \begin{cases}
-(r\ \mathcal{S}^{cs}_{[x/r]}e_1) &\text{if } e_0 = x\ \mathrm{(4)}
+(r\ \mathcal{S}^{cs}_{[x/r]}e_1) &\text{if } e_0 = x\ \mathrm{(3)}
 \\
 (\mathcal{S}^{cs}_{[x/r]}e_0\ \mathcal{S}^{cs}_{[x/r]}e_1) &\text{otherwise}
 \end{cases}
 \end{align*}
 $$
 
-All other clauses of $\mathcal{S}^{cs}$, including the same alpha-renaming side conditions, are the same as $\mathcal{S}$.
+All other clauses of $\mathcal{S}^{cs}$ are the same as $\mathcal{S}$, under the same alpha-converted freshness convention.
 
-In (4), this variant only replaces occurrences of $x$ in function position.
+In (3), this variant only replaces occurrences of $x$ in function position.
 
 ## Beta Reduction $\beta$
 
