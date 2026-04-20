@@ -16,8 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "minlam_dump_b.h"
-
+#include "emit_b_dump.h"
 #include "cekfs_debug.h"
 #include "hash.h"
 #include <ctype.h>

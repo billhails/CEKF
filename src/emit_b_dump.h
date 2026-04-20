@@ -1,5 +1,5 @@
-#ifndef cekf_minlam_dump_b_h
-#define cekf_minlam_dump_b_h
+#ifndef cekf_emit_b_dump_h
+#define cekf_emit_b_dump_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2026  Bill Hails

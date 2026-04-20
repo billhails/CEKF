@@ -20,11 +20,11 @@
  */
 
 #include "minlam_emit_b.h"
+#include "emit_b_assembler.h"
 #include "emit_b_helper.h"
 #include "emit_helper.h"
 #include "memory.h"
 #include "minlam.h"
-#include "minlam_assembler_b.h"
 #include "minlam_pp.h"
 #include "minlam_runtime.h"
 #include "symbol.h"

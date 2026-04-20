@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "minlam_assembler_b.h"
+#include "emit_b_assembler.h"
 
 #include "emit_b_helper.h"
 

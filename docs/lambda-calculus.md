@@ -89,7 +89,7 @@ l &= (\mathtt{letrec}\ (b_0\dots b_n)\ e)
 && \text{where } b_i = (x_i:\ \lambda y_i.e_i),\ x'_i = \mathrm{fresh}(x_i) && \text{(4)}
 \\
 \mathcal{A}_{\rho}l &=
-(\mathtt{letrec}\ ((\mathcal{A}_{\rho'}b_0)\dots(\mathcal{A}_{\rho'}b_n))\ \mathcal{A}_{\rho'}e)
+(\mathtt{letrec}\ (\mathcal{A}_{\rho'}b_0\dots\mathcal{A}_{\rho'}b_n)\ \mathcal{A}_{\rho'}e)
 && && \text{(5)}
 \\
 \mathcal{A}_{\rho}(x:\ \lambda y.e) &= (\rho(x):\ \lambda y'.\mathcal{A}_{\rho[y \mapsto y']}e)
