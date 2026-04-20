@@ -342,8 +342,8 @@ $$
 
 ### Recursive $\mathcal{R}$
 
-Only `letrec` can bind recursive functions, and even mutual recursion is limited
-to the bindings of a single `letrec`.
+Only `letrec` can bind recursive functions, and mutual recursion is limited
+to the bindings within a single `letrec`.
 
 So given:
 
