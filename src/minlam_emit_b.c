@@ -191,13 +191,13 @@ static Index addToConstants(MaybeBigInt *bi, EC *ctx) {
     }
     Index i;
     BConstantArray *constants = ctx->constants;
-    for (i = 0; i < constants->size; i++) {
-        if (constants->entries[i].type == v.type &&
-            minlam_runtime_cmp(constants->entries[i], v) == CMP_EQ) {
+    for (i = 0; i < countBConstantArray(constants); i++) {
+        Value w = getBConstantArray(constants, i);
+        if (w.type == v.type && minlam_runtime_cmp(w, v) == CMP_EQ) {
             return i;
         }
     }
-    i = constants->size;
+    i = countBConstantArray(constants);
     int save = protectValue(v);
     pushBConstantArray(constants, v);
     UNPROTECT(save);
@@ -366,8 +366,7 @@ static ER *emitIntegerResult(Integer i, EC *ctx) {
 static ER *emitCharacterResult(Character c, EC *ctx) {
     ER *target = claimSlot(ctx);
     int save = PROTECT(target);
-    bemit_code(ctx, BBC_TYPE_LOAD_CHAR, IX(target, ctx), 0, 0);
-    bemit_word(ctx, c);
+    bemit_code(ctx, BBC_TYPE_LOAD_CHAR, IX(target, ctx), c, 0);
     UNPROTECT(save);
     return target;
 }

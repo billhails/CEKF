@@ -51,6 +51,7 @@ Value --vec--> Vec
 Value --builtIn--> BuiltInImplementation
 Value --opaque--> opaque
 Value --addr--> ptr
+Value --index--> index
 ByteCodeArray["ByteCodeArray[]"] --entries--> byte
 Stack["Stack[]"] --entries--> Value
 ByteCodes["enum ByteCodes"]

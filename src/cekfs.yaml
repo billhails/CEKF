@@ -122,6 +122,7 @@ inline:
                 builtIn: BuiltInImplementation
                 opaque: opaque
                 addr: ptr
+                index: index
 
     arrays:
         ByteCodeArray:
