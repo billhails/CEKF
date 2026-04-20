@@ -76,25 +76,23 @@ y &\text{otherwise}
 \\
 \mathcal{S}_{[x/r]}(e_0\ e_1) &= (\mathcal{S}_{[x/r]}e_0\ \mathcal{S}_{[x/r]}e_1)
 \\
-\mathcal{S}_{[x/r]}(\lambda y.e_0) &=
-\begin{aligned}[t]
-(\lambda y.e_0) &\quad \text{if } x = y && \text{(1)}
+\mathcal{S}_{[x/r]}(\lambda y.e_0) &= \begin{cases}
+(\lambda y.e_0) &\text{if } x = y\ \mathrm{(1)}
 \\
-(\lambda y.\mathcal{S}_{[x/r]}e_0) &\quad \text{if } y \notin \mathcal{F}r
+(\lambda y.\mathcal{S}_{[x/r]}e_0) &\text{if } y \notin \mathcal{F}r
 \\
-(\lambda y'.\mathcal{S}_{[x/r]}(e_0[y'/y]_{\alpha})) &\quad \text{otherwise, where } y' \notin \mathcal{F}r \cup \mathcal{F}e_0 \cup \set{x}
-\end{aligned}
+(\lambda y'.\mathcal{S}_{[x/r]}(e_0[y'/y]_{\alpha})) &\text{otherwise, where } y' \notin \mathcal{F}r \cup \mathcal{F}e_0 \cup \set{x}
+\end{cases}
 \\
 l &= (\mathtt{letrec}\ B\ e)
 \\
-\mathcal{S}_{[x/r]}l &=
-\begin{aligned}[t]
-l &\quad \text{if } x \in K && \text{(2)}
+\mathcal{S}_{[x/r]}l &= \begin{cases}
+l &\text{if } x \in K\ \mathrm{(2)}
 \\
-l' &\quad \text{if } (K \cup Z) \cap \mathcal{F}r = \set{}
+l' &\text{if } (K \cup Z) \cap \mathcal{F}r = \set{}
 \\
-\widehat{l}' &\quad \text{otherwise} && \text{(3)}
-\end{aligned}
+\widehat{l}' &\text{otherwise}\ \mathrm{(3)}
+\end{cases}
 \end{align*}
 $$
 
@@ -132,12 +130,11 @@ $$
 \begin{align*}
 \mathcal{S}^{cs}_{[x/r]}y &= y
 \\
-\mathcal{S}^{cs}_{[x/r]}(e_0\ e_1) &=
-\begin{aligned}[t]
-(r\ \mathcal{S}^{cs}_{[x/r]}e_1) &\quad \text{if } e_0 = x && \text{(4)}
+\mathcal{S}^{cs}_{[x/r]}(e_0\ e_1) &= \begin{cases}
+(r\ \mathcal{S}^{cs}_{[x/r]}e_1) &\text{if } e_0 = x\ \mathrm{(4)}
 \\
-(\mathcal{S}^{cs}_{[x/r]}e_0\ \mathcal{S}^{cs}_{[x/r]}e_1) &\quad \text{otherwise}
-\end{aligned}
+(\mathcal{S}^{cs}_{[x/r]}e_0\ \mathcal{S}^{cs}_{[x/r]}e_1) &\text{otherwise}
+\end{cases}
 \end{align*}
 $$
 
@@ -190,12 +187,11 @@ $$
 \\
 \eta (e_0\ e_1) &= (\eta e_0\  \eta e_1)
 \\
-\eta(\lambda x.(e\ x)) &=
-\begin{aligned}[t]
-\eta e &\quad \text{iff } x \not \in \mathcal{F}e && \text{(1)}
+\eta(\lambda x.(e\ x)) &= \begin{cases}
+\eta e &\text{iff } x \not \in \mathcal{F}e\ \mathrm{(1)}
 \\
-(\lambda x .\eta(e\ x)) &\quad \text{otherwise}
-\end{aligned}
+(\lambda x .\eta(e\ x)) &\text{otherwise}
+\end{cases}
 \\
 \eta(\lambda x.e) &= (\lambda x.\eta e)
 \\
