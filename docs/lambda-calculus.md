@@ -289,9 +289,9 @@ l &= (\mathtt{letrec}\ ((x_0:\ \lambda_0)\dots(x_n:\ \lambda_n))\ e)
 \\
 \mathcal{S}_{cs}^{\ast}y &= \mathcal{S}^{cs}_{[x_0/\lambda_0]}\dots\mathcal{S}^{cs}_{[x_m/\lambda_m]}y
 \\
-R &= \set{(x_i:\ \lambda_i) \in \set{(x_0:\ \lambda_0)\dots(x_n:\ \lambda_n)} | \operatorname{safe}(x_i, \lambda_i, l)} = \set{(x_0:\ \lambda_0)\dots(x_m:\ \lambda_m)}
+R &= \set{(x_i:\ \lambda_i) \in \set{(x_0:\ \lambda_0)\dots(x_n:\ \lambda_n)} | \mathrm{safe}(x_i, \lambda_i, l)} = \set{(x_0:\ \lambda_0)\dots(x_m:\ \lambda_m)}
 \\
-\operatorname{safe}(x_i, \lambda_i, l) &= \mathcal{Z}\lambda_i < \mathtt{MAX} \land \lnot\mathcal{R}x_i \land \mathcal{C}_{x_i}l = 1 \land \mathcal{C}^{cs}_{x_i}l = 1
+\mathrm{safe}(x_i, \lambda_i, l) &= \mathcal{Z}\lambda_i < \mathtt{MAX} \land \lnot\mathcal{R}x_i \land \mathcal{C}_{x_i}l = 1 \land \mathcal{C}^{cs}_{x_i}l = 1
 \end{align*}
 $$
 
