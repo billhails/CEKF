@@ -82,15 +82,18 @@ $$
 \mathcal{A}_{\rho}(\lambda x.e) &= (\lambda x'.\mathcal{A}_{\rho[x \mapsto x']}e)
 && \text{where } x' = \mathrm{fresh}(x) && \text{(2)}
 \\
-l &= (\mathtt{letrec}\ ((x_0:\ \lambda y_0.e_0)\dots(x_n:\ \lambda y_n.e_n))\ e)
+l &= (\mathtt{letrec}\ (b_0\dots b_n)\ e)
 && && \text{(3)}
 \\
 \rho' &= \rho[x_0 \mapsto x'_0,\dots,x_n \mapsto x'_n]
-&& \text{where } x'_i = \mathrm{fresh}(x_i) && \text{(4)}
+&& \text{where } b_i = (x_i:\ \lambda y_i.e_i),\ x'_i = \mathrm{fresh}(x_i) && \text{(4)}
 \\
 \mathcal{A}_{\rho}l &=
-(\mathtt{letrec}\ ((x'_0:\ \lambda y'_0.\mathcal{A}_{\rho'[y_0 \mapsto y'_0]}e_0)\dots(x'_n:\ \lambda y'_n.\mathcal{A}_{\rho'[y_n \mapsto y'_n]}e_n))\ \mathcal{A}_{\rho'}e)
-&& \text{where } y'_i = \mathrm{fresh}(y_i) && \text{(5)}
+(\mathtt{letrec}\ ((\mathcal{A}_{\rho'}b_0)\dots(\mathcal{A}_{\rho'}b_n))\ \mathcal{A}_{\rho'}e)
+&& && \text{(5)}
+\\
+\mathcal{A}_{\rho}(x:\ \lambda y.e) &= (\rho(x):\ \lambda y'.\mathcal{A}_{\rho[y \mapsto y']}e)
+&& \text{where } y' = \mathrm{fresh}(y) && \text{(6)}
 \end{align*}
 $$
 
@@ -98,7 +101,8 @@ $$
 2. A lambda allocates a fresh name for its argument, extends the environment, then visits the body in that extended environment.
 3. For `letrec`, we first name the whole expression $l$ only to state the helper equations below it.
 4. All `letrec` binding names are added to the environment before any binding body is visited. This is the crucial step that preserves mutual recursion and mirrors `visitLetRecVariables` in the implementation.
-5. Each binding body is then visited in the shared `letrec` environment $\rho'$, further extended with a fresh name for that binding's formal argument. The `letrec` body itself is visited in $\rho'$.
+5. The `letrec` body is visited in the shared recursive environment $\rho'$, and each binding is alpha-converted in that same environment.
+6. A binding keeps its already-chosen recursive name $\rho(x)$, then freshens only its formal argument before visiting the lambda body. This mirrors `visitLetRecValues` in the implementation.
 
 ## Substitution $\mathcal{S}_{[x/r]}$
 
