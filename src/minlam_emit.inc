@@ -237,13 +237,15 @@ static ER *emitMakeVec(MinExprList *vecs, EC *ctx) {
     RA *results = emitRL(vecs, ctx);
     int save = PROTECT(results);
     int count = countMinExprList(vecs);
-    releaseSlots(results, ctx);
     ER *target = NULL;
     if (count == 0) {
         target = emitNone(ctx);
+        PROTECT(target);
+        releaseSlots(results, ctx);
     } else {
         target = claimSlot(ctx);
         PROTECT(target);
+        releaseSlots(results, ctx);
         emitConstructVec(target, count, results, ctx);
     }
     UNPROTECT(save);

@@ -65,7 +65,7 @@ static void emitMinMatchList(MinMatchList *, EC *, IndexArray *, HashSymbol *);
             bemit_location(ctx, CPI(node));                                    \
     } while (0)
 
-static inline int IX(ER *r, EC *c) {
+static inline Index IX(ER *r, EC *c) {
     if (isEmitBResult_Slot(r)) {
         return slotIndex(getEmitBResult_Slot(r), &c->context);
     }
@@ -217,8 +217,7 @@ static inline HashSymbol *getResultSlotSymbol(ER *result) {
 }
 
 static inline bool resultNeedsMaterialization(ER *result) {
-    (void)result;
-    return false;
+    return isEmitBResult_Slot(result);
 }
 
 /////////////////
@@ -245,10 +244,14 @@ static void emitAssignPrimOp(MinPrimOp type, ER *target, ER *arg1, ER *arg2,
 }
 
 static inline void emitAssign(ER *to, ER *from, EC *ctx) {
+    if (IX(to, ctx) == IX(from, ctx))
+        return;
     bemit_code(ctx, BBC_TYPE_MOVE, IX(to, ctx), IX(from, ctx), 0);
 }
 
 static inline void emitAssignReg(Index i, ER *value, EC *ctx) {
+    if (i == IX(value, ctx))
+        return;
     bemit_code(ctx, BBC_TYPE_MOVE, i, IX(value, ctx), 0);
 }
 
@@ -270,15 +273,21 @@ static void emitClosureNew(ER *target, HashSymbol *label, EC *ctx) {
 static void emitIfThenElse(ER *test, MinExp *con, MinExp *alt, EC *ctx) {
     HashSymbol *ELSE = genSym("ELSE");
     HashSymbol *END = genSym("END");
+    // JMP_FALSE [test] LABEL_ELSE
     bemit_code(ctx, BBC_TYPE_JMP_FALSE, IX(test, ctx), 0, 0);
     bemit_fixup_code(ctx, ELSE, bemitter_pos(ctx));
     bemit_word(ctx, 0);
-    bemit_label(ctx, ELSE, bemitter_pos(ctx));
+    // true branch
     emitMinExp(con, ctx);
+    // JMP LABEL_END
     bemit_code(ctx, BBC_TYPE_JMP, 0, 0, 0);
     bemit_fixup_code(ctx, END, bemitter_pos(ctx));
     bemit_word(ctx, 0);
+    // LABEL_ELSE:
+    bemit_label(ctx, ELSE, bemitter_pos(ctx));
+    // false branch
     emitMinExp(alt, ctx);
+    // LABEL_END:
     bemit_label(ctx, END, bemitter_pos(ctx));
 }
 

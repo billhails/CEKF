@@ -56,14 +56,14 @@ void brun(BLinkedImage *image, BuiltIns *builtins) {
     int save = PROTECT(reg);
 
     for (;;) {
-        eprintf("%08x ", IP);
+        eprintf("%04x ", IP);
         inst = readInstruction(image, &IP);
         switch (inst.code) {
         case BBC_TYPE_CALL_BUILTIN: { // builtin_id, dst, argv_reg
             eprintf("CALL_BUILTIN id=%u dst=reg[%d] arg=reg[%d]\n", inst.a1,
                     inst.a2, inst.a3);
-            int builtInId = getValue_Stdint(getVec(reg, inst.a1));
-            int dst = getValue_Stdint(getVec(reg, inst.a2));
+            int builtInId = inst.a1;
+            int dst = inst.a2;
             Vec *argv = getValue_Vec(getVec(reg, inst.a3));
             BuiltIn *builtIn = getBuiltIns(builtins, builtInId);
             BuiltInFunction fn = (BuiltInFunction)builtIn->implementation;
@@ -89,7 +89,7 @@ void brun(BLinkedImage *image, BuiltIns *builtins) {
         }
         case BBC_TYPE_CLOSURE_NEW: { // dst, lambda_id
             Index lambda = bReadWord(image, &IP);
-            eprintf("CLOSURE_NEW dst=reg[%d] lambda=%08x\n", inst.a1, lambda);
+            eprintf("CLOSURE_NEW dst=reg[%d] lambda=%04x\n", inst.a1, lambda);
             Vec *closure = newVec(2);
             setVec(reg, inst.a1, value_Vec(closure));
             setVec(closure, 0, value_Index(lambda));
@@ -128,7 +128,7 @@ void brun(BLinkedImage *image, BuiltIns *builtins) {
         }
         case BBC_TYPE_JMP_FALSE: { // test_reg, imm_target
             Index target = bReadWord(image, &IP);
-            eprintf("JMP_FALSE test=reg[%d] target=%d\n", inst.a1, target);
+            eprintf("JMP_FALSE test=reg[%d] target=%04x\n", inst.a1, target);
             if (!isTrue(getVec(reg, inst.a1))) {
                 IP = target;
             }
@@ -141,12 +141,12 @@ void brun(BLinkedImage *image, BuiltIns *builtins) {
         }
         case BBC_TYPE_JMP: { // imm_target
             IP = bReadWord(image, &IP);
-            eprintf("JMP target=%08x\n", IP);
+            eprintf("JMP target=%04x\n", IP);
             break;
         }
         case BBC_TYPE_LOAD_ADDR: { // dst, imm32 # 32-bit addr
             Index addr = bReadWord(image, &IP);
-            eprintf("LOAD_ADDR dst=reg[%d] addr=%08x\n", inst.a1, addr);
+            eprintf("LOAD_ADDR dst=reg[%d] addr=%04x\n", inst.a1, addr);
             setVec(reg, inst.a1, value_Index(addr));
             break;
         }
@@ -161,10 +161,10 @@ void brun(BLinkedImage *image, BuiltIns *builtins) {
             setVec(reg, inst.a1, getBConstantArray(image->constants, inst.a2));
             break;
         }
-        case BBC_TYPE_LOAD_I32: { // dst, imm32 DUPLICATE OF LOAD_ADDR
-            Index addr = bReadWord(image, &IP);
-            eprintf("LOAD_I32 target=reg[%d] addr=%08x\n", inst.a1, addr);
-            setVec(reg, inst.a1, value_Index(addr));
+        case BBC_TYPE_LOAD_I32: { // dst, imm32
+            int i32 = bReadWord(image, &IP);
+            eprintf("LOAD_I32 dst=reg[%d] i32=%d\n", inst.a1, i32);
+            setVec(reg, inst.a1, value_Stdint(i32));
             break;
         }
         case BBC_TYPE_LOAD_NONE: { // dst
@@ -180,7 +180,7 @@ void brun(BLinkedImage *image, BuiltIns *builtins) {
         case BBC_TYPE_MATCH: { // test_reg, table_id
             Index t = bReadWord(image, &IP);
             eprintf("MATCH test=reg[%d] table=%d\n", inst.a1, t);
-            Index i = getValue_Index(getVec(reg, inst.a1));
+            int i = getValue_Stdint(getVec(reg, inst.a1));
             IndexArray *table = getMatchTable(image->matches, t);
             IP = getIndexArray(table, i);
             break;
@@ -289,7 +289,7 @@ void brun(BLinkedImage *image, BuiltIns *builtins) {
                     inst.a3);
             setVec(reg, inst.a1,
                    getVec(getValue_Vec(getVec(reg, inst.a3)),
-                          getValue_Index(getVec(reg, inst.a2))));
+                          getValue_Stdint(getVec(reg, inst.a2))));
             break;
         case BBC_TYPE_UNPROTECT: // if a bigint was protected by
                                  // minlam_runtime

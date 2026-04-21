@@ -172,7 +172,7 @@ static void dumpMetadataAt(FILE *out, BFixupArray *fixups,
 
 static void dumpRawWordLine(FILE *out, Index index, UInteger word,
                             const char *note) {
-    fprintf(out, "%04u: .word 0x%08x", index, (unsigned int)word);
+    fprintf(out, "%04x: .word 0x%08x", index, (unsigned int)word);
     if (note != NULL) {
         ppad(out);
         fprintf(out, "%s", note);
@@ -307,7 +307,7 @@ static void dumpInstructionLine(FILE *out, Index index, UInteger word,
                                 BBC opcode, UInteger a1, UInteger a2,
                                 UInteger a3, bool unpacked,
                                 BConstantArray *constants) {
-    fprintf(out, "%04u: .inst 0x%08x %s", index, (unsigned int)word,
+    fprintf(out, "%04x: .inst 0x%08x %s", index, (unsigned int)word,
             opcodeDisplayName(opcode));
     if (unpacked) {
         fprintf(out, " [EXT]");
@@ -322,26 +322,26 @@ static void dumpTrailingWordLine(FILE *out, Index index, BBC opcode,
     case BBC_TYPE_CHARCOND:
     case BBC_TYPE_INTCOND:
     case BBC_TYPE_MATCH:
-        fprintf(out, "%04u: .word 0x%08x ; table=%u\n", index,
+        fprintf(out, "%04x: .word 0x%08x ; table=%u\n", index,
                 (unsigned int)word, (unsigned int)word);
         break;
     case BBC_TYPE_CLOSURE_NEW:
     case BBC_TYPE_LOAD_ADDR:
-        fprintf(out, "%04u: .word 0x%08x ; addr\n", index, (unsigned int)word);
+        fprintf(out, "%04x: .word 0x%08x ; addr\n", index, (unsigned int)word);
         break;
     case BBC_TYPE_JMP_FALSE:
     case BBC_TYPE_JMP:
-        fprintf(out, "%04u: .word 0x%08x ; target=%u\n", index,
+        fprintf(out, "%04x: .word 0x%08x ; target=%u\n", index,
                 (unsigned int)word, (unsigned int)word);
         break;
     case BBC_TYPE_LOAD_CHAR:
-        fprintf(out, "%04u: .word 0x%08x ; codepoint=", index,
+        fprintf(out, "%04x: .word 0x%08x ; codepoint=", index,
                 (unsigned int)word);
         printCodepoint(out, word);
         fprintf(out, "\n");
         break;
     case BBC_TYPE_LOAD_I32:
-        fprintf(out, "%04u: .word 0x%08x ; imm32=%d\n", index,
+        fprintf(out, "%04x: .word 0x%08x ; imm32=%d\n", index,
                 (unsigned int)word, (int)word);
         break;
     default:
