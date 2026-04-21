@@ -21,6 +21,12 @@
 #include "cekfs.h"
 #include "minlam_runtime.h"
 
+#ifdef TRACE_BRUN
+#define EPRINTF(...) eprintf(__VA_ARGS__)
+#else
+#define EPRINTF(...) ;
+#endif
+
 typedef struct {
     int code;
     int a1;
@@ -56,11 +62,11 @@ void brun(BLinkedImage *image, BuiltIns *builtins) {
     int save = PROTECT(reg);
 
     for (;;) {
-        eprintf("%04x ", IP);
+        EPRINTF("%04x ", IP);
         inst = readInstruction(image, &IP);
         switch (inst.code) {
         case BBC_TYPE_CALL_BUILTIN: { // builtin_id, dst, argv_reg
-            eprintf("CALL_BUILTIN id=%u dst=reg[%d] arg=reg[%d]\n", inst.a1,
+            EPRINTF("CALL_BUILTIN id=%u dst=reg[%d] arg=reg[%d]\n", inst.a1,
                     inst.a2, inst.a3);
             int builtInId = inst.a1;
             int dst = inst.a2;
@@ -72,7 +78,7 @@ void brun(BLinkedImage *image, BuiltIns *builtins) {
         }
         case BBC_TYPE_CHARCOND: { // test_reg, table_id
             Index t = bReadWord(image, &IP);
-            eprintf("CHARCOND test=reg[%d] table=%u\n", inst.a1, t);
+            EPRINTF("CHARCOND test=reg[%d] table=%u\n", inst.a1, t);
             Character c = getValue_Character(getVec(reg, inst.a1));
             CharCondSwitch *table = getCharCondTable(image->charConds, t);
             // consider later sorting and binary search, or a tree
@@ -89,20 +95,20 @@ void brun(BLinkedImage *image, BuiltIns *builtins) {
         }
         case BBC_TYPE_CLOSURE_NEW: { // dst, lambda_id
             Index lambda = bReadWord(image, &IP);
-            eprintf("CLOSURE_NEW dst=reg[%d] lambda=%04x\n", inst.a1, lambda);
+            EPRINTF("CLOSURE_NEW dst=reg[%d] lambda=%04x\n", inst.a1, lambda);
             Vec *closure = newVec(2);
             setVec(reg, inst.a1, value_Vec(closure));
             setVec(closure, 0, value_Index(lambda));
             break;
         }
         case BBC_TYPE_CLOSURE_SET_ENV: { // clo_reg, env_reg
-            eprintf("CLOSURE_SET_ENV clo=reg[%d] env=reg[%d]\n", inst.a1,
+            EPRINTF("CLOSURE_SET_ENV clo=reg[%d] env=reg[%d]\n", inst.a1,
                     inst.a2);
             setVec(getValue_Vec(getVec(reg, inst.a1)), 1, getVec(reg, inst.a2));
             break;
         }
         case BBC_TYPE_DONE: { // exit_status
-            eprintf("DONE exit=%d\n", inst.a1);
+            EPRINTF("DONE exit=%d\n", inst.a1);
             exit(inst.a1); // reconsider return instead
         }
         case BBC_TYPE_EXT: {    // unpacked modifier for the next instruction
@@ -110,7 +116,7 @@ void brun(BLinkedImage *image, BuiltIns *builtins) {
         }
         case BBC_TYPE_INTCOND: { // test_reg, table_id
             Index t = bReadWord(image, &IP);
-            eprintf("INTCOND test=reg[%d] table=%u\n", inst.a1, t);
+            EPRINTF("INTCOND test=reg[%d] table=%u\n", inst.a1, t);
             Value v = getVec(reg, inst.a1);
             IntCondSwitch *table = getIntCondTable(image->intConds, t);
             for (Index i = 0; i < countIntCondCaseArray(table->cases); i++) {
@@ -128,164 +134,164 @@ void brun(BLinkedImage *image, BuiltIns *builtins) {
         }
         case BBC_TYPE_JMP_FALSE: { // test_reg, imm_target
             Index target = bReadWord(image, &IP);
-            eprintf("JMP_FALSE test=reg[%d] target=%04x\n", inst.a1, target);
+            EPRINTF("JMP_FALSE test=reg[%d] target=%04x\n", inst.a1, target);
             if (!isTrue(getVec(reg, inst.a1))) {
                 IP = target;
             }
             break;
         }
         case BBC_TYPE_JMP_REG: { // reg_target DUPLICATE of TAILCALL
-            eprintf("JMP_REG target=reg[%d]\n", inst.a1);
+            EPRINTF("JMP_REG target=reg[%d]\n", inst.a1);
             IP = getValue_Index(getVec(reg, inst.a1));
             break;
         }
         case BBC_TYPE_JMP: { // imm_target
             IP = bReadWord(image, &IP);
-            eprintf("JMP target=%04x\n", IP);
+            EPRINTF("JMP target=%04x\n", IP);
             break;
         }
         case BBC_TYPE_LOAD_ADDR: { // dst, imm32 # 32-bit addr
             Index addr = bReadWord(image, &IP);
-            eprintf("LOAD_ADDR dst=reg[%d] addr=%04x\n", inst.a1, addr);
+            EPRINTF("LOAD_ADDR dst=reg[%d] addr=%04x\n", inst.a1, addr);
             setVec(reg, inst.a1, value_Index(addr));
             break;
         }
         case BBC_TYPE_LOAD_CHAR: { // dst, codepoint
             Index c = bReadWord(image, &IP);
-            eprintf("LOAD_CHAR target=reg[%d] codepoint=%u\n", inst.a1, c);
+            EPRINTF("LOAD_CHAR target=reg[%d] codepoint=%u\n", inst.a1, c);
             setVec(reg, inst.a1, value_Character(c));
             break;
         }
         case BBC_TYPE_LOAD_CONST: { // dst, const_index
-            eprintf("LOAD_CONST target=reg[%d] id=%d\n", inst.a1, inst.a2);
+            EPRINTF("LOAD_CONST target=reg[%d] id=%d\n", inst.a1, inst.a2);
             setVec(reg, inst.a1, getBConstantArray(image->constants, inst.a2));
             break;
         }
         case BBC_TYPE_LOAD_I32: { // dst, imm32
             int i32 = bReadWord(image, &IP);
-            eprintf("LOAD_I32 dst=reg[%d] i32=%d\n", inst.a1, i32);
+            EPRINTF("LOAD_I32 dst=reg[%d] i32=%d\n", inst.a1, i32);
             setVec(reg, inst.a1, value_Stdint(i32));
             break;
         }
         case BBC_TYPE_LOAD_NONE: { // dst
-            eprintf("LOAD_NONE\n");
+            EPRINTF("LOAD_NONE\n");
             setVec(reg, inst.a1, value_None());
             break;
         }
         case BBC_TYPE_MAKE_VEC: { // dst, count
-            eprintf("MAKE_VEC dst=reg[%d] count=%d\n", inst.a1, inst.a2);
+            EPRINTF("MAKE_VEC dst=reg[%d] count=%d\n", inst.a1, inst.a2);
             setVec(reg, inst.a1, value_Vec(newVec((int)inst.a2)));
             break;
         }
         case BBC_TYPE_MATCH: { // test_reg, table_id
             Index t = bReadWord(image, &IP);
-            eprintf("MATCH test=reg[%d] table=%d\n", inst.a1, t);
+            EPRINTF("MATCH test=reg[%d] table=%d\n", inst.a1, t);
             int i = getValue_Stdint(getVec(reg, inst.a1));
             IndexArray *table = getMatchTable(image->matches, t);
             IP = getIndexArray(table, i);
             break;
         }
         case BBC_TYPE_MOVE: // dst, src
-            eprintf("MOVE dst=reg[%d] src=reg[%d]\n", inst.a1, inst.a2);
+            EPRINTF("MOVE dst=reg[%d] src=reg[%d]\n", inst.a1, inst.a2);
             setVec(reg, inst.a1, getVec(reg, inst.a2));
             break;
         case BBC_TYPE_PRIM_ADD: // dst, left, right
-            eprintf("ADD dst=[%d] lhs=reg[%d] rhs=reg[%d]\n", inst.a1, inst.a2,
+            EPRINTF("ADD dst=[%d] lhs=reg[%d] rhs=reg[%d]\n", inst.a1, inst.a2,
                     inst.a3);
             setVec(reg, inst.a1,
                    nadd(getVec(reg, inst.a2), getVec(reg, inst.a3)));
             break;
         case BBC_TYPE_PRIM_CANON: // dst, left, right
-            eprintf("CANON dst=[%d] lhs=reg[%d] rhs=reg[%d]\n", inst.a1,
+            EPRINTF("CANON dst=[%d] lhs=reg[%d] rhs=reg[%d]\n", inst.a1,
                     inst.a2, inst.a3);
             setVec(reg, inst.a1, ncanon(getVec(reg, inst.a2)));
             break;
         case BBC_TYPE_PRIM_CMP: // dst, left, right
-            eprintf("CMP dst=[%d] lhs=reg[%d] rhs=reg[%d]\n", inst.a1, inst.a2,
+            EPRINTF("CMP dst=[%d] lhs=reg[%d] rhs=reg[%d]\n", inst.a1, inst.a2,
                     inst.a3);
             setVec(reg, inst.a1,
                    cmp(getVec(reg, inst.a2), getVec(reg, inst.a3)));
             break;
         case BBC_TYPE_PRIM_DIV: // dst, left, right
-            eprintf("DIV dst=[%d] lhs=reg[%d] rhs=reg[%d]\n", inst.a1, inst.a2,
+            EPRINTF("DIV dst=[%d] lhs=reg[%d] rhs=reg[%d]\n", inst.a1, inst.a2,
                     inst.a3);
             setVec(reg, inst.a1,
                    ndiv(getVec(reg, inst.a2), getVec(reg, inst.a3)));
             break;
         case BBC_TYPE_PRIM_EQ: // dst, left, right
-            eprintf("EQ dst=[%d] lhs=reg[%d] rhs=reg[%d]\n", inst.a1, inst.a2,
+            EPRINTF("EQ dst=[%d] lhs=reg[%d] rhs=reg[%d]\n", inst.a1, inst.a2,
                     inst.a3);
             setVec(reg, inst.a1,
                    eq(getVec(reg, inst.a2), getVec(reg, inst.a3)));
             break;
         case BBC_TYPE_PRIM_GCD: // dst, left, right
-            eprintf("GCD dst=[%d] lhs=reg[%d] rhs=reg[%d]\n", inst.a1, inst.a2,
+            EPRINTF("GCD dst=[%d] lhs=reg[%d] rhs=reg[%d]\n", inst.a1, inst.a2,
                     inst.a3);
             setVec(reg, inst.a1,
                    ngcd(getVec(reg, inst.a2), getVec(reg, inst.a3)));
             break;
         case BBC_TYPE_PRIM_GE: // dst, left, right
-            eprintf("GE dst=[%d] lhs=reg[%d] rhs=reg[%d]\n", inst.a1, inst.a2,
+            EPRINTF("GE dst=[%d] lhs=reg[%d] rhs=reg[%d]\n", inst.a1, inst.a2,
                     inst.a3);
             setVec(reg, inst.a1,
                    ge(getVec(reg, inst.a2), getVec(reg, inst.a3)));
             break;
         case BBC_TYPE_PRIM_GT: // dst, left, right
-            eprintf("LE dst=[%d] lhs=reg[%d] rhs=reg[%d]\n", inst.a1, inst.a2,
+            EPRINTF("LE dst=[%d] lhs=reg[%d] rhs=reg[%d]\n", inst.a1, inst.a2,
                     inst.a3);
             setVec(reg, inst.a1,
                    gt(getVec(reg, inst.a2), getVec(reg, inst.a3)));
             break;
         case BBC_TYPE_PRIM_LCM: // dst, left, right
-            eprintf("LCM dst=[%d] lhs=reg[%d] rhs=reg[%d]\n", inst.a1, inst.a2,
+            EPRINTF("LCM dst=[%d] lhs=reg[%d] rhs=reg[%d]\n", inst.a1, inst.a2,
                     inst.a3);
             setVec(reg, inst.a1,
                    nlcm(getVec(reg, inst.a2), getVec(reg, inst.a3)));
             break;
         case BBC_TYPE_PRIM_LE: // dst, left, right
-            eprintf("LE dst=[%d] lhs=reg[%d] rhs=reg[%d]\n", inst.a1, inst.a2,
+            EPRINTF("LE dst=[%d] lhs=reg[%d] rhs=reg[%d]\n", inst.a1, inst.a2,
                     inst.a3);
             setVec(reg, inst.a1,
                    le(getVec(reg, inst.a2), getVec(reg, inst.a3)));
             break;
         case BBC_TYPE_PRIM_LT: // dst, left, right
-            eprintf("LT dst=[%d] lhs=reg[%d] rhs=reg[%d]\n", inst.a1, inst.a2,
+            EPRINTF("LT dst=[%d] lhs=reg[%d] rhs=reg[%d]\n", inst.a1, inst.a2,
                     inst.a3);
             setVec(reg, inst.a1,
                    lt(getVec(reg, inst.a2), getVec(reg, inst.a3)));
             break;
         case BBC_TYPE_PRIM_MOD: // dst, left, right
-            eprintf("MOD dst=[%d] lhs=reg[%d] rhs=reg[%d]\n", inst.a1, inst.a2,
+            EPRINTF("MOD dst=[%d] lhs=reg[%d] rhs=reg[%d]\n", inst.a1, inst.a2,
                     inst.a3);
             setVec(reg, inst.a1,
                    nmod(getVec(reg, inst.a2), getVec(reg, inst.a3)));
             break;
         case BBC_TYPE_PRIM_MUL: // dst, left, right
-            eprintf("MUL dst=[%d] lhs=reg[%d] rhs=reg[%d]\n", inst.a1, inst.a2,
+            EPRINTF("MUL dst=[%d] lhs=reg[%d] rhs=reg[%d]\n", inst.a1, inst.a2,
                     inst.a3);
             setVec(reg, inst.a1,
                    nmul(getVec(reg, inst.a2), getVec(reg, inst.a3)));
             break;
         case BBC_TYPE_PRIM_NE: // dst, left, right
-            eprintf("NE dst=[%d] lhs=reg[%d] rhs=reg[%d]\n", inst.a1, inst.a2,
+            EPRINTF("NE dst=[%d] lhs=reg[%d] rhs=reg[%d]\n", inst.a1, inst.a2,
                     inst.a3);
             setVec(reg, inst.a1,
                    ne(getVec(reg, inst.a2), getVec(reg, inst.a3)));
             break;
         case BBC_TYPE_PRIM_POW: // dst, left, right
-            eprintf("POW dst=[%d] lhs=reg[%d] rhs=reg[%d]\n", inst.a1, inst.a2,
+            EPRINTF("POW dst=[%d] lhs=reg[%d] rhs=reg[%d]\n", inst.a1, inst.a2,
                     inst.a3);
             setVec(reg, inst.a1,
                    npow(getVec(reg, inst.a2), getVec(reg, inst.a3)));
             break;
         case BBC_TYPE_PRIM_SUB: // dst, left, right
-            eprintf("SUB dst=[%d] lhs=reg[%d] rhs=reg[%d]\n", inst.a1, inst.a2,
+            EPRINTF("SUB dst=[%d] lhs=reg[%d] rhs=reg[%d]\n", inst.a1, inst.a2,
                     inst.a3);
             setVec(reg, inst.a1,
                    nsub(getVec(reg, inst.a2), getVec(reg, inst.a3)));
             break;
         case BBC_TYPE_PRIM_VEC: // dst, index_reg, vec_reg
-            eprintf("VEC dst=[%d] lhs=reg[%d] rhs=reg[%d]\n", inst.a1, inst.a2,
+            EPRINTF("VEC dst=[%d] lhs=reg[%d] rhs=reg[%d]\n", inst.a1, inst.a2,
                     inst.a3);
             setVec(reg, inst.a1,
                    getVec(getValue_Vec(getVec(reg, inst.a3)),
@@ -293,20 +299,20 @@ void brun(BLinkedImage *image, BuiltIns *builtins) {
             break;
         case BBC_TYPE_UNPROTECT: // if a bigint was protected by
                                  // minlam_runtime
-            eprintf("UNPROTECT\n");
+            EPRINTF("UNPROTECT\n");
             break;
         case BBC_TYPE_TAILCALL: // clo_reg
-            eprintf("TAILCALL clo=reg[%d]\n", inst.a1);
+            EPRINTF("TAILCALL clo=reg[%d]\n", inst.a1);
             IP = getValue_Index(getVec(reg, inst.a1));
             break;
         case BBC_TYPE_VEC_GET_IMM: // dst, index_imm, vec_reg
-            eprintf("VEC_GET_IMM dst=reg[%d] index=%d vec=reg[%d]\n", inst.a1,
+            EPRINTF("VEC_GET_IMM dst=reg[%d] index=%d vec=reg[%d]\n", inst.a1,
                     inst.a2, inst.a3);
             setVec(reg, inst.a1,
                    getVec(getValue_Vec(getVec(reg, inst.a3)), inst.a2));
             break;
         case BBC_TYPE_VEC_SET: // vec_reg, index_imm, src_reg
-            eprintf("VEC_SET vec=reg[%d] index=%d src=reg[%d]\n", inst.a1,
+            EPRINTF("VEC_SET vec=reg[%d] index=%d src=reg[%d]\n", inst.a1,
                     inst.a2, inst.a3);
             setVec(getValue_Vec(getVec(reg, inst.a1)), inst.a2,
                    getVec(reg, inst.a3));

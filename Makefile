@@ -174,30 +174,30 @@ test-c: all $(TEST_FN_BINARIES)
 	@for t in $(TEST_FN_BINARIES) ; do echo $$t ; $$t || exit 1 ; done
 	@echo All generated C tests pass
 
-irs: $(TEST_FN_SFILES) tmp/test_harness.scm
+irs: $(TEST_FN_SFILES) $(TMPDIR)/test_harness.scm
 
-test-big-c: all tmp/test_harness
-	tmp/test_harness
+test-big-c: all $(TMPDIR)/test_harness
+	$(TMPDIR)/test_harness
 
 test-b: all
 	@for t in $(TEST_FN_FILES) ; do set -x; $(TARGET) $(TARGET_ARGS) --target-b $$t || exit 1 ; done
 	@echo All B-code tests pass
 
-tmp/test_harness: tmp/test_harness.o $(ALL_OBJ)
+$(TMPDIR)/test_harness: $(TMPDIR)/test_harness.o $(ALL_OBJ)
 	$(LAXCC) -o $@ $< $(ALL_OBJ) $(LIBS)
 
-tmp/test_harness.o: tmp/test_harness.c
+$(TMPDIR)/test_harness.o: $(TMPDIR)/test_harness.c
 	$(LAXCC) $(INCLUDE_PATHS) -c $< -o $@
 
-tmp/test_harness.c: $(FNDIR)/rewrite/test_harness.fn $(TARGET)
+$(TMPDIR)/test_harness.c: $(FNDIR)/rewrite/test_harness.fn $(TARGET) | $(TMPDIR)
 	$(TARGET) --target-c=$@~ $< && mv $@~ $@
 	indent $@
 	rm -f $@~
 
-tmp/test_harness.scm: $(FNDIR)/rewrite/test_harness.fn $(TARGET)
+$(TMPDIR)/test_harness.scm: $(FNDIR)/rewrite/test_harness.fn $(TARGET) | $(TMPDIR)
 	$(TARGET) --target-c --dump-inline-f $< >$@~ && mv $@~ $@
 
-tmp/test_harness.fnc: $(FNDIR)/rewrite/test_harness.fn $(TARGET)
+$(TMPDIR)/test_harness.fnc: $(FNDIR)/rewrite/test_harness.fn $(TARGET) | $(TMPDIR)
 	$(TARGET) --binary-out=$@~ $<  && mv $@~ $@
 
 PERF_CASE=fib35
@@ -358,9 +358,9 @@ profile-compile: all
 	valgrind --tool=callgrind ./$(TARGET) --binary-out=/dev/null $(FNDIR)/$(PROF_SRC).fn
 
 # Profile a compiled C target
-profile-compiled: all tmp/test_harness
+profile-compiled: all $(TMPDIR)/test_harness
 	rm -f callgrind.out.*
-	valgrind --tool=callgrind ./tmp/test_harness
+	valgrind --tool=callgrind ./$(TMPDIR)/test_harness
 
 # Convenience: annotate the most recent callgrind output
 profile-annotate:

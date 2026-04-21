@@ -217,7 +217,10 @@ static inline HashSymbol *getResultSlotSymbol(ER *result) {
 }
 
 static inline bool resultNeedsMaterialization(ER *result) {
-    return isEmitBResult_Slot(result);
+    (void)result;
+    // All current B results denote live registers, so emitGoto must stage them
+    // through temporaries before left-to-right copy-down into reg[0..N-1].
+    return true;
 }
 
 /////////////////
