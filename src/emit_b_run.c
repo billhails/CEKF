@@ -71,9 +71,10 @@ void brun(BLinkedImage *image, BuiltIns *builtins) {
             break;
         }
         case BBC_TYPE_CHARCOND: { // test_reg, table_id
-            eprintf("CHARCOND test=reg[%d] table=%d\n", inst.a1, inst.a2);
+            Index t = bReadWord(image, &IP);
+            eprintf("CHARCOND test=reg[%d] table=%u\n", inst.a1, t);
             Character c = getValue_Character(getVec(reg, inst.a1));
-            CharCondSwitch *table = getCharCondTable(image->charConds, inst.a2);
+            CharCondSwitch *table = getCharCondTable(image->charConds, t);
             // consider later sorting and binary search, or a tree
             for (Index i = 0; i < countCharCondCaseArray(table->cases); i++) {
                 CharCondCase *candidate = getCharCondCaseArray(table->cases, i);
@@ -108,9 +109,10 @@ void brun(BLinkedImage *image, BuiltIns *builtins) {
             cant_happen("EXT"); // readInstruction should have handled this.
         }
         case BBC_TYPE_INTCOND: { // test_reg, table_id
-            eprintf("INTCOND test=reg[%d] table=%d\n", inst.a1, inst.a2);
+            Index t = bReadWord(image, &IP);
+            eprintf("INTCOND test=reg[%d] table=%u\n", inst.a1, t);
             Value v = getVec(reg, inst.a1);
-            IntCondSwitch *table = getIntCondTable(image->intConds, inst.a2);
+            IntCondSwitch *table = getIntCondTable(image->intConds, t);
             for (Index i = 0; i < countIntCondCaseArray(table->cases); i++) {
                 IntCondCase *candidate = getIntCondCaseArray(table->cases, i);
                 Value w =
@@ -149,9 +151,9 @@ void brun(BLinkedImage *image, BuiltIns *builtins) {
             break;
         }
         case BBC_TYPE_LOAD_CHAR: { // dst, codepoint
-            eprintf("LOAD_CHAR target=reg[%d] codepoint=%d\n", inst.a1,
-                    inst.a2);
-            setVec(reg, inst.a1, value_Character(inst.a2));
+            Index c = bReadWord(image, &IP);
+            eprintf("LOAD_CHAR target=reg[%d] codepoint=%u\n", inst.a1, c);
+            setVec(reg, inst.a1, value_Character(c));
             break;
         }
         case BBC_TYPE_LOAD_CONST: { // dst, const_index
@@ -176,9 +178,10 @@ void brun(BLinkedImage *image, BuiltIns *builtins) {
             break;
         }
         case BBC_TYPE_MATCH: { // test_reg, table_id
-            eprintf("MATCH test=reg[%d] table=%d\n", inst.a1, inst.a2);
+            Index t = bReadWord(image, &IP);
+            eprintf("MATCH test=reg[%d] table=%d\n", inst.a1, t);
             Index i = getValue_Index(getVec(reg, inst.a1));
-            IndexArray *table = getMatchTable(image->matches, inst.a2);
+            IndexArray *table = getMatchTable(image->matches, t);
             IP = getIndexArray(table, i);
             break;
         }
@@ -302,7 +305,7 @@ void brun(BLinkedImage *image, BuiltIns *builtins) {
             setVec(reg, inst.a1,
                    getVec(getValue_Vec(getVec(reg, inst.a3)), inst.a2));
             break;
-        case BBC_TYPE_VEC_SET: // vec_reg, index_imm, src
+        case BBC_TYPE_VEC_SET: // vec_reg, index_imm, src_reg
             eprintf("VEC_SET vec=reg[%d] index=%d src=reg[%d]\n", inst.a1,
                     inst.a2, inst.a3);
             setVec(getValue_Vec(getVec(reg, inst.a1)), inst.a2,

@@ -309,8 +309,8 @@ static void emitConstructVec(ER *target, int count, RA *results, EC *ctx) {
     int target_reg = IX(target, ctx);
     bemit_code(ctx, BBC_TYPE_MAKE_VEC, target_reg, count, 0);
     for (Index i = results->size; i > 0; i--) {
-        bemit_code(ctx, BBC_TYPE_VEC_SET, target_reg,
-                   IX(results->entries[i - 1], ctx), 0);
+        bemit_code(ctx, BBC_TYPE_VEC_SET, target_reg, count - i,
+                   IX(results->entries[i - 1], ctx));
     }
 }
 
@@ -366,7 +366,8 @@ static ER *emitIntegerResult(Integer i, EC *ctx) {
 static ER *emitCharacterResult(Character c, EC *ctx) {
     ER *target = claimSlot(ctx);
     int save = PROTECT(target);
-    bemit_code(ctx, BBC_TYPE_LOAD_CHAR, IX(target, ctx), c, 0);
+    bemit_code(ctx, BBC_TYPE_LOAD_CHAR, IX(target, ctx), 0, 0);
+    bemit_word(ctx, c);
     UNPROTECT(save);
     return target;
 }
