@@ -272,6 +272,7 @@ static void emitMinLam(MinLam *node, EC *ctx) {
 
 static void emitGoto(ER *target, RA *args, EC *ctx) {
     comment(ctx, "emitGoto - %u outgoing slots", args->size);
+    comment(ctx, "emitGoto stage outgoing args into temporaries");
     RA *sourceSlots = newRA();
     int save = PROTECT(sourceSlots);
     RA *claimedSlots = newRA();
@@ -303,6 +304,7 @@ static void emitGoto(ER *target, RA *args, EC *ctx) {
     }
 
     // Copy-down to reg[0..N-1]
+    comment(ctx, "emitGoto copy-down into reg[0..%u]", sourceSlots->size);
     for (Index i = 0; i < sourceSlots->size; i++) {
         emitAssignReg(i, sourceSlots->entries[i], ctx);
     }
@@ -312,6 +314,7 @@ static void emitGoto(ER *target, RA *args, EC *ctx) {
         ctx->context.needsUnprotect = false;
     }
 
+    comment(ctx, "emitGoto jump to staged target");
     emitTrace(savedTarget, args, ctx);
     emitJumpToLambda(savedTarget, ctx);
     releaseSlots(claimedSlots, ctx);
@@ -320,6 +323,7 @@ static void emitGoto(ER *target, RA *args, EC *ctx) {
 
 static ER *emitExtractFromClosure(ER *closure, int index, EC *ctx) {
     // this must never write to slots except this one
+    comment(ctx, "emitExtractFromClosure index=%d", index);
     ER *target = claimSlot(ctx);
     int save = PROTECT(target);
     emitVecGetImm(target, closure, index, ctx);
@@ -420,6 +424,7 @@ static void emitApplyBuiltin(MinApply *node, EC *ctx) {
 
 static void emitApplyClosure(MinApply *apply, EC *ctx) {
     EMITLOC("emitApplyClosure", apply, ctx);
+    comment(ctx, "emitApplyClosure argc=%u", countMinExprList(apply->args));
 
     RA *closureArgSlots =
         claimSlotsBelow(countMinExprList(apply->args) + 1, // +1 for closure env
@@ -429,12 +434,14 @@ static void emitApplyClosure(MinApply *apply, EC *ctx) {
     ER *closure = emitArg(apply->function, ctx);
     PROTECT(closure);
 
+    comment(ctx, "emitApplyClosure extract target from closure");
     ER *target = emitExtractFromClosure(closure, 0, ctx);
     PROTECT(target);
     // deliberate early release allows for behaviour like
     // tmp_1 = vec(..., tmp_1);
     releaseSlot(closure, ctx);
 
+    comment(ctx, "emitApplyClosure extract env from closure");
     ER *env = emitExtractFromClosure(closure, 1, ctx);
     PROTECT(env);
 
