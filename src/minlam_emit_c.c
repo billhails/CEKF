@@ -37,6 +37,7 @@
 typedef CEmitterContext EC;
 typedef EmitCResult ER;
 typedef CResultArray RA;
+typedef CResultMap RM;
 
 typedef struct EmitBuffer {
     FILE *fh;
@@ -84,6 +85,30 @@ static void emitCharacter(Character character, EC *ctx);
 static inline RA *newRA() { return newCResultArray(); }
 
 static inline void pushRA(RA *ra, ER *r) { pushCResultArray(ra, r); }
+
+__attribute__((unused)) static inline RM *newRM() { return newCResultMap(); }
+
+static inline void setRM(RM *map, HashSymbol *k, ER *r) {
+    setCResultMap(map, k, r);
+}
+
+__attribute__((unused)) static inline bool getRM(RM *map, HashSymbol *k,
+                                                 ER **r) {
+    return getCResultMap(map, k, r);
+}
+
+__attribute__((unused)) static inline HashSymbol *iterateRM(RM *m, Index *i,
+                                                            ER **r) {
+    return iterateCResultMap(m, i, r);
+}
+
+static HashSymbol *tokenForER(ER *er) {
+    if (isEmitCResult_Var(er)) {
+        return getEmitCResult_Var(er);
+    } else {
+        return NULL;
+    }
+}
 
 static inline ER *newResultSlotSymbol(HashSymbol *s) {
     return newEmitCResult_Var(s);
@@ -711,7 +736,9 @@ void emitCProgram(MinExp *node, BuiltIns *builtIns, FILE *out) {
     HashSymbol *main = newSymbol("main");
     SymbolArray *heap = emitter_createHeap();
     PROTECT(heap);
-    EmitterContext context = newEmitterContext(main, builtIns, heap);
+    SymbolArray *symbols = newSymbolArray();
+    PROTECT(symbols);
+    EmitterContext context = newEmitterContext(main, builtIns, symbols, heap);
     PROTECT(context.slots);
     EC *ctx = newCEmitterContext(body, context);
     REPLACE_PROTECT(save, ctx);

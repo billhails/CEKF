@@ -36,6 +36,18 @@ structs:
             text: SCharArray
             index: int
 
+    SlotAssign:
+        meta:
+            description: Records an assignment for later emission
+        data:
+            source: HashSymbol
+            dest: HashSymbol
+
+arrays:
+    SlotAssignArray:
+        data:
+            entries: SlotAssign
+
 hashes:
     SlotPool:
         data:
@@ -50,11 +62,12 @@ inline:
                 currentBinding: HashSymbol
                 builtIns: BuiltIns
                 slots: SlotPool
+                slotSymbols: SymbolArray
                 heap: SymbolArray # minheap
-                activeSlots: int=0
-                totalSlots: int=0
-                maxReg: int=0
-                currentReg: int=0
+                activeSlots: index=0
+                totalSlots: index=0
+                maxReg: index=0
+                currentReg: index=0
                 needsUnprotect: bool=false
 
 primitives: !include primitives.yaml

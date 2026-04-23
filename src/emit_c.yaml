@@ -50,12 +50,16 @@ hashes:
         data:
             entries: opaque
 
-primitives: !include primitives.yaml
+    CResultMap:
+        data:
+            entries: EmitCResult
 
 arrays:
     CResultArray:
         data:
             entries: EmitCResult
+
+primitives: !include primitives.yaml
 
 external:
   - !include emit.yaml

@@ -5,6 +5,7 @@ New byteode emission utilities
 ```mermaid
 flowchart LR
 BBufferBag --entries--> BBuffer
+BResultMap --entries--> EmitBResult
 BEmitterContext --lambdas--> BBufferBag
 BEmitterContext --body--> BBuffer
 BEmitterContext --context--> EmitterContext

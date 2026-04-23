@@ -165,6 +165,10 @@ hashes:
         data:
             entries: BBuffer
 
+    BResultMap:
+        data:
+            entries: EmitBResult
+
 arrays:
     BResultArray:
         data:

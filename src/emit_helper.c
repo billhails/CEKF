@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-// shared slot heap support for emit_b and emit_c branches
+// shared slot heap and assignment support for emit_b and emit_c branches
 
 #include "emit_helper.h"
 #include <math.h>
@@ -208,8 +208,14 @@ HashSymbol *emitter_claimSlotSymbol(EmitterContext *ctx) {
     resultSlot = createNewSlot(ctx);
     int save = PROTECT(resultSlot);
     setSlotPool(ctx->slots, result, resultSlot);
+    pushSymbolArray(ctx->slotSymbols, result);
     ctx->activeSlots++;
     ctx->totalSlots++;
+#ifdef SAFETY_CHECKS
+    if (ctx->totalSlots != countSymbolArray(ctx->slotSymbols)) {
+        cant_happen("slot index misalignment");
+    }
+#endif
     setMaxReg(ctx);
     UNPROTECT(save);
     return result;
@@ -228,6 +234,10 @@ void emitter_releaseSlotSymbol(HashSymbol *temp, EmitterContext *ctx) {
     }
 }
 
+HashSymbol *symbolForSlot(Index i, EmitterContext *ctx) {
+    return getSymbolArray(ctx->slotSymbols, i);
+}
+
 Slot *emitter_getSlot(HashSymbol *temp, EmitterContext *ctx) {
     Slot *slot = NULL;
     if (getSlotPool(ctx->slots, temp, &slot)) {
@@ -240,9 +250,194 @@ Slot *emitter_getSlot(HashSymbol *temp, EmitterContext *ctx) {
 bool emitter_slotsAvailableBelow(int N, EmitterContext *ctx) {
     if (N == 0)
         return false;
-    if (ctx->totalSlots < N) // we've never allocated them
+    if (ctx->totalSlots < (Index)N) // we've never allocated them
         return true;
     if (emitter_peekHeap(ctx) < N)
         return true;
     return false;
+}
+
+static SymbolMap *cleanIdentities(SymbolMap *M) {
+    HashSymbol *source = NULL;
+    HashSymbol *dest = NULL;
+    Index i = 0;
+    SymbolMap *cleaned = newSymbolMap();
+    int save = PROTECT(cleaned);
+    while ((dest = iterateSymbolMap(M, &i, &source)) != NULL) {
+        if (source != dest) {
+            setSymbolMap(cleaned, dest, source);
+        }
+    }
+    UNPROTECT(save);
+    return cleaned;
+}
+
+static SymbolSet *getTargets(SymbolMap *M) {
+    SymbolSet *T = newSymbolSet();
+    int save = PROTECT(T);
+    HashSymbol *target = NULL;
+    Index i = 0;
+    while ((target = iterateSymbolMap(M, &i, NULL)) != NULL) {
+        setSymbolSet(T, target);
+    }
+    UNPROTECT(save);
+    return T;
+}
+
+static IntMap *initUses(SymbolMap *M) {
+    IntMap *uses = newIntMap();
+    int save = PROTECT(uses);
+    Index i = 0;
+    Integer count = 0;
+    HashSymbol *source = NULL;
+    HashSymbol *dest = NULL;
+    while ((dest = iterateSymbolMap(M, &i, &source)) != NULL) {
+        if (getIntMap(uses, source, &count)) {
+            count += 1;
+        } else {
+            count = 1;
+        }
+        setIntMap(uses, source, count);
+        if (!getIntMap(uses, dest, NULL)) {
+            setIntMap(uses, dest, 0);
+        }
+    }
+    UNPROTECT(save);
+    return uses;
+}
+
+static void emitMove(SlotAssignArray *assignments, HashSymbol *source,
+                     HashSymbol *target) {
+    SlotAssign *assign = newSlotAssign(source, target);
+    int save = PROTECT(assign);
+    pushSlotAssignArray(assignments, assign);
+    UNPROTECT(save);
+}
+
+static SymbolMap *deleteConnection(SymbolMap *M, HashSymbol *target) {
+    SymbolMap *replacement = newSymbolMap();
+    int save = PROTECT(replacement);
+    HashSymbol *t = NULL;
+    HashSymbol *s = NULL;
+    Index i = 0;
+    while ((t = iterateSymbolMap(M, &i, &s)) != NULL) {
+        if (t != target) {
+            setSymbolMap(replacement, t, s);
+        }
+    }
+    UNPROTECT(save);
+    return replacement;
+}
+
+static SymbolSet *deleteTarget(SymbolSet *T, HashSymbol *target) {
+    SymbolSet *replacement = newSymbolSet();
+    int save = PROTECT(replacement);
+    HashSymbol *t = NULL;
+    Index i = 0;
+    while ((t = iterateSymbolSet(T, &i)) != NULL) {
+        if (t != target) {
+            setSymbolSet(replacement, t);
+        }
+    }
+    UNPROTECT(save);
+    return replacement;
+}
+
+static void decrementUses(IntMap *uses, HashSymbol *source) {
+    Integer use = 0;
+    if (getIntMap(uses, source, &use)) {
+#ifdef SAFETY_CHECKS
+        if (use == 0)
+            cant_happen("decrement use below zero");
+#endif
+        setIntMap(uses, source, use - 1);
+    } else {
+        cant_happen("cannot find use count");
+    }
+}
+
+static void incrementUses(IntMap *uses, HashSymbol *source) {
+    Integer use = 0;
+    if (getIntMap(uses, source, &use)) {
+        setIntMap(uses, source, use + 1);
+    } else {
+        setIntMap(uses, source, 1);
+    }
+}
+
+static SymbolMap *replaceAllTmp(SymbolMap *M, HashSymbol *val,
+                                HashSymbol *replacement) {
+    SymbolMap *N = newSymbolMap();
+    int save = PROTECT(N);
+    HashSymbol *k = NULL, *v = NULL;
+    Index i = 0;
+    while ((k = iterateSymbolMap(M, &i, &v)) != NULL) {
+        if (v == val) {
+            setSymbolMap(N, k, replacement);
+        } else {
+            setSymbolMap(N, k, v);
+        }
+    }
+    UNPROTECT(save);
+    return N;
+}
+
+// resolves a map of copy instructions to an ordered,
+// minimal sequence of assignments.
+SlotAssignArray *resolveCopy(SymbolMap *M, HashSymbol *tmp, HashSymbol **J) {
+    M = cleanIdentities(M); // discard x <-- x
+    int save_M = PROTECT(M);
+    IntMap *uses = initUses(M); // count uses (including 0)
+    PROTECT(uses);
+    SymbolSet *T = getTargets(M); // keys of M
+    int save_T = PROTECT(T);
+    SlotAssignArray *assignments = newSlotAssignArray(); // results
+    PROTECT(assignments);
+    if (J != NULL && *J != NULL) {
+        incrementUses(uses, *J);
+    }
+    setIntMap(uses, tmp, 0);
+
+RESOLVER_RESTART:
+    while (countSymbolMap(M) > 0) {
+        HashSymbol *target = NULL;
+        Index i = 0;
+        while ((target = iterateSymbolSet(T, &i)) != NULL) {
+            int count = 0;
+            if (getIntMap(uses, target, &count) && count == 0) {
+                HashSymbol *source = NULL;
+                if (getSymbolMap(M, target, &source)) {
+                    emitMove(assignments, source, target);
+                    M = deleteConnection(M, target);
+                    REPLACE_PROTECT(save_M, M);
+                    T = deleteTarget(T, target);
+                    REPLACE_PROTECT(save_T, T);
+                    decrementUses(uses, source);
+                    // not safe to continue to iterate over T after changing it
+                    goto RESOLVER_RESTART;
+                } else {
+                    cant_happen("failed to find source");
+                }
+            }
+        }
+        i = 0;
+        if ((target = iterateSymbolSet(T, &i)) != NULL) {
+            Integer count = 0;
+            if (!getIntMap(uses, target, &count)) {
+                cant_happen("failed to find use count");
+            }
+            emitMove(assignments, target, tmp);
+            if (J != NULL && *J == target) {
+                *J = tmp;
+            }
+            M = replaceAllTmp(M, target, tmp);
+            REPLACE_PROTECT(save_M, M);
+            setIntMap(uses, tmp, count);
+            setIntMap(uses, target, 0);
+        } else {
+            cant_happen("expected at least one occupied slot");
+        }
+    }
+    UNPROTECT(save_M);
+    return assignments;
 }

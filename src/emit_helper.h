@@ -52,5 +52,7 @@ HashSymbol *emitter_claimSlotSymbol(EmitterContext *ctx);
 void emitter_releaseSlotSymbol(HashSymbol *temp, EmitterContext *ctx);
 Slot *emitter_getSlot(HashSymbol *temp, EmitterContext *ctx);
 bool emitter_slotsAvailableBelow(int N, EmitterContext *ctx);
+SlotAssignArray *resolveCopy(SymbolMap *M, HashSymbol *tmp, HashSymbol **J);
+HashSymbol *symbolForSlot(Index i, EmitterContext *ctx);
 
 #endif

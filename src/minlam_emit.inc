@@ -34,6 +34,7 @@
 typedef BEmitterContext EC;
 typedef EmitBResult ER;
 typedef BResultArray RA;
+typedef BResultMap RM;
 #endif
 
 static ER *claimSlot(EC *);
@@ -43,10 +44,26 @@ static void emitMinBindings(MinBindings *, Integer, RA *, EC *);
 static void emitMinIff(MinIff *, EC *);
 static void emitMinLam(MinLam *, EC *);
 static void emitMinLetRec(MinLetRec *, EC *);
+static void recordAssignment(RM *, SymbolMap *, ER *, ER *);
 
 ////////////////////
 // SlotPool Helpers
 ////////////////////
+
+__attribute__((unused)) static void
+recordAssignment(RM *map, SymbolMap *symbols, ER *to, ER *from) {
+    HashSymbol *toSymbol = tokenForER(to);
+    if (toSymbol == NULL) {
+        cant_happen("assignment to non-register");
+    }
+    setRM(map, toSymbol, to);
+    HashSymbol *fromSymbol = tokenForER(from);
+    if (fromSymbol == NULL) {
+        fromSymbol = genSym("er");
+    }
+    setRM(map, fromSymbol, from);
+    setSymbolMap(symbols, toSymbol, fromSymbol);
+}
 
 static ER *claimSlot(EC *ctx) {
     HashSymbol *symbol = emitter_claimSlotSymbol(&ctx->context);
@@ -275,8 +292,12 @@ static void emitGoto(ER *target, RA *args, EC *ctx) {
     comment(ctx, "emitGoto stage outgoing args into temporaries");
     RA *sourceSlots = newRA();
     int save = PROTECT(sourceSlots);
-    RA *claimedSlots = newRA();
-    PROTECT(claimedSlots);
+    RA *allClaimedSlots = newRA();
+    PROTECT(allClaimedSlots);
+    SymbolMap *copyMap = newSymbolMap();
+    PROTECT(copyMap);
+    RM *ERMap = newRM();
+    PROTECT(ERMap);
 
     for (Index i = 0; i < args->size; i++) {
         ER *tempSlot = claimSlot(ctx);
@@ -290,13 +311,13 @@ static void emitGoto(ER *target, RA *args, EC *ctx) {
             // copy-down, likewise if this is a constant expression.
             pushRA(sourceSlots, arg);
         }
-        pushRA(claimedSlots, tempSlot);
+        pushRA(allClaimedSlots, tempSlot);
         UNPROTECT(save2);
     }
 
     ER *savedTarget = claimSlot(ctx);
     PROTECT(savedTarget);
-    pushRA(claimedSlots, savedTarget);
+    pushRA(allClaimedSlots, savedTarget);
     if (resultNeedsMaterialization(target)) {
         emitAssign(savedTarget, target, ctx);
     } else {
@@ -317,7 +338,7 @@ static void emitGoto(ER *target, RA *args, EC *ctx) {
     comment(ctx, "emitGoto jump to staged target");
     emitTrace(savedTarget, args, ctx);
     emitJumpToLambda(savedTarget, ctx);
-    releaseSlots(claimedSlots, ctx);
+    releaseSlots(allClaimedSlots, ctx);
     UNPROTECT(save);
 }
 

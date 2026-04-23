@@ -41,6 +41,7 @@
 typedef BEmitterContext EC;
 typedef EmitBResult ER;
 typedef BResultArray RA;
+typedef BResultMap RM;
 
 /////////////////////////////////////////////////////
 // Forward declarations only used in this file
@@ -78,6 +79,30 @@ static inline Index IX(ER *r, EC *c) {
 static inline RA *newRA() { return newBResultArray(); }
 
 static inline void pushRA(RA *ra, ER *r) { pushBResultArray(ra, r); }
+
+__attribute__((unused)) static inline RM *newRM() { return newBResultMap(); }
+
+static inline void setRM(RM *map, HashSymbol *k, ER *r) {
+    setBResultMap(map, k, r);
+}
+
+__attribute__((unused)) static inline bool getRM(RM *map, HashSymbol *k,
+                                                 ER **r) {
+    return getBResultMap(map, k, r);
+}
+
+__attribute__((unused)) static inline HashSymbol *iterateRM(RM *m, Index *i,
+                                                            ER **r) {
+    return iterateBResultMap(m, i, r);
+}
+
+static HashSymbol *tokenForER(ER *er) {
+    if (isEmitBResult_Slot(er)) {
+        return getEmitBResult_Slot(er);
+    } else {
+        return NULL;
+    }
+}
 
 static inline ER *newResultSlotSymbol(HashSymbol *s) {
     return newEmitBResult_Slot(s);
@@ -541,7 +566,9 @@ BLinkedImage *emitBProgram(MinExp *node, BuiltIns *builtIns) {
     HashSymbol *main = newSymbol("main");
     SymbolArray *heap = emitter_createHeap();
     int save = PROTECT(heap);
-    EmitterContext context = newEmitterContext(main, builtIns, heap);
+    SymbolArray *symbols = newSymbolArray();
+    PROTECT(symbols);
+    EmitterContext context = newEmitterContext(main, builtIns, symbols, heap);
     PROTECT(context.slots);
     EC *ctx = bemitter_newContext(context);
     REPLACE_PROTECT(save, ctx);

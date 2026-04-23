@@ -5,6 +5,7 @@ C code emission utilities
 ```mermaid
 flowchart LR
 CBufferBag --entries--> opaque
+CResultMap --entries--> EmitCResult
 CEmitterContext --lambdas--> CBufferBag
 CEmitterContext --body--> opaque
 CEmitterContext --context--> EmitterContext
