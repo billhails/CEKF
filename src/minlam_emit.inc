@@ -44,24 +44,28 @@ static void emitMinBindings(MinBindings *, Integer, RA *, EC *);
 static void emitMinIff(MinIff *, EC *);
 static void emitMinLam(MinLam *, EC *);
 static void emitMinLetRec(MinLetRec *, EC *);
-static void recordAssignment(RM *, SymbolMap *, ER *, ER *);
+static void recordAssignment(RM *, SymbolMap *, ER *, ER *, EC *);
 
 ////////////////////
 // SlotPool Helpers
 ////////////////////
 
-__attribute__((unused)) static void
-recordAssignment(RM *map, SymbolMap *symbols, ER *to, ER *from) {
-    HashSymbol *toSymbol = tokenForER(to);
-    if (toSymbol == NULL) {
-        cant_happen("assignment to non-register");
+static HashSymbol *addRM(RM *map, ER *res, bool fatal, EC *ctx) {
+    HashSymbol *symbol = tokenForER(res, ctx);
+    if (symbol == NULL) {
+        if (fatal)
+            cant_happen("assignment to non-register");
+        else
+            symbol = genSym("er");
     }
-    setRM(map, toSymbol, to);
-    HashSymbol *fromSymbol = tokenForER(from);
-    if (fromSymbol == NULL) {
-        fromSymbol = genSym("er");
-    }
-    setRM(map, fromSymbol, from);
+    setRM(map, symbol, res);
+    return symbol;
+}
+
+static void recordAssignment(RM *map, SymbolMap *symbols, ER *to, ER *from,
+                             EC *ctx) {
+    HashSymbol *toSymbol = addRM(map, to, true, ctx);
+    HashSymbol *fromSymbol = addRM(map, from, false, ctx);
     setSymbolMap(symbols, toSymbol, fromSymbol);
 }
 
@@ -304,6 +308,8 @@ static void emitGoto(ER *target, RA *args, EC *ctx) {
         int save2 = PROTECT(tempSlot);
         ER *arg = args->entries[i];
         if (resultNeedsMaterialization(arg)) {
+            // in the emit_c case this is an expression involving
+            // registers, not just a register.
             emitAssign(tempSlot, arg, ctx);
             pushRA(sourceSlots, tempSlot);
         } else {
@@ -327,7 +333,32 @@ static void emitGoto(ER *target, RA *args, EC *ctx) {
     // Copy-down to reg[0..N-1]
     comment(ctx, "emitGoto copy-down into reg[0..%u]", sourceSlots->size);
     for (Index i = 0; i < sourceSlots->size; i++) {
-        emitAssignReg(i, sourceSlots->entries[i], ctx);
+        ER *dest = erForSlot(i, ctx);
+        int save2 = PROTECT(dest);
+        recordAssignment(ERMap, copyMap, dest, sourceSlots->entries[i], ctx);
+        UNPROTECT(save2);
+    }
+
+    ER *tmp = claimSlot(ctx);
+    PROTECT(tmp);
+    pushRA(allClaimedSlots, tmp);
+    addRM(ERMap, tmp, true, ctx);
+
+    SlotAssignArray *schedule =
+        resolveCopy(copyMap, tokenForER(tmp, ctx), NULL);
+    PROTECT(schedule);
+
+    for (Index i = 0; i < countSlotAssignArray(schedule); i++) {
+        SlotAssign *assign = getSlotAssignArray(schedule, i);
+        ER *dest;
+        ER *source;
+        if (!getRM(ERMap, assign->dest, &dest)) {
+            cant_happen("failed to locate token in RM");
+        }
+        if (!getRM(ERMap, assign->source, &source)) {
+            cant_happen("failed to locate token in RM");
+        }
+        emitAssign(dest, source, ctx);
     }
 
     if (ctx->context.needsUnprotect) {

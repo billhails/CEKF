@@ -76,6 +76,11 @@ static inline Index IX(ER *r, EC *c) {
     cant_happen("unrecognised EmitBResult");
 }
 
+static inline ER *erForSlot(Index i, EC *ctx) {
+    HashSymbol *symbol = symbolForSlot(i, &ctx->context);
+    return newEmitBResult_Slot(symbol);
+}
+
 static inline RA *newRA() { return newBResultArray(); }
 
 static inline void pushRA(RA *ra, ER *r) { pushBResultArray(ra, r); }
@@ -96,11 +101,11 @@ __attribute__((unused)) static inline HashSymbol *iterateRM(RM *m, Index *i,
     return iterateBResultMap(m, i, r);
 }
 
-static HashSymbol *tokenForER(ER *er) {
+static HashSymbol *tokenForER(ER *er, EC *ctx) {
     if (isEmitBResult_Slot(er)) {
         return getEmitBResult_Slot(er);
     } else {
-        return NULL;
+        return symbolForSlot(getEmitBResult_Immediate(er), &ctx->context);
     }
 }
 
@@ -174,6 +179,8 @@ static EC *extendContextForLambda(HashSymbol *var, EC *ctx) {
     context.heap = heap;
     context.slots = newSlotPool();
     PROTECT(context.slots);
+    context.slotSymbols = newSymbolArray();
+    PROTECT(context.slotSymbols);
     context.activeSlots = 0;
     context.totalSlots = 0;
     context.currentReg = 0;
@@ -245,7 +252,7 @@ static inline bool resultNeedsMaterialization(ER *result) {
     (void)result;
     // All current B results denote live registers, so emitGoto must stage them
     // through temporaries before left-to-right copy-down into reg[0..N-1].
-    return true;
+    return false;
 }
 
 /////////////////
@@ -277,7 +284,8 @@ static inline void emitAssign(ER *to, ER *from, EC *ctx) {
     bemit_code(ctx, BBC_TYPE_MOVE, IX(to, ctx), IX(from, ctx), 0);
 }
 
-static inline void emitAssignReg(Index i, ER *value, EC *ctx) {
+__attribute__((unused)) static inline void emitAssignReg(Index i, ER *value,
+                                                         EC *ctx) {
     if (i == IX(value, ctx))
         return;
     bemit_code(ctx, BBC_TYPE_MOVE, i, IX(value, ctx), 0);

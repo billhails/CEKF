@@ -57,6 +57,8 @@ static void emitVecGetImm(ER *, ER *, int, EC *);
 static inline RA *newRA();
 static inline void pushRA(RA *ra, ER *r);
 static inline ER *newResultSlotSymbol(HashSymbol *s);
+static inline ER *erForSlot(Index, EC *);
+static HashSymbol *tokenForER(ER *, EC *);
 static ER *emitAnnotatedVarResult(MinAnnotatedVar *,
                                   EC *ctx __attribute__((unused)));
 

@@ -213,7 +213,8 @@ HashSymbol *emitter_claimSlotSymbol(EmitterContext *ctx) {
     ctx->totalSlots++;
 #ifdef SAFETY_CHECKS
     if (ctx->totalSlots != countSymbolArray(ctx->slotSymbols)) {
-        cant_happen("slot index misalignment");
+        cant_happen("slot index misalignment %u vs %u", ctx->totalSlots,
+                    countSymbolArray(ctx->slotSymbols));
     }
 #endif
     setMaxReg(ctx);

@@ -86,6 +86,11 @@ static inline RA *newRA() { return newCResultArray(); }
 
 static inline void pushRA(RA *ra, ER *r) { pushCResultArray(ra, r); }
 
+static inline ER *erForSlot(Index i, EC *ctx) {
+    HashSymbol *symbol = symbolForSlot(i, &ctx->context);
+    return newEmitCResult_Var(symbol);
+}
+
 __attribute__((unused)) static inline RM *newRM() { return newCResultMap(); }
 
 static inline void setRM(RM *map, HashSymbol *k, ER *r) {
@@ -102,7 +107,7 @@ __attribute__((unused)) static inline HashSymbol *iterateRM(RM *m, Index *i,
     return iterateCResultMap(m, i, r);
 }
 
-static HashSymbol *tokenForER(ER *er) {
+static HashSymbol *tokenForER(ER *er, EC *ctx __attribute__((unused))) {
     if (isEmitCResult_Var(er)) {
         return getEmitCResult_Var(er);
     } else {
@@ -283,6 +288,8 @@ static EC *extendContextForLambda(HashSymbol *var, EC *ctx) {
     context.heap = heap;
     context.slots = newSlotPool();
     PROTECT(context.slots);
+    context.slotSymbols = newSymbolArray();
+    PROTECT(context.slotSymbols);
     context.activeSlots = 0;
     context.totalSlots = 0;
     context.currentReg = 0;
@@ -591,7 +598,8 @@ static inline void emitAssign(ER *to, ER *from, EC *ctx) {
     fprintf(FH(ctx), "%s = %s;\n", resultText(to, ctx), resultText(from, ctx));
 }
 
-static inline void emitAssignReg(Index i, ER *value, EC *ctx) {
+__attribute__((unused)) static inline void emitAssignReg(Index i, ER *value,
+                                                         EC *ctx) {
     fprintf(FH(ctx), "reg[%d] = %s;\n", (int)i, resultText(value, ctx));
 }
 
