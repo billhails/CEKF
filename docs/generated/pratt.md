@@ -6,6 +6,7 @@ Pratt Parser support
 flowchart LR
 PrattRecordTable --entries--> PrattRecord
 PrattNsIdTable --entries--> int
+PrattMacroTable --entries--> PrattMacroSpec
 PrattTrie --character--> character
 PrattTrie --terminal--> HashSymbol
 PrattTrie --siblings--> PrattTrie
@@ -42,6 +43,15 @@ PrattMixfixPattern --arity--> int
 PrattMixfixPattern --associativity--> PrattAssoc
 PrattMixfixPattern --startsWithHole--> bool
 PrattMixfixPattern --endsWithHole--> bool
+PrattMacroHole --syntaxClass--> PrattSyntaxClass
+PrattMacroHole --name--> HashSymbol
+PrattMacroSpec --headSymbol--> HashSymbol
+PrattMacroSpec --literalTokens--> PrattStrings
+PrattMacroSpec --holes--> PrattMacroHoles
+PrattMacroSpec --template--> AstExpression
+PrattMacroSpec --export--> bool
+PrattMacroSpec --importNsRef--> int
+PrattMacroSpec --importNsSymbol--> HashSymbol
 PrattFixityConfig --op--> PrattParselet
 PrattFixityConfig --prec--> int
 PrattFixityConfig --originalImpl--> AstExpression
@@ -60,9 +70,11 @@ PrattAssoc["enum PrattAssoc"]
 PrattNumberState["enum PrattNumberState"]
 PrattStringState["enum PrattStringState"]
 PrattFixity["enum PrattFixity"]
+PrattSyntaxClass["enum PrattSyntaxClass"]
 PrattStrings["PrattStrings[]"] --entries--> WCharArray
 PrattParsers["PrattParsers[]"] --entries--> PrattParser
 PrattNsOpsArray["PrattNsOpsArray[]"] --entries--> PrattExportedOps
+PrattMacroHoles["PrattMacroHoles[]"] --entries--> PrattMacroHole
 ```
 
 > Generated from src/pratt.yaml by tools/generate.py

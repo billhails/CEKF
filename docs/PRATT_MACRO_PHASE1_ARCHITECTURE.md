@@ -56,7 +56,7 @@ Relevant control points:
 
 Consequence:
 
-- Macro head keywords and literal subkeywords can reuse the same scanner
+- Macro heads and quoted literal terminals can reuse the same scanner
   recognition path that operators use today.
 - A separate scanner architecture is probably unnecessary for phase 1.
 
@@ -127,7 +127,7 @@ recognition”.
 
 Consequence:
 
-- If a macro introduces a head keyword or fixed literal separators, those can
+- If a macro introduces a head symbol or fixed literal terminals, those can
   be registered in the trie just like operators and mixfix keywords.
 - This is a recognition mechanism, not an expansion mechanism.
 
@@ -181,7 +181,7 @@ That makes them poor candidates for the initial fixed syntax-class set.
 
 The Pratt loop allows tokens with no local record to terminate expressions.
 That behavior is convenient for mixfix secondary keywords, but it also means
-that adding more literal keywords through the trie may affect how expressions
+that adding more literal terminals through the trie may affect how expressions
 stop.
 
 That is manageable, but it is a real design pressure toward a conservative
@@ -262,6 +262,73 @@ Possible mapping onto current parser helpers:
 - `String` -> existing string token or string helper path
 - `Type` -> `typeType(parser)`
 
+### Candidate Phase-1 BNF
+
+Before implementing anything, it is worth making the intended declaration
+syntax explicit.
+
+This grammar is deliberately only for phase-1 macro definitions. It is not an
+attempt at a full grammar-extension system.
+
+```bnf
+macro_definition ::= "macro" macro_pattern macro_template
+
+macro_pattern ::= macro_head macro_pattern_item*
+
+macro_head ::= quoted_symbol
+
+macro_pattern_item ::= typed_hole
+                     | quoted_terminal
+
+typed_hole ::= symbol ":" syntax_class
+
+quoted_symbol ::= any double-quoted symbol token
+
+quoted_terminal ::= any double-quoted literal token
+
+syntax_class ::= "Expr"
+               | "Name"
+               | "Nest"
+               | "String"
+               | "Type"
+
+macro_template ::= nest
+```
+
+This is intended to cover the initial motivating shapes without introducing a
+fully general pattern language.
+
+Examples that fit this grammar:
+
+```fn
+macro "time" "(" expr: Expr ")" {
+    ...
+}
+
+macro "unless" "(" cond: Expr ")" consequent: Nest "else" alternative: Nest {
+    ...
+}
+
+macro "for" "(" name: Name "=" init: Expr "," test: Expr "," step: Expr ")" body: Nest {
+    ...
+}
+```
+
+Notes:
+
+- `macro_head` is intentionally a quoted leading symbol in phase 1.
+- Any fixed token in the macro pattern is written as a quoted terminal. That
+  includes words such as `"unless"` and `"else"`, and punctuation such as
+  `"("`, `")"`, `"="`, and `","`.
+- This makes a separate keyword-versus-punctuation distinction unnecessary in
+  the spec.
+- `macro_template` is a `nest`, which keeps expansion bodies aligned with the
+  existing brace-delimited parser entry point.
+- This note uses `Nest` as the phase-1 syntax-class name, even where other
+  notes sometimes say `Block`.
+- If later work needs clause-like bodies or richer head grammars, that should
+  be added as a second step rather than folded into the first implementation.
+
 ### Suggested New Metadata Shape
 
 The current operator metadata is centered on `PrattFixityConfig`. A phase-1
@@ -286,12 +353,12 @@ structs:
     meta:
       brief: Parser metadata for a phase-1 macro definition.
       description: >-
-        Stores the head symbol, literal subkeywords, typed holes,
+        Stores the head symbol, literal terminals, typed holes,
         and template expression needed for parser-time macro
         expansion in the current scope.
     data:
       headSymbol: HashSymbol
-      literalKeywords: PrattStrings
+      literalTokens: PrattStrings
       holes: PrattMacroHoles
       template: AstExpression=NULL
       export: bool=false
@@ -335,7 +402,7 @@ The registration path should mirror operators as closely as possible.
 1. `definition()` recognizes a new `macro` declaration form.
 2. A macro-definition helper parses the head pattern and parameter classes.
 3. The helper builds a `PrattMacroSpec`.
-4. The head keyword and literal subkeywords are inserted into the parser trie.
+4. The head symbol and literal terminals are inserted into the parser trie.
 5. The current parser scope stores the macro metadata in a local table.
 6. The expression parser later consults that metadata when the head token is
    encountered.
@@ -399,7 +466,7 @@ be:
 1. add a fixed `PrattSyntaxClass` enum
 2. add a small parser-owned macro metadata struct
 3. add a `macro` declaration path in `definition()`
-4. add trie registration for macro head and literal keywords
+4. add trie registration for macro head and literal terminals
 5. add a generic macro parselet that supports only `Expr`, `Name`, and `Nest`
 6. expand only into ordinary AST, not token streams
 

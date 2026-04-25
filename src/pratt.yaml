@@ -21,12 +21,12 @@ config:
     description: Pratt Parser support
     parserInfo: false
     includes:
-    - utils.h
+      - utils.h
     limited_includes:
-    - ast_helper.h
-    - ast_debug.h
-    - pratt_functions.h
-    - utils_debug.h
+      - ast_helper.h
+      - ast_debug.h
+      - pratt_functions.h
+      - utils_debug.h
 
 structs:
     # Scanner token parsing
@@ -35,10 +35,11 @@ structs:
             brief: A tree of tokens indexed by character.
             description: >-
                 A Trie is a tree of tokens indexed by character. It is used to
-                parse the input stream and build a parse tree. The root node
-                has the first character, siblings are alternatives at the current level,
-                and the children are indexed by subsequent characters of the token.
-                Ordering of siblings ensures efficient search and insertion.
+                parse the input stream and build a parse tree. The root node has
+                the first character, siblings are alternatives at the current
+                level, and the children are indexed by subsequent characters of
+                the token. Ordering of siblings ensures efficient search and
+                insertion.
         data:
             character: character
             terminal: HashSymbol
@@ -49,8 +50,8 @@ structs:
         meta:
             brief: A buffer of wide characters.
             description: >-
-                A buffer of wide characters that is both used during parsing
-                and returned by the token parser (like yytext).
+                A buffer of wide characters that is both used during parsing and
+                returned by the token parser (like yytext).
         data:
             data: WCharVec
             start: wstring=NULL
@@ -60,8 +61,8 @@ structs:
         meta:
             brief: A list of buffers.
             description: >-
-                A list of buffers that are parsed in order. The first buffer
-                is the most recent, and the last buffer is the oldest.
+                A list of buffers that are parsed in order. The first buffer is
+                the most recent, and the last buffer is the oldest.
         data:
             lineNo: int
             fileName: HashSymbol
@@ -86,8 +87,8 @@ structs:
             brief: The current state of the scanner.
             description: >-
                 The current state of the token scanner. It contains the current
-                buffer, the current token, and the current position in the
-                input stream.
+                buffer, the current token, and the current position in the input
+                stream.
         data:
             bufList: PrattBufList
             tokenHead: PrattToken=NULL
@@ -103,6 +104,7 @@ structs:
                 other nameSpaces.
         data:
             rules: PrattRecordTable
+            macros: PrattMacroTable
             nameSpaces: PrattNsIdTable
             lexer: PrattLexer=NULL
             trie: PrattTrie=NULL
@@ -127,9 +129,10 @@ structs:
         meta:
             brief: Exported operators for a nameSpace.
             description: >-
-                Snapshot of exported operator records captured after a nameSpace is
-                parsed for the first time. Intended to be cached and indexed by the
-                nameSpace reference (nsRef) to support later imports without reparsing.
+                Snapshot of exported operator records captured after a nameSpace
+                is parsed for the first time. Intended to be cached and indexed
+                by the nameSpace reference (nsRef) to support later imports
+                without reparsing.
         data:
             exportedRules: PrattRecordTable
 
@@ -147,60 +150,97 @@ structs:
             startsWithHole: bool
             endsWithHole: bool
 
+    PrattMacroHole:
+        meta:
+            brief: A single typed hole in a macro pattern.
+            description: >-
+                Describes one macro parameter, including its parser-owned syntax
+                class and the symbol it binds in the macro template.
+        data:
+            syntaxClass: PrattSyntaxClass
+            name: HashSymbol
+
+    PrattMacroSpec:
+        meta:
+            brief: Parser metadata for a phase-1 macro definition.
+            description: >-
+                Stores the head symbol, literal terminals, typed holes, and
+                template expression needed for parser-time macro expansion in
+                the current scope.
+        data:
+            headSymbol: HashSymbol
+            literalTokens: PrattStrings
+            holes: PrattMacroHoles
+            template: AstExpression=NULL
+            export: bool=false
+            importNsRef: int=-1
+            importNsSymbol: HashSymbol=NULL
+
 enums:
     PrattAssoc:
         meta:
             brief: The set of associativity types for operators.
             description: >-
-                The associativity of an operator determines how it is parsed
-                in relation to other operators of the same precedence. It can
-                be left associative, right associative, or non-associative.
-                This is used to determine the order of operations during parsing.
+                The associativity of an operator determines how it is parsed in
+                relation to other operators of the same precedence. It can be
+                left associative, right associative, or non-associative. This is
+                used to determine the order of operations during parsing.
         data:
-            - LEFT
-            - RIGHT
-            - NONE
+          - LEFT
+          - RIGHT
+          - NONE
 
     PrattNumberState:
         meta:
             brief: The set of states for the number parser.
             description: >-
-                The state of the number parser. It is used to parse numbers
-                with a given radix. The parser can handle decimal, hexadecimal,
-                and floating point numbers.
+                The state of the number parser. It is used to parse numbers with
+                a given radix. The parser can handle decimal, hexadecimal, and
+                floating point numbers.
         data:
-            - START
-            - ZERO
-            - HEX
-            - DEC
-            - FLOAT
-            - END
+          - START
+          - ZERO
+          - HEX
+          - DEC
+          - FLOAT
+          - END
 
     PrattStringState:
         meta:
             brief: The set of states for the string parser.
         data:
-            - START
-            - STR
-            - ESC
-            - ESCS
-            - UNI
-            - CHR
-            - END
+          - START
+          - STR
+          - ESC
+          - ESCS
+          - UNI
+          - CHR
+          - END
 
     PrattFixity:
         meta:
             brief: The set of fixity types for operators.
         data:
-            - PREFIX
-            - INFIX
-            - POSTFIX
+          - PREFIX
+          - INFIX
+          - POSTFIX
+
+    PrattSyntaxClass:
+        meta:
+            brief: The fixed parser-side syntax classes for phase-1 macros.
+        data:
+          - EXPR
+          - NAME
+          - NEST
+          - STRING
+          - TYPE
 
 inline:
     structs:
         PrattFixityConfig:
             meta:
-                brief: Configuration for an individual fixity (prefix/infix/postfix) of an operator.
+                brief: Configuration for an individual fixity (prefix/infix/postfix) of an
+                    operator.
             data:
                 op: PrattParselet
                 prec: int
@@ -219,8 +259,8 @@ unions:
             brief: The value of a token after parsing.
             description: >-
                 The value of a token after parsing. It can be a string, number,
-                character, or atom. This is used to represent the value of
-                the token in the parse tree.
+                character, or atom. This is used to represent the value of the
+                token in the parse tree.
         data:
             string: WCharArray
             number: MaybeBigInt
@@ -232,11 +272,11 @@ hashes:
         meta:
             brief: The Pratt parser table.
             description: >-
-                The Pratt parser table is a hash table that maps tokens
-                to their parsing rules. It is used to look up the
-                parsing rules for operators during parsing. Each entry in the
-                table contains the operator symbol, its precedence, and the
-                implementations of the token parser for each fixity.
+                The Pratt parser table is a hash table that maps tokens to their
+                parsing rules. It is used to look up the parsing rules for
+                operators during parsing. Each entry in the table contains the
+                operator symbol, its precedence, and the implementations of the
+                token parser for each fixity.
         data:
             entries: PrattRecord
 
@@ -249,13 +289,22 @@ hashes:
         data:
             entries: int
 
+    PrattMacroTable:
+        meta:
+            brief: A hash table of macro specifications indexed by HashSymbol.
+            description: >-
+                A hash table that maps a macro head symbol to its parser-side
+                phase-1 macro metadata in the current scope.
+        data:
+            entries: PrattMacroSpec
+
 arrays:
     PrattStrings:
         meta:
             brief: An array of Unicode strings.
             description: >-
-                An array of Unicode strings that is used to hold
-                multiple keywords for the PrattMixfixPattern structure.
+                An array of Unicode strings that is used to hold multiple
+                keywords for the PrattMixfixPattern structure.
         data:
             entries: WCharArray
 
@@ -263,10 +312,10 @@ arrays:
         meta:
             brief: A stack of Pratt parsers.
             description: >-
-                A stack of Pratt parsers that are used to parse the input stream.
-                Each parser is associated with a specific scope and contains
-                the rules for parsing tokens in that scope, which can change due
-                to user-defined operators or imported nameSpaces.
+                A stack of Pratt parsers that are used to parse the input
+                stream. Each parser is associated with a specific scope and
+                contains the rules for parsing tokens in that scope, which can
+                change due to user-defined operators or imported nameSpaces.
         data:
             entries: PrattParser
 
@@ -274,14 +323,24 @@ arrays:
         meta:
             brief: Array of exported operator sets indexed by nameSpace reference.
             description: >-
-                Cache of exported operators per nameSpace. Each entry corresponds
-                to a nameSpace reference (nsRef) and contains the set of operators
-                that were explicitly exported by that nameSpace.
+                Cache of exported operators per nameSpace. Each entry
+                corresponds to a nameSpace reference (nsRef) and contains the
+                set of operators that were explicitly exported by that
+                nameSpace.
         data:
             entries: PrattExportedOps
+
+    PrattMacroHoles:
+        meta:
+            brief: An ordered list of macro holes.
+            description: >-
+                Holds the typed holes for a macro pattern in declaration order
+                so parse-time expansion can bind arguments consistently.
+        data:
+            entries: PrattMacroHole
 
 primitives: !include primitives.yaml
 
 external:
-- !include ast.yaml
-- !include utils.yaml
+  - !include ast.yaml
+  - !include utils.yaml

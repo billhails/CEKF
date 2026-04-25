@@ -69,12 +69,13 @@ later source-span preservation work.
 
 ### Recommended Surface Syntax
 
-Use function-shaped macro headers plus keyword-based quotation forms.
+Use macro patterns with double-quoted literal terminals, plus keyword-based
+quotation forms.
 
 Example:
 
 ```fn
-macro unless(cond: Expr): consequent: Block else: alternative: Block {
+macro "unless" "(" cond: Expr ")" consequent: Block "else" alternative: Block {
     quote {
         if (unquote cond) {
             unquote alternative
@@ -85,9 +86,12 @@ macro unless(cond: Expr): consequent: Block else: alternative: Block {
 }
 ```
 
+In this notation, any fixed token in the macro head is written as a quoted
+terminal, including punctuation such as `"("` and `")"`.
+
 This fits the existing parser style better than speculative backtick or
-quasiquote punctuation, which is mentioned in older notes but does not
-appear to exist as a live parser feature.
+quasiquote punctuation, which is mentioned in older notes but does not appear
+to exist as a live parser feature.
 
 ### Suggested Initial Syntax Classes
 
@@ -120,7 +124,7 @@ trace(expr)
 Definition shape:
 
 ```fn
-macro time(expr: Expr) {
+macro "time" "(" expr: Expr ")" {
     quote {
         let start = now()
         in
@@ -161,7 +165,7 @@ unless(hasBinding(name)): {
 Definition shape:
 
 ```fn
-macro unless(cond: Expr): consequent: Block else: alternative: Block {
+macro "unless" "(" cond: Expr ")" consequent: Block "else" alternative: Block {
     quote {
         if (unquote cond) {
             unquote alternative
@@ -200,7 +204,7 @@ for(i = 0, i < len(xs), i + 1): {
 Definition shape:
 
 ```fn
-macro for(name: Name = init: Expr, test: Expr, step: Expr): body: Block {
+macro "for" "(" name: Name "=" init: Expr "," test: Expr "," step: Expr ")" body: Block {
     quote {
         let fn loop(unquote name) {
             if (unquote test) {
