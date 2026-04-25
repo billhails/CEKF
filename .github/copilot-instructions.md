@@ -55,17 +55,19 @@ make docs              # Generates Mermaid diagrams from YAML schemas
 
 - Use `PROTECT(obj)` macro to shield objects during construction.
 - `PROTECT(obj)` pushes `obj` onto protection stack and returns the previous stack pointer.
-- `PROTECT(NULL)` returns the current stack pointer.
+- `STARTPROTECT()` returns the current stack pointer without pushing an object.
 - `UNPROTECT(save)` restores the stack pointer to `save` (previous result of `PROTECT()`).
 - `REPLACE_PROTECT(save, newObj)` replaces whatever was at stack position `save` with `newObj`.
 - Pattern: `int save = PROTECT(obj); /* allocating code */ UNPROTECT(save);`.
+- Bookmark pattern: `int save = STARTPROTECT(); /* optional PROTECT calls */ UNPROTECT(save);`.
 - Never use literal numbers with UNPROTECT - only values returned by `PROTECT()`.
 - An invariant you can assume and should always enforce: **CALLER PROECTS**.
   - The caller must protect memory managed arguments to functions before calling, and protect any memory-managed result of calling.
   - Even though this may lead to a few extra lines of code, the consistency is well worth it as avoids subtle and hard to track bugs.
 - Assume any call can allocate and trigger GC. If an object is still in use and not protected, it is unsafe even if tests currently pass.
 - Passing tests does not prove protection correctness; it may only mean no GC sweep happened at the vulnerable point.
-- One last subtle gotcha: `PROTECT(NULL)` does not advance the stack pointer, so it is never safe to do a `REPLACE_PROTECT(save, newObj)` if `save` was the result of a call to `PROTECT(NULL)`.
+- `PROTECT(NULL)` is no longer a valid API. Use `STARTPROTECT()` whenever you need a bookmark rather than an object push.
+- `REPLACE_PROTECT(save, newObj)` is only valid when `save` came from protecting a real object slot, not from `STARTPROTECT()`.
 
 ### HashSymbol objects must never be PROTECT'ed
 

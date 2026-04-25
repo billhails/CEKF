@@ -1416,7 +1416,7 @@ static void testNPowComplexIntEndToEnd() {
 }
 
 static void testNPowCrossDomainParity() {
-    int save = PROTECT(NULL);
+    int save = STARTPROTECT();
 
     Value rat = stdRational(9, 4);
     protectValue(rat);

@@ -1,29 +1,26 @@
 # emit
 
-Code emission utilities
+Shared code emission utilities
 
 ```mermaid
 flowchart LR
-BufferBag --entries--> opaque
 SlotPool --entries--> Slot
-EmitterContext --currentBinding--> HashSymbol
-EmitterContext --lambdas--> BufferBag
-EmitterContext --body--> opaque
-EmitterContext --builtIns--> BuiltIns
-EmitterContext --slots--> SlotPool
-EmitterContext --heap--> SymbolArray
-EmitterContext --activeSlots--> int
-EmitterContext --totalSlots--> int
-EmitterContext --maxReg--> int
-EmitterContext --currentReg--> int
-EmitterContext --needsUnprotect--> bool
 Slot --isAvailable--> bool
 Slot --text--> SCharArray
 Slot --index--> int
-EmitResult --var--> HashSymbol
-EmitResult --buf--> opaque
-EmitResult --constant--> opaque
-ResultArray["ResultArray[]"] --entries--> EmitResult
+SlotAssign --source--> HashSymbol
+SlotAssign --dest--> HashSymbol
+EmitterContext --currentBinding--> HashSymbol
+EmitterContext --builtIns--> BuiltIns
+EmitterContext --slots--> SlotPool
+EmitterContext --slotSymbols--> SymbolArray
+EmitterContext --heap--> SymbolArray
+EmitterContext --activeSlots--> index
+EmitterContext --totalSlots--> index
+EmitterContext --maxReg--> index
+EmitterContext --currentReg--> index
+EmitterContext --needsUnprotect--> bool
+SlotAssignArray["SlotAssignArray[]"] --entries--> SlotAssign
 ```
 
 > Generated from src/emit.yaml by tools/generate.py

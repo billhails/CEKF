@@ -258,7 +258,7 @@ static MinExp *cpsTkMinSequence(MinExprList *node, CpsKont *k) {
     }
 #endif
     MinExp *result = NULL;
-    int save = PROTECT(NULL);
+    int save = STARTPROTECT();
     if (node->next == NULL) {
         result = cpsTk(node->exp, k);
     } else {
@@ -404,7 +404,7 @@ static MinExp *cpsTkMinCond(MinCond *node, CpsKont *k) {
 CpsWork *TkCondKont(MinExp *atest, TkCondKontEnv *env) {
     ENTER(TkCondKont);
     MinCondCases *cases = NULL;
-    int save = PROTECT(NULL);
+    int save = STARTPROTECT();
     switch (env->branches->type) {
     case MINCONDCASES_TYPE_INTEGERS: {
         CpsWork *mapWork = makeCpsWork_TkMapIntCondCases(

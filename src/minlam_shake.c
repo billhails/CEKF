@@ -42,7 +42,7 @@ static MinIntCondCases *shakeMinIntCondCases(MinIntCondCases *);
 static MinCharCondCases *shakeMinCharCondCases(MinCharCondCases *);
 static MinMatch *shakeMinMatch(MinMatch *);
 static MinMatchList *shakeMinMatchList(MinMatchList *);
-static MinLetRec *shakeMinLetRec(MinLetRec *);
+static MinExp *shakeMinLetRec(MinExp *);
 static MinBindings *shakeMinBindings(MinBindings *);
 static MinAmb *shakeMinAmb(MinAmb *);
 static MinCondCases *shakeMinCondCases(MinCondCases *);
@@ -259,10 +259,9 @@ static MinMatchList *shakeMinMatchList(MinMatchList *node) {
 }
 
 // Where it all happens
-static MinLetRec *shakeMinLetRec(MinLetRec *node) {
-    if (node == NULL)
-        return NULL;
+static MinExp *shakeMinLetRec(MinExp *exp) {
     ENTER(shakeMinLetRec);
+    MinLetRec *node = getMinExp_LetRec(exp);
     bool changed = false;
     // post-traversal processing, recurse into the body
     // and the bindings first.
@@ -272,22 +271,31 @@ static MinLetRec *shakeMinLetRec(MinLetRec *node) {
     MinBindings *new_bindings = shakeMinBindings(node->bindings);
     PROTECT(new_bindings);
 
-    // main algorithm
+    // keys = { x_0 ... x_n }
     SymbolSet *keys = getAllKeys(node->bindings);
     PROTECT(keys);
+    // deps = { x_i -> x_j | x_i in FV(\_i) intersection keys }
     SymbolSetMap *deps = buildDependencyGraph(node->bindings, keys);
     PROTECT(deps);
+    // rootSet = { keys intersection FV(body) }
     SymbolSet *rootSet = computeRoots(keys, new_body);
     PROTECT(rootSet);
+    // live = rootSet intersect deps+
     SymbolSet *live = computeLiveBindings(deps, rootSet);
     PROTECT(live);
+    // new_bindings = { x_i: \_i | x_i in live }
     new_bindings = retainOnlyLive(new_bindings, live);
     PROTECT(new_bindings);
 
     changed = changed || (new_bindings != node->bindings);
-    MinLetRec *result = node;
+    MinExp *result = exp;
     if (changed) {
-        result = newMinLetRec(CPI(node), new_bindings, new_body);
+        if (new_bindings == NULL)
+            result = new_body;
+        else
+            result = makeMinExp_LetRec(CPI(node), new_bindings, new_body);
+    } else if (new_bindings == NULL) {
+        result = new_body;
     }
     UNPROTECT(save);
     LEAVE(shakeMinLetRec);
@@ -343,7 +351,7 @@ MinExp *shakeMinExp(MinExp *node) {
     if (node == NULL)
         return NULL;
     ENTER(shakeMinExp);
-    int save = PROTECT(NULL);
+    int save = STARTPROTECT();
     MinExp *result = node;
     switch (node->type) {
     case MINEXP_TYPE_AMB: {
@@ -448,12 +456,8 @@ MinExp *shakeMinExp(MinExp *node) {
     }
     case MINEXP_TYPE_LETREC: {
         // MinLetRec
-        MinLetRec *variant = getMinExp_LetRec(node);
-        MinLetRec *new_variant = shakeMinLetRec(variant);
-        if (new_variant != variant) {
-            PROTECT(new_variant);
-            result = newMinExp_LetRec(CPI(node), new_variant);
-        }
+        // can return just the body if the bindings are empty
+        result = shakeMinLetRec(node);
         break;
     }
     case MINEXP_TYPE_MAKEVEC: {
@@ -516,7 +520,7 @@ static MinCondCases *shakeMinCondCases(MinCondCases *node) {
     if (node == NULL)
         return NULL;
     ENTER(shakeMinCondCases);
-    int save = PROTECT(NULL);
+    int save = STARTPROTECT();
     MinCondCases *result = node;
     switch (node->type) {
     case MINCONDCASES_TYPE_INTEGERS: {

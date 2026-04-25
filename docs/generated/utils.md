@@ -6,6 +6,7 @@ Common utility structures
 flowchart LR
 SymbolSet --entries--> NULL
 IntMap --entries--> int
+IndexMap --entries--> index
 SymbolMap --entries--> HashSymbol
 SymbolSetMap --entries--> SymbolSet
 BoolMap --entries--> bool
@@ -26,6 +27,8 @@ UCharArray["UCharArray[]"] --entries--> byte
 SCharArray["SCharArray[]"] --entries--> schar
 SymbolArray["SymbolArray[]"] --entries--> HashSymbol
 IntArray["IntArray[]"] --entries--> int
+UIntArray["UIntArray[]"] --entries--> uint
+IndexArray["IndexArray[]"] --entries--> index
 ```
 
 > Generated from src/utils.yaml by tools/generate.py

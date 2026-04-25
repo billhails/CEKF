@@ -339,7 +339,7 @@ static bool tryConstantFold(Term *term, TermType op, Term *left, Term *right,
 }
 
 static bool tryAddIdentity(Term *term, Term *left, Term *right, Term **result) {
-    int save = PROTECT(NULL);
+    int save = STARTPROTECT();
     Term *inner = NULL;
     Term *leftNum = NULL;
     Term *leftDen = NULL;
@@ -475,7 +475,7 @@ static bool tryAddIdentity(Term *term, Term *left, Term *right, Term **result) {
 }
 
 static bool trySubIdentity(Term *term, Term *left, Term *right, Term **result) {
-    int save = PROTECT(NULL);
+    int save = STARTPROTECT();
     Term *inner = NULL;
     Term *leftNum = NULL;
     Term *leftDen = NULL;
@@ -600,7 +600,7 @@ static bool trySubIdentity(Term *term, Term *left, Term *right, Term **result) {
 }
 
 static bool tryMulIdentity(Term *term, Term *left, Term *right, Term **result) {
-    int save = PROTECT(NULL);
+    int save = STARTPROTECT();
     TermOp *div = NULL;
     TermOp *pow = NULL;
     Value a;
@@ -757,7 +757,7 @@ static bool tryMulIdentity(Term *term, Term *left, Term *right, Term **result) {
 }
 
 static bool tryDivIdentity(Term *term, Term *left, Term *right, Term **result) {
-    int save = PROTECT(NULL);
+    int save = STARTPROTECT();
     TermOp *outer = NULL;
     TermOp *lpow = NULL;
     TermOp *rpow = NULL;
@@ -895,7 +895,7 @@ static bool tryDivIdentity(Term *term, Term *left, Term *right, Term **result) {
 }
 
 static bool tryModIdentity(Term *term, Term *left, Term *right, Term **result) {
-    int save = PROTECT(NULL);
+    int save = STARTPROTECT();
     TermOp *inner = NULL;
 
     if (isZeroTerm(left) || eqTerm(left, right)) {
@@ -917,7 +917,7 @@ static bool tryModIdentity(Term *term, Term *left, Term *right, Term **result) {
 }
 
 static bool tryPowIdentity(Term *term, Term *left, Term *right, Term **result) {
-    int save = PROTECT(NULL);
+    int save = STARTPROTECT();
     TermOp *outer = NULL;
 
     if (isZeroTerm(right)) {
@@ -943,7 +943,7 @@ static bool tryPowIdentity(Term *term, Term *left, Term *right, Term **result) {
 }
 
 static bool tryGcdIdentity(Term *term, Term *left, Term *right, Term **result) {
-    int save = PROTECT(NULL);
+    int save = STARTPROTECT();
     TermOp *inner = NULL;
 
     if (isZeroTerm(left) && isZeroTerm(right)) {
@@ -984,7 +984,7 @@ static bool tryGcdIdentity(Term *term, Term *left, Term *right, Term **result) {
 }
 
 static bool tryLcmIdentity(Term *term, Term *left, Term *right, Term **result) {
-    int save = PROTECT(NULL);
+    int save = STARTPROTECT();
     TermOp *inner = NULL;
 
     if (isZeroTerm(left) || isZeroTerm(right)) {
@@ -1057,7 +1057,7 @@ static Term *rebuildBinaryIfChanged(Term *term, const BinaryOpSpec *spec,
 
 static Term *simplifyBinaryOp(Term *term, const BinaryOpSpec *spec,
                               TermOp *termOp) {
-    int save = PROTECT(NULL);
+    int save = STARTPROTECT();
     Term *left = simplifyTerm(termOp->left);
     PROTECT(left);
     Term *right = simplifyTerm(termOp->right);

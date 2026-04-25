@@ -1209,7 +1209,7 @@ nsAstTypeConstructorArgs(AstTypeConstructorArgs *node, VisitorContext context) {
         return NULL;
     }
     ENTER(nsAstTypeConstructorArgs);
-    int save = PROTECT(NULL);
+    int save = STARTPROTECT();
     AstTypeConstructorArgs *result = node;
     switch (node->type) {
     case AST_TYPECONSTRUCTORARGS_TYPE_LIST: {
@@ -1244,7 +1244,7 @@ static AstLookUpOrSymbol *nsAstLookUpOrSymbol(AstLookUpOrSymbol *node,
         return NULL;
     }
     ENTER(nsAstLookUpOrSymbol);
-    int save = PROTECT(NULL);
+    int save = STARTPROTECT();
     AstLookUpOrSymbol *result = node;
     switch (node->type) {
     case AST_LOOKUPORSYMBOL_TYPE_SYMBOL: {
@@ -1275,7 +1275,7 @@ static AstDefinition *nsAstDefinition(AstDefinition *node,
         return NULL;
     }
     ENTER(nsAstDefinition);
-    int save = PROTECT(NULL);
+    int save = STARTPROTECT();
     AstDefinition *result = node;
     switch (node->type) {
     case AST_DEFINITION_TYPE_DEFINE: {
@@ -1343,7 +1343,7 @@ static AstTypeClause *nsAstTypeClause(AstTypeClause *node,
         return NULL;
     }
     ENTER(nsAstTypeClause);
-    int save = PROTECT(NULL);
+    int save = STARTPROTECT();
     AstTypeClause *result = node;
     switch (node->type) {
     case AST_TYPECLAUSE_TYPE_INTEGER:
@@ -1381,7 +1381,7 @@ static AstFarg *nsAstFarg(AstFarg *node, VisitorContext context) {
         return NULL;
     }
     ENTER(nsAstFarg);
-    int save = PROTECT(NULL);
+    int save = STARTPROTECT();
     AstFarg *result = node;
     switch (node->type) {
     case AST_FARG_TYPE_WILDCARD: {
@@ -1454,7 +1454,7 @@ static AstExpression *nsAstExpression(AstExpression *node,
         return NULL;
     }
     ENTER(nsAstExpression);
-    int save = PROTECT(NULL);
+    int save = STARTPROTECT();
     AstExpression *result = node;
     switch (node->type) {
     case AST_EXPRESSION_TYPE_BACK:

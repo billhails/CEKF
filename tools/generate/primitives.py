@@ -111,7 +111,7 @@ class Primitive(Base):
         c = self.comment('printProtectField')
         pad(depth)
         if self.markFn is None:
-            print(f"return PROTECT(NULL); {c}")
+            print(f"return STARTPROTECT(); {c}")
         else:
             a = '.' if isInline else '->'
             print(f"return PROTECT(_x{a}{prefix}{field}); {c}")

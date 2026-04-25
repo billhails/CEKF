@@ -64,6 +64,12 @@ hashes:
         data:
             entries: int
 
+    IndexMap:
+        meta:
+            brief: Map from Symbol to Index
+        data:
+            entries: index
+
     SymbolMap:
         meta:
             brief: Map from Symbol to Symbol
@@ -124,6 +130,18 @@ arrays:
             brief: integer array
         data:
             entries: int
+
+    UIntArray:
+        meta:
+            brief: unsigned integer array
+        data:
+            entries: uint
+
+    IndexArray:
+        meta:
+            brief: index array
+        data:
+            entries: index
 
 vectors:
     SCharVec:

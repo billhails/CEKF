@@ -24,8 +24,6 @@
 #include "cekf.h"
 #include <stdio.h>
 
-void printCEKF(CEKF *x);
-
 void dumpByteCode(FILE *out, ByteCodeArray *b, LocationArray *l);
 
 #endif

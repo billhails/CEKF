@@ -401,7 +401,7 @@ MinExp *ambMinExp(MinExp *node, MinExp *fail) {
         LEAVE(ambMinExp);
         return NULL;
     }
-    int save = PROTECT(NULL);
+    int save = STARTPROTECT();
     MinExp *result = node;
     switch (node->type) {
     case MINEXP_TYPE_AMB: {
@@ -549,7 +549,7 @@ static MinCondCases *ambMinCondCases(MinCondCases *node, MinExp *fail) {
         return NULL;
     }
 
-    int save = PROTECT(NULL);
+    int save = STARTPROTECT();
     MinCondCases *result = node;
 
     switch (node->type) {

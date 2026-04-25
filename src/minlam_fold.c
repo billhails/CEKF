@@ -338,7 +338,7 @@ MinExp *foldMinExp(MinExp *node) {
     if (node == NULL)
         return NULL;
 
-    int save = PROTECT(NULL);
+    int save = STARTPROTECT();
     MinExp *result = node;
 
     switch (node->type) {
@@ -453,9 +453,7 @@ MinExp *foldMinExp(MinExp *node) {
             candidate = newMinExp_Prim(CPI(node), new_variant);
         }
         MinPrimApp *candidatePrim = getMinExp_Prim(candidate);
-        bool hasArgsOperand = candidatePrim->exp1->type == MINEXP_TYPE_ARGS ||
-                              candidatePrim->exp2->type == MINEXP_TYPE_ARGS;
-        if (primOpIsArithmetic(candidatePrim->type) && !hasArgsOperand) {
+        if (primOpIsArithmetic(candidatePrim->type)) {
             result = simplifyMinExp(candidate);
         } else {
             result = candidate;
@@ -483,7 +481,7 @@ static MinCondCases *foldMinCondCases(MinCondCases *node) {
     if (node == NULL)
         return NULL;
 
-    int save = PROTECT(NULL);
+    int save = STARTPROTECT();
     MinCondCases *result = node;
 
     switch (node->type) {

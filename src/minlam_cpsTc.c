@@ -145,7 +145,7 @@ static MinExp *cpsTcMinSequence(MinExprList *node, MinExp *c) {
     }
 #endif
     MinExp *result = NULL;
-    int save = PROTECT(NULL);
+    int save = STARTPROTECT();
     if (node->next == NULL) {
         result = cpsTcMinExp(node->exp, c);
     } else {
@@ -326,7 +326,7 @@ CpsWork *TcCondKont(MinExp *atest, TcCondKontEnv *env) {
     ENTER(TcCondKont);
     MinExp *result = NULL;
     MinCondCases *cases = NULL;
-    int save = PROTECT(NULL);
+    int save = STARTPROTECT();
     switch (env->branches->type) {
     case MINCONDCASES_TYPE_INTEGERS: {
         CpsWork *mapWork = makeCpsWork_TcMapIntCondCases(

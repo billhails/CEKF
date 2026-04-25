@@ -234,6 +234,36 @@ class SimpleVector(Base):
         print(f'}} {c}')
         print('')
 
+    def printSetDeclaration(self, catalog):
+        myName = self.getName()
+        myType = self.getTypeDeclaration(catalog)
+        entryType = self.entries.getTypeDeclaration(catalog)
+        c = self.comment('printSetDeclaration')
+        print(f'static inline void set{myName}({myType} _x, Index index, {entryType} value) {{ {c}')
+        print(f'#ifdef SAFETY_CHECKS {c}')
+        print(f'    if (index >= _x->size) {{ {c}')
+        print(f'        cant_happen("{myName} bounds exceeded"); {c}')
+        print(f'    }} {c}')
+        print(f'#endif {c}')
+        print(f'    _x->entries[index] = value; {c}')
+        print(f'}} {c}')
+        print('')
+
+    def printGetDeclaration(self, catalog):
+        myName = self.getName()
+        myType = self.getTypeDeclaration(catalog)
+        entryType = self.entries.getTypeDeclaration(catalog)
+        c = self.comment('printGetDeclaration')
+        print(f'static inline {entryType} get{myName}({myType} _x, Index index) {{ {c}')
+        print(f'#ifdef SAFETY_CHECKS {c}')
+        print(f'    if (index >= _x->size) {{ {c}')
+        print(f'        cant_happen("{myName} bounds exceeded"); {c}')
+        print(f'    }} {c}')
+        print(f'#endif {c}')
+        print(f'    return _x->entries[index]; {c}')
+        print(f'}} {c}')
+        print('')
+
     def printPrintFunction(self, catalog):
         myName = self.getName()
         decl = self.getPrintSignature(catalog)

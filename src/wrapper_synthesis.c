@@ -16,23 +16,25 @@ static void makeArgLists(ParserInfo PI, int n, AstFargList **formalOut,
                          AstExpressions **actualOut) {
     AstFargList *formals = NULL;
     AstExpressions *actuals = NULL;
-    int saveFormals = PROTECT(NULL);
-    int saveActuals = PROTECT(NULL);
     for (int i = n - 1; i >= 0; i--) {
+        int save = STARTPROTECT();
+        if (formals != NULL)
+            PROTECT(formals);
+        if (actuals != NULL)
+            PROTECT(actuals);
         char buf[32];
         sprintf(buf, "a$%d", i);
         HashSymbol *sym = newSymbol(buf);
         AstFarg *farg = newAstFarg_Symbol(PI, sym);
         PROTECT(farg);
         formals = newAstFargList(PI, farg, formals);
-        REPLACE_PROTECT(saveFormals, formals);
+        PROTECT(formals);
         AstExpression *symExpr = newAstExpression_Symbol(PI, sym);
         PROTECT(symExpr);
         actuals = newAstExpressions(PI, symExpr, actuals);
-        REPLACE_PROTECT(saveActuals, actuals);
+        PROTECT(actuals);
+        UNPROTECT(save);
     }
-    UNPROTECT(saveActuals);
-    UNPROTECT(saveFormals);
     *formalOut = formals;
     *actualOut = actuals;
 }

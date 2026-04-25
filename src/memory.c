@@ -125,6 +125,10 @@ __attribute__((unused)) static const char *typeName(ObjType type) {
         return typenameUtilsObj(type);
         TERM_OBJTYPE_CASES()
         return typenameTermObj(type);
+        EMIT_B_OBJTYPE_CASES()
+        return typenameEmit_bObj(type);
+        EMIT_C_OBJTYPE_CASES()
+        return typenameEmit_cObj(type);
         EMIT_OBJTYPE_CASES()
         return typenameEmitObj(type);
     default: {
@@ -179,7 +183,15 @@ void initProtection(void) {
 /**
  * invoked by the REPLACE_PROTECT macro
  */
-void replaceProtect(Index i, Header *obj) { protected->stack[i] = obj; }
+void replaceProtect(Index i, Header *obj) {
+#ifdef SAFETY_CHECKS
+    if (i >= protected->sp) {
+        cant_happen("invalid REPLACE_PROTECT index %d (sp=%d)", i,
+                    protected->sp);
+    }
+#endif
+    protected->stack[i] = obj;
+}
 
 /**
  * Invoked by the PROTECT macro.
@@ -411,6 +423,12 @@ void markObj(Header *h, Index i) {
         TERM_OBJTYPE_CASES()
         markTermObj(h);
         break;
+        EMIT_B_OBJTYPE_CASES()
+        markEmit_bObj(h);
+        break;
+        EMIT_C_OBJTYPE_CASES()
+        markEmit_cObj(h);
+        break;
         EMIT_OBJTYPE_CASES()
         markEmitObj(h);
         break;
@@ -485,6 +503,12 @@ void freeObj(Header *h) {
         break;
         TERM_OBJTYPE_CASES()
         freeTermObj(h);
+        break;
+        EMIT_B_OBJTYPE_CASES()
+        freeEmit_bObj(h);
+        break;
+        EMIT_C_OBJTYPE_CASES()
+        freeEmit_cObj(h);
         break;
         EMIT_OBJTYPE_CASES()
         freeEmitObj(h);

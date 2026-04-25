@@ -29,6 +29,8 @@ struct Header;
 #include "builtins_objtypes.h"
 #include "cekfs_objtypes.h"
 #include "cps_kont_objtypes.h"
+#include "emit_b_objtypes.h"
+#include "emit_c_objtypes.h"
 #include "emit_objtypes.h"
 #include "lambda_objtypes.h"
 #include "minlam_objtypes.h"
@@ -70,6 +72,8 @@ typedef enum {
     UTILS_OBJTYPES(),
     TERM_OBJTYPES(),
     EMIT_OBJTYPES(),
+    EMIT_B_OBJTYPES(),
+    EMIT_C_OBJTYPES(),
 } ObjType;
 
 typedef struct Header {
@@ -139,7 +143,8 @@ void collectGarbage();
  * stack pointer index of the pushed object, which can be used
  * to unprotect the object later.
  */
-#define PROTECT(x) protect((Header *)(x))
+// #define PROTECT(x) protect((Header *)(x))
+#define PROTECT(x) protect(&((x)->header))
 /**
  * UNPROTECT restores the ProtectionStack to its argument index,
  * effectively removing all objects at and above that index from the
@@ -153,7 +158,7 @@ void collectGarbage();
  * the object that replaces it, since mark and sweep will automatically
  * protect the contained object.
  */
-#define REPLACE_PROTECT(i, x) replaceProtect(i, (Header *)(x))
+#define REPLACE_PROTECT(i, x) replaceProtect(i, &((x)->header))
 /**
  * STARTPROTECT just returns the current stack pointer, a later
  * UNPROTECT will restore the stack to this point, having no effect

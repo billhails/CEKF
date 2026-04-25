@@ -18,30 +18,15 @@
 
 config:
     name: emit
-    description: Code emission utilities
+    description: Shared code emission utilities
     parserInfo: false
     limited_includes:
       - builtins.h
+      - builtins_debug.h
       - utils.h
       - utils_debug.h
-      - builtins_debug.h
 
 structs:
-    EmitterContext:
-        meta:
-            brief: VisitorContext for emitMinExp
-        data:
-            currentBinding: HashSymbol
-            lambdas: BufferBag
-            body: opaque
-            builtIns: BuiltIns
-            slots: SlotPool
-            heap: SymbolArray # minheap
-            activeSlots: int=0
-            totalSlots: int=0
-            maxReg: int=0
-            currentReg: int=0
-            needsUnprotect: bool=false
 
     Slot:
         meta:
@@ -51,33 +36,41 @@ structs:
             text: SCharArray
             index: int
 
-unions:
-    EmitResult:
+    SlotAssign:
         meta:
-            description: >
-                Either a hash symbol representing a temp variable, or an Opaque
-                EmitBuffer containing an immediate expression which can be
-                a  constant or text that refers to variables.
+            description: Records an assignment for later emission
         data:
-            var: HashSymbol
-            buf: opaque
-            constant: opaque
+            source: HashSymbol
+            dest: HashSymbol
+
+arrays:
+    SlotAssignArray:
+        data:
+            entries: SlotAssign
 
 hashes:
-    BufferBag:
-        data:
-            entries: opaque
-
     SlotPool:
         data:
             entries: Slot
 
-primitives: !include primitives.yaml
+inline:
+    structs:
+        EmitterContext:
+            meta:
+                brief: Shared VisitorContext for emitMinExp
+            data:
+                currentBinding: HashSymbol
+                builtIns: BuiltIns
+                slots: SlotPool
+                slotSymbols: SymbolArray
+                heap: SymbolArray # minheap
+                activeSlots: index=0
+                totalSlots: index=0
+                maxReg: index=0
+                currentReg: index=0
+                needsUnprotect: bool=false
 
-arrays:
-    ResultArray:
-        data:
-            entries: EmitResult
+primitives: !include primitives.yaml
 
 external:
   - !include utils.yaml

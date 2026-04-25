@@ -16,7 +16,9 @@ More of a wish-list than a hard and fast plan.
 * Memory Management.
   * Replace mark and sweep GC with a generational stop and copy.
 * Pipeline.
-  * Re-order Type Checking before TPMC - NEXT!
+  * Extend operator folding to include boolean operators.
+  * Fold conditionals that have constant tests.
+  * Re-order Type Checking before TPMC.
   * Target LLVM.
 * Generate.
   * Move all signatures into `signature_helper.py`, not just the shared ones.

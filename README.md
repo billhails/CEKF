@@ -2,6 +2,12 @@
 
 ![logo](./docs/CEKF2.png)
 
+> "I do remember one thing, it took hours and hours and by the
+  time I was done with it, I was so involved I didn't know
+  what to think. I carried it around with me for days and days,
+  playing little games. Like not looking at it for a whole day,
+  and then looking at it, to see if I still liked it. I DID!"
+
 Low level, hopefully fast C implementation of a CEK machine with an
 additional "F" failure continuation supporting amb (and a stack).
 
@@ -107,7 +113,7 @@ lconv -.-> lambda_ds
 denamespace ==> lc
 
 subgraph Lambda Conversion
-   lc([Lambda Conversion]):::process ==> tpmc([Pattern Matching Compiler]):::process
+   lc([Lambda Conversion]):::process ===> tpmc([Pattern Matching Compiler]):::process
    lc <==> pg([Print Function Generator]):::process
    lc <==> me([Lazy Function Expansion]):::process
    tpmc ==> vs([Variable Substitution]):::process
@@ -156,9 +162,15 @@ subgraph Target C
    closure_conversion([Closure Lifting]):::process ==>
    closures(Explicit Closures):::minlam ==>
    de_bruijn([DeBruijn Indexing]):::process ==>
-   indexed("Annotated Variables (Final IR)"):::minlam ==>
+   indexed("Annotated Variables (Final IR)"):::minlam
+   indexed ==>
    c_emitter([Emit C]):::process ==>
    target_c(Pure C code)
+   indexed ==>
+   b_emitter([Emit B]):::process ==>
+   target_b(Byte Code)
+   target_b ==> brun([B-Runner]):::process
+   target_b <==> bbcf(Bytecode Files)
 end
    
 lambda3 ==> desugaring

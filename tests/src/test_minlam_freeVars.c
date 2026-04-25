@@ -213,7 +213,7 @@ static void assertSetContainsOnly(SymbolSet *set, HashSymbol *a, HashSymbol *b,
 }
 
 static void test_var_unbound_is_free(void) {
-    int save = PROTECT(NULL);
+    int save = STARTPROTECT();
     HashSymbol *x = newSymbol("x");
     MinExp *expr = V("x");
     SymbolSet *freeVars = newSymbolSet();
@@ -226,7 +226,7 @@ static void test_var_unbound_is_free(void) {
 }
 
 static void test_var_bound_in_context_is_not_free(void) {
-    int save = PROTECT(NULL);
+    int save = STARTPROTECT();
     HashSymbol *x = newSymbol("x");
     MinExp *expr = V("x");
     SymbolSet *freeVars = newSymbolSet();
@@ -242,7 +242,7 @@ static void test_var_bound_in_context_is_not_free(void) {
 }
 
 static void test_add_collects_both_sides(void) {
-    int save = PROTECT(NULL);
+    int save = STARTPROTECT();
     HashSymbol *x = newSymbol("x");
     HashSymbol *y = newSymbol("y");
     MinExp *expr = Add(V("x"), V("y"));
@@ -256,7 +256,7 @@ static void test_add_collects_both_sides(void) {
 }
 
 static void test_lambda_binds_parameter(void) {
-    int save = PROTECT(NULL);
+    int save = STARTPROTECT();
     HashSymbol *y = newSymbol("y");
     MinExp *expr = Lam(Args1("x"), Add(V("x"), V("y")));
     SymbolSet *freeVars = newSymbolSet();
@@ -269,7 +269,7 @@ static void test_lambda_binds_parameter(void) {
 }
 
 static void test_letrec_binds_binding_names_in_values_and_body(void) {
-    int save = PROTECT(NULL);
+    int save = STARTPROTECT();
     HashSymbol *y = newSymbol("y");
     HashSymbol *z = newSymbol("z");
 
@@ -286,7 +286,7 @@ static void test_letrec_binds_binding_names_in_values_and_body(void) {
 }
 
 static void test_letrec_binding_value_respects_lambda_bound_vars(void) {
-    int save = PROTECT(NULL);
+    int save = STARTPROTECT();
     HashSymbol *z = newSymbol("z");
 
     MinBindings *bindings =
@@ -302,7 +302,7 @@ static void test_letrec_binding_value_respects_lambda_bound_vars(void) {
 }
 
 static void test_apply_collects_function_and_args(void) {
-    int save = PROTECT(NULL);
+    int save = STARTPROTECT();
     HashSymbol *f = newSymbol("f");
     HashSymbol *x = newSymbol("x");
     HashSymbol *y = newSymbol("y");
@@ -322,7 +322,7 @@ static void test_apply_collects_function_and_args(void) {
 }
 
 static void test_lookup_iff_amb_collect_free_vars(void) {
-    int save = PROTECT(NULL);
+    int save = STARTPROTECT();
     HashSymbol *x = newSymbol("x");
     HashSymbol *c = newSymbol("c");
     HashSymbol *t = newSymbol("t");
@@ -348,7 +348,7 @@ static void test_lookup_iff_amb_collect_free_vars(void) {
 }
 
 static void test_cond_integer_and_character_cases(void) {
-    int save = PROTECT(NULL);
+    int save = STARTPROTECT();
     HashSymbol *v = newSymbol("v");
     HashSymbol *x = newSymbol("x");
     HashSymbol *z = newSymbol("z");
@@ -377,7 +377,7 @@ static void test_cond_integer_and_character_cases(void) {
 }
 
 static void test_match_sequence_makevec_and_callcc(void) {
-    int save = PROTECT(NULL);
+    int save = STARTPROTECT();
     HashSymbol *i = newSymbol("i");
     HashSymbol *a = newSymbol("a");
     HashSymbol *b = newSymbol("b");
@@ -418,7 +418,7 @@ static void test_match_sequence_makevec_and_callcc(void) {
 }
 
 static void test_non_variable_forms_do_not_add_free_vars(void) {
-    int save = PROTECT(NULL);
+    int save = STARTPROTECT();
 
     SymbolSet *s1 = newSymbolSet();
     PROTECT(s1);

@@ -509,7 +509,7 @@ MinExp *substMinExp(MinExp *node, MinExpTable *context) {
         return node;
     }
 
-    int save = PROTECT(NULL);
+    int save = STARTPROTECT();
     MinExp *result = node;
 
     switch (node->type) {
@@ -653,7 +653,7 @@ static MinCondCases *substMinCondCases(MinCondCases *node,
         return NULL;
     }
 
-    int save = PROTECT(NULL);
+    int save = STARTPROTECT();
     MinCondCases *result = node;
 
     switch (node->type) {

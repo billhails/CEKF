@@ -47,6 +47,7 @@ typedef unsigned int Word;
 typedef short int Short;
 typedef unsigned short int ShortIndex;
 typedef int Integer;
+typedef uint32_t UInteger;
 typedef unsigned int Index;
 typedef double Double;
 typedef size_t Control;

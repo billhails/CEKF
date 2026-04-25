@@ -157,6 +157,9 @@ class SimpleStack(SimpleArray):
     def printAppendDeclaration(self, catalog):
         pass
 
+    def printGetDeclaration(self, catalog):
+        pass
+
     def printAppendFunction(self, catalog):
         pass
 
