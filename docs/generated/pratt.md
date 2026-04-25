@@ -27,6 +27,7 @@ PrattLexer --bufList--> PrattBufList
 PrattLexer --tokenHead--> PrattToken
 PrattLexer --tokenTail--> PrattToken
 PrattParser --rules--> PrattRecordTable
+PrattParser --macros--> PrattMacroTable
 PrattParser --nameSpaces--> PrattNsIdTable
 PrattParser --lexer--> PrattLexer
 PrattParser --trie--> PrattTrie
@@ -46,8 +47,7 @@ PrattMixfixPattern --endsWithHole--> bool
 PrattMacroHole --syntaxClass--> PrattSyntaxClass
 PrattMacroHole --name--> HashSymbol
 PrattMacroSpec --headSymbol--> HashSymbol
-PrattMacroSpec --literalTokens--> PrattStrings
-PrattMacroSpec --holes--> PrattMacroHoles
+PrattMacroSpec --patternItems--> PrattMacroPatternItems
 PrattMacroSpec --template--> AstExpression
 PrattMacroSpec --export--> bool
 PrattMacroSpec --importNsRef--> int
@@ -62,6 +62,8 @@ PrattFixityConfig --pattern--> PrattMixfixPattern
 PrattFixityConfig --isLazy--> bool
 PrattFixityConfig --importNsRef--> int
 PrattFixityConfig --importNsSymbol--> HashSymbol
+PrattMacroPatternItem --quotedTerminal--> WCharArray
+PrattMacroPatternItem --typedHole--> PrattMacroHole
 PrattValue --string--> WCharArray
 PrattValue --number--> MaybeBigInt
 PrattValue --character--> character
@@ -74,7 +76,7 @@ PrattSyntaxClass["enum PrattSyntaxClass"]
 PrattStrings["PrattStrings[]"] --entries--> WCharArray
 PrattParsers["PrattParsers[]"] --entries--> PrattParser
 PrattNsOpsArray["PrattNsOpsArray[]"] --entries--> PrattExportedOps
-PrattMacroHoles["PrattMacroHoles[]"] --entries--> PrattMacroHole
+PrattMacroPatternItems["PrattMacroPatternItems[]"] --entries--> PrattMacroPatternItem
 ```
 
 > Generated from src/pratt.yaml by tools/generate.py

@@ -66,6 +66,7 @@ TOKFN(EOF, " EOF")
 TOKFN(EQ, "EQ")
 TOKFN(ERROR, " ERROR")
 TOKFN(EXPORT, "export")
+TOKFN(EXPRTYPE, "Expr")
 TOKFN(FN, "fn")
 TOKFN(HASH, "#")
 TOKFN(IF, "if")
@@ -80,7 +81,10 @@ TOKFN(LET, "let")
 TOKFN(LINK, "link")
 TOKFN(LAZY, "lazy")
 TOKFN(LSQUARE, "[")
+TOKFN(MACRO, "macro")
+TOKFN(NAMETYPE, "Name")
 TOKFN(NAMESPACE, "namespace")
+TOKFN(NESTTYPE, "Nest")
 TOKFN(NONE, "none")
 TOKFN(NUMBER, " NUMBER")
 TOKFN(OPEN, "(")
@@ -94,10 +98,12 @@ TOKFN(RIGHT, "right")
 TOKFN(RSQUARE, "]")
 TOKFN(SEMI, ";")
 TOKFN(STRING, " STRING")
+TOKFN(STRINGTYPE, " String")
 TOKFN(SWITCH, "switch")
 TOKFN(TUPLE, "#(")
 TOKFN(TYPEDEF, "typedef")
 TOKFN(TYPEOF, "typeof")
+TOKFN(TYPETYPE, "Type")
 TOKFN(UNSAFE, "unsafe")
 TOKFN(WILDCARD, "_")
 
@@ -1203,6 +1209,12 @@ bool match(PrattParser *parser, HashSymbol *type) {
     return false;
 }
 
+static const char *friendlyExpectedName(HashSymbol *type) {
+    if (type == TOK_ATOM())
+        return "identifier";
+    return type->name;
+}
+
 /**
  * @brief Consumes the next token if it matches the specified type.
  *
@@ -1210,12 +1222,6 @@ bool match(PrattParser *parser, HashSymbol *type) {
  * If the match fails, it consumes the token, raises an error, and returns
  * false.
  */
-static const char *friendlyExpectedName(HashSymbol *type) {
-    if (type == TOK_ATOM())
-        return "identifier";
-    return type->name;
-}
-
 bool consume(PrattParser *parser, HashSymbol *type) {
     PrattToken *token = next(parser);
     validateLastAlloc();

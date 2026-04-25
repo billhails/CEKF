@@ -1,0 +1,10 @@
+let
+    macro "time" expr: Expr {
+        expr
+    };
+
+    macro "time" value: Expr {
+        value
+    };
+in
+    assert(false)

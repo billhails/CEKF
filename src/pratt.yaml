@@ -164,14 +164,13 @@ structs:
         meta:
             brief: Parser metadata for a phase-1 macro definition.
             description: >-
-                Stores the head symbol, literal terminals, typed holes, and
-                template expression needed for parser-time macro expansion in
-                the current scope.
+                Stores the head symbol, ordered pattern items, and template
+                expression needed for parser-time macro expansion in the current
+                scope.
         data:
             headSymbol: HashSymbol
-            literalTokens: PrattStrings
-            holes: PrattMacroHoles
-            template: AstExpression=NULL
+            patternItems: PrattMacroPatternItems
+            template: AstExpression
             export: bool=false
             importNsRef: int=-1
             importNsSymbol: HashSymbol=NULL
@@ -254,6 +253,16 @@ inline:
                 importNsSymbol: HashSymbol=NULL
 
 unions:
+    PrattMacroPatternItem:
+        meta:
+            brief: A single ordered item in a macro pattern.
+            description: >-
+                Represents one item in a phase-1 macro pattern, preserving the
+                declared interleaving of quoted terminals and typed holes.
+        data:
+            quotedTerminal: WCharArray
+            typedHole: PrattMacroHole
+
     PrattValue:
         meta:
             brief: The value of a token after parsing.
@@ -330,14 +339,15 @@ arrays:
         data:
             entries: PrattExportedOps
 
-    PrattMacroHoles:
+    PrattMacroPatternItems:
         meta:
-            brief: An ordered list of macro holes.
+            brief: An ordered list of macro pattern items.
             description: >-
-                Holds the typed holes for a macro pattern in declaration order
-                so parse-time expansion can bind arguments consistently.
+                Holds the full ordered phase-1 macro pattern so the parser can
+                preserve the declared interleaving of quoted terminals and typed
+                holes.
         data:
-            entries: PrattMacroHole
+            entries: PrattMacroPatternItem
 
 primitives: !include primitives.yaml
 

@@ -319,6 +319,7 @@ static PrattParser *makePrattParser(void) {
     addRecord(table, TOK_LINK(), NULL, 0, NULL, 0, NULL, 0);
     addRecord(table, TOK_LAZY(), NULL, 0, NULL, 0, NULL, 0);
     addRecord(table, TOK_LSQUARE(), list, 0, NULL, 0, NULL, 0);
+    addRecord(table, TOK_MACRO(), NULL, 0, NULL, 0, NULL, 0);
     addRecord(table, TOK_NAMESPACE(), NULL, 0, NULL, 0, NULL, 0);
     addRecord(table, TOK_NUMBER(), makeNumber, 0, NULL, 0, NULL, 0);
     addRecord(table, TOK_OPEN(), grouping, 0, call, 14, NULL, 0);
@@ -2026,6 +2027,104 @@ static AstDefinition *operator(PrattParser *parser, bool isLazy) {
     return def;
 }
 
+PrattMacroHole *typedHole(PrattParser *parser) {
+    PrattToken *token = next(parser);
+    int save = PROTECT(token);
+    // we know it's an atom
+#ifdef SAFETY_CHECKS
+    if (token->type != TOK_ATOM()) {
+        cant_happen("typedHole called with non-atom \"%s\"", token->type->name);
+    }
+#endif
+    HashSymbol *symbol = getPrattValue_Atom(token->value);
+    consume(parser, TOK_COLON());
+    token = next(parser);
+    REPLACE_PROTECT(save, token);
+    PrattMacroHole *result = NULL;
+    if (token->type == TOK_ATOM()) {
+        HashSymbol *type = getPrattValue_Atom(token->value);
+        if (type == TOK_EXPRTYPE()) {
+            result = newPrattMacroHole(PRATTSYNTAXCLASS_TYPE_EXPR, symbol);
+        } else if (type == TOK_NAMETYPE()) {
+            result = newPrattMacroHole(PRATTSYNTAXCLASS_TYPE_NAME, symbol);
+        } else if (type == TOK_NESTTYPE()) {
+            result = newPrattMacroHole(PRATTSYNTAXCLASS_TYPE_NEST, symbol);
+        } else if (type == TOK_STRINGTYPE()) {
+            result = newPrattMacroHole(PRATTSYNTAXCLASS_TYPE_STRING, symbol);
+        } else if (type == TOK_TYPETYPE()) {
+            result = newPrattMacroHole(PRATTSYNTAXCLASS_TYPE_TYPE, symbol);
+        }
+    }
+    UNPROTECT(save);
+    return result;
+}
+
+static PrattMacroPatternItems *macroPatternItems(PrattParser *parser) {
+    PrattMacroPatternItems *result = newPrattMacroPatternItems();
+    int save = PROTECT(result);
+    for (;;) {
+        if (check(parser, TOK_STRING())) {
+            WCharArray *str = rawString(parser);
+            int save2 = PROTECT(str);
+            PrattMacroPatternItem *this =
+                newPrattMacroPatternItem_QuotedTerminal(str);
+            PROTECT(this);
+            pushPrattMacroPatternItems(result, this);
+            UNPROTECT(save2);
+        } else if (check(parser, TOK_ATOM())) {
+            PrattMacroHole *hole = typedHole(parser);
+            if (hole == NULL)
+                break;
+            else {
+                int save2 = PROTECT(hole);
+                PrattMacroPatternItem *this =
+                    newPrattMacroPatternItem_TypedHole(hole);
+                PROTECT(this);
+                pushPrattMacroPatternItems(result, this);
+                UNPROTECT(save2);
+            }
+        } else {
+            break;
+        }
+    }
+    UNPROTECT(save);
+    return result;
+}
+
+static AstDefinition *macroDefinition(PrattParser *parser) {
+    ENTER(macroDefinition);
+    PrattToken *tok = peek(parser);
+    int save = PROTECT(tok);
+    if (!check(parser, TOK_STRING())) {
+        parserError(parser, "expected string after macro");
+        UNPROTECT(save);
+        return newAstDefinition_Blank(LEXPI(parser->lexer));
+    }
+    WCharArray *macro_head = rawString(parser);
+    PROTECT(macro_head);
+    PrattMacroPatternItems *patternItems = macroPatternItems(parser);
+    PROTECT(patternItems);
+    AstExpression *template = NULL;
+    AstNest *body = nest(parser);
+    if (body != NULL) {
+        PROTECT(body);
+        template = newAstExpression_Nest(CPI(body), body);
+        PROTECT(template);
+    }
+    HashSymbol *head = unicodeToSymbol(macro_head);
+    if (getPrattMacroTable(parser->macros, head, NULL)) {
+        parserError(parser, "macro %s already defined in current scope",
+                    head->name);
+    }
+    PrattMacroSpec *spec = newPrattMacroSpec(head, patternItems, template);
+    PROTECT(spec);
+    setPrattMacroTable(parser->macros, head, spec);
+
+    LEAVE(macroDefinition);
+    UNPROTECT(save);
+    return newAstDefinition_Blank(LEXPI(parser->lexer));
+}
+
 /**
  * @brief Parse a definition.
  *
@@ -2043,6 +2142,9 @@ static AstDefinition *definition(PrattParser *parser) {
     save = PROTECT(res);
     if (match(parser, TOK_BUILTINS())) {
         res = newAstDefinition_BuiltinsSlot(TOKPI(peek(parser)));
+        save = PROTECT(res);
+    } else if (match(parser, TOK_MACRO())) {
+        res = macroDefinition(parser);
         save = PROTECT(res);
     } else if (check(parser, TOK_ATOM())) {
         res = assignment(parser);
@@ -2067,8 +2169,7 @@ static AstDefinition *definition(PrattParser *parser) {
         res = defun(parser, false, DEFUN_COMPARATOR);
         save = PROTECT(res);
     } else if (match(parser, TOK_LAZY())) {
-        if (check(parser, TOK_OPERATOR())) {
-            match(parser, TOK_OPERATOR());
+        if (match(parser, TOK_OPERATOR())) {
             res = operator(parser, true);
         } else {
             consume(parser, TOK_FN());

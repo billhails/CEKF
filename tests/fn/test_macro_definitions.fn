@@ -1,0 +1,14 @@
+let
+    macro "time" "(" expr: Expr ")" {
+        expr
+    };
+
+    macro "unless" "(" cond: Expr ")" consequent: Nest "else" alternative: Nest {
+        cond
+    };
+
+    macro "annotate" name: Name ":" annotation: Type "=" value: Expr {
+        value
+    };
+in
+    assert(1 == 1)
