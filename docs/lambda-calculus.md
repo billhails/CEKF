@@ -6,17 +6,13 @@ can be reduced to pure math on a lambda calculus.
 
 ## Our grammar
 
-This is basically the lambda calculus, with added `constant`, `conditional`, `primapp` and `letrec`.
+This is basically the lambda calculus, with added `constant` and `letrec`.
 
 $$
 \begin{align*}
 e\ &\mathtt{::=\ } \mathtt{C} & \texttt{[constant]}
 \\
 &\mathtt{|\ \ \ \ \ } x & \texttt{[variable]}
-\\
-&\mathtt{|\ \ \ \ \ } (\mathtt{if}\ e\ e\ e) & \texttt{[conditional]}
-\\
-&\mathtt{|\ \ \ \ \ } (\circ\ e\ e) & \texttt{[primapp]}
 \\
 &\mathtt{|\ \ \ \ \ } (e\ e) & \texttt{[application]}
 \\
@@ -28,6 +24,11 @@ b\ &\mathtt{::=\ } ( x:\ \lambda y.e ) & \texttt{[letrec binding]}
 \end{align*}
 $$
 
+The "real" `MinLam` core has other constructs but for all the following
+transforms the behaviour is identical: transforming a constant is a no-op,
+and transforming a container is the container with its components transformed,
+for example $\mathcal{T}\texttt{(if t c a)} = \texttt{(if }\mathcal{T}\texttt{t }\mathcal{T}\texttt{c }\mathcal{T}\texttt{a)}$.
+
 ## Free variables $\mathcal{F}$
 
 A variable is free in an expression if it is present in a scope where it is not bound.
@@ -37,10 +38,6 @@ $$
 \mathcal{F}\mathtt{C} &= \set{}
 \\
 \mathcal{F}x &= \set{x}
-\\
-\mathcal{F}(\mathtt{if}\ e_0\ e_1\ e_2) &= \mathcal{F}e_0\cup \mathcal{F}e_1\cup \mathcal{F}e_2
-\\
-\mathcal{F}(\circ\ e_0\ e_1) &= \mathcal{F}e_0\cup \mathcal{F}e_1
 \\
 \mathcal{F}(e_0\ e_1) &= \mathcal{F}e_0\cup \mathcal{F}e_1
 \\
@@ -72,10 +69,6 @@ $$
 \mathcal{A}_{\rho}\mathtt{C} &= \mathtt{C}
 \\
 \mathcal{A}_{\rho}x &= \rho(x) && \text{(1)}
-\\
-\mathcal{A}_{\rho}(\mathtt{if}\ e_0\ e_1\ e_2) &= (\mathtt{if}\ \mathcal{A}_{\rho}e_0\ \mathcal{A}_{\rho}e_1\ \mathcal{A}_{\rho}e_2)
-\\
-\mathcal{A}_{\rho}(\circ\ e_0\ e_1) &= (\circ\ \mathcal{A}_{\rho}e_0\ \mathcal{A}_{\rho}e_1)
 \\
 \mathcal{A}_{\rho}(e_0\ e_1) &= (\mathcal{A}_{\rho}e_0\ \mathcal{A}_{\rho}e_1)
 \\
@@ -121,10 +114,6 @@ r &\text{if } x = y
 \\
 y &\text{otherwise}
 \end{cases}
-\\
-\mathcal{S}_{[x/r]}(\mathtt{if}\ e_0\ e_1\ e_2) &= (\mathtt{if}\ \mathcal{S}_{[x/r]}e_0\ \mathcal{S}_{[x/r]}e_1\ \mathcal{S}_{[x/r]}e_2)
-\\
-\mathcal{S}_{[x/r]}(\circ\ e_0\ e_1) &= (\circ\ \mathcal{S}_{[x/r]}e_0\ \mathcal{S}_{[x/r]}e_1)
 \\
 \mathcal{S}_{[x/r]}(e_0\ e_1) &= (\mathcal{S}_{[x/r]}e_0\ \mathcal{S}_{[x/r]}e_1)
 \\
@@ -175,10 +164,6 @@ $$
 \\
 \beta x &= x
 \\
-\beta (\mathtt{if}\ e_0\ e_1\ e_2) &= (\mathtt{if}\ \beta e_0\ \beta e_1\ \beta e_2)
-\\
-\beta (\circ\ e_0\ e_1) &= (\circ\ \beta e_0\ \beta e_1)
-\\
 \beta((\lambda x.e_0)\ e_1) &= \mathcal{S}_{[x/\beta e_1]}\beta e_0 && \text{(1)}
 \\
 \beta (e_0\ e_1) &= (\beta e_0\ \beta e_1)
@@ -203,10 +188,6 @@ $$
 \eta\mathtt{C} &= \mathtt{C}
 \\
 \eta x &= x
-\\
-\eta (\mathtt{if}\ e_0\ e_1\ e_2) &= (\mathtt{if}\ \eta e_0\ \eta e_1\ \eta e_2)
-\\
-\eta (\circ\ e_0\ e_1) &= (\circ\ \eta e_0\  \eta e_1)
 \\
 \eta (e_0\ e_1) &= (\eta e_0\  \eta e_1)
 \\
@@ -236,10 +217,6 @@ $$
 \\
 \mathcal{T}x &= x
 \\
-\mathcal{T}(\mathtt{if}\ e_0\ e_1\ e_2) &= (\mathtt{if}\ \mathcal{T}e_0\ \mathcal{T}e_1\ \mathcal{T}e_2)
-\\
-\mathcal{T}(\circ\ e_0\ e_1) &= (\circ\ \mathcal{T}e_0\ \mathcal{T}e_1)
-\\
 \mathcal{T}(e_0\ e_1) &= (\mathcal{T}e_0\ \mathcal{T}e_1)
 \\
 \mathcal{T}(\lambda x . e) &= (\lambda x.\mathcal{T}e)
@@ -256,8 +233,10 @@ L &= \bigcup_{x\in B} \vec{D}^{\ast}(x) && \text{(5)}
 \\
 \mathcal{T}l &=
 (\mathtt{letrec}\ (\set{(x_i:\ \mathcal{T}\lambda_i) | x_i \in L})\ \mathcal{T}e)
+&& \text{(6)}
 \\
 \mathcal{T}(\mathtt{letrec}\ (\ )\ e) &= \mathcal{T}e
+&& \text{(7)}
 \end{align*}
 $$
 
@@ -268,10 +247,8 @@ The preliminaries are just navigating to the `letrec`. Having got there:
 3. Let $\vec{D}$ be the relation of each $x_i$ in $K$ to a set of other $\set{x_j\dots x_k}$ in $K$ where $x_j\dots x_k$ are free in $x_i$'s associated tree-shook lambda $\mathcal{T}\lambda_i$. Essentially a map from the lambda name to any letrec bound variables in its body.
 4. Let $B$ be the set of elements of $K$ that are free in the tree-shook body $\mathcal{T}e$.
 5. Let $L$ be the set of live variables: those $x_i$ in $K$ that are reachable from $e$ via zero or more applications of $\vec{D}$.
-
-Then $\mathcal{T}l$ is the tree-shook letrec $l$, With bindings restricted to those whose keys are members of $L$.
-
-Finally, though not properly part of tree shaking,
+6. Then $\mathcal{T}l$ is the tree-shook letrec $l$, With bindings restricted to those whose keys are members of $L$.
+7. Finally, though not properly part of tree shaking,
 if the result is a `letrec` with no bindings it reduces
 to just the tree-shook body.
 
@@ -290,11 +267,6 @@ $$
 \mathcal{I}\mathtt{C} &= \mathtt{C}
 \\
 \mathcal{I}x &= x
-\\
-\mathcal{I}(\mathtt{if}\ e_0\ e_1\ e_2) &=
-    (\mathtt{if}\ \mathcal{I}e_0\ \mathcal{I}e_1\ \mathcal{I}e_2)
-\\
-\mathcal{I}(\circ\ e_0\ e_1) &= (\circ\ \mathcal{I}e_0\ \mathcal{I}e_1)
 \\
 \mathcal{I}(e_0\ e_1) &= (\mathcal{I}e_0\ \mathcal{I}e_1)
 \\
@@ -325,10 +297,6 @@ $$
 \mathcal{Z}\mathtt{C} &= 1
 \\
 \mathcal{Z}x &= 1
-\\
-\mathcal{Z}(\mathtt{if}\ e_0\ e_1\ e_2) &= 1 + \mathcal{Z}e_0 + \mathcal{Z}e_1 + \mathcal{Z}e_2
-\\
-\mathcal{Z}(\circ\ e_0\ e_1) &= 1 + \mathcal{Z}e_0 + \mathcal{Z}e_1
 \\
 \mathcal{Z}(e_0\ e_1) &= 1 + \mathcal{Z}e_0 + \mathcal{Z}e_1
 \\
@@ -382,10 +350,6 @@ $$
 \\
 0 &\text{otherwise}
 \end{cases}
-\\
-\mathcal{C}_x(\mathtt{if}\ e_0\ e_1\ e_2) &= \mathcal{C}_xe_0 +\mathcal{C}_xe_1 +  \mathcal{C}_xe_2
-\\
-\mathcal{C}_x(\circ\ e_0\ e_1) &= \mathcal{C}_xe_0 + \mathcal{C}_xe_1
 \\
 \mathcal{C}_x(e_0\ e_1) &= \mathcal{C}_xe_0 + \mathcal{C}_xe_1
 \\
