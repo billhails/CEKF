@@ -260,7 +260,7 @@ unions:
                 Represents one item in a phase-1 macro pattern, preserving the
                 declared interleaving of quoted terminals and typed holes.
         data:
-            quotedTerminal: WCharArray
+            quotedTerminal: HashSymbol
             typedHole: PrattMacroHole
 
     PrattValue:

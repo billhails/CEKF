@@ -53,7 +53,7 @@ That means phase 1 should explicitly avoid taking on:
 At the same time, phase 1 should avoid painting later work into a corner.
 The MVP should leave room for:
 
-- structured clause blocks beyond plain expressions
+- structured clause nests beyond plain expressions
 - macro forms that need dictionary-like compile-time parameters
 - later typeclass-driven surface sugar such as `do`
 - richer source spans and diagnostics on expanded code
@@ -75,7 +75,7 @@ quotation forms.
 Example:
 
 ```fn
-macro "unless" "(" cond: Expr ")" consequent: Block "else" alternative: Block {
+macro "unless" "(" cond: Expr ")" consequent: Nest "else" alternative: Nest {
     quote {
         if (unquote cond) {
             unquote alternative
@@ -86,8 +86,13 @@ macro "unless" "(" cond: Expr ")" consequent: Block "else" alternative: Block {
 }
 ```
 
-In this notation, any fixed token in the macro head is written as a quoted
-terminal, including punctuation such as `"("` and `")"`.
+In this notation, the leading macro head is a quoted symbol, and any remaining
+fixed token in the pattern is written as a quoted terminal, including
+punctuation such as `"("` and `")"`.
+
+The quoted head symbol should be registered in the parser trie and dispatched
+through a generic macro parselet, so macro use sites are scanner-recognized
+rather than falling through generic identifier parsing.
 
 This fits the existing parser style better than speculative backtick or
 quasiquote punctuation, which is mentioned in older notes but does not appear
@@ -100,12 +105,26 @@ small fixed set of syntax classes.
 
 - `Expr`
 - `Name`
-- `Block`
-- `Binding`
-- `ClauseList`
+- `Nest`
+- `String`
+- `Type`
 
 These are enough to support useful call-shaped macros, header-plus-body
-macros, and some structured multi-clause rewrites.
+macros, and template-oriented rewrites without taking on clause-oriented or
+binding-shaped parser entry points too early.
+
+### Phase-1 Template Quotation
+
+For phase 1, make the quoted template surface explicit.
+
+- `quote { ... }` builds template syntax from a brace-delimited nest.
+- `unquote name` inserts one captured syntax object.
+- `splice name` inserts captured sequence syntax in sequence positions.
+- `unquote` and `splice` are only valid within `quote`.
+
+This keeps declaration patterns and template construction separate: quoted
+terminals describe how a macro is recognized, while `quote`, `unquote`, and
+`splice` describe how its expansion is built.
 
 ## Concrete Motivating Examples
 
@@ -165,7 +184,7 @@ unless(hasBinding(name)): {
 Definition shape:
 
 ```fn
-macro "unless" "(" cond: Expr ")" consequent: Block "else" alternative: Block {
+macro "unless" "(" cond: Expr ")" consequent: Nest "else" alternative: Nest {
     quote {
         if (unquote cond) {
             unquote alternative
@@ -188,7 +207,7 @@ Why this matters:
 Minimum capability:
 
 - Expression parameters.
-- Block parameters.
+- Nest parameters.
 - Quote and unquote.
 
 ### 3. For Loop As Expression Sugar
@@ -204,7 +223,7 @@ for(i = 0, i < len(xs), i + 1): {
 Definition shape:
 
 ```fn
-macro "for" "(" name: Name "=" init: Expr "," test: Expr "," step: Expr ")" body: Block {
+macro "for" "(" name: Name "=" init: Expr "," test: Expr "," step: Expr ")" body: Nest {
     quote {
         let fn loop(unquote name) {
             if (unquote test) {
@@ -229,7 +248,7 @@ Minimum capability:
 
 - Name parameters.
 - Expression parameters.
-- Block parameters.
+- Nest parameters.
 - Hygienic generated bindings.
 
 ### 4. Switch As A Macro-Extraction Candidate
@@ -429,7 +448,7 @@ do {
 
 #### Core Desugaring Shape
 
-The natural expansion is recursive over a semicolon-separated block of
+The natural expansion is recursive over a semicolon-separated nest of
 clauses.
 
 Roughly:
@@ -458,10 +477,10 @@ This is a macro, not a new runtime feature.
 
 The expansion only needs to:
 
-- parse a structured block of clauses
+- parse a structured nest of clauses
 - generate nested lambdas hygienically
 - preserve definition-site resolution for `bind` and `pure`
-- recursively rewrite the block into ordinary F♮ expressions
+- recursively rewrite the nest into ordinary F♮ expressions
 
 That is exactly the kind of surface-to-core translation a real macro system
 should eventually handle.
@@ -533,7 +552,7 @@ If a narrower first target is needed, the strongest trio is:
 Together they force the design to cover:
 
 - Hygienic generated bindings.
-- Expression and block parameters.
+- Expression and Nest parameters.
 - Name parameters.
 - Header-plus-body forms.
 
@@ -559,14 +578,15 @@ milestone does not need to solve immediately.
 
 1. What exact runtime-independent representation should syntax objects use
    in the AST?
-2. How should quote, unquote, and splice map onto existing parser forms?
+2. What is the smallest useful container-aware `splice` surface once
+    `quote` and `unquote` are fixed?
 3. What phase ordering is safest relative to namespace flattening and
    later pipeline stages?
 4. What source metadata should macro expansions preserve now, and what
    richer span model should be reserved for later?
 5. What is the smallest useful surface for syntax-class parameters?
-6. Should some later macro forms accept structured statement blocks rather
-   than only expression and block parameters?
+6. Should some later macro forms accept structured statement nests rather
+    than only expression and Nest parameters?
 7. If `do` notation arrives before type classes, should it require an
    explicit monad dictionary or namespace argument?
 8. If pattern binds are allowed in `do`, what is the failure semantics?
@@ -597,6 +617,9 @@ milestone does not need to solve immediately.
 - Keep phase 1 tightly scoped to syntax-object expansion, hygiene, and a
     small fixed family of macro parameter classes.
 - Bias examples toward compiler, interpreter, analyzer, and DSL work.
+- Use quoted macro heads registered in the parser trie and dispatched through
+    a generic macro parselet.
+- Use `Nest` as the phase-1 body syntax class.
 - Prefer keyword-based quote forms in the first draft.
 - Delay arbitrary grammar extension and deliberate hygiene escapes.
 - Treat typeclass-backed `do` notation as a useful later stress test, not as
@@ -604,6 +627,8 @@ milestone does not need to solve immediately.
 
 ## Next Draft Should Probably Do Two Things
 
-1. Pick one concrete syntax family for macro definitions and quotation.
+1. Work through `quote`, `unquote`, and `splice` against the current AST
+    container shapes, especially which positions should admit splicing in phase
+    1.
 2. Work through the `time`, `unless`, and `for` examples in more detail,
    including their exact expansion shapes.

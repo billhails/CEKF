@@ -204,6 +204,36 @@ static PrattParsers *parserStack = NULL;
 static PrattNsOpsArray *nsOpsCache = NULL;
 
 /**
+ * This deals with the situation where a token may or may not
+ * have been registered (by a macro or an operator) and we still
+ * must match it.
+ *
+ * If it has been registered then the scanner will return it as
+ * the token type. Otherwise it will be returned as the value of
+ * an atom type.
+ */
+static HashSymbol *getTokenTypeOrAtom(PrattToken *token) {
+    if (token->type == TOK_ATOM()) {
+        return getPrattValue_Atom(token->value);
+    } else {
+        return token->type;
+    }
+}
+
+/**
+ * This deals with the situation where a token may or may not
+ * have been registered (by a macro or an operator) and we still
+ * must match it.
+ *
+ * If it has been registered then the scanner will return it as
+ * the token type. Otherwise it will be returned as the value of
+ * an atom type.
+ */
+static bool isTokenTypeOrAtom(PrattToken *token, HashSymbol *type) {
+    return getTokenTypeOrAtom(token) == type;
+}
+
+/**
  * Create a file id from a fileName.
  *
  * @param fileName the fileName
@@ -224,6 +254,7 @@ static HashSymbol *unicodeToSymbol(WCharArray *unicode) {
     SCharVec *mbStr = newSCharVec(len + 1);
     int save = PROTECT(mbStr);
     wcstombs(mbStr->entries, unicode->entries, len + 1);
+    setSCharVec(mbStr, len, 0);
     HashSymbol *res = newSymbol(mbStr->entries);
     UNPROTECT(save);
     return res;
@@ -1946,17 +1977,15 @@ parseMixfixPattern(ParserInfo PI, PrattParser *parser, WCharArray *str) {
 
 static PrattAssoc parseOptionalAssociativity(PrattParser *parser) {
     PrattAssoc associativity = PRATTASSOC_TYPE_NONE;
-    if (check(parser, TOK_ATOM())) {
-        PrattToken *atom = peek(parser);
-        if (atom->value->val.atom == TOK_LEFT() ||
-            atom->value->val.atom == TOK_RIGHT() ||
-            atom->value->val.atom == TOK_NONE()) {
-            next(parser);
-            if (atom->value->val.atom == TOK_LEFT()) {
-                associativity = PRATTASSOC_TYPE_LEFT;
-            } else if (atom->value->val.atom == TOK_RIGHT()) {
-                associativity = PRATTASSOC_TYPE_RIGHT;
-            }
+    PrattToken *tok = peek(parser);
+    if (isTokenTypeOrAtom(tok, TOK_LEFT()) ||
+        isTokenTypeOrAtom(tok, TOK_RIGHT()) ||
+        isTokenTypeOrAtom(tok, TOK_NONE())) {
+        next(parser);
+        if (isTokenTypeOrAtom(tok, TOK_LEFT())) {
+            associativity = PRATTASSOC_TYPE_LEFT;
+        } else if (isTokenTypeOrAtom(tok, TOK_RIGHT())) {
+            associativity = PRATTASSOC_TYPE_RIGHT;
         }
     }
     return associativity;
@@ -2027,7 +2056,22 @@ static AstDefinition *operator(PrattParser *parser, bool isLazy) {
     return def;
 }
 
-PrattMacroHole *typedHole(PrattParser *parser) {
+static void checkTerminal(PrattParser *parser, WCharArray *string) {
+    if (countWCharArray(string) == 0) {
+        parserError(parser, "empty identifier string");
+    }
+    if (getWCharArray(string, 0) == 0) {
+        parserError(parser, "empty identifier string");
+    }
+    for (Index i = 0;
+         i < countWCharArray(string) && getWCharArray(string, i) != 0; ++i) {
+        if (iswspace(getWCharArray(string, i))) {
+            parserError(parser, "space in quoted token");
+        }
+    }
+}
+
+static PrattMacroHole *typedHole(PrattParser *parser) {
     PrattToken *token = next(parser);
     int save = PROTECT(token);
     // we know it's an atom
@@ -2041,19 +2085,19 @@ PrattMacroHole *typedHole(PrattParser *parser) {
     token = next(parser);
     REPLACE_PROTECT(save, token);
     PrattMacroHole *result = NULL;
-    if (token->type == TOK_ATOM()) {
-        HashSymbol *type = getPrattValue_Atom(token->value);
-        if (type == TOK_EXPRTYPE()) {
-            result = newPrattMacroHole(PRATTSYNTAXCLASS_TYPE_EXPR, symbol);
-        } else if (type == TOK_NAMETYPE()) {
-            result = newPrattMacroHole(PRATTSYNTAXCLASS_TYPE_NAME, symbol);
-        } else if (type == TOK_NESTTYPE()) {
-            result = newPrattMacroHole(PRATTSYNTAXCLASS_TYPE_NEST, symbol);
-        } else if (type == TOK_STRINGTYPE()) {
-            result = newPrattMacroHole(PRATTSYNTAXCLASS_TYPE_STRING, symbol);
-        } else if (type == TOK_TYPETYPE()) {
-            result = newPrattMacroHole(PRATTSYNTAXCLASS_TYPE_TYPE, symbol);
-        }
+    if (isTokenTypeOrAtom(token, TOK_EXPRTYPE())) {
+        result = newPrattMacroHole(PRATTSYNTAXCLASS_TYPE_EXPR, symbol);
+    } else if (isTokenTypeOrAtom(token, TOK_NAMETYPE())) {
+        result = newPrattMacroHole(PRATTSYNTAXCLASS_TYPE_NAME, symbol);
+    } else if (isTokenTypeOrAtom(token, TOK_NESTTYPE())) {
+        result = newPrattMacroHole(PRATTSYNTAXCLASS_TYPE_NEST, symbol);
+    } else if (isTokenTypeOrAtom(token, TOK_STRINGTYPE())) {
+        result = newPrattMacroHole(PRATTSYNTAXCLASS_TYPE_STRING, symbol);
+    } else if (isTokenTypeOrAtom(token, TOK_TYPETYPE())) {
+        result = newPrattMacroHole(PRATTSYNTAXCLASS_TYPE_TYPE, symbol);
+    } else {
+        parserError(parser, "unrecognised syntax class %s",
+                    getTokenTypeOrAtom(token)->name);
     }
     UNPROTECT(save);
     return result;
@@ -2066,8 +2110,10 @@ static PrattMacroPatternItems *macroPatternItems(PrattParser *parser) {
         if (check(parser, TOK_STRING())) {
             WCharArray *str = rawString(parser);
             int save2 = PROTECT(str);
+            checkTerminal(parser, str);
+            HashSymbol *symbol = unicodeToSymbol(str);
             PrattMacroPatternItem *this =
-                newPrattMacroPatternItem_QuotedTerminal(str);
+                newPrattMacroPatternItem_QuotedTerminal(symbol);
             PROTECT(this);
             pushPrattMacroPatternItems(result, this);
             UNPROTECT(save2);
@@ -2095,13 +2141,9 @@ static AstDefinition *macroDefinition(PrattParser *parser) {
     ENTER(macroDefinition);
     PrattToken *tok = peek(parser);
     int save = PROTECT(tok);
-    if (!check(parser, TOK_STRING())) {
-        parserError(parser, "expected string after macro");
-        UNPROTECT(save);
-        return newAstDefinition_Blank(LEXPI(parser->lexer));
-    }
     WCharArray *macro_head = rawString(parser);
     PROTECT(macro_head);
+    checkTerminal(parser, macro_head);
     PrattMacroPatternItems *patternItems = macroPatternItems(parser);
     PROTECT(patternItems);
     AstExpression *template = NULL;

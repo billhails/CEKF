@@ -62,7 +62,7 @@ PrattFixityConfig --pattern--> PrattMixfixPattern
 PrattFixityConfig --isLazy--> bool
 PrattFixityConfig --importNsRef--> int
 PrattFixityConfig --importNsSymbol--> HashSymbol
-PrattMacroPatternItem --quotedTerminal--> WCharArray
+PrattMacroPatternItem --quotedTerminal--> HashSymbol
 PrattMacroPatternItem --typedHole--> PrattMacroHole
 PrattValue --string--> WCharArray
 PrattValue --number--> MaybeBigInt
