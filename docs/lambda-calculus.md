@@ -51,7 +51,7 @@ $$
 1. The free variables in a lambda are the free variables in its body minus its argument.
 2. The free variables in a `letrec` are the free variables in its lambdas (1) plus the free variables in its body, minus the variables bound by the letrec itself.
 
-## Alpha Conversion $\mathcal{A}_{\rho}$
+## Alpha Conversion $\alpha_{\rho}$
 
 Alpha conversion renames binders to fresh names and rewrites bound occurrences to match.
 
@@ -66,13 +66,13 @@ The initial environment $\rho_0$ maps every built-in name to itself. Variable lo
 
 $$
 \begin{align*}
-\mathcal{A}_{\rho}\mathtt{C} &= \mathtt{C}
+\alpha_{\rho}\mathtt{C} &= \mathtt{C}
 \\
-\mathcal{A}_{\rho}x &= \rho(x) && \text{(1)}
+\alpha_{\rho}x &= \rho(x) && && \text{(1)}
 \\
-\mathcal{A}_{\rho}(e_0\ e_1) &= (\mathcal{A}_{\rho}e_0\ \mathcal{A}_{\rho}e_1)
+\alpha_{\rho}(e_0\ e_1) &= (\alpha_{\rho}e_0\ \alpha_{\rho}e_1)
 \\
-\mathcal{A}_{\rho}(\lambda x.e) &= (\lambda x'.\mathcal{A}_{\rho[x \mapsto x']}e)
+\alpha_{\rho}(\lambda x.e) &= (\lambda x'.\alpha_{\rho[x \mapsto x']}e)
 && \text{where } x' = \mathrm{fresh}(x) && \text{(2)}
 \\
 l &= (\mathtt{letrec}\ (b_0\dots b_n)\ e)
@@ -81,11 +81,11 @@ l &= (\mathtt{letrec}\ (b_0\dots b_n)\ e)
 \rho' &= \rho[x_0 \mapsto x'_0,\dots,x_n \mapsto x'_n]
 && \text{where } b_i = (x_i:\ \lambda y_i.e_i),\ x'_i = \mathrm{fresh}(x_i) && \text{(4)}
 \\
-\mathcal{A}_{\rho}l &=
-(\mathtt{letrec}\ (\mathcal{A}_{\rho'}b_0\dots\mathcal{A}_{\rho'}b_n)\ \mathcal{A}_{\rho'}e)
+\alpha_{\rho}l &=
+(\mathtt{letrec}\ (\alpha_{\rho'}b_0\dots\alpha_{\rho'}b_n)\ \alpha_{\rho'}e)
 && && \text{(5)}
 \\
-\mathcal{A}_{\rho}(x:\ \lambda y.e) &= (\rho(x):\ \lambda y'.\mathcal{A}_{\rho[y \mapsto y']}e)
+\alpha_{\rho}(x:\ \lambda y.e) &= (\rho(x):\ \lambda y'.\alpha_{\rho[y \mapsto y']}e)
 && \text{where } y' = \mathrm{fresh}(y) && \text{(6)}
 \end{align*}
 $$
