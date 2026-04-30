@@ -318,6 +318,38 @@ macro "for" "(" name: Name "=" init: Expr "," test: Expr "," step: Expr ")" body
 }
 ```
 
+This fixed-item grammar is a good first anchor, but the list-comprehension
+example in the kickoff note exposes an immediate follow-up requirement:
+single macro definitions may need optional and repeated subpatterns.
+
+For example, these should still be one `lco` macro shape, not separate macro
+definitions:
+
+```fn
+lco [x + 1 for x in xs]
+lco [x + 1 for x in xs where x > 4]
+lco [x + 1 for x in xs where x > 4, isOdd(x)]
+```
+
+Architecturally, that argues for one of two parser-owned strategies:
+
+- keep the user-facing declaration syntax simple and let the macro-definition
+  helper normalize optional or repeated segments into a canonical internal
+  form before generic macro matching
+- or add one level above flat pattern items, so the internal pattern metadata
+  can represent optional and repeated groups directly
+
+The important point is the single-macro property. Phase 1 should not require
+authors to duplicate near-identical macro definitions just to cover an
+omitted `where` clause or a comma-separated predicate chain.
+
+Given the longer-term direction sketched in [SYNTAX.md](SYNTAX.md), the second
+option is the better architectural target. An embedded-BNF or named-subsyntax
+surface wants parser-owned structure for grouping, alternation, and
+parameterized subrules. A one-shot normalization pass may still be a useful
+staging aid, but it should be treated as an implementation convenience over a
+grouped internal representation, not as the long-term model.
+
 ### Suggested Template Quotation Surface
 
 The macro body should remain an ordinary `nest` in the declaration grammar,
@@ -371,6 +403,23 @@ right shape. It preserves the declared interleaving of quoted terminals and
 typed holes directly, instead of splitting them into separate lists and then
 having to reconstruct their order later.
 
+For strictly fixed patterns, a flat ordered item list is enough. If phase 1
+also wants single-macro variant forms such as list comprehensions with an
+optional `where` tail and repeated comma-separated predicates, then the
+implementation should add either:
+
+- a normalization pass from surface syntax into canonical fixed metadata
+- or a grouped internal pattern representation above `PrattMacroPatternItem`
+
+It should not model those variants as multiple separate macro specs that just
+happen to share the same head.
+
+With the longer-term syntax-extension goal in mind, grouped internal pattern
+nodes are the preferable destination. They can later grow toward named
+subsyntaxes, alternation, empty productions, and parameterized helper rules of
+the kind sketched in [SYNTAX.md](SYNTAX.md), while still allowing a flatter
+phase-1 surface to compile into them.
+
 In `pratt.yaml` terms, one plausible sketch is:
 
 ```yaml
@@ -420,7 +469,7 @@ unions:
         preserving the declared interleaving of quoted
         terminals and typed holes.
     data:
-      quotedTerminal: HashSymbol
+      quotedTerminal: WCharArray
       typedHole: PrattMacroHole
 
 arrays:
@@ -448,12 +497,15 @@ The registration path should mirror operators as closely as possible.
 
 1. `definition()` recognizes a new `macro` declaration form.
 2. A macro-definition helper parses the head pattern and parameter classes.
-3. The helper builds a `PrattMacroSpec`.
-4. The helper installs or reuses a generic prefix parselet binding for the
+3. If the chosen surface admits optional or repeated segments, the helper
+  builds grouped internal pattern nodes, optionally using a normalization step
+  as a staging layer.
+4. The helper builds a `PrattMacroSpec`.
+5. The helper installs or reuses a generic prefix parselet binding for the
   macro head.
-5. The head symbol and literal terminals are inserted into the parser trie.
-6. The current parser scope stores the macro metadata in a local table.
-7. The generic macro parselet later consults that metadata when the head token
+6. The head symbol and literal terminals are inserted into the parser trie.
+7. The current parser scope stores the macro metadata in a local table.
+8. The generic macro parselet later consults that metadata when the head token
   is encountered.
 
 This is the cleanest analogue to the operator pipeline.
@@ -464,9 +516,11 @@ At parse time, a generic macro parselet should:
 
 1. be invoked by the trie-recognized macro head token
 2. consult the stored macro spec
-3. parse each hole according to its fixed syntax class
-4. build a syntax-object environment
-5. expand to normal AST using the stored template or expansion form
+3. match any grouped pattern structure, including optional or repeated
+  segments if phase 1 supports them
+4. parse each hole according to its fixed syntax class
+5. build a syntax-object environment
+6. expand to normal AST using the stored template or expansion form
 
 The key phase-1 choice is that hole parsing is dispatched by a fixed parser
 helper table, not by user-supplied parser logic.
@@ -522,6 +576,13 @@ be:
 6. add `quote` and `unquote` handling in macro templates, with `splice`
   either included immediately or treated as the first follow-up
 7. expand only into ordinary AST, not token streams
+
+If list comprehensions or similarly variant forms are part of the early goal,
+the narrowest extension after that slice is not a second macro system. It is
+one small grouped-pattern mechanism for optional and repeated segments,
+possibly fed by a normalization step, so one macro definition can cover both
+the plain and filtered forms while still moving toward later embedded-BNF
+syntax extension.
 
 That would be enough to test whether the architecture works without taking on
 the specialized clause grammars too early.

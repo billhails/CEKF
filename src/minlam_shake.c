@@ -283,7 +283,7 @@ static MinExp *shakeMinLetRec(MinExp *exp) {
     // live = rootSet intersect deps+
     SymbolSet *live = computeLiveBindings(deps, rootSet);
     PROTECT(live);
-    // new_bindings = { x_i: \_i | x_i in live }
+    // new_bindings = { x_i: λ_i | x_i ∈ live }
     new_bindings = retainOnlyLive(new_bindings, live);
     PROTECT(new_bindings);
 

@@ -38,8 +38,8 @@ The first milestone should be deliberately narrow.
 ### Phase 1 Guardrails
 
 Phase 1 should optimize for the smallest macro system that can clearly handle
-`time`, the corrected `unless`, `for`, and eventually extraction of the
-existing `switch` desugaring from the parser.
+`time`, the corrected `unless`, `for`, simple list comprehensions, and
+eventually extraction of the existing `switch` desugaring from the parser.
 
 That means phase 1 should explicitly avoid taking on:
 
@@ -251,7 +251,69 @@ Minimum capability:
 - Nest parameters.
 - Hygienic generated bindings.
 
-### 4. Switch As A Macro-Extraction Candidate
+### 4. List Comprehensions As Pipeline Sugar
+
+Use-sites:
+
+```fn
+lco [x + 1 for x in xs]
+lco [x + 1 for x in xs where x > 4]
+lco [x + 1 for x in xs where x > 4, isOdd(x)]
+```
+
+Likely expansion shapes:
+
+```fn
+lco [x + 1 for x in xs]
+=> xs |> fn (x) { x + 1 }
+
+lco [x + 1 for x in xs where x > 4]
+=> xs |? fn (x) { x > 4 } |> fn (x) { x + 1 }
+
+lco [x + 1 for x in xs where x > 4, isOdd(x)]
+=> xs
+        |? fn (x) { x > 4 }
+        |? fn (x) { isOdd(x) }
+        |> fn (x) { x + 1 }
+```
+
+Likely definition shape:
+
+- One `lco` macro, not separate macros for with-`where` and without-`where`
+    forms.
+- A required introductory keyword plus bracketed comprehension body.
+- An optional `where` tail represented internally as part of one grouped macro
+    pattern rather than as a separate macro form.
+- A repeated comma-separated predicate sequence within that tail.
+- Expansion to zero or more `|?` stages followed by one `|>` stage.
+
+Why this matters:
+
+- It is a compact, readable example of expression-only macro rewriting.
+- It opens up the question of variant macro forms: optional and repeated
+    pattern segments should still belong to one macro definition rather than a
+    family of near-duplicate declarations.
+- It shows how existing library operators such as `|?` and `|>` can become
+    the target of surface sugar rather than requiring new core machinery.
+- It exercises definition-site resolution for helper operators while still
+    using captured names inside generated lambdas.
+- It is a realistic convenience form for tree walks, analysis passes, and
+    collection-oriented compiler code.
+
+Minimum capability:
+
+- Expression parameters.
+- Name parameters.
+- Quote and unquote.
+- Definition-site resolution for expansion helpers.
+- Some parser-owned way to represent optional and repeated pattern segments,
+    with normalization remaining an implementation aid rather than the long-term
+    model.
+
+This should likely start with a required introductory keyword such as `lco`
+rather than trying to reuse Python-style bare bracket syntax.
+
+### 5. Switch As A Macro-Extraction Candidate
 
 Use-site:
 
@@ -291,7 +353,7 @@ Minimum capability:
 This is probably just beyond the smallest MVP, but it is an especially good
 early migration target.
 
-### 5. Rewrite-Rule Helper
+### 6. Rewrite-Rule Helper
 
 Use-site:
 
@@ -320,7 +382,7 @@ Minimum capability:
 
 This is a strong second-wave target rather than a first-milestone one.
 
-### 6. Definition-Position Boilerplate Generators
+### 7. Definition-Position Boilerplate Generators
 
 Use-site:
 
@@ -352,7 +414,7 @@ Minimum capability:
 This is probably second wave, but it is an excellent north-star
 example.
 
-### 7. Grammar Or DSL Macros
+### 8. Grammar Or DSL Macros
 
 Use-site:
 
@@ -380,7 +442,7 @@ Minimum capability:
 
 This should stay out of the first milestone.
 
-### 8. Haskell-Like `do` Notation For Monads
+### 9. Haskell-Like `do` Notation For Monads
 
 This is explicitly not phase 1, but it is still a good motivating stretch
 goal because it would make parser combinators, state threading, error
@@ -556,6 +618,11 @@ Together they force the design to cover:
 - Name parameters.
 - Header-plus-body forms.
 
+List comprehensions are also a strong early follow-on example because they
+mostly reuse the same machinery while additionally stressing definition-site
+resolution of expansion helpers such as `|?` and `|>`, plus optional and
+repeated pattern segments within a single macro form.
+
 ### Second-Wave Targets
 
 - `do` notation for explicit monad dictionaries or later typeclass-based monads
@@ -585,13 +652,16 @@ milestone does not need to solve immediately.
 4. What source metadata should macro expansions preserve now, and what
    richer span model should be reserved for later?
 5. What is the smallest useful surface for syntax-class parameters?
-6. Should some later macro forms accept structured statement nests rather
+6. What is the smallest useful way to express optional and repeated pattern
+    segments within one macro definition, so forms like list comprehensions can
+    omit `where` or chain comma-separated predicates without separate macros?
+7. Should some later macro forms accept structured statement nests rather
     than only expression and Nest parameters?
-7. If `do` notation arrives before type classes, should it require an
+8. If `do` notation arrives before type classes, should it require an
    explicit monad dictionary or namespace argument?
-8. If pattern binds are allowed in `do`, what is the failure semantics?
-9. When should explicit hygiene escapes be introduced, if at all?
-10. Which existing hard-coded parser sugars should be migrated first?
+9. If pattern binds are allowed in `do`, what is the failure semantics?
+10. When should explicit hygiene escapes be introduced, if at all?
+11. Which existing hard-coded parser sugars should be migrated first?
     `switch` is the clearest candidate.
 
 ## Relevant Files
@@ -630,5 +700,6 @@ milestone does not need to solve immediately.
 1. Work through `quote`, `unquote`, and `splice` against the current AST
     container shapes, especially which positions should admit splicing in phase
     1.
-2. Work through the `time`, `unless`, and `for` examples in more detail,
-   including their exact expansion shapes.
+2. Work through the `time`, `unless`, `for`, and list-comprehension examples
+    in more detail, including their exact expansion shapes and the smallest
+    useful treatment of optional and repeated macro-pattern segments.

@@ -72,6 +72,13 @@ fn map(dict, f) {
 
 export operator "_|>_" left 8 fn (d, f) { map(f, d) };
 
+// Set(#a) -> (#a -> bool) -> Set(#a)
+fn filter(dict, f) {
+    to_set(list.filter(fn (k) { f(k) }, to_list(dict)))
+}
+
+export operator "_|?_" left 8 fn (d, f) { filter(f, d) };
+
 // Set(#t) -> number
 fn size(dict) {
     DICT.size(dict);

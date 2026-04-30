@@ -1,0 +1,120 @@
+namespace
+
+link "../listutils.fn" as list;
+link "../setutils.fn" as sets;
+link "../dictutils.fn" as dicts;
+link "freevars.fn" as Free;
+link "minexpr.fn" as M;
+import list operator "_|>_";
+import list operator "_|?_";
+import list operator "_&&_";
+import sets operator "_N_";
+import sets operator "_IN_";
+
+// dict(str, set(str)) -> str -> list(str) -> dict(str, set(str))
+fn addBindings {
+    (d, k, v @ vs) { addBindings(addBinding(d, k, v), k, vs) }
+    (d, k, [])     { d }
+}
+
+// dict(str, set(str)) -> str -> str -> dict(str, set(str))
+fn addBinding (d, k, v) {
+    switch (dicts.lookup(k, d)) {
+        (just(s)) {
+            dicts.insert(k, sets.add(s, v), d);
+        }
+        (nothing) {
+            dicts.insert(k, sets.to_set([v]), d);
+        }
+    }
+}
+
+// list(#(str, #(M.expr, _))) -> dict(str, set(str))
+fn makeMap (bs1) {
+    let fn work {
+        ([], d) { d }
+        (#(x, #(λ, _)) @ bs, d) {
+            work(bs, addBindings(d, x, Free.free(λ)))
+        }
+    }
+    in
+        work(bs1, dicts.empty())
+}
+
+// set(str) -> dict(str, set(str)) -> set(str)
+fn tc (B, M) {
+    let
+        fn work {
+            ([], live) { live }
+            (x @ xs, live ) {
+                if (x IN live) {
+                    work(xs, live)
+                } else {
+                    switch (dicts.lookup(x, M)) {
+                        (just(ys)) {
+                            work(sets.to_list(ys) @@ xs, sets.add(live, x))
+                        }
+                        (nothing) {
+                            work(xs, sets.add(live, x))
+                        }
+                    }
+                }
+            }
+        }
+    in
+        work(sets.to_list(B), sets.to_set([]))
+}
+
+fn shake {
+    (M.amb_expr(a1, a2)) { M.amb_expr(shake(a1), shake(a2)) }
+
+    (M.apply(x=M.primop(_), args)) {
+        M.apply(x, args |> shake)
+    }
+
+    (M.apply(e, args)) {
+        M.apply(shake(e), args |> shake)
+    }
+
+    (M.cond_expr(e, cases)) {
+        M.cond_expr(shake(e), cases |> shake && shake)
+    }
+
+    (M.if_expr(e1, e2, e3)) {
+        M.if_expr(shake(e1), shake(e2), shake(e3))
+    }
+
+    (M.lambda(args, body)) {
+        M.lambda(args, shake(body))
+    }
+
+    (M.letrec_expr(bs, e)) {
+        let
+            bs1 = bs |> identity && (shake && identity);
+            #(xs, _) = list.unzip(bs1);
+            K = sets.to_set(xs);
+            e1 = shake(e);
+            B = sets.to_set(Free.free(e1)) N K;
+            M = makeMap(bs1); // dict(str, set(str))
+            L = tc(B, M);
+        in
+            M.letrec_expr(
+                bs1 |? fn (#(x, _)) { x IN L },
+                e1
+            )
+    }
+
+    (M.make_vec(num, exprs)) {
+        M.make_vec(num, exprs |> shake)
+    }
+
+    (M.match_cases(e, cases)) {
+        M.match_cases(shake(e), cases |> identity && shake)
+    }
+
+    (M.sequence(exprs)) {
+        M.sequence(exprs |> shake)
+    }
+
+    (x) { x }
+}

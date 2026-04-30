@@ -2,8 +2,7 @@
 
 ## Language Level
 
-Thinking to model this on the scheme `define-syntax`/`syntax-rules` system, a scheme
-example is
+Thinking to model this on the scheme `define-syntax`/`syntax-rules` system, a scheme example is
 
 ```scheme
 (define-syntax or
@@ -67,4 +66,28 @@ syntax (switch) {
     exprs ::= (expr, ...)
     body ::= 
 }
+```
+
+```fn
+// list comprehensions
+syntax ::= "lco" "[" // unnamed is top-level
+    e1: Expr
+    "for" x : Name "in" lst : Expr
+    filters : Syntax(where(x)) // new "Syntax(id)" refers to other syntax
+                               // Syntax(id(arg,...)) allows passing data
+"]" {
+    quote {
+        lst
+        unquote filters
+        |> fn (unquote x) { unquote e1 }
+    }
+};
+
+syntax where(x) ::= {}; // empty
+               | "where" c: Syntax(filters(x)) { c };
+
+syntax filters(x) ::= c: Syntax(cond(x)) { c };
+                 | cond: Syntax(cond(x)) "," conds: Syntax(filters(x)) { cond conds };
+
+syntax cond(x) ::= c : Expr { quote |? fn (unquote x) { unquote c } };
 ```
