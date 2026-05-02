@@ -7,11 +7,14 @@ let
         message
     };
 
-    syntax keepOriginal(value) ::= "with" ignored: Expr {
+    syntax chooseValue(value) ::= "with" "skip" ignored: Expr {
         value
+    }
+    | replacement: Expr {
+        replacement
     };
 
-    syntax internalGrab: Expr ::= "grab" "(" value: Expr ")" result: Syntax(keepOriginal(value)) {
+    syntax internalGrab: Expr ::= "grab" "(" value: Expr ")" result: Syntax(chooseValue(value)) {
         result
     };
 
@@ -25,4 +28,5 @@ let
 in
     assert(42 == time(42));
     assert("hello" == echo "hello");
-    assert(42 == grab(42) with 0)
+    assert(42 == grab(42) with skip 0);
+    assert(7 == grab(42) with 7)

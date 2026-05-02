@@ -109,6 +109,7 @@ structs:
             lexer: PrattLexer=NULL
             trie: PrattTrie=NULL
             panicMode: bool=false
+            suppressErrors: bool=false
             isPreamble: bool=false
             next: PrattParser
 
@@ -174,9 +175,20 @@ structs:
             parameters: SymbolArray=NULL
             patternItems: PrattMacroPatternItems
             template: AstExpression
+            alternatives: PrattMacroAlternatives=NULL
             export: bool=false
             importNsRef: int=-1
             importNsSymbol: HashSymbol=NULL
+
+    PrattMacroAlternative:
+        meta:
+            brief: One ordered syntax alternative.
+            description: >-
+                Stores the ordered pattern items and template for one syntax
+                alternative in declaration order.
+        data:
+            patternItems: PrattMacroPatternItems
+            template: AstExpression
 
 enums:
     PrattAssoc:
@@ -332,6 +344,15 @@ arrays:
         data:
             entries: PrattParser
 
+    PrattTokens:
+        meta:
+            brief: A queue snapshot of Pratt tokens.
+            description: >-
+                Holds token pointers in queue order so syntax alternative probes
+                can restore lexer lookahead without losing GC reachability.
+        data:
+            entries: PrattToken
+
     PrattNsOpsArray:
         meta:
             brief: Array of exported operator sets indexed by nameSpace reference.
@@ -352,6 +373,15 @@ arrays:
                 holes.
         data:
             entries: PrattMacroPatternItem
+
+    PrattMacroAlternatives:
+        meta:
+            brief: An ordered list of syntax alternatives.
+            description: >-
+                Holds syntax alternatives in declaration order for parser-time
+                matching and rollback.
+        data:
+            entries: PrattMacroAlternative
 
 primitives: !include primitives.yaml
 

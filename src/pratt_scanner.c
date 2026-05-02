@@ -145,6 +145,8 @@ void parserError(PrattParser *parser, const char *message, ...) {
     if (parser->panicMode)
         return;
     parser->panicMode = true;
+    if (parser->suppressErrors)
+        return;
     va_start(args, message);
     PrattBufList *bufList = parser->lexer->bufList;
     if (bufList) {
@@ -168,6 +170,8 @@ void parserErrorAt(ParserInfo PI, PrattParser *parser, const char *message,
     if (parser->panicMode)
         return;
     parser->panicMode = true;
+    if (parser->suppressErrors)
+        return;
     va_start(args, message);
     vcan_happen(PI, message, args);
     va_end(args);
