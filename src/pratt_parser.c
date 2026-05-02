@@ -190,6 +190,7 @@ static HashSymbol *symbol(PrattParser *);
 static HashSymbol *typeVariable(PrattParser *);
 static PrattRecord *fetchRecord(PrattParser *, HashSymbol *);
 static PrattMacroSpec *findLocalSyntaxSpecForHead(PrattParser *, HashSymbol *);
+static PrattMacroSpec *findSyntaxSpecByName(PrattParser *, HashSymbol *);
 static PrattMacroSpec *findSyntaxSpecForHead(PrattParser *, HashSymbol *);
 static PrattTrie *makePrattTrie(PrattParser *, PrattTrie *);
 static WCharArray *rawString(PrattParser *);
@@ -198,28 +199,41 @@ static void storeNameSpace(PrattParser *, AstNameSpace *);
 static void synchronize(PrattParser *parser);
 static PrattExportedOps *captureNameSpaceOperatorExports(PrattParser *parser);
 static PrattRecord *ensureTargetRecord(PrattParser *parser, HashSymbol *op);
+static bool symbolArrayContains(SymbolArray *symbols, HashSymbol *symbol);
+static SymbolArray *parseOptionalSyntaxParameters(PrattParser *parser);
 static bool parseOptionalExprSyntaxEntry(PrattParser *parser);
+static SymbolArray *parseSyntaxCallArguments(PrattParser *parser);
 static void registerExprSyntaxHead(PrattParser *parser, HashSymbol *head);
 static AstExpression *parseSyntaxHoleExpression(PrattParser *parser,
-                                                PrattMacroHole *hole);
+                                                PrattMacroHole *hole,
+                                                SyntaxExprBindings *bindings);
+static bool hasSyntaxBindingName(HashSymbol **names, Index count,
+                                 HashSymbol *name);
 static AstExpression *lookupSyntaxBindingCopy(SyntaxExprBindings *bindings,
                                               HashSymbol *name);
-static AstDefinitions *substituteSyntaxDefinitions(AstDefinitions *definitions,
-                                                   SyntaxExprBindings *bindings);
-static AstAltFunction *substituteSyntaxAltFunction(AstAltFunction *function,
-                                                   SyntaxExprBindings *bindings);
+static AstDefinitions *
+substituteSyntaxDefinitions(AstDefinitions *definitions,
+                            SyntaxExprBindings *bindings);
+static AstAltFunction *
+substituteSyntaxAltFunction(AstAltFunction *function,
+                            SyntaxExprBindings *bindings);
 static AstCompositeFunction *
 substituteSyntaxCompositeFunction(AstCompositeFunction *function,
                                   SyntaxExprBindings *bindings);
 static AstTaggedExpressions *
 substituteSyntaxTaggedExpressions(AstTaggedExpressions *expressions,
                                   SyntaxExprBindings *bindings);
-static AstExpressions *substituteSyntaxExpressions(AstExpressions *expressions,
-                                                   SyntaxExprBindings *bindings);
+static AstExpressions *
+substituteSyntaxExpressions(AstExpressions *expressions,
+                            SyntaxExprBindings *bindings);
 static AstNest *substituteSyntaxNest(AstNest *nest,
                                      SyntaxExprBindings *bindings);
 static AstExpression *substituteSyntaxExpression(AstExpression *expression,
                                                  SyntaxExprBindings *bindings);
+static AstExpression *
+expandSyntaxExprWithBindings(PrattParser *parser, PrattToken *tok,
+                             PrattMacroSpec *spec, bool headAlreadyConsumed,
+                             SyntaxExprBindings *inherited);
 static AstExpression *expandSyntaxExpr(PrattParser *parser, PrattToken *tok,
                                        PrattMacroSpec *spec);
 static void mergeFixityImport(PrattParser *parser, PrattRecord *target,
@@ -280,6 +294,19 @@ static PrattMacroSpec *findLocalSyntaxSpecForHead(PrattParser *parser,
         }
     }
     return NULL;
+}
+
+static PrattMacroSpec *findSyntaxSpecByName(PrattParser *parser,
+                                            HashSymbol *name) {
+    PrattMacroSpec *spec = NULL;
+    getPrattMacroTable(parser->macros, name, &spec);
+    if (spec != NULL) {
+        return spec;
+    } else if (parser->next != NULL) {
+        return findSyntaxSpecByName(parser->next, name);
+    } else {
+        return NULL;
+    }
 }
 
 static PrattMacroSpec *findSyntaxSpecForHead(PrattParser *parser,
@@ -2142,28 +2169,74 @@ static PrattMacroHole *typedHole(PrattParser *parser) {
         cant_happen("typedHole called with non-atom \"%s\"", token->type->name);
     }
 #endif
-    HashSymbol *symbol = getPrattValue_Atom(token->value);
+    HashSymbol *bindingName = getPrattValue_Atom(token->value);
     consume(parser, TOK_COLON());
     token = next(parser);
     REPLACE_PROTECT(save, token);
     PrattMacroHole *result = NULL;
     if (isTokenTypeOrAtom(token, TOK_EXPRTYPE())) {
-        result = newPrattMacroHole(PRATTSYNTAXCLASS_TYPE_EXPR, symbol);
+        result = newPrattMacroHole(PRATTSYNTAXCLASS_TYPE_EXPR, bindingName);
     } else if (isTokenTypeOrAtom(token, TOK_NAMETYPE())) {
-        result = newPrattMacroHole(PRATTSYNTAXCLASS_TYPE_NAME, symbol);
+        result = newPrattMacroHole(PRATTSYNTAXCLASS_TYPE_NAME, bindingName);
     } else if (isTokenTypeOrAtom(token, TOK_NESTTYPE())) {
-        result = newPrattMacroHole(PRATTSYNTAXCLASS_TYPE_NEST, symbol);
+        result = newPrattMacroHole(PRATTSYNTAXCLASS_TYPE_NEST, bindingName);
     } else if (isTokenTypeOrAtom(token, TOK_STRINGTYPE()) ||
                isTokenTypeOrAtom(token, newSymbol("String"))) {
-        result = newPrattMacroHole(PRATTSYNTAXCLASS_TYPE_STRING, symbol);
+        result = newPrattMacroHole(PRATTSYNTAXCLASS_TYPE_STRING, bindingName);
     } else if (isTokenTypeOrAtom(token, TOK_TYPETYPE())) {
-        result = newPrattMacroHole(PRATTSYNTAXCLASS_TYPE_TYPE, symbol);
+        result = newPrattMacroHole(PRATTSYNTAXCLASS_TYPE_TYPE, bindingName);
+    } else if (isAtomSymbol(token, newSymbol("Syntax"))) {
+        result = newPrattMacroHole(PRATTSYNTAXCLASS_TYPE_SYNTAX, bindingName);
+        int save2 = PROTECT(result);
+        consume(parser, TOK_OPEN());
+        result->callTarget = symbol(parser);
+        result->callArguments = parseSyntaxCallArguments(parser);
+        consume(parser, TOK_CLOSE());
+        UNPROTECT(save2);
     } else {
         parserError(parser, "unrecognised syntax class %s",
                     getTokenTypeOrAtom(token)->name);
     }
     UNPROTECT(save);
     return result;
+}
+
+static bool symbolArrayContains(SymbolArray *symbols, HashSymbol *symbol) {
+    if (symbols == NULL) {
+        return false;
+    }
+    for (Index i = 0; i < sizeSymbolArray(symbols); ++i) {
+        if (getSymbolArray(symbols, i) == symbol) {
+            return true;
+        }
+    }
+    return false;
+}
+
+static SymbolArray *parseOptionalSyntaxParameters(PrattParser *parser) {
+    if (!match(parser, TOK_OPEN())) {
+        return NULL;
+    }
+
+    SymbolArray *parameters = newSymbolArray();
+    int save = PROTECT(parameters);
+
+    for (;;) {
+        HashSymbol *parameter = symbol(parser);
+        if (symbolArrayContains(parameters, parameter)) {
+            parserError(parser, "duplicate syntax parameter %s",
+                        parameter->name);
+        } else {
+            pushSymbolArray(parameters, parameter);
+        }
+        if (!match(parser, TOK_COMMA())) {
+            break;
+        }
+    }
+
+    consume(parser, TOK_CLOSE());
+    UNPROTECT(save);
+    return parameters;
 }
 
 static PrattMacroPatternItems *macroPatternItems(PrattParser *parser) {
@@ -2200,6 +2273,26 @@ static PrattMacroPatternItems *macroPatternItems(PrattParser *parser) {
     return result;
 }
 
+static SymbolArray *parseSyntaxCallArguments(PrattParser *parser) {
+    if (!match(parser, TOK_OPEN())) {
+        return NULL;
+    }
+
+    SymbolArray *arguments = newSymbolArray();
+    int save = PROTECT(arguments);
+
+    for (;;) {
+        pushSymbolArray(arguments, symbol(parser));
+        if (!match(parser, TOK_COMMA())) {
+            break;
+        }
+    }
+
+    consume(parser, TOK_CLOSE());
+    UNPROTECT(save);
+    return arguments;
+}
+
 static bool parseOptionalExprSyntaxEntry(PrattParser *parser) {
     if (!match(parser, TOK_COLON())) {
         return false;
@@ -2225,9 +2318,10 @@ static void registerExprSyntaxHead(PrattParser *parser, HashSymbol *head) {
         record = copyPrattRecord(record);
         PROTECT(record);
         if (record->prefix.op != NULL && record->prefix.op != userSyntaxExpr) {
-            parserError(parser,
-                        "syntax head %s conflicts with an existing prefix entry",
-                        head->name);
+            parserError(
+                parser,
+                "syntax head %s conflicts with an existing prefix entry",
+                head->name);
             UNPROTECT(save);
             return;
         }
@@ -2242,7 +2336,8 @@ static void registerExprSyntaxHead(PrattParser *parser, HashSymbol *head) {
 }
 
 static AstExpression *parseSyntaxHoleExpression(PrattParser *parser,
-                                                PrattMacroHole *hole) {
+                                                PrattMacroHole *hole,
+                                                SyntaxExprBindings *bindings) {
     switch (hole->syntaxClass) {
     case PRATTSYNTAXCLASS_TYPE_EXPR:
         return expressionPrecedence(parser, 0);
@@ -2253,7 +2348,8 @@ static AstExpression *parseSyntaxHoleExpression(PrattParser *parser,
                         hole->name->name);
             return errorExpression(TOKPI(token));
         }
-        return newAstExpression_Symbol(TOKPI(token), getPrattValue_Atom(token->value));
+        return newAstExpression_Symbol(TOKPI(token),
+                                       getPrattValue_Atom(token->value));
     }
     case PRATTSYNTAXCLASS_TYPE_NEST: {
         AstNest *body = nest(parser);
@@ -2279,6 +2375,56 @@ static AstExpression *parseSyntaxHoleExpression(PrattParser *parser,
         UNPROTECT(save);
         return result;
     }
+    case PRATTSYNTAXCLASS_TYPE_SYNTAX: {
+        PrattMacroSpec *spec = findSyntaxSpecByName(parser, hole->callTarget);
+        if (spec == NULL) {
+            parserError(parser, "unknown syntax helper %s",
+                        hole->callTarget->name);
+            return errorExpression(LEXPI(parser->lexer));
+        }
+
+        Index parameterCount =
+            spec->parameters != NULL ? sizeSymbolArray(spec->parameters) : 0;
+        Index argumentCount = hole->callArguments != NULL
+                                  ? sizeSymbolArray(hole->callArguments)
+                                  : 0;
+        if (parameterCount != argumentCount) {
+            parserError(parser,
+                        "syntax helper %s expects %ld arguments but got %ld",
+                        hole->callTarget->name, (long)parameterCount,
+                        (long)argumentCount);
+            return errorExpression(LEXPI(parser->lexer));
+        }
+
+        AstExpressionArray *inheritedValues = newAstExpressionArray();
+        int save = PROTECT(inheritedValues);
+        for (Index i = 0; i < argumentCount; ++i) {
+            HashSymbol *actual = getSymbolArray(hole->callArguments, i);
+            AstExpression *value =
+                bindings != NULL ? lookupSyntaxBindingCopy(bindings, actual)
+                                 : NULL;
+            if (value == NULL) {
+                parserError(parser, "syntax call argument %s is not bound",
+                            actual->name);
+                UNPROTECT(save);
+                return errorExpression(LEXPI(parser->lexer));
+            }
+            int save2 = PROTECT(value);
+            pushAstExpressionArray(inheritedValues, value);
+            UNPROTECT(save2);
+        }
+
+        SyntaxExprBindings inherited = {
+            .names =
+                spec->parameters != NULL ? spec->parameters->entries : NULL,
+            .values = inheritedValues,
+        };
+        PrattToken *start = peek(parser);
+        AstExpression *result = expandSyntaxExprWithBindings(
+            parser, start, spec, false, &inherited);
+        UNPROTECT(save);
+        return result;
+    }
     default:
         parserError(parser,
                     "syntax class %s is not yet supported in expression syntax",
@@ -2287,18 +2433,33 @@ static AstExpression *parseSyntaxHoleExpression(PrattParser *parser,
     }
 }
 
+static bool hasSyntaxBindingName(HashSymbol **names, Index count,
+                                 HashSymbol *name) {
+    for (Index i = 0; i < count; ++i) {
+        if (names[i] == name) {
+            return true;
+        }
+    }
+    return false;
+}
+
 static AstExpression *lookupSyntaxBindingCopy(SyntaxExprBindings *bindings,
                                               HashSymbol *name) {
+    if (bindings == NULL) {
+        return NULL;
+    }
     for (Index i = 0; i < sizeAstExpressionArray(bindings->values); ++i) {
         if (bindings->names[i] == name) {
-            return copyAstExpression(getAstExpressionArray(bindings->values, i));
+            return copyAstExpression(
+                getAstExpressionArray(bindings->values, i));
         }
     }
     return NULL;
 }
 
-static AstDefinitions *substituteSyntaxDefinitions(AstDefinitions *definitions,
-                                                   SyntaxExprBindings *bindings) {
+static AstDefinitions *
+substituteSyntaxDefinitions(AstDefinitions *definitions,
+                            SyntaxExprBindings *bindings) {
     if (definitions == NULL) {
         return NULL;
     }
@@ -2327,12 +2488,14 @@ static AstDefinitions *substituteSyntaxDefinitions(AstDefinitions *definitions,
     case AST_DEFINITION_TYPE_BUILTINSSLOT:
         break;
     }
-    definitions->next = substituteSyntaxDefinitions(definitions->next, bindings);
+    definitions->next =
+        substituteSyntaxDefinitions(definitions->next, bindings);
     return definitions;
 }
 
-static AstAltFunction *substituteSyntaxAltFunction(AstAltFunction *function,
-                                                   SyntaxExprBindings *bindings) {
+static AstAltFunction *
+substituteSyntaxAltFunction(AstAltFunction *function,
+                            SyntaxExprBindings *bindings) {
     if (function == NULL) {
         return NULL;
     }
@@ -2366,14 +2529,16 @@ substituteSyntaxTaggedExpressions(AstTaggedExpressions *expressions,
     return expressions;
 }
 
-static AstExpressions *substituteSyntaxExpressions(AstExpressions *expressions,
-                                                   SyntaxExprBindings *bindings) {
+static AstExpressions *
+substituteSyntaxExpressions(AstExpressions *expressions,
+                            SyntaxExprBindings *bindings) {
     if (expressions == NULL) {
         return NULL;
     }
     expressions->expression =
         substituteSyntaxExpression(expressions->expression, bindings);
-    expressions->next = substituteSyntaxExpressions(expressions->next, bindings);
+    expressions->next =
+        substituteSyntaxExpressions(expressions->next, bindings);
     return expressions;
 }
 
@@ -2382,8 +2547,10 @@ static AstNest *substituteSyntaxNest(AstNest *nest,
     if (nest == NULL) {
         return NULL;
     }
-    nest->definitions = substituteSyntaxDefinitions(nest->definitions, bindings);
-    nest->expressions = substituteSyntaxExpressions(nest->expressions, bindings);
+    nest->definitions =
+        substituteSyntaxDefinitions(nest->definitions, bindings);
+    nest->expressions =
+        substituteSyntaxExpressions(nest->expressions, bindings);
     return nest;
 }
 
@@ -2401,9 +2568,8 @@ static AstExpression *substituteSyntaxExpression(AstExpression *expression,
     case AST_EXPRESSION_TYPE_ENV:
         return expression;
     case AST_EXPRESSION_TYPE_ALIAS:
-        getAstExpression_Alias(expression)->value =
-            substituteSyntaxExpression(getAstExpression_Alias(expression)->value,
-                                       bindings);
+        getAstExpression_Alias(expression)->value = substituteSyntaxExpression(
+            getAstExpression_Alias(expression)->value, bindings);
         return expression;
     case AST_EXPRESSION_TYPE_ANNOTATEDSYMBOL:
         getAstExpression_AnnotatedSymbol(expression)->originalImpl =
@@ -2425,8 +2591,8 @@ static AstExpression *substituteSyntaxExpression(AstExpression *expression,
                 getAstExpression_LookUp(expression)->expression, bindings);
         return expression;
     case AST_EXPRESSION_TYPE_SYMBOL: {
-        AstExpression *bound =
-            lookupSyntaxBindingCopy(bindings, getAstExpression_Symbol(expression));
+        AstExpression *bound = lookupSyntaxBindingCopy(
+            bindings, getAstExpression_Symbol(expression));
         return bound != NULL ? bound : expression;
     }
     case AST_EXPRESSION_TYPE_FUN:
@@ -2442,30 +2608,24 @@ static AstExpression *substituteSyntaxExpression(AstExpression *expression,
                 getAstExpression_Nest(expression)->expressions, bindings);
         return expression;
     case AST_EXPRESSION_TYPE_IFF:
-        getAstExpression_Iff(expression)->test =
-            substituteSyntaxExpression(getAstExpression_Iff(expression)->test,
-                                       bindings);
-        getAstExpression_Iff(expression)->consequent =
-            substituteSyntaxNest(getAstExpression_Iff(expression)->consequent,
-                                 bindings);
-        getAstExpression_Iff(expression)->alternative =
-            substituteSyntaxNest(getAstExpression_Iff(expression)->alternative,
-                                 bindings);
+        getAstExpression_Iff(expression)->test = substituteSyntaxExpression(
+            getAstExpression_Iff(expression)->test, bindings);
+        getAstExpression_Iff(expression)->consequent = substituteSyntaxNest(
+            getAstExpression_Iff(expression)->consequent, bindings);
+        getAstExpression_Iff(expression)->alternative = substituteSyntaxNest(
+            getAstExpression_Iff(expression)->alternative, bindings);
         return expression;
     case AST_EXPRESSION_TYPE_PRINT:
-        getAstExpression_Print(expression)->exp =
-            substituteSyntaxExpression(getAstExpression_Print(expression)->exp,
-                                       bindings);
+        getAstExpression_Print(expression)->exp = substituteSyntaxExpression(
+            getAstExpression_Print(expression)->exp, bindings);
         return expression;
     case AST_EXPRESSION_TYPE_TYPEOF:
-        getAstExpression_TypeOf(expression)->exp =
-            substituteSyntaxExpression(getAstExpression_TypeOf(expression)->exp,
-                                       bindings);
+        getAstExpression_TypeOf(expression)->exp = substituteSyntaxExpression(
+            getAstExpression_TypeOf(expression)->exp, bindings);
         return expression;
     case AST_EXPRESSION_TYPE_TUPLE:
-        expression->val.tuple =
-            substituteSyntaxExpressions(getAstExpression_Tuple(expression),
-                                        bindings);
+        expression->val.tuple = substituteSyntaxExpressions(
+            getAstExpression_Tuple(expression), bindings);
         return expression;
     case AST_EXPRESSION_TYPE_STRUCTURE:
         getAstExpression_Structure(expression)->expressions =
@@ -2473,14 +2633,12 @@ static AstExpression *substituteSyntaxExpression(AstExpression *expression,
                 getAstExpression_Structure(expression)->expressions, bindings);
         return expression;
     case AST_EXPRESSION_TYPE_ASSERTION:
-        expression->val.assertion =
-            substituteSyntaxExpression(getAstExpression_Assertion(expression),
-                                       bindings);
+        expression->val.assertion = substituteSyntaxExpression(
+            getAstExpression_Assertion(expression), bindings);
         return expression;
     case AST_EXPRESSION_TYPE_ERROR:
-        expression->val.error =
-            substituteSyntaxExpression(getAstExpression_Error(expression),
-                                       bindings);
+        expression->val.error = substituteSyntaxExpression(
+            getAstExpression_Error(expression), bindings);
         return expression;
     }
 
@@ -2488,33 +2646,70 @@ static AstExpression *substituteSyntaxExpression(AstExpression *expression,
                 astExpressionTypeName(expression->type));
 }
 
-static AstExpression *expandSyntaxExpr(PrattParser *parser, PrattToken *tok,
-                                       PrattMacroSpec *spec) {
+static AstExpression *
+expandSyntaxExprWithBindings(PrattParser *parser, PrattToken *tok,
+                             PrattMacroSpec *spec, bool headAlreadyConsumed,
+                             SyntaxExprBindings *inherited) {
     if (spec->template == NULL) {
         parserError(parser, "syntax %s has no template body",
                     spec->headSymbol->name);
         return errorExpression(TOKPI(tok));
     }
 
+    Index parameterCount =
+        spec->parameters != NULL ? sizeSymbolArray(spec->parameters) : 0;
+    Index inheritedCount =
+        inherited != NULL ? sizeAstExpressionArray(inherited->values) : 0;
+    if (parameterCount != inheritedCount) {
+        parserError(
+            parser, "syntax %s expects %ld inherited arguments but got %ld",
+            spec->headSymbol->name, (long)parameterCount, (long)inheritedCount);
+        return errorExpression(TOKPI(tok));
+    }
+
     Index itemCount = countPrattMacroPatternItems(spec->patternItems);
-    HashSymbol **names = calloc(itemCount == 0 ? 1 : itemCount,
+    Index bindingCapacity = parameterCount + itemCount;
+    HashSymbol **names = calloc(bindingCapacity == 0 ? 1 : bindingCapacity,
                                 sizeof(HashSymbol *));
     AstExpressionArray *values = newAstExpressionArray();
     int save = STARTPROTECT();
     PROTECT(values);
 
-    bool consumedPattern = false;
+    for (Index i = 0; i < parameterCount; ++i) {
+        AstExpression *value =
+            copyAstExpression(getAstExpressionArray(inherited->values, i));
+        int save2 = PROTECT(value);
+        names[sizeAstExpressionArray(values)] =
+            getSymbolArray(spec->parameters, i);
+        pushAstExpressionArray(values, value);
+        UNPROTECT(save2);
+    }
+
+    SyntaxExprBindings bindings = {.names = names, .values = values};
+
+    bool consumedPattern = headAlreadyConsumed;
+    if (!headAlreadyConsumed) {
+        PrattToken *nextTok = peek(parser);
+        if (!isTokenTypeOrAtom(nextTok, spec->headSymbol)) {
+            free(names);
+            UNPROTECT(save);
+            return NULL;
+        }
+        next(parser);
+        consumedPattern = true;
+    }
+
     for (Index i = 0; i < itemCount; ++i) {
         PrattMacroPatternItem *item =
             getPrattMacroPatternItems(spec->patternItems, i);
         if (item->type == PRATTMACROPATTERNITEM_TYPE_QUOTEDTERMINAL) {
-            HashSymbol *expected = getPrattMacroPatternItem_QuotedTerminal(item);
+            HashSymbol *expected =
+                getPrattMacroPatternItem_QuotedTerminal(item);
             PrattToken *nextTok = peek(parser);
             if (!isTokenTypeOrAtom(nextTok, expected)) {
                 if (consumedPattern) {
                     parserErrorAt(TOKPI(nextTok), parser,
-                                  "expected syntax token '%s'",
-                                  expected->name);
+                                  "expected syntax token '%s'", expected->name);
                 }
                 free(names);
                 UNPROTECT(save);
@@ -2524,7 +2719,22 @@ static AstExpression *expandSyntaxExpr(PrattParser *parser, PrattToken *tok,
             consumedPattern = true;
         } else {
             PrattMacroHole *hole = getPrattMacroPatternItem_TypedHole(item);
-            AstExpression *value = parseSyntaxHoleExpression(parser, hole);
+            if (hasSyntaxBindingName(names, sizeAstExpressionArray(values),
+                                     hole->name)) {
+                parserError(parser, "syntax binding %s already defined",
+                            hole->name->name);
+                free(names);
+                UNPROTECT(save);
+                return errorExpression(TOKPI(tok));
+            }
+            AstExpression *value =
+                parseSyntaxHoleExpression(parser, hole, &bindings);
+            if (value == NULL) {
+                PrattToken *nextTok = peek(parser);
+                free(names);
+                UNPROTECT(save);
+                return consumedPattern ? errorExpression(TOKPI(nextTok)) : NULL;
+            }
             int save2 = PROTECT(value);
             names[sizeAstExpressionArray(values)] = hole->name;
             pushAstExpressionArray(values, value);
@@ -2535,7 +2745,6 @@ static AstExpression *expandSyntaxExpr(PrattParser *parser, PrattToken *tok,
 
     AstExpression *template = copyAstExpression(spec->template);
     PROTECT(template);
-    SyntaxExprBindings bindings = {.names = names, .values = values};
     AstExpression *result = substituteSyntaxExpression(template, &bindings);
     PROTECT(result);
     free(names);
@@ -2543,8 +2752,12 @@ static AstExpression *expandSyntaxExpr(PrattParser *parser, PrattToken *tok,
     return result;
 }
 
-static AstExpression *userSyntaxExpr(PrattRecord *record,
-                                     PrattParser *parser,
+static AstExpression *expandSyntaxExpr(PrattParser *parser, PrattToken *tok,
+                                       PrattMacroSpec *spec) {
+    return expandSyntaxExprWithBindings(parser, tok, spec, true, NULL);
+}
+
+static AstExpression *userSyntaxExpr(PrattRecord *record, PrattParser *parser,
                                      AstExpression *lhs __attribute__((unused)),
                                      PrattToken *tok) {
     PrattMacroSpec *spec = findSyntaxSpecForHead(parser, record->symbol);
@@ -2559,6 +2772,10 @@ static AstDefinition *syntaxDefinition(PrattParser *parser) {
     PrattToken *tok = peek(parser);
     int save = PROTECT(tok);
     HashSymbol *ruleName = symbol(parser);
+    SymbolArray *parameters = parseOptionalSyntaxParameters(parser);
+    if (parameters != NULL) {
+        PROTECT(parameters);
+    }
     bool isExprEntry = parseOptionalExprSyntaxEntry(parser);
     consume(parser, TOK_PRODUCTION());
     WCharArray *headText = rawString(parser);
@@ -2578,13 +2795,17 @@ static AstDefinition *syntaxDefinition(PrattParser *parser) {
         parserError(parser, "syntax %s already defined in current scope",
                     ruleName->name);
     }
-    if (isExprEntry && findLocalSyntaxSpecForHead(parser, surfaceHead) != NULL) {
-        parserError(parser,
-                    "expression syntax head %s already defined in current scope",
-                    surfaceHead->name);
+    if (isExprEntry &&
+        findLocalSyntaxSpecForHead(parser, surfaceHead) != NULL) {
+        parserError(
+            parser,
+            "expression syntax head %s already defined in current scope",
+            surfaceHead->name);
     }
-    PrattMacroSpec *spec = newPrattMacroSpec(surfaceHead, patternItems, template);
+    PrattMacroSpec *spec =
+        newPrattMacroSpec(surfaceHead, patternItems, template);
     PROTECT(spec);
+    spec->parameters = parameters;
     setPrattMacroTable(parser->macros, ruleName, spec);
     if (isExprEntry && !parser->panicMode) {
         registerExprSyntaxHead(parser, surfaceHead);

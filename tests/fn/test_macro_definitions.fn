@@ -7,6 +7,14 @@ let
         message
     };
 
+    syntax keepOriginal(value) ::= "with" ignored: Expr {
+        value
+    };
+
+    syntax internalGrab: Expr ::= "grab" "(" value: Expr ")" result: Syntax(keepOriginal(value)) {
+        result
+    };
+
     syntax unless ::= "unless" "(" cond: Expr ")" consequent: Nest "else" alternative: Nest {
         cond
     };
@@ -16,4 +24,5 @@ let
     };
 in
     assert(42 == time(42));
-    assert("hello" == echo "hello")
+    assert("hello" == echo "hello");
+    assert(42 == grab(42) with 0)

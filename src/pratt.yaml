@@ -159,6 +159,8 @@ structs:
         data:
             syntaxClass: PrattSyntaxClass
             name: HashSymbol
+            callTarget: HashSymbol=NULL
+            callArguments: SymbolArray=NULL
 
     PrattMacroSpec:
         meta:
@@ -169,6 +171,7 @@ structs:
                 scope.
         data:
             headSymbol: HashSymbol
+            parameters: SymbolArray=NULL
             patternItems: PrattMacroPatternItems
             template: AstExpression
             export: bool=false
@@ -233,6 +236,7 @@ enums:
           - NEST
           - STRING
           - TYPE
+          - SYNTAX
 
 inline:
     structs:
