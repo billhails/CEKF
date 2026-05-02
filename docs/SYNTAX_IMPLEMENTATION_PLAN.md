@@ -113,8 +113,8 @@ Phase-1 notes:
 - In the current implementation, initiating rules are a narrower subset than
   the grammar above: they accept one alternative, while helper-only rules use
   `<syntax-alternative-list>`.
-- Alternatives are tried in declaration order, so an empty helper fallback
-  should appear last rather than first.
+- Helper-only matching now tries consuming alternatives before empty ones,
+  while preserving declaration order within each group.
 - Phase-1 `Syntax(...)` actual arguments are identifiers naming already-bound
   inherited or captured values, not arbitrary new expressions.
 - `<template-body>` is intentionally left abstract here. It belongs to the

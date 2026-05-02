@@ -1,0 +1,9 @@
+let
+    syntax choose ::= {
+        1
+    }
+    | {
+        2
+    };
+in
+    assert(true)

@@ -218,6 +218,24 @@ static PrattRecord *ensureTargetRecord(PrattParser *parser, HashSymbol *op);
 static bool symbolArrayContains(SymbolArray *symbols, HashSymbol *symbol);
 static SymbolArray *parseOptionalSyntaxParameters(PrattParser *parser);
 static PrattMacroAlternative *parseSyntaxAlternative(PrattParser *parser);
+static bool syntaxPatternNameEquivalent(HashSymbol *left, HashSymbol *right,
+                                        HashSymbol **leftNames,
+                                        HashSymbol **rightNames,
+                                        Index mappedCount);
+static bool recordSyntaxPatternNameMap(HashSymbol *left, HashSymbol *right,
+                                       HashSymbol **leftNames,
+                                       HashSymbol **rightNames,
+                                       Index *mappedCount);
+static bool syntaxCallArgumentsEquivalent(SymbolArray *left,
+                                          SymbolArray *right,
+                                          HashSymbol **leftNames,
+                                          HashSymbol **rightNames,
+                                          Index mappedCount);
+static bool syntaxAlternativesEquivalent(PrattMacroAlternative *left,
+                                         PrattMacroAlternative *right);
+static void validateSyntaxAlternatives(PrattParser *parser,
+                                       HashSymbol *ruleName,
+                                       PrattMacroAlternatives *alternatives);
 static bool parseOptionalExprSyntaxEntry(PrattParser *parser);
 static SymbolArray *parseSyntaxCallArguments(PrattParser *parser);
 static void registerExprSyntaxHead(PrattParser *parser, HashSymbol *head);
@@ -2424,6 +2442,159 @@ static PrattMacroAlternative *parseSyntaxAlternative(PrattParser *parser) {
     return alternative;
 }
 
+static bool syntaxPatternNameEquivalent(HashSymbol *left, HashSymbol *right,
+                                        HashSymbol **leftNames,
+                                        HashSymbol **rightNames,
+                                        Index mappedCount) {
+    bool rightMapped = false;
+
+    for (Index i = 0; i < mappedCount; ++i) {
+        if (leftNames[i] == left) {
+            return rightNames[i] == right;
+        }
+        if (rightNames[i] == right) {
+            rightMapped = true;
+        }
+    }
+
+    if (rightMapped) {
+        return false;
+    }
+
+    return left == right;
+}
+
+static bool recordSyntaxPatternNameMap(HashSymbol *left, HashSymbol *right,
+                                       HashSymbol **leftNames,
+                                       HashSymbol **rightNames,
+                                       Index *mappedCount) {
+    for (Index i = 0; i < *mappedCount; ++i) {
+        if (leftNames[i] == left) {
+            return rightNames[i] == right;
+        }
+        if (rightNames[i] == right) {
+            return false;
+        }
+    }
+
+    leftNames[*mappedCount] = left;
+    rightNames[*mappedCount] = right;
+    (*mappedCount)++;
+    return true;
+}
+
+static bool syntaxCallArgumentsEquivalent(SymbolArray *left,
+                                          SymbolArray *right,
+                                          HashSymbol **leftNames,
+                                          HashSymbol **rightNames,
+                                          Index mappedCount) {
+    if (left == NULL || right == NULL) {
+        return left == right;
+    }
+
+    if (sizeSymbolArray(left) != sizeSymbolArray(right)) {
+        return false;
+    }
+
+    for (Index i = 0; i < sizeSymbolArray(left); ++i) {
+        if (!syntaxPatternNameEquivalent(getSymbolArray(left, i),
+                                         getSymbolArray(right, i), leftNames,
+                                         rightNames, mappedCount)) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+static bool syntaxAlternativesEquivalent(PrattMacroAlternative *left,
+                                         PrattMacroAlternative *right) {
+    Index leftCount = countPrattMacroPatternItems(left->patternItems);
+    Index rightCount = countPrattMacroPatternItems(right->patternItems);
+    if (leftCount != rightCount) {
+        return false;
+    }
+
+    HashSymbol **leftNames = calloc(leftCount == 0 ? 1 : leftCount,
+                                    sizeof(HashSymbol *));
+    HashSymbol **rightNames = calloc(rightCount == 0 ? 1 : rightCount,
+                                     sizeof(HashSymbol *));
+    bool equivalent = true;
+    Index mappedCount = 0;
+
+    for (Index i = 0; i < leftCount; ++i) {
+        PrattMacroPatternItem *leftItem =
+            getPrattMacroPatternItems(left->patternItems, i);
+        PrattMacroPatternItem *rightItem =
+            getPrattMacroPatternItems(right->patternItems, i);
+        if (leftItem->type != rightItem->type) {
+            equivalent = false;
+            break;
+        }
+
+        if (leftItem->type == PRATTMACROPATTERNITEM_TYPE_QUOTEDTERMINAL) {
+            if (getPrattMacroPatternItem_QuotedTerminal(leftItem) !=
+                getPrattMacroPatternItem_QuotedTerminal(rightItem)) {
+                equivalent = false;
+                break;
+            }
+            continue;
+        }
+
+        PrattMacroHole *leftHole = getPrattMacroPatternItem_TypedHole(leftItem);
+        PrattMacroHole *rightHole =
+            getPrattMacroPatternItem_TypedHole(rightItem);
+
+        if (leftHole->syntaxClass != rightHole->syntaxClass ||
+            leftHole->callTarget != rightHole->callTarget ||
+            !syntaxCallArgumentsEquivalent(leftHole->callArguments,
+                                           rightHole->callArguments,
+                                           leftNames, rightNames,
+                                           mappedCount) ||
+            !recordSyntaxPatternNameMap(leftHole->name, rightHole->name,
+                                        leftNames, rightNames,
+                                        &mappedCount)) {
+            equivalent = false;
+            break;
+        }
+    }
+
+    free(leftNames);
+    free(rightNames);
+    return equivalent;
+}
+
+static void validateSyntaxAlternatives(PrattParser *parser,
+                                       HashSymbol *ruleName,
+                                       PrattMacroAlternatives *alternatives) {
+    bool sawEmpty = false;
+
+    for (Index i = 0; i < sizePrattMacroAlternatives(alternatives); ++i) {
+        PrattMacroAlternative *alternative =
+            getPrattMacroAlternatives(alternatives, i);
+        if (countPrattMacroPatternItems(alternative->patternItems) == 0) {
+            if (sawEmpty) {
+                parserError(parser,
+                            "syntax %s has more than one empty alternative",
+                            ruleName->name);
+                return;
+            }
+            sawEmpty = true;
+        }
+
+        for (Index j = 0; j < i; ++j) {
+            PrattMacroAlternative *earlier =
+                getPrattMacroAlternatives(alternatives, j);
+            if (syntaxAlternativesEquivalent(earlier, alternative)) {
+                parserError(parser,
+                            "syntax %s alternative %ld duplicates alternative %ld",
+                            ruleName->name, (long)(i + 1), (long)(j + 1));
+                return;
+            }
+        }
+    }
+}
+
 static bool parseOptionalExprSyntaxEntry(PrattParser *parser) {
     if (!match(parser, TOK_COLON())) {
         return false;
@@ -2885,6 +3056,47 @@ static AstExpression *expandSyntaxAlternative(PrattParser *parser,
     return result;
 }
 
+static bool syntaxAlternativeIsEmpty(PrattMacroAlternative *alternative) {
+    return countPrattMacroPatternItems(alternative->patternItems) == 0;
+}
+
+static AstExpression *trySyntaxAlternative(PrattParser *parser,
+                                           PrattToken *tok,
+                                           PrattMacroSpec *spec,
+                                           PrattMacroAlternative *alternative,
+                                           bool headAlreadyConsumed,
+                                           SyntaxExprBindings *inherited,
+                                           bool *hadCommittedFailure) {
+    SyntaxLexerCheckpoint checkpoint = captureSyntaxLexerCheckpoint(parser);
+    int save = STARTPROTECT();
+    if (checkpoint.bufList != NULL) {
+        PROTECT(checkpoint.bufList);
+    }
+    if (checkpoint.queuedTokens != NULL) {
+        PROTECT(checkpoint.queuedTokens);
+    }
+
+    bool suppressErrors = parser->suppressErrors;
+    parser->suppressErrors = true;
+    AstExpression *result = expandSyntaxAlternative(
+        parser, tok, spec, alternative->patternItems, alternative->template,
+        headAlreadyConsumed, inherited);
+    bool alternativeFailed = parser->panicMode;
+    parser->suppressErrors = suppressErrors;
+
+    if (!alternativeFailed && result != NULL) {
+        freeSyntaxLexerCheckpoint(&checkpoint);
+        UNPROTECT(save);
+        return result;
+    }
+
+    restoreSyntaxLexerCheckpoint(parser, &checkpoint);
+    freeSyntaxLexerCheckpoint(&checkpoint);
+    UNPROTECT(save);
+    *hadCommittedFailure = *hadCommittedFailure || alternativeFailed;
+    return NULL;
+}
+
 static AstExpression *
 expandSyntaxExprWithBindings(PrattParser *parser, PrattToken *tok,
                              PrattMacroSpec *spec, bool headAlreadyConsumed,
@@ -2896,36 +3108,25 @@ expandSyntaxExprWithBindings(PrattParser *parser, PrattToken *tok,
     }
 
     bool hadCommittedFailure = false;
-    for (Index i = 0; i < sizePrattMacroAlternatives(spec->alternatives); ++i) {
-        PrattMacroAlternative *alternative =
-            getPrattMacroAlternatives(spec->alternatives, i);
-        SyntaxLexerCheckpoint checkpoint = captureSyntaxLexerCheckpoint(parser);
-        int save = STARTPROTECT();
-        if (checkpoint.bufList != NULL) {
-            PROTECT(checkpoint.bufList);
-        }
-        if (checkpoint.queuedTokens != NULL) {
-            PROTECT(checkpoint.queuedTokens);
-        }
+    bool helperOnly = !spec->isExprEntry;
+    for (int pass = 0; pass < (helperOnly ? 2 : 1); ++pass) {
+        for (Index i = 0; i < sizePrattMacroAlternatives(spec->alternatives);
+             ++i) {
+            PrattMacroAlternative *alternative =
+                getPrattMacroAlternatives(spec->alternatives, i);
+            bool isEmpty = syntaxAlternativeIsEmpty(alternative);
 
-        bool suppressErrors = parser->suppressErrors;
-        parser->suppressErrors = true;
-        AstExpression *result = expandSyntaxAlternative(
-            parser, tok, spec, alternative->patternItems, alternative->template,
-            headAlreadyConsumed, inherited);
-        bool alternativeFailed = parser->panicMode;
-        parser->suppressErrors = suppressErrors;
+            if (helperOnly && ((pass == 0 && isEmpty) || (pass == 1 && !isEmpty))) {
+                continue;
+            }
 
-        if (!alternativeFailed && result != NULL) {
-            freeSyntaxLexerCheckpoint(&checkpoint);
-            UNPROTECT(save);
-            return result;
+            AstExpression *result = trySyntaxAlternative(
+                parser, tok, spec, alternative, headAlreadyConsumed, inherited,
+                &hadCommittedFailure);
+            if (result != NULL) {
+                return result;
+            }
         }
-
-        restoreSyntaxLexerCheckpoint(parser, &checkpoint);
-        freeSyntaxLexerCheckpoint(&checkpoint);
-        UNPROTECT(save);
-        hadCommittedFailure = hadCommittedFailure || alternativeFailed;
     }
 
     if (hadCommittedFailure) {
@@ -2999,6 +3200,12 @@ static AstDefinition *syntaxDefinition(PrattParser *parser) {
             parser,
             "expression syntax head %s already defined in current scope",
             surfaceHead->name);
+    }
+    validateSyntaxAlternatives(parser, ruleName, alternatives);
+    if (parser->panicMode) {
+        LEAVE(syntaxDefinition);
+        UNPROTECT(save);
+        return newAstDefinition_Blank(LEXPI(parser->lexer));
     }
     PrattMacroAlternative *firstAlternative =
         getPrattMacroAlternatives(alternatives, 0);

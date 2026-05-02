@@ -120,8 +120,10 @@ initiating rules rather than as a general-purpose annotation on every rule.
 Each alternative should be an ordered list of components rather than a DAG.
 That is enough for the examples here and makes backtracking rules simpler.
 
-Alternatives are tried in declaration order. An empty fallback therefore needs
-to appear last if any earlier alternative is expected to consume input.
+For helper-only rules, alternatives that consume input are tried before empty
+alternatives. Within those two groups, declaration order is preserved. That
+makes an empty recursive base case readable in either first or last position
+without changing the match result.
 
 Useful component kinds are:
 

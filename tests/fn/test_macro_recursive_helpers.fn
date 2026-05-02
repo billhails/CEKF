@@ -6,10 +6,24 @@ let
         total
     };
 
+    syntax sumTailFront(total) ::= {
+        total
+    }
+    | "," next: Expr rest: Syntax(sumTailFront(next)) {
+        total + rest
+    };
+
     syntax internalSum: Expr ::= "sum" "(" first: Expr tail: Syntax(sumTail(first)) ")" {
+        tail
+    };
+
+    syntax internalSumFront: Expr ::= "sumfront" "(" first: Expr tail: Syntax(sumTailFront(first)) ")" {
         tail
     };
 in
     assert(1 == sum(1));
     assert(6 == sum(1,2,3));
-    assert(15 == sum(4,5,6))
+    assert(15 == sum(4,5,6));
+    assert(1 == sumfront(1));
+    assert(6 == sumfront(1,2,3));
+    assert(15 == sumfront(4,5,6))
