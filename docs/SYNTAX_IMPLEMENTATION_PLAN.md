@@ -34,6 +34,12 @@ This implementation plan treats the following as fixed inputs.
 - Helper-only rules default to an `Expr` result in phase 1.
 - The `macro` keyword is removed from the intended long-term surface.
 
+Current implementation note:
+
+- Initiating rules still use a dedicated registered head token and currently
+  accept only one alternative.
+- Helper-only rules own their full patterns and may use `|` alternatives.
+
 ### Phase-1 Declaration Grammar
 
 The parser work should follow a concrete phase-1 grammar for syntax
@@ -104,6 +110,11 @@ Phase-1 notes:
   list in phase 1, so empty `()` is not part of the planned surface syntax.
 - The empty alternative is represented by `ε` in `<syntax-pattern>`, which is
   how a rule such as `syntax where(x, xs) ::= { xs } | ... ;` is modeled.
+- In the current implementation, initiating rules are a narrower subset than
+  the grammar above: they accept one alternative, while helper-only rules use
+  `<syntax-alternative-list>`.
+- Alternatives are tried in declaration order, so an empty helper fallback
+  should appear last rather than first.
 - Phase-1 `Syntax(...)` actual arguments are identifiers naming already-bound
   inherited or captured values, not arbitrary new expressions.
 - `<template-body>` is intentionally left abstract here. It belongs to the

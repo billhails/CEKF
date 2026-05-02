@@ -1,0 +1,15 @@
+let
+    syntax sumTail(total) ::= "," next: Expr rest: Syntax(sumTail(next)) {
+        total + rest
+    }
+    | {
+        total
+    };
+
+    syntax internalSum: Expr ::= "sum" "(" first: Expr tail: Syntax(sumTail(first)) ")" {
+        tail
+    };
+in
+    assert(1 == sum(1));
+    assert(6 == sum(1,2,3));
+    assert(15 == sum(4,5,6))

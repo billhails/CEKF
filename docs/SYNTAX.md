@@ -13,15 +13,15 @@ syntax lco: Expr ::= "lco" "["
     quote { map(fn (unquote x) { unquote exp }, unquote filters) }
 };
 
-syntax where(x, xs) ::= { xs }; // empty
-                       | "where" cond: Expr rest: Syntax(filter(x, xs)) {
+syntax where(x, xs) ::= "where" cond: Expr rest: Syntax(filter(x, xs)) {
                            quote { filter(fn (unquote x) { unquote cond }, unquote rest) }
                        }
+             | { xs };
 
-syntax filter(x, xs) ::= { xs }
-                       |  "," cond: Expr rest: Syntax(filter(x, xs)) {
+syntax filter(x, xs) ::= "," cond: Expr rest: Syntax(filter(x, xs)) {
                            quote { filter(fn (unquote x) { unquote cond }, unquote rest) }
                        }
+             | { xs }
 ```
 
 In phase 1, the explicit `: Expr` or `: Def` annotation is a good surface
@@ -35,6 +35,12 @@ This avoids introducing another keyword just to mark triggers. Internally the
 implementation still needs both a result kind and an entry kind, but the first
 surface syntax can reuse the optional annotation to mark the common initiating
 cases.
+
+Current phase-1 implementation note:
+
+- Helper-only rules own their full patterns and may use ordered alternatives.
+- Initiating rules still register a dedicated head token and are currently
+  limited to one alternative each.
 
 ## Implementation Sketch
 
@@ -68,9 +74,17 @@ PrattRecord.
 - Non-initiating syntax rules are stored in a syntax table only. They are not
   reachable from the top-level Pratt expression loop and can only be called from
   another syntax rule through Syntax(...).
+- Helper-only alternatives own their full patterns. They do not share an
+  implicit entry head token with each other.
 - Adding a token to the trie and allowing it to start an expression are distinct
   decisions. Secondary keywords still need to be recognized lexically even when
   they are not valid entry points by themselves.
+
+That split matters for backtracking. A helper rule such as `chooseValue ::= "with"
+"skip" ... | "with" replacement: Expr ...` must be able to roll back before the
+first `"with"`, whereas an initiating rule such as `syntax time: Expr ::= "time"
+...` has already committed to its registered head token before rule matching
+starts.
 
 This keeps Pratt in charge of expression entry and the existing definition
 parser in charge of definition entry, while allowing a syntax rule to run its
@@ -85,7 +99,7 @@ Each rule should contain:
 
 - A rule name.
 - Zero or more inherited parameters.
-- One or more alternatives.
+- One or more alternatives for helper-only rules.
 - A resolved result kind such as `Expr` or `Def`.
 - An entry kind: expression, definition, or helper-only.
 - A template to build when an alternative matches.
@@ -100,9 +114,14 @@ initiating rules rather than as a general-purpose annotation on every rule.
   result unless a later extension adds explicit helper result annotations.
 - Result kind and entry kind remain separate properties internally even if the
   initial surface syntax couples them in the common cases.
+- The current phase-1 implementation keeps initiating rules single-alternative
+  until the entry path is generalized.
 
 Each alternative should be an ordered list of components rather than a DAG.
 That is enough for the examples here and makes backtracking rules simpler.
+
+Alternatives are tried in declaration order. An empty fallback therefore needs
+to appear last if any earlier alternative is expected to consume input.
 
 Useful component kinds are:
 
