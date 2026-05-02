@@ -1,6 +1,10 @@
 let
-    syntax time ::= "time" "(" expr: Expr ")" {
+    syntax time: Expr ::= "time" "(" expr: Expr ")" {
         expr
+    };
+
+    syntax echo: Expr ::= "echo" message: String {
+        message
     };
 
     syntax unless ::= "unless" "(" cond: Expr ")" consequent: Nest "else" alternative: Nest {
@@ -11,4 +15,5 @@ let
         value
     };
 in
-    assert(1 == 1)
+    assert(42 == time(42));
+    assert("hello" == echo "hello")

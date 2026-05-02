@@ -1,9 +1,9 @@
 let
-    syntax time ::= "time" expr: Expr {
+    syntax time: Expr ::= "time" expr: Expr {
         expr
     };
 
-    syntax time ::= "time" value: Expr {
+    syntax time: Expr ::= "time" value: Expr {
         value
     };
 in
