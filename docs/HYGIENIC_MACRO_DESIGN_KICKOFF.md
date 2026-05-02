@@ -1,5 +1,18 @@
 # Hygienic Macro Design Kickoff
 
+## Status
+
+This document is superseded by [SYNTAX.md](SYNTAX.md), which should be treated
+as the clearer statement of the intended end state for this feature.
+
+Within this document, the term `macro` should now be read as meaning `syntax`.
+The two terms may be used interchangeably when discussing compile-time syntax
+transformation, but the preferred current term is `syntax`.
+
+The parser work already done under the `macro` name is still intended to be
+reused. The current direction is to remove the dedicated `macro` keyword from
+the parser surface while keeping and repurposing the underlying parser support.
+
 ## Goal
 
 Start a design-first pass for real compile-time macros in F♮.
