@@ -251,6 +251,17 @@ static bool hasSyntaxBindingName(HashSymbol **names, Index count,
                                  HashSymbol *name);
 static AstExpression *lookupSyntaxBindingCopy(SyntaxExprBindings *bindings,
                                               HashSymbol *name);
+static HashSymbol *lookupSyntaxBindingSymbol(SyntaxExprBindings *bindings,
+                                             HashSymbol *name);
+static AstFargList *substituteSyntaxFargList(AstFargList *args,
+                                             SyntaxExprBindings *bindings);
+static AstTaggedArgList *
+substituteSyntaxTaggedArgList(AstTaggedArgList *args,
+                              SyntaxExprBindings *bindings);
+static AstAltArgs *substituteSyntaxAltArgs(AstAltArgs *args,
+                                           SyntaxExprBindings *bindings);
+static AstFarg *substituteSyntaxFarg(AstFarg *arg,
+                                     SyntaxExprBindings *bindings);
 static AstDefinitions *
 substituteSyntaxDefinitions(AstDefinitions *definitions,
                             SyntaxExprBindings *bindings);
@@ -2791,6 +2802,98 @@ static AstExpression *lookupSyntaxBindingCopy(SyntaxExprBindings *bindings,
     return NULL;
 }
 
+static HashSymbol *lookupSyntaxBindingSymbol(SyntaxExprBindings *bindings,
+                                             HashSymbol *name) {
+    if (bindings == NULL) {
+        return NULL;
+    }
+    for (Index i = 0; i < sizeAstExpressionArray(bindings->values); ++i) {
+        if (bindings->names[i] == name) {
+            AstExpression *value = getAstExpressionArray(bindings->values, i);
+            if (value->type == AST_EXPRESSION_TYPE_SYMBOL) {
+                return getAstExpression_Symbol(value);
+            }
+            return NULL;
+        }
+    }
+    return NULL;
+}
+
+static AstFargList *substituteSyntaxFargList(AstFargList *args,
+                                             SyntaxExprBindings *bindings) {
+    if (args == NULL) {
+        return NULL;
+    }
+    args->arg = substituteSyntaxFarg(args->arg, bindings);
+    args->next = substituteSyntaxFargList(args->next, bindings);
+    return args;
+}
+
+static AstTaggedArgList *
+substituteSyntaxTaggedArgList(AstTaggedArgList *args,
+                              SyntaxExprBindings *bindings) {
+    if (args == NULL) {
+        return NULL;
+    }
+    args->arg = substituteSyntaxFarg(args->arg, bindings);
+    args->next = substituteSyntaxTaggedArgList(args->next, bindings);
+    return args;
+}
+
+static AstAltArgs *substituteSyntaxAltArgs(AstAltArgs *args,
+                                           SyntaxExprBindings *bindings) {
+    if (args == NULL) {
+        return NULL;
+    }
+    args->argList = substituteSyntaxFargList(args->argList, bindings);
+    args->next = substituteSyntaxAltArgs(args->next, bindings);
+    return args;
+}
+
+static AstFarg *substituteSyntaxFarg(AstFarg *arg,
+                                     SyntaxExprBindings *bindings) {
+    if (arg == NULL) {
+        return NULL;
+    }
+
+    switch (arg->type) {
+    case AST_FARG_TYPE_WILDCARD:
+    case AST_FARG_TYPE_LOOKUP:
+    case AST_FARG_TYPE_NUMBER:
+    case AST_FARG_TYPE_CHARACTER:
+        return arg;
+    case AST_FARG_TYPE_SYMBOL: {
+        HashSymbol *bound =
+            lookupSyntaxBindingSymbol(bindings, getAstFarg_Symbol(arg));
+        if (bound != NULL) {
+            setAstFarg_Symbol(arg, bound);
+        }
+        return arg;
+    }
+    case AST_FARG_TYPE_NAMED:
+        getAstFarg_Named(arg)->arg =
+            substituteSyntaxFarg(getAstFarg_Named(arg)->arg, bindings);
+        return arg;
+    case AST_FARG_TYPE_UNPACK:
+        getAstFarg_Unpack(arg)->argList =
+            substituteSyntaxFargList(getAstFarg_Unpack(arg)->argList,
+                                     bindings);
+        return arg;
+    case AST_FARG_TYPE_UNPACKSTRUCT:
+        getAstFarg_UnpackStruct(arg)->argList =
+            substituteSyntaxTaggedArgList(
+                getAstFarg_UnpackStruct(arg)->argList, bindings);
+        return arg;
+    case AST_FARG_TYPE_TUPLE:
+        setAstFarg_Tuple(arg, substituteSyntaxFargList(getAstFarg_Tuple(arg),
+                                                       bindings));
+        return arg;
+    }
+
+    cant_happen("unrecognised farg type %s in substituteSyntaxFarg",
+                astFargTypeName(arg->type));
+}
+
 static AstDefinitions *
 substituteSyntaxDefinitions(AstDefinitions *definitions,
                             SyntaxExprBindings *bindings) {
@@ -2833,6 +2936,7 @@ substituteSyntaxAltFunction(AstAltFunction *function,
     if (function == NULL) {
         return NULL;
     }
+    function->altArgs = substituteSyntaxAltArgs(function->altArgs, bindings);
     function->nest = substituteSyntaxNest(function->nest, bindings);
     return function;
 }
@@ -2843,6 +2947,8 @@ substituteSyntaxCompositeFunction(AstCompositeFunction *function,
     if (function == NULL) {
         return NULL;
     }
+    function->function->argList =
+        substituteSyntaxFargList(function->function->argList, bindings);
     function->function->nest =
         substituteSyntaxNest(function->function->nest, bindings);
     function->next =

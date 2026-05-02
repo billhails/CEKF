@@ -1,0 +1,22 @@
+let
+    link "listutils.fn" as list;
+
+    syntax internalLco: Expr ::= "lco" "[" exp: Expr "for" x: Name "in" xs: Expr filters: Syntax(whereClauses(x, xs)) "]" {
+        list.map(fn (x) { exp }, filters)
+    };
+
+    syntax whereClauses(x, xs) ::= { xs }
+    | "where" cond: Expr rest: Syntax(moreFilters(x, xs)) {
+        list.filter(fn (x) { cond }, rest)
+    };
+
+    syntax moreFilters(x, xs) ::= { xs }
+    | "," cond: Expr rest: Syntax(moreFilters(x, xs)) {
+        list.filter(fn (x) { cond }, rest)
+    };
+in
+    assert([2,4,6] == lco[ n * 2 for n in [1,2,3] ]);
+    assert([4,8] == lco[ value * 2 for value in [1,2,3,4] where value % 2 == 0 ]);
+    assert([8] == lco[ item * 2 for item in [1,2,3,4] where item > 2, item % 2 == 0 ]);
+    assert([3,4] == lco[ x + 1 for x in [1,2,3]
+                         where list.member(x, lco[ y + 1 for y in [1,2,3] ]) ])

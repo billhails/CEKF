@@ -24,6 +24,11 @@ syntax filter(x, xs) ::= "," cond: Expr rest: Syntax(filter(x, xs)) {
              | { xs }
 ```
 
+The current parser does not implement `quote` and `unquote` yet, but the same
+shape can now be demonstrated with plain template blocks because captured
+`Name` bindings substitute into function-binder positions. See
+`tests/fn/test_macro_list_comprehension.fn` for the working phase-1 version.
+
 In phase 1, the explicit `: Expr` or `: Def` annotation is a good surface
 marker for initiating rules.
 
