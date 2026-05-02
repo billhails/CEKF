@@ -1,0 +1,9 @@
+let
+    syntax bad: Expr ::= "bad" value: Expr {
+        value
+    }
+    | other: Expr {
+        other
+    };
+in
+    bad 1

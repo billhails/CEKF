@@ -176,6 +176,7 @@ structs:
             patternItems: PrattMacroPatternItems
             template: AstExpression
             alternatives: PrattMacroAlternatives=NULL
+            isExprEntry: bool=false
             export: bool=false
             importNsRef: int=-1
             importNsSymbol: HashSymbol=NULL

@@ -10,7 +10,7 @@ let
     syntax chooseValue(value) ::= "with" "skip" ignored: Expr {
         value
     }
-    | replacement: Expr {
+    | "with" replacement: Expr {
         replacement
     };
 

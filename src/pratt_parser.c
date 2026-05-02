@@ -313,7 +313,7 @@ static PrattMacroSpec *findLocalSyntaxSpecForHead(PrattParser *parser,
     Index i = 0;
     PrattMacroSpec *spec = NULL;
     while (iteratePrattMacroTable(parser->macros, &i, &spec) != NULL) {
-        if (spec != NULL && spec->headSymbol == head) {
+        if (spec != NULL && spec->isExprEntry && spec->headSymbol == head) {
             return spec;
         }
     }
@@ -2822,7 +2822,7 @@ static AstExpression *expandSyntaxAlternative(PrattParser *parser,
     SyntaxExprBindings bindings = {.names = names, .values = values};
 
     bool consumedPattern = headAlreadyConsumed;
-    if (!headAlreadyConsumed) {
+    if (spec->isExprEntry && !headAlreadyConsumed) {
         PrattToken *nextTok = peek(parser);
         if (!isTokenTypeOrAtom(nextTok, spec->headSymbol)) {
             free(names);
@@ -2964,18 +2964,31 @@ static AstDefinition *syntaxDefinition(PrattParser *parser) {
     }
     bool isExprEntry = parseOptionalExprSyntaxEntry(parser);
     consume(parser, TOK_PRODUCTION());
-    WCharArray *headText = rawString(parser);
-    PROTECT(headText);
-    checkTerminal(parser, headText);
     PrattMacroAlternatives *alternatives = newPrattMacroAlternatives();
     PROTECT(alternatives);
-    do {
+    HashSymbol *surfaceHead = ruleName;
+    if (isExprEntry) {
+        WCharArray *headText = rawString(parser);
+        int save2 = PROTECT(headText);
+        checkTerminal(parser, headText);
+        surfaceHead = unicodeToSymbol(headText);
         PrattMacroAlternative *alternative = parseSyntaxAlternative(parser);
-        int save2 = PROTECT(alternative);
+        int save3 = PROTECT(alternative);
         pushPrattMacroAlternatives(alternatives, alternative);
+        UNPROTECT(save3);
+        if (match(parser, TOK_PIPE())) {
+            parserError(parser,
+                        "initiating syntax does not yet support alternatives");
+        }
         UNPROTECT(save2);
-    } while (match(parser, TOK_PIPE()));
-    HashSymbol *surfaceHead = unicodeToSymbol(headText);
+    } else {
+        do {
+            PrattMacroAlternative *alternative = parseSyntaxAlternative(parser);
+            int save2 = PROTECT(alternative);
+            pushPrattMacroAlternatives(alternatives, alternative);
+            UNPROTECT(save2);
+        } while (match(parser, TOK_PIPE()));
+    }
     if (getPrattMacroTable(parser->macros, ruleName, NULL)) {
         parserError(parser, "syntax %s already defined in current scope",
                     ruleName->name);
@@ -2995,6 +3008,7 @@ static AstDefinition *syntaxDefinition(PrattParser *parser) {
     PROTECT(spec);
     spec->parameters = parameters;
     spec->alternatives = alternatives;
+    spec->isExprEntry = isExprEntry;
     setPrattMacroTable(parser->macros, ruleName, spec);
     if (isExprEntry && !parser->panicMode) {
         registerExprSyntaxHead(parser, surfaceHead);
