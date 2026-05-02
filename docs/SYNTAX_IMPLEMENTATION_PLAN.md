@@ -115,6 +115,8 @@ Phase-1 notes:
   `<syntax-alternative-list>`.
 - Helper-only matching now tries consuming alternatives before empty ones,
   while preserving declaration order within each group.
+- Helper-only declarations reject exact duplicate alternatives and obvious
+  strict-prefix shadowing at parse time.
 - Phase-1 `Syntax(...)` actual arguments are identifiers naming already-bound
   inherited or captured values, not arbitrary new expressions.
 - `<template-body>` is intentionally left abstract here. It belongs to the

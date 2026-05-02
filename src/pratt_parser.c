@@ -231,8 +231,13 @@ static bool syntaxCallArgumentsEquivalent(SymbolArray *left,
                                           HashSymbol **leftNames,
                                           HashSymbol **rightNames,
                                           Index mappedCount);
+static bool syntaxPatternItemsMatch(PrattMacroPatternItems *leftItems,
+                                    PrattMacroPatternItems *rightItems,
+                                    bool requireRightLonger);
 static bool syntaxAlternativesEquivalent(PrattMacroAlternative *left,
                                          PrattMacroAlternative *right);
+static bool syntaxAlternativeShadows(PrattMacroAlternative *earlier,
+                                     PrattMacroAlternative *later);
 static void validateSyntaxAlternatives(PrattParser *parser,
                                        HashSymbol *ruleName,
                                        PrattMacroAlternatives *alternatives);
@@ -2507,35 +2512,40 @@ static bool syntaxCallArgumentsEquivalent(SymbolArray *left,
     return true;
 }
 
-static bool syntaxAlternativesEquivalent(PrattMacroAlternative *left,
-                                         PrattMacroAlternative *right) {
-    Index leftCount = countPrattMacroPatternItems(left->patternItems);
-    Index rightCount = countPrattMacroPatternItems(right->patternItems);
-    if (leftCount != rightCount) {
+static bool syntaxPatternItemsMatch(PrattMacroPatternItems *leftItems,
+                                    PrattMacroPatternItems *rightItems,
+                                    bool requireRightLonger) {
+    Index leftCount = countPrattMacroPatternItems(leftItems);
+    Index rightCount = countPrattMacroPatternItems(rightItems);
+
+    if (requireRightLonger) {
+        if (leftCount >= rightCount) {
+            return false;
+        }
+    } else if (leftCount != rightCount) {
         return false;
     }
 
     HashSymbol **leftNames = calloc(leftCount == 0 ? 1 : leftCount,
                                     sizeof(HashSymbol *));
-    HashSymbol **rightNames = calloc(rightCount == 0 ? 1 : rightCount,
+    HashSymbol **rightNames = calloc(leftCount == 0 ? 1 : leftCount,
                                      sizeof(HashSymbol *));
-    bool equivalent = true;
+    bool matched = true;
     Index mappedCount = 0;
 
     for (Index i = 0; i < leftCount; ++i) {
-        PrattMacroPatternItem *leftItem =
-            getPrattMacroPatternItems(left->patternItems, i);
+        PrattMacroPatternItem *leftItem = getPrattMacroPatternItems(leftItems, i);
         PrattMacroPatternItem *rightItem =
-            getPrattMacroPatternItems(right->patternItems, i);
+            getPrattMacroPatternItems(rightItems, i);
         if (leftItem->type != rightItem->type) {
-            equivalent = false;
+            matched = false;
             break;
         }
 
         if (leftItem->type == PRATTMACROPATTERNITEM_TYPE_QUOTEDTERMINAL) {
             if (getPrattMacroPatternItem_QuotedTerminal(leftItem) !=
                 getPrattMacroPatternItem_QuotedTerminal(rightItem)) {
-                equivalent = false;
+                matched = false;
                 break;
             }
             continue;
@@ -2554,14 +2564,30 @@ static bool syntaxAlternativesEquivalent(PrattMacroAlternative *left,
             !recordSyntaxPatternNameMap(leftHole->name, rightHole->name,
                                         leftNames, rightNames,
                                         &mappedCount)) {
-            equivalent = false;
+            matched = false;
             break;
         }
     }
 
     free(leftNames);
     free(rightNames);
-    return equivalent;
+    return matched;
+}
+
+static bool syntaxAlternativesEquivalent(PrattMacroAlternative *left,
+                                         PrattMacroAlternative *right) {
+    return syntaxPatternItemsMatch(left->patternItems, right->patternItems,
+                                   false);
+}
+
+static bool syntaxAlternativeShadows(PrattMacroAlternative *earlier,
+                                     PrattMacroAlternative *later) {
+    if (countPrattMacroPatternItems(earlier->patternItems) == 0) {
+        return false;
+    }
+
+    return syntaxPatternItemsMatch(earlier->patternItems, later->patternItems,
+                                   true);
 }
 
 static void validateSyntaxAlternatives(PrattParser *parser,
@@ -2588,6 +2614,12 @@ static void validateSyntaxAlternatives(PrattParser *parser,
             if (syntaxAlternativesEquivalent(earlier, alternative)) {
                 parserError(parser,
                             "syntax %s alternative %ld duplicates alternative %ld",
+                            ruleName->name, (long)(i + 1), (long)(j + 1));
+                return;
+            }
+            if (syntaxAlternativeShadows(earlier, alternative)) {
+                parserError(parser,
+                            "syntax %s alternative %ld is shadowed by alternative %ld",
                             ruleName->name, (long)(i + 1), (long)(j + 1));
                 return;
             }

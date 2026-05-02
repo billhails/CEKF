@@ -125,6 +125,11 @@ alternatives. Within those two groups, declaration order is preserved. That
 makes an empty recursive base case readable in either first or last position
 without changing the match result.
 
+The current implementation also rejects helper alternatives that are obviously
+unreachable at declaration time. Exact duplicates are rejected, and a later
+consuming alternative is rejected if an earlier consuming alternative is a
+strict pattern prefix of it modulo binder renaming.
+
 Useful component kinds are:
 
 - Terminal: a fixed quoted token such as "for" or ",".
