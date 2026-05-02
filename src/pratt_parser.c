@@ -189,7 +189,8 @@ static AstType *typeType(PrattParser *);
 static HashSymbol *symbol(PrattParser *);
 static HashSymbol *typeVariable(PrattParser *);
 static PrattRecord *fetchRecord(PrattParser *, HashSymbol *);
-static PrattMacroSpec *fetchSyntaxSpec(PrattParser *, HashSymbol *);
+static PrattMacroSpec *findLocalSyntaxSpecForHead(PrattParser *, HashSymbol *);
+static PrattMacroSpec *findSyntaxSpecForHead(PrattParser *, HashSymbol *);
 static PrattTrie *makePrattTrie(PrattParser *, PrattTrie *);
 static WCharArray *rawString(PrattParser *);
 static WCharArray *str(PrattParser *);
@@ -198,7 +199,7 @@ static void synchronize(PrattParser *parser);
 static PrattExportedOps *captureNameSpaceOperatorExports(PrattParser *parser);
 static PrattRecord *ensureTargetRecord(PrattParser *parser, HashSymbol *op);
 static bool parseOptionalExprSyntaxEntry(PrattParser *parser);
-static void registerExprSyntaxEntry(PrattParser *parser, HashSymbol *ruleName);
+static void registerExprSyntaxHead(PrattParser *parser, HashSymbol *head);
 static AstExpression *parseSyntaxHoleExpression(PrattParser *parser,
                                                 PrattMacroHole *hole);
 static AstExpression *lookupSyntaxBindingCopy(SyntaxExprBindings *bindings,
@@ -266,12 +267,28 @@ static bool isTokenTypeOrAtom(PrattToken *token, HashSymbol *type) {
     return getTokenTypeOrAtom(token) == type;
 }
 
-static PrattMacroSpec *fetchSyntaxSpec(PrattParser *parser, HashSymbol *symbol) {
+/* Syntax definitions are keyed by rule name, but Expr dispatch resolves by
+ * the quoted surface head token.
+ */
+static PrattMacroSpec *findLocalSyntaxSpecForHead(PrattParser *parser,
+                                                  HashSymbol *head) {
+    Index i = 0;
     PrattMacroSpec *spec = NULL;
-    if (getPrattMacroTable(parser->macros, symbol, &spec)) {
+    while (iteratePrattMacroTable(parser->macros, &i, &spec) != NULL) {
+        if (spec != NULL && spec->headSymbol == head) {
+            return spec;
+        }
+    }
+    return NULL;
+}
+
+static PrattMacroSpec *findSyntaxSpecForHead(PrattParser *parser,
+                                             HashSymbol *head) {
+    PrattMacroSpec *spec = findLocalSyntaxSpecForHead(parser, head);
+    if (spec != NULL) {
         return spec;
     } else if (parser->next != NULL) {
-        return fetchSyntaxSpec(parser->next, symbol);
+        return findSyntaxSpecForHead(parser->next, head);
     } else {
         return NULL;
     }
@@ -2196,9 +2213,9 @@ static bool parseOptionalExprSyntaxEntry(PrattParser *parser) {
     return true;
 }
 
-static void registerExprSyntaxEntry(PrattParser *parser, HashSymbol *ruleName) {
+static void registerExprSyntaxHead(PrattParser *parser, HashSymbol *head) {
     PrattRecord *record = NULL;
-    getPrattRecordTable(parser->rules, ruleName, &record);
+    getPrattRecordTable(parser->rules, head, &record);
 
     PrattFixityConfig empty = {NULL,  0,    NULL,  NULL, false,
                                false, NULL, false, -1,   NULL};
@@ -2209,17 +2226,18 @@ static void registerExprSyntaxEntry(PrattParser *parser, HashSymbol *ruleName) {
         PROTECT(record);
         if (record->prefix.op != NULL && record->prefix.op != userSyntaxExpr) {
             parserError(parser,
-                        "syntax %s conflicts with an existing prefix entry",
-                        ruleName->name);
+                        "syntax head %s conflicts with an existing prefix entry",
+                        head->name);
             UNPROTECT(save);
             return;
         }
     } else {
-        record = newPrattRecord(ruleName, empty, empty, empty);
+        record = newPrattRecord(head, empty, empty, empty);
         PROTECT(record);
+        parser->trie = insertPrattTrie(parser->trie, head);
     }
     record->prefix.op = userSyntaxExpr;
-    setPrattRecordTable(parser->rules, ruleName, record);
+    setPrattRecordTable(parser->rules, head, record);
     UNPROTECT(save);
 }
 
@@ -2525,12 +2543,11 @@ static AstExpression *expandSyntaxExpr(PrattParser *parser, PrattToken *tok,
     return result;
 }
 
-static AstExpression *userSyntaxExpr(PrattRecord *record __attribute__((unused)),
+static AstExpression *userSyntaxExpr(PrattRecord *record,
                                      PrattParser *parser,
                                      AstExpression *lhs __attribute__((unused)),
                                      PrattToken *tok) {
-    HashSymbol *name = getPrattValue_Atom(tok->value);
-    PrattMacroSpec *spec = fetchSyntaxSpec(parser, name);
+    PrattMacroSpec *spec = findSyntaxSpecForHead(parser, record->symbol);
     if (spec == NULL) {
         return NULL;
     }
@@ -2544,9 +2561,9 @@ static AstDefinition *syntaxDefinition(PrattParser *parser) {
     HashSymbol *ruleName = symbol(parser);
     bool isExprEntry = parseOptionalExprSyntaxEntry(parser);
     consume(parser, TOK_PRODUCTION());
-    WCharArray *syntax_head = rawString(parser);
-    PROTECT(syntax_head);
-    checkTerminal(parser, syntax_head);
+    WCharArray *headText = rawString(parser);
+    PROTECT(headText);
+    checkTerminal(parser, headText);
     PrattMacroPatternItems *patternItems = macroPatternItems(parser);
     PROTECT(patternItems);
     AstExpression *template = NULL;
@@ -2556,21 +2573,21 @@ static AstDefinition *syntaxDefinition(PrattParser *parser) {
         template = newAstExpression_Nest(CPI(body), body);
         PROTECT(template);
     }
-    HashSymbol *head = unicodeToSymbol(syntax_head);
-    if (isExprEntry && head != ruleName) {
-        parserError(parser,
-                    "expression syntax %s must use a matching quoted head",
-                    ruleName->name);
-    }
+    HashSymbol *surfaceHead = unicodeToSymbol(headText);
     if (getPrattMacroTable(parser->macros, ruleName, NULL)) {
         parserError(parser, "syntax %s already defined in current scope",
                     ruleName->name);
     }
-    PrattMacroSpec *spec = newPrattMacroSpec(head, patternItems, template);
+    if (isExprEntry && findLocalSyntaxSpecForHead(parser, surfaceHead) != NULL) {
+        parserError(parser,
+                    "expression syntax head %s already defined in current scope",
+                    surfaceHead->name);
+    }
+    PrattMacroSpec *spec = newPrattMacroSpec(surfaceHead, patternItems, template);
     PROTECT(spec);
     setPrattMacroTable(parser->macros, ruleName, spec);
     if (isExprEntry && !parser->panicMode) {
-        registerExprSyntaxEntry(parser, ruleName);
+        registerExprSyntaxHead(parser, surfaceHead);
     }
 
     LEAVE(syntaxDefinition);
@@ -4779,7 +4796,7 @@ static AstExpression *iff(PrattRecord *record __attribute__((unused)),
  * @brief parselet triggered by a prefix atom not recognised as special.
  */
 static AstExpression *makeAtom(PrattRecord *record __attribute__((unused)),
-                               PrattParser *parser,
+                               PrattParser *parser __attribute__((unused)),
                                AstExpression *lhs __attribute__((unused)),
                                PrattToken *tok) {
 #ifdef SAFETY_CHECKS
@@ -4788,14 +4805,6 @@ static AstExpression *makeAtom(PrattRecord *record __attribute__((unused)),
     }
 #endif
     HashSymbol *name = tok->value->val.atom;
-
-    PrattRecord *syntaxRecord = fetchRecord(parser, name);
-    if (syntaxRecord != NULL && syntaxRecord->prefix.op == userSyntaxExpr) {
-        AstExpression *expanded = userSyntaxExpr(syntaxRecord, parser, lhs, tok);
-        if (expanded != NULL) {
-            return expanded;
-        }
-    }
 
     // Special handling for currentLine - replace with line number
     if (name == currentLineSymbol()) {

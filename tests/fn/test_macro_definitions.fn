@@ -1,9 +1,9 @@
 let
-    syntax time: Expr ::= "time" "(" expr: Expr ")" {
+    syntax internalTime: Expr ::= "time" "(" expr: Expr ")" {
         expr
     };
 
-    syntax echo: Expr ::= "echo" message: String {
+    syntax internalEcho: Expr ::= "echo" message: String {
         message
     };
 
