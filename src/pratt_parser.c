@@ -350,7 +350,7 @@ static PrattParser *makePrattParser(void) {
     addRecord(table, TOK_LINK(), NULL, 0, NULL, 0, NULL, 0);
     addRecord(table, TOK_LAZY(), NULL, 0, NULL, 0, NULL, 0);
     addRecord(table, TOK_LSQUARE(), list, 0, NULL, 0, NULL, 0);
-    addRecord(table, TOK_MACRO(), NULL, 0, NULL, 0, NULL, 0);
+    addRecord(table, TOK_SYNTAX(), NULL, 0, NULL, 0, NULL, 0);
     addRecord(table, TOK_NAMESPACE(), NULL, 0, NULL, 0, NULL, 0);
     addRecord(table, TOK_NUMBER(), makeNumber, 0, NULL, 0, NULL, 0);
     addRecord(table, TOK_OPEN(), grouping, 0, call, 14, NULL, 0);
@@ -358,6 +358,7 @@ static PrattParser *makePrattParser(void) {
     addRecord(table, TOK_PERIOD(), NULL, 0, lookUp, 15, NULL, 0);
     addRecord(table, TOK_PIPE(), NULL, 0, NULL, 0, NULL, 0);
     addRecord(table, TOK_PRINT(), print, 0, NULL, 0, NULL, 0);
+    addRecord(table, TOK_PRODUCTION(), NULL, 0, NULL, 0, NULL, 0);
     addRecord(table, TOK_RCURLY(), NULL, 0, NULL, 0, NULL, 0);
     addRecord(table, TOK_RSQUARE(), NULL, 0, NULL, 0, NULL, 0);
     addRecord(table, TOK_SEMI(), NULL, 0, NULL, 0, NULL, 0);
@@ -2137,13 +2138,15 @@ static PrattMacroPatternItems *macroPatternItems(PrattParser *parser) {
     return result;
 }
 
-static AstDefinition *macroDefinition(PrattParser *parser) {
-    ENTER(macroDefinition);
+static AstDefinition *syntaxDefinition(PrattParser *parser) {
+    ENTER(syntaxDefinition);
     PrattToken *tok = peek(parser);
     int save = PROTECT(tok);
-    WCharArray *macro_head = rawString(parser);
-    PROTECT(macro_head);
-    checkTerminal(parser, macro_head);
+    HashSymbol *ruleName = symbol(parser);
+    consume(parser, TOK_PRODUCTION());
+    WCharArray *syntax_head = rawString(parser);
+    PROTECT(syntax_head);
+    checkTerminal(parser, syntax_head);
     PrattMacroPatternItems *patternItems = macroPatternItems(parser);
     PROTECT(patternItems);
     AstExpression *template = NULL;
@@ -2153,16 +2156,16 @@ static AstDefinition *macroDefinition(PrattParser *parser) {
         template = newAstExpression_Nest(CPI(body), body);
         PROTECT(template);
     }
-    HashSymbol *head = unicodeToSymbol(macro_head);
-    if (getPrattMacroTable(parser->macros, head, NULL)) {
-        parserError(parser, "macro %s already defined in current scope",
-                    head->name);
+    HashSymbol *head = unicodeToSymbol(syntax_head);
+    if (getPrattMacroTable(parser->macros, ruleName, NULL)) {
+        parserError(parser, "syntax %s already defined in current scope",
+                    ruleName->name);
     }
     PrattMacroSpec *spec = newPrattMacroSpec(head, patternItems, template);
     PROTECT(spec);
-    setPrattMacroTable(parser->macros, head, spec);
+    setPrattMacroTable(parser->macros, ruleName, spec);
 
-    LEAVE(macroDefinition);
+    LEAVE(syntaxDefinition);
     UNPROTECT(save);
     return newAstDefinition_Blank(LEXPI(parser->lexer));
 }
@@ -2185,8 +2188,8 @@ static AstDefinition *definition(PrattParser *parser) {
     if (match(parser, TOK_BUILTINS())) {
         res = newAstDefinition_BuiltinsSlot(TOKPI(peek(parser)));
         save = PROTECT(res);
-    } else if (match(parser, TOK_MACRO())) {
-        res = macroDefinition(parser);
+    } else if (match(parser, TOK_SYNTAX())) {
+        res = syntaxDefinition(parser);
         save = PROTECT(res);
     } else if (check(parser, TOK_ATOM())) {
         res = assignment(parser);

@@ -1,13 +1,13 @@
 let
-    macro "time" "(" expr: Expr ")" {
+    syntax time ::= "time" "(" expr: Expr ")" {
         expr
     };
 
-    macro "unless" "(" cond: Expr ")" consequent: Nest "else" alternative: Nest {
+    syntax unless ::= "unless" "(" cond: Expr ")" consequent: Nest "else" alternative: Nest {
         cond
     };
 
-    macro "annotate" name: Name ":" annotation: Type "=" value: Expr {
+    syntax annotate ::= "annotate" name: Name ":" annotation: Type "=" value: Expr {
         value
     };
 in
