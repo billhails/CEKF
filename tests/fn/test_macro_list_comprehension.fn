@@ -25,4 +25,6 @@ in
     assert([4,8] == lco[ value * 2 for value in [1,2,3,4] where value % 2 == 0 ]);
     assert([8] == lco[ item * 2 for item in [1,2,3,4] where item > 2, item % 2 == 0 ]);
     assert([3,4] == lco[ x + 1 for x in [1,2,3]
-                         where list.member(x, lco[ y + 1 for y in [1,2,3] ]) ])
+                         where list.member(x, lco[ y + 1 for y in [1,2,3] ]) ]);
+    assert([3,4] == lco[ x + 1 for x in [1,2,3]
+                         where list.member(x, lco[ x + 1 for x in [1,2,3] ]) ])
