@@ -1,0 +1,6 @@
+let
+    operator "Expr_" 10 fn (x) { x };
+
+    syntax pass: Expr ::= "sid" x: Expr quote { unquote(x) };
+in
+    assert(7 == sid 7)

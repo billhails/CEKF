@@ -225,12 +225,14 @@ static void validateSyntaxAlternatives(PrattParser *parser,
 static bool parseOptionalExprSyntaxEntry(PrattParser *parser);
 static SymbolArray *parseSyntaxCallArguments(PrattParser *parser);
 static void registerExprSyntaxHead(PrattParser *parser, HashSymbol *head);
+static HashSymbol *syntaxSymbol(PrattParser *parser);
 static AstExpression *parseSyntaxHoleExpression(PrattParser *parser,
                                                 PrattMacroHole *hole,
                                                 SyntaxExprBindings *bindings);
 static HashSymbol *syntaxQuoteSymbol(void);
 static HashSymbol *syntaxUnquoteSymbol(void);
 static bool isSyntaxQuoteToken(PrattToken *token);
+static bool isSyntaxPatternBoundaryToken(PrattToken *token);
 static AstExpression *makeSyntaxQuotedTemplate(ParserInfo PI,
                                                AstExpression *body);
 static AstExpression *unwrapSyntaxQuotedTemplate(AstExpression *template);
@@ -2286,13 +2288,7 @@ static void checkTerminal(PrattParser *parser, WCharArray *string) {
 static PrattMacroHole *typedHole(PrattParser *parser) {
     PrattToken *token = next(parser);
     int save = PROTECT(token);
-    // we know it's an atom
-#ifdef SAFETY_CHECKS
-    if (token->type != TOK_ATOM()) {
-        cant_happen("typedHole called with non-atom \"%s\"", token->type->name);
-    }
-#endif
-    HashSymbol *bindingName = getPrattValue_Atom(token->value);
+    HashSymbol *bindingName = getTokenTypeOrAtom(token);
     consume(parser, TOK_COLON());
     token = next(parser);
     REPLACE_PROTECT(save, token);
@@ -2308,11 +2304,11 @@ static PrattMacroHole *typedHole(PrattParser *parser) {
         result = newPrattMacroHole(PRATTSYNTAXCLASS_TYPE_STRING, bindingName);
     } else if (isTokenTypeOrAtom(token, TOK_TYPETYPE())) {
         result = newPrattMacroHole(PRATTSYNTAXCLASS_TYPE_TYPE, bindingName);
-    } else if (isAtomSymbol(token, newSymbol("Syntax"))) {
+    } else if (isTokenTypeOrAtom(token, newSymbol("Syntax"))) {
         result = newPrattMacroHole(PRATTSYNTAXCLASS_TYPE_SYNTAX, bindingName);
         int save2 = PROTECT(result);
         consume(parser, TOK_OPEN());
-        result->callTarget = symbol(parser);
+        result->callTarget = syntaxSymbol(parser);
         result->callArguments = parseSyntaxCallArguments(parser);
         consume(parser, TOK_CLOSE());
         UNPROTECT(save2);
@@ -2345,7 +2341,7 @@ static SymbolArray *parseOptionalSyntaxParameters(PrattParser *parser) {
     int save = PROTECT(parameters);
 
     for (;;) {
-        HashSymbol *parameter = symbol(parser);
+        HashSymbol *parameter = syntaxSymbol(parser);
         if (symbolArrayContains(parameters, parameter)) {
             parserError(parser, "duplicate syntax parameter %s",
                         parameter->name);
@@ -2376,7 +2372,7 @@ static PrattMacroPatternItems *macroPatternItems(PrattParser *parser) {
             PROTECT(this);
             pushPrattMacroPatternItems(result, this);
             UNPROTECT(save2);
-        } else if (check(parser, TOK_ATOM())) {
+        } else if (!isSyntaxPatternBoundaryToken(peek(parser))) {
             if (isSyntaxQuoteToken(peek(parser))) {
                 break;
             }
@@ -2408,7 +2404,7 @@ static SymbolArray *parseSyntaxCallArguments(PrattParser *parser) {
     int save = PROTECT(arguments);
 
     for (;;) {
-        pushSymbolArray(arguments, symbol(parser));
+        pushSymbolArray(arguments, syntaxSymbol(parser));
         if (!match(parser, TOK_COMMA())) {
             break;
         }
@@ -2437,6 +2433,12 @@ static HashSymbol *syntaxUnquoteSymbol(void) {
 
 static bool isSyntaxQuoteToken(PrattToken *token) {
     return isTokenTypeOrAtom(token, syntaxQuoteSymbol());
+}
+
+static bool isSyntaxPatternBoundaryToken(PrattToken *token) {
+    return isSyntaxQuoteToken(token) || token->type == TOK_LCURLY() ||
+           token->type == TOK_PIPE() || token->type == TOK_SEMI() ||
+           token->type == TOK_EOF();
 }
 
 static AstExpression *makeSyntaxQuotedTemplate(ParserInfo PI,
@@ -2475,26 +2477,48 @@ static PrattMacroAlternative *parseSyntaxAlternative(PrattParser *parser) {
         PrattToken *quoteToken = next(parser);
         int save2 = PROTECT(quoteToken);
 
-        // In template mode, unquote(...) must parse as an identifier call,
-        // even if user code defines a dedicated unquote_ operator token.
-        HashSymbol *unquote = syntaxUnquoteSymbol();
-        PrattRecord *previousUnquoteRecord = NULL;
-        getPrattRecordTable(parser->rules, unquote, &previousUnquoteRecord);
-        PrattRecord *overrideUnquoteRecord = NULL;
-        if (previousUnquoteRecord != NULL) {
-            overrideUnquoteRecord = copyPrattRecord(previousUnquoteRecord);
-            int save3 = PROTECT(overrideUnquoteRecord);
-            overrideUnquoteRecord->prefix.op = makeAtom;
-            overrideUnquoteRecord->prefix.prec = 0;
-            setPrattRecordTable(parser->rules, unquote, overrideUnquoteRecord);
-            UNPROTECT(save3);
+        SymbolArray *overrideSymbols = newSymbolArray();
+        int save3 = PROTECT(overrideSymbols);
+        pushSymbolArray(overrideSymbols, syntaxUnquoteSymbol());
+        for (Index i = 0; i < countPrattMacroPatternItems(patternItems); ++i) {
+            PrattMacroPatternItem *item =
+                getPrattMacroPatternItems(patternItems, i);
+            if (item->type == PRATTMACROPATTERNITEM_TYPE_TYPEDHOLE) {
+                HashSymbol *name =
+                    getPrattMacroPatternItem_TypedHole(item)->name;
+                if (!symbolArrayContains(overrideSymbols, name)) {
+                    pushSymbolArray(overrideSymbols, name);
+                }
+            }
+        }
+
+        Index overrideCount = sizeSymbolArray(overrideSymbols);
+        PrattRecord **savedRecords = calloc(
+            overrideCount == 0 ? 1 : overrideCount, sizeof(PrattRecord *));
+        for (Index i = 0; i < overrideCount; ++i) {
+            HashSymbol *symbol = getSymbolArray(overrideSymbols, i);
+            getPrattRecordTable(parser->rules, symbol, &savedRecords[i]);
+            if (savedRecords[i] != NULL) {
+                PrattRecord *overrideRecord = copyPrattRecord(savedRecords[i]);
+                int save4 = PROTECT(overrideRecord);
+                overrideRecord->prefix.op = makeAtom;
+                overrideRecord->prefix.prec = 0;
+                setPrattRecordTable(parser->rules, symbol, overrideRecord);
+                UNPROTECT(save4);
+            }
         }
 
         AstNest *body = nest(parser);
 
-        if (previousUnquoteRecord != NULL) {
-            setPrattRecordTable(parser->rules, unquote, previousUnquoteRecord);
+        for (Index i = 0; i < overrideCount; ++i) {
+            if (savedRecords[i] != NULL) {
+                setPrattRecordTable(parser->rules,
+                                    getSymbolArray(overrideSymbols, i),
+                                    savedRecords[i]);
+            }
         }
+        free(savedRecords);
+        UNPROTECT(save3);
 
         if (body != NULL) {
             PROTECT(body);
@@ -2740,6 +2764,11 @@ static void registerExprSyntaxHead(PrattParser *parser, HashSymbol *head) {
     UNPROTECT(save);
 }
 
+static HashSymbol *syntaxSymbol(PrattParser *parser) {
+    PrattToken *token = next(parser);
+    return getTokenTypeOrAtom(token);
+}
+
 static AstExpression *parseSyntaxHoleExpression(PrattParser *parser,
                                                 PrattMacroHole *hole,
                                                 SyntaxExprBindings *bindings) {
@@ -2748,13 +2777,15 @@ static AstExpression *parseSyntaxHoleExpression(PrattParser *parser,
         return expressionPrecedence(parser, 0);
     case PRATTSYNTAXCLASS_TYPE_NAME: {
         PrattToken *token = next(parser);
-        if (token->type != TOK_ATOM()) {
+        HashSymbol *name = getTokenTypeOrAtom(token);
+        if (name == TOK_EOF() || name == TOK_SEMI() || name == TOK_CLOSE() ||
+            name == TOK_COMMA() || name == TOK_PRODUCTION() ||
+            name == TOK_COLON()) {
             parserError(parser, "expected identifier for syntax hole %s",
                         hole->name->name);
             return errorExpression(TOKPI(token));
         }
-        return newAstExpression_Symbol(TOKPI(token),
-                                       getPrattValue_Atom(token->value));
+        return newAstExpression_Symbol(TOKPI(token), name);
     }
     case PRATTSYNTAXCLASS_TYPE_NEST: {
         AstNest *body = nest(parser);
@@ -3479,7 +3510,7 @@ static AstDefinition *syntaxDefinition(PrattParser *parser) {
     ENTER(syntaxDefinition);
     PrattToken *tok = peek(parser);
     int save = PROTECT(tok);
-    HashSymbol *ruleName = symbol(parser);
+    HashSymbol *ruleName = syntaxSymbol(parser);
     SymbolArray *parameters = parseOptionalSyntaxParameters(parser);
     if (parameters != NULL) {
         PROTECT(parameters);

@@ -1,0 +1,7 @@
+let
+    operator "helper_" 10 fn (x) { x };
+
+    syntax helper(x) ::= quote { unquote(x) };
+    syntax pass: Expr ::= "sid" x: Expr y: Syntax(helper(x)) quote { unquote(y) };
+in
+    assert(7 == sid 7)
