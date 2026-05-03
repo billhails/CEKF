@@ -169,8 +169,12 @@ structs:
             description: >-
                 Stores the head symbol, ordered pattern items, and template
                 expression needed for parser-time macro expansion in the current
-                scope.
+                scope. The declarationId links this to the durable AstSyntaxDecl
+                in the AST.
         data:
+            declarationId: int=0
+            entryKind: PrattSyntaxEntryKind=PRATTSYNTAXENTRYKIND_TYPE_HELPER
+            resultKind: PrattSyntaxResultKind=PRATTSYNTAXRESULTKIND_TYPE_EXPR
             headSymbol: HashSymbol
             parameters: SymbolArray=NULL
             patternItems: PrattMacroPatternItems
@@ -225,6 +229,18 @@ structs:
             queuedTokens: PrattTokens=NULL
             snapshots: SyntaxLexerSnapshot=NULL
             panicMode: bool=false
+
+    PrattSyntaxBinding:
+        meta:
+            brief: Parser-side binding collected during syntax matching.
+            description: >-
+                Temporary parser-owned binding used to build an AstExprSyntaxUse
+                or AstDefSyntaxUse carrier after a successful syntax alternative
+                match.
+        data:
+            name: HashSymbol
+            value: AstExpression
+            inherited: bool=false
 
 enums:
     PrattAssoc:
@@ -285,6 +301,28 @@ enums:
           - STRING
           - TYPE
           - SYNTAX
+
+    PrattSyntaxEntryKind:
+        meta:
+            brief: Parser-side syntax entry kind.
+            description: >-
+                Whether a syntax rule is entered from expression position,
+                definition position, or is a helper rule callable from other
+                rules.
+        data:
+          - EXPR
+          - DEF
+          - HELPER
+
+    PrattSyntaxResultKind:
+        meta:
+            brief: Parser-side syntax result kind.
+            description: >-
+                Whether the output of expanding a syntax rule is an expression
+                or a definition.
+        data:
+          - EXPR
+          - DEF
 
 inline:
     structs:
@@ -418,6 +456,15 @@ arrays:
                 matching and rollback.
         data:
             entries: PrattMacroAlternative
+
+    PrattSyntaxBindings:
+        meta:
+            brief: An ordered list of parser-side syntax bindings.
+            description: >-
+                Holds bindings collected during a successful syntax alternative
+                match, to be placed into an AST syntax-use carrier.
+        data:
+            entries: PrattSyntaxBinding
 
 primitives: !include primitives.yaml
 

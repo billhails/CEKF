@@ -49,6 +49,9 @@ PrattMacroHole --syntaxClass--> PrattSyntaxClass
 PrattMacroHole --name--> HashSymbol
 PrattMacroHole --callTarget--> HashSymbol
 PrattMacroHole --callArguments--> SymbolArray
+PrattMacroSpec --declarationId--> int
+PrattMacroSpec --entryKind--> PrattSyntaxEntryKind
+PrattMacroSpec --resultKind--> PrattSyntaxResultKind
 PrattMacroSpec --headSymbol--> HashSymbol
 PrattMacroSpec --parameters--> SymbolArray
 PrattMacroSpec --patternItems--> PrattMacroPatternItems
@@ -71,6 +74,9 @@ SyntaxLexerCheckpoint --bufList--> PrattBufList
 SyntaxLexerCheckpoint --queuedTokens--> PrattTokens
 SyntaxLexerCheckpoint --snapshots--> SyntaxLexerSnapshot
 SyntaxLexerCheckpoint --panicMode--> bool
+PrattSyntaxBinding --name--> HashSymbol
+PrattSyntaxBinding --value--> AstExpression
+PrattSyntaxBinding --inherited--> bool
 PrattFixityConfig --op--> PrattParselet
 PrattFixityConfig --prec--> int
 PrattFixityConfig --originalImpl--> AstExpression
@@ -92,12 +98,15 @@ PrattNumberState["enum PrattNumberState"]
 PrattStringState["enum PrattStringState"]
 PrattFixity["enum PrattFixity"]
 PrattSyntaxClass["enum PrattSyntaxClass"]
+PrattSyntaxEntryKind["enum PrattSyntaxEntryKind"]
+PrattSyntaxResultKind["enum PrattSyntaxResultKind"]
 PrattStrings["PrattStrings[]"] --entries--> WCharArray
 PrattParsers["PrattParsers[]"] --entries--> PrattParser
 PrattTokens["PrattTokens[]"] --entries--> PrattToken
 PrattNsOpsArray["PrattNsOpsArray[]"] --entries--> PrattExportedOps
 PrattMacroPatternItems["PrattMacroPatternItems[]"] --entries--> PrattMacroPatternItem
 PrattMacroAlternatives["PrattMacroAlternatives[]"] --entries--> PrattMacroAlternative
+PrattSyntaxBindings["PrattSyntaxBindings[]"] --entries--> PrattSyntaxBinding
 ```
 
 > Generated from src/pratt.yaml by tools/generate.py
