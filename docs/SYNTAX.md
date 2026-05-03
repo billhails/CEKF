@@ -530,6 +530,20 @@ The `time` example fits the current plan cleanly.
 
 That is already aligned with the current SyntaxSpec shape and hygiene position.
 
+```fn
+syntax time: Expr ::= "time" "(" expr: Expr ")" {
+    quote {
+        let start = now()
+        in
+            let result = unquote expr
+            in {
+                print(now() - start);
+                result
+            }
+    }
+}
+```
+
 #### Trace
 
 `trace` is only partly covered.
@@ -550,6 +564,20 @@ be treated as later than the core phase-1 design.
 
 This is still a strong MVP candidate.
 
+```fn
+syntax unless: Expr ::= "unless" "(" cond: Expr ")"
+                        consequent: Nest "else"
+                        alternative: Nest {
+    quote {
+        if (unquote cond) {
+            unquote alternative
+        } else {
+            unquote consequent
+        }
+    }
+}
+```
+
 #### For Loop As Expression Sugar
 
 The `for` example also fits the phase-1 plan.
@@ -560,6 +588,24 @@ The `for` example also fits the phase-1 plan.
 
 Those requirements are already visible in the current template and hygiene
 sections, so this remains a good stress test rather than a blocker.
+
+```fn
+syntax for: Expr ::= "for" "(" name: Name "=" init: Expr ","
+                 test: Expr "," step: Expr ")" body: Nest quote {
+  let fn loop(unquote(name)) {
+    if (unquote(test)) {
+      unquote(body);
+      loop(unquote(step))
+    } else {
+      unquote(name)
+    }
+  }
+  in loop(unquote(init))
+}
+```
+
+The current tested surface uses `quote` directly after the pattern rather than
+wrapping the template in an additional rule body block.
 
 #### List Comprehensions
 

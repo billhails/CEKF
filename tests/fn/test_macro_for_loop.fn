@@ -1,0 +1,16 @@
+let
+    syntax internalFor: Expr ::= "for" "(" name: Name "=" init: Expr ","
+                                   test: Expr "," step: Expr ")" body: Nest quote {
+        let fn loop(unquote(name)) {
+            if (unquote(test)) {
+                unquote(body);
+                loop(unquote(step))
+            } else {
+                unquote(name)
+            }
+        }
+        in loop(unquote(init))
+    };
+in
+    assert(5 == for(i = 0, i < 5, i + 1) { i });
+    assert(3 == for(counter = 10, counter > 3, counter - 1) { counter })
