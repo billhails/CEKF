@@ -10,42 +10,23 @@ carrier model before touching `src/ast.yaml` or `src/pratt.yaml`.
 The intent is to de-risk two questions.
 
 1. What durable syntax data must survive parsing?
-2. Which parts belong in `ast.yaml` versus `pratt.yaml`?
+2. How to divide responsibilities between `ast.yaml` and `pratt.yaml`.
 
-## Recommendation
-
-Use this split.
+## Approach
 
 - `ast.yaml` owns the durable syntax declaration, syntax use, binding, and
   template IR types.
 - `pratt.yaml` owns only the parser-side matcher metadata needed during parsing.
 - The two layers are tied together by a shared `declarationId`.
 
-That keeps the AST self-sufficient after parsing, while keeping the Pratt-side
-rule table lightweight.
-
-## Why This Split
-
 After `prattParseFile()` returns, parser-owned structures are no longer the
-right place to store stage-5 data.
+right place to store stage-5 data. The later passes need syntax declarations
+and syntax uses to survive until `nsAstProg()`, `syntaxPrepareAst()`, and
+`syntaxLowerAst()`, so the durable rule/template data lives in `ast.yaml`.
 
-The later passes need syntax declarations and syntax uses to survive until:
-
-- `nsAstProg()`
-- `syntaxPrepareAst()`
-- `syntaxLowerAst()`
-
-So the durable rule/template data has to live in `ast.yaml`.
-
-By contrast, `pratt.yaml` only needs enough metadata to:
-
-- recognize syntax entry heads
-- match pattern items
-- perform rollback
-- collect captures
-- emit syntax-use carriers
-
-It does not need to own the long-lived template IR.
+`pratt.yaml` retains only enough metadata to recognize syntax entry heads,
+match pattern items, perform rollback, collect captures, and emit syntax-use
+carriers.
 
 ## AST Draft
 

@@ -43,8 +43,6 @@ Current code anchors:
 ### Files (Phase 1)
 
 - [ ] [src/ast.yaml](src/ast.yaml)
-- [ ] Optional split: [src/ast_syntax.yaml](src/ast_syntax.yaml) and include from
-      [src/ast.yaml](src/ast.yaml)
 
 ### Tasks (Phase 1)
 
@@ -63,8 +61,6 @@ Current code anchors:
 
 ### Notes (Phase 1)
 
-- If using `ast_syntax.yaml`, keep include direction one-way:
-  `ast.yaml` includes `ast_syntax.yaml`, not vice versa.
 - Ensure parserInfo behavior remains consistent with existing AST generation.
 
 ### Validation (Phase 1)
