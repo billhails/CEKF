@@ -199,7 +199,8 @@ static PrattExportedOps *captureNameSpaceOperatorExports(PrattParser *parser);
 static PrattRecord *ensureTargetRecord(PrattParser *parser, HashSymbol *op);
 static bool symbolArrayContains(SymbolArray *symbols, HashSymbol *symbol);
 static SymbolArray *parseOptionalSyntaxParameters(PrattParser *parser);
-static PrattMacroAlternative *parseSyntaxAlternative(PrattParser *parser);
+static PrattMacroAlternative *parseSyntaxAlternative(PrattParser *parser,
+                                                     SymbolArray *parameters);
 static bool syntaxPatternNameEquivalent(HashSymbol *left, HashSymbol *right,
                                         SymbolArray *leftNames,
                                         SymbolArray *rightNames,
@@ -2469,7 +2470,8 @@ static AstExpression *unwrapSyntaxQuotedTemplate(AstExpression *template) {
     return call->arguments->expression;
 }
 
-static PrattMacroAlternative *parseSyntaxAlternative(PrattParser *parser) {
+static PrattMacroAlternative *parseSyntaxAlternative(PrattParser *parser,
+                                                     SymbolArray *parameters) {
     PrattMacroPatternItems *patternItems = macroPatternItems(parser);
     int save = PROTECT(patternItems);
     AstExpression *template = NULL;
@@ -2486,6 +2488,14 @@ static PrattMacroAlternative *parseSyntaxAlternative(PrattParser *parser) {
             if (item->type == PRATTMACROPATTERNITEM_TYPE_TYPEDHOLE) {
                 HashSymbol *name =
                     getPrattMacroPatternItem_TypedHole(item)->name;
+                if (!symbolArrayContains(overrideSymbols, name)) {
+                    pushSymbolArray(overrideSymbols, name);
+                }
+            }
+        }
+        if (parameters != NULL) {
+            for (Index i = 0; i < sizeSymbolArray(parameters); ++i) {
+                HashSymbol *name = getSymbolArray(parameters, i);
                 if (!symbolArrayContains(overrideSymbols, name)) {
                     pushSymbolArray(overrideSymbols, name);
                 }
@@ -3525,7 +3535,8 @@ static AstDefinition *syntaxDefinition(PrattParser *parser) {
         int save2 = PROTECT(headText);
         checkTerminal(parser, headText);
         surfaceHead = unicodeToSymbol(headText);
-        PrattMacroAlternative *alternative = parseSyntaxAlternative(parser);
+        PrattMacroAlternative *alternative =
+            parseSyntaxAlternative(parser, parameters);
         int save3 = PROTECT(alternative);
         pushPrattMacroAlternatives(alternatives, alternative);
         UNPROTECT(save3);
@@ -3536,7 +3547,8 @@ static AstDefinition *syntaxDefinition(PrattParser *parser) {
         UNPROTECT(save2);
     } else {
         do {
-            PrattMacroAlternative *alternative = parseSyntaxAlternative(parser);
+            PrattMacroAlternative *alternative =
+                parseSyntaxAlternative(parser, parameters);
             int save2 = PROTECT(alternative);
             pushPrattMacroAlternatives(alternatives, alternative);
             UNPROTECT(save2);
