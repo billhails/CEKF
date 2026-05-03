@@ -226,8 +226,7 @@ static bool recordSyntaxPatternNameMap(HashSymbol *left, HashSymbol *right,
                                        HashSymbol **leftNames,
                                        HashSymbol **rightNames,
                                        Index *mappedCount);
-static bool syntaxCallArgumentsEquivalent(SymbolArray *left,
-                                          SymbolArray *right,
+static bool syntaxCallArgumentsEquivalent(SymbolArray *left, SymbolArray *right,
                                           HashSymbol **leftNames,
                                           HashSymbol **rightNames,
                                           Index mappedCount);
@@ -249,45 +248,61 @@ static AstExpression *parseSyntaxHoleExpression(PrattParser *parser,
                                                 SyntaxExprBindings *bindings);
 static bool hasSyntaxBindingName(HashSymbol **names, Index count,
                                  HashSymbol *name);
+static HashSymbol *syntaxQuoteSymbol(void);
+static HashSymbol *syntaxUnquoteSymbol(void);
+static bool isSyntaxQuoteToken(PrattToken *token);
+static AstExpression *makeSyntaxQuotedTemplate(ParserInfo PI,
+                                               AstExpression *body);
+static AstExpression *unwrapSyntaxQuotedTemplate(AstExpression *template);
 static AstExpression *lookupSyntaxBindingCopy(SyntaxExprBindings *bindings,
                                               HashSymbol *name);
 static HashSymbol *lookupSyntaxBindingSymbol(SyntaxExprBindings *bindings,
                                              HashSymbol *name);
 static AstFargList *substituteSyntaxFargList(AstFargList *args,
-                                             SyntaxExprBindings *bindings);
+                                             SyntaxExprBindings *bindings,
+                                             PrattParser *parser,
+                                             bool explicitUnquoteOnly);
 static AstTaggedArgList *
 substituteSyntaxTaggedArgList(AstTaggedArgList *args,
-                              SyntaxExprBindings *bindings);
+                              SyntaxExprBindings *bindings, PrattParser *parser,
+                              bool explicitUnquoteOnly);
 static AstAltArgs *substituteSyntaxAltArgs(AstAltArgs *args,
-                                           SyntaxExprBindings *bindings);
-static AstFarg *substituteSyntaxFarg(AstFarg *arg,
-                                     SyntaxExprBindings *bindings);
-static AstDefinitions *
-substituteSyntaxDefinitions(AstDefinitions *definitions,
-                            SyntaxExprBindings *bindings);
-static AstAltFunction *
-substituteSyntaxAltFunction(AstAltFunction *function,
-                            SyntaxExprBindings *bindings);
-static AstCompositeFunction *
-substituteSyntaxCompositeFunction(AstCompositeFunction *function,
-                                  SyntaxExprBindings *bindings);
-static AstTaggedExpressions *
-substituteSyntaxTaggedExpressions(AstTaggedExpressions *expressions,
-                                  SyntaxExprBindings *bindings);
-static AstExpressions *
-substituteSyntaxExpressions(AstExpressions *expressions,
-                            SyntaxExprBindings *bindings);
+                                           SyntaxExprBindings *bindings,
+                                           PrattParser *parser,
+                                           bool explicitUnquoteOnly);
+static AstFarg *substituteSyntaxFarg(AstFarg *arg, SyntaxExprBindings *bindings,
+                                     PrattParser *parser,
+                                     bool explicitUnquoteOnly);
+static AstDefinitions *substituteSyntaxDefinitions(AstDefinitions *definitions,
+                                                   SyntaxExprBindings *bindings,
+                                                   PrattParser *parser,
+                                                   bool explicitUnquoteOnly);
+static AstAltFunction *substituteSyntaxAltFunction(AstAltFunction *function,
+                                                   SyntaxExprBindings *bindings,
+                                                   PrattParser *parser,
+                                                   bool explicitUnquoteOnly);
+static AstCompositeFunction *substituteSyntaxCompositeFunction(
+    AstCompositeFunction *function, SyntaxExprBindings *bindings,
+    PrattParser *parser, bool explicitUnquoteOnly);
+static AstTaggedExpressions *substituteSyntaxTaggedExpressions(
+    AstTaggedExpressions *expressions, SyntaxExprBindings *bindings,
+    PrattParser *parser, bool explicitUnquoteOnly);
+static AstExpressions *substituteSyntaxExpressions(AstExpressions *expressions,
+                                                   SyntaxExprBindings *bindings,
+                                                   PrattParser *parser,
+                                                   bool explicitUnquoteOnly);
 static AstNest *substituteSyntaxNest(AstNest *nest,
-                                     SyntaxExprBindings *bindings);
+                                     SyntaxExprBindings *bindings,
+                                     PrattParser *parser,
+                                     bool explicitUnquoteOnly);
 static AstExpression *substituteSyntaxExpression(AstExpression *expression,
-                                                 SyntaxExprBindings *bindings);
-static AstExpression *expandSyntaxAlternative(PrattParser *parser,
-                                              PrattToken *tok,
-                                              PrattMacroSpec *spec,
-                                              PrattMacroPatternItems *patternItems,
-                                              AstExpression *template,
-                                              bool headAlreadyConsumed,
-                                              SyntaxExprBindings *inherited);
+                                                 SyntaxExprBindings *bindings,
+                                                 PrattParser *parser,
+                                                 bool explicitUnquoteOnly);
+static AstExpression *expandSyntaxAlternative(
+    PrattParser *parser, PrattToken *tok, PrattMacroSpec *spec,
+    PrattMacroPatternItems *patternItems, AstExpression *template,
+    bool headAlreadyConsumed, SyntaxExprBindings *inherited);
 static AstExpression *
 expandSyntaxExprWithBindings(PrattParser *parser, PrattToken *tok,
                              PrattMacroSpec *spec, bool headAlreadyConsumed,
@@ -415,7 +430,8 @@ static SyntaxLexerCheckpoint captureSyntaxLexerCheckpoint(PrattParser *parser) {
         return checkpoint;
     }
 
-    checkpoint.buffers = calloc(checkpoint.snapshotCount, sizeof(PrattBufList *));
+    checkpoint.buffers =
+        calloc(checkpoint.snapshotCount, sizeof(PrattBufList *));
     checkpoint.starts = calloc(checkpoint.snapshotCount, sizeof(Character *));
     checkpoint.offsets = calloc(checkpoint.snapshotCount, sizeof(int));
     checkpoint.lineNos = calloc(checkpoint.snapshotCount, sizeof(int));
@@ -2402,6 +2418,9 @@ static PrattMacroPatternItems *macroPatternItems(PrattParser *parser) {
             pushPrattMacroPatternItems(result, this);
             UNPROTECT(save2);
         } else if (check(parser, TOK_ATOM())) {
+            if (isSyntaxQuoteToken(peek(parser))) {
+                break;
+            }
             PrattMacroHole *hole = typedHole(parser);
             if (hole == NULL)
                 break;
@@ -2441,15 +2460,77 @@ static SymbolArray *parseSyntaxCallArguments(PrattParser *parser) {
     return arguments;
 }
 
+static HashSymbol *syntaxQuoteSymbol(void) {
+    static HashSymbol *symbol = NULL;
+    if (symbol == NULL) {
+        symbol = newSymbol("quote");
+    }
+    return symbol;
+}
+
+static HashSymbol *syntaxUnquoteSymbol(void) {
+    static HashSymbol *symbol = NULL;
+    if (symbol == NULL) {
+        symbol = newSymbol("unquote");
+    }
+    return symbol;
+}
+
+static bool isSyntaxQuoteToken(PrattToken *token) {
+    return isAtomSymbol(token, syntaxQuoteSymbol());
+}
+
+static AstExpression *makeSyntaxQuotedTemplate(ParserInfo PI,
+                                               AstExpression *body) {
+    AstExpression *quoteSymbol =
+        newAstExpression_Symbol(PI, syntaxQuoteSymbol());
+    int save = PROTECT(quoteSymbol);
+    AstExpressions *arguments = newAstExpressions(PI, body, NULL);
+    PROTECT(arguments);
+    AstExpression *result =
+        makeAstExpression_FunCall(PI, quoteSymbol, arguments);
+    UNPROTECT(save);
+    return result;
+}
+
+static AstExpression *unwrapSyntaxQuotedTemplate(AstExpression *template) {
+    if (template == NULL || template->type != AST_EXPRESSION_TYPE_FUNCALL) {
+        return NULL;
+    }
+
+    AstFunCall *call = getAstExpression_FunCall(template);
+    if (call->function->type != AST_EXPRESSION_TYPE_SYMBOL ||
+        getAstExpression_Symbol(call->function) != syntaxQuoteSymbol() ||
+        call->arguments == NULL || call->arguments->next != NULL) {
+        return NULL;
+    }
+
+    return call->arguments->expression;
+}
+
 static PrattMacroAlternative *parseSyntaxAlternative(PrattParser *parser) {
     PrattMacroPatternItems *patternItems = macroPatternItems(parser);
     int save = PROTECT(patternItems);
     AstExpression *template = NULL;
-    AstNest *body = nest(parser);
-    if (body != NULL) {
-        PROTECT(body);
-        template = newAstExpression_Nest(CPI(body), body);
-        PROTECT(template);
+    if (check(parser, TOK_ATOM()) && isSyntaxQuoteToken(peek(parser))) {
+        PrattToken *quoteToken = next(parser);
+        int save2 = PROTECT(quoteToken);
+        AstNest *body = nest(parser);
+        if (body != NULL) {
+            PROTECT(body);
+            AstExpression *quotedBody = newAstExpression_Nest(CPI(body), body);
+            PROTECT(quotedBody);
+            template = makeSyntaxQuotedTemplate(TOKPI(quoteToken), quotedBody);
+            PROTECT(template);
+        }
+        UNPROTECT(save2);
+    } else {
+        AstNest *body = nest(parser);
+        if (body != NULL) {
+            PROTECT(body);
+            template = newAstExpression_Nest(CPI(body), body);
+            PROTECT(template);
+        }
     }
     PrattMacroAlternative *alternative =
         newPrattMacroAlternative(patternItems, template);
@@ -2499,8 +2580,7 @@ static bool recordSyntaxPatternNameMap(HashSymbol *left, HashSymbol *right,
     return true;
 }
 
-static bool syntaxCallArgumentsEquivalent(SymbolArray *left,
-                                          SymbolArray *right,
+static bool syntaxCallArgumentsEquivalent(SymbolArray *left, SymbolArray *right,
                                           HashSymbol **leftNames,
                                           HashSymbol **rightNames,
                                           Index mappedCount) {
@@ -2537,15 +2617,16 @@ static bool syntaxPatternItemsMatch(PrattMacroPatternItems *leftItems,
         return false;
     }
 
-    HashSymbol **leftNames = calloc(leftCount == 0 ? 1 : leftCount,
-                                    sizeof(HashSymbol *));
-    HashSymbol **rightNames = calloc(leftCount == 0 ? 1 : leftCount,
-                                     sizeof(HashSymbol *));
+    HashSymbol **leftNames =
+        calloc(leftCount == 0 ? 1 : leftCount, sizeof(HashSymbol *));
+    HashSymbol **rightNames =
+        calloc(leftCount == 0 ? 1 : leftCount, sizeof(HashSymbol *));
     bool matched = true;
     Index mappedCount = 0;
 
     for (Index i = 0; i < leftCount; ++i) {
-        PrattMacroPatternItem *leftItem = getPrattMacroPatternItems(leftItems, i);
+        PrattMacroPatternItem *leftItem =
+            getPrattMacroPatternItems(leftItems, i);
         PrattMacroPatternItem *rightItem =
             getPrattMacroPatternItems(rightItems, i);
         if (leftItem->type != rightItem->type) {
@@ -2569,12 +2650,10 @@ static bool syntaxPatternItemsMatch(PrattMacroPatternItems *leftItems,
         if (leftHole->syntaxClass != rightHole->syntaxClass ||
             leftHole->callTarget != rightHole->callTarget ||
             !syntaxCallArgumentsEquivalent(leftHole->callArguments,
-                                           rightHole->callArguments,
-                                           leftNames, rightNames,
-                                           mappedCount) ||
+                                           rightHole->callArguments, leftNames,
+                                           rightNames, mappedCount) ||
             !recordSyntaxPatternNameMap(leftHole->name, rightHole->name,
-                                        leftNames, rightNames,
-                                        &mappedCount)) {
+                                        leftNames, rightNames, &mappedCount)) {
             matched = false;
             break;
         }
@@ -2623,15 +2702,17 @@ static void validateSyntaxAlternatives(PrattParser *parser,
             PrattMacroAlternative *earlier =
                 getPrattMacroAlternatives(alternatives, j);
             if (syntaxAlternativesEquivalent(earlier, alternative)) {
-                parserError(parser,
-                            "syntax %s alternative %ld duplicates alternative %ld",
-                            ruleName->name, (long)(i + 1), (long)(j + 1));
+                parserError(
+                    parser,
+                    "syntax %s alternative %ld duplicates alternative %ld",
+                    ruleName->name, (long)(i + 1), (long)(j + 1));
                 return;
             }
             if (syntaxAlternativeShadows(earlier, alternative)) {
-                parserError(parser,
-                            "syntax %s alternative %ld is shadowed by alternative %ld",
-                            ruleName->name, (long)(i + 1), (long)(j + 1));
+                parserError(
+                    parser,
+                    "syntax %s alternative %ld is shadowed by alternative %ld",
+                    ruleName->name, (long)(i + 1), (long)(j + 1));
                 return;
             }
         }
@@ -2819,41 +2900,120 @@ static HashSymbol *lookupSyntaxBindingSymbol(SyntaxExprBindings *bindings,
     return NULL;
 }
 
+static bool syntaxUnquoteExpressionName(AstExpression *expression,
+                                        HashSymbol **name) {
+    if (expression->type != AST_EXPRESSION_TYPE_FUNCALL) {
+        return false;
+    }
+
+    AstFunCall *call = getAstExpression_FunCall(expression);
+    if (call->function->type != AST_EXPRESSION_TYPE_SYMBOL ||
+        getAstExpression_Symbol(call->function) != syntaxUnquoteSymbol()) {
+        return false;
+    }
+
+    if (call->arguments != NULL && call->arguments->next == NULL &&
+        call->arguments->expression->type == AST_EXPRESSION_TYPE_SYMBOL) {
+        *name = getAstExpression_Symbol(call->arguments->expression);
+    } else {
+        *name = NULL;
+    }
+
+    return true;
+}
+
+static bool syntaxUnquoteFargName(AstFarg *arg, HashSymbol **name) {
+    if (arg->type != AST_FARG_TYPE_UNPACK) {
+        return false;
+    }
+
+    AstUnpack *unpack = getAstFarg_Unpack(arg);
+    if (!isAstLookUpOrSymbol_Symbol(unpack->symbol) ||
+        getAstLookUpOrSymbol_Symbol(unpack->symbol) != syntaxUnquoteSymbol()) {
+        return false;
+    }
+
+    if (unpack->argList != NULL && unpack->argList->next == NULL &&
+        unpack->argList->arg->type == AST_FARG_TYPE_SYMBOL) {
+        *name = getAstFarg_Symbol(unpack->argList->arg);
+    } else {
+        *name = NULL;
+    }
+
+    return true;
+}
+
 static AstFargList *substituteSyntaxFargList(AstFargList *args,
-                                             SyntaxExprBindings *bindings) {
+                                             SyntaxExprBindings *bindings,
+                                             PrattParser *parser,
+                                             bool explicitUnquoteOnly) {
     if (args == NULL) {
         return NULL;
     }
-    args->arg = substituteSyntaxFarg(args->arg, bindings);
-    args->next = substituteSyntaxFargList(args->next, bindings);
+    args->arg =
+        substituteSyntaxFarg(args->arg, bindings, parser, explicitUnquoteOnly);
+    args->next = substituteSyntaxFargList(args->next, bindings, parser,
+                                          explicitUnquoteOnly);
     return args;
 }
 
 static AstTaggedArgList *
 substituteSyntaxTaggedArgList(AstTaggedArgList *args,
-                              SyntaxExprBindings *bindings) {
+                              SyntaxExprBindings *bindings, PrattParser *parser,
+                              bool explicitUnquoteOnly) {
     if (args == NULL) {
         return NULL;
     }
-    args->arg = substituteSyntaxFarg(args->arg, bindings);
-    args->next = substituteSyntaxTaggedArgList(args->next, bindings);
+    args->arg =
+        substituteSyntaxFarg(args->arg, bindings, parser, explicitUnquoteOnly);
+    args->next = substituteSyntaxTaggedArgList(args->next, bindings, parser,
+                                               explicitUnquoteOnly);
     return args;
 }
 
 static AstAltArgs *substituteSyntaxAltArgs(AstAltArgs *args,
-                                           SyntaxExprBindings *bindings) {
+                                           SyntaxExprBindings *bindings,
+                                           PrattParser *parser,
+                                           bool explicitUnquoteOnly) {
     if (args == NULL) {
         return NULL;
     }
-    args->argList = substituteSyntaxFargList(args->argList, bindings);
-    args->next = substituteSyntaxAltArgs(args->next, bindings);
+    args->argList = substituteSyntaxFargList(args->argList, bindings, parser,
+                                             explicitUnquoteOnly);
+    args->next = substituteSyntaxAltArgs(args->next, bindings, parser,
+                                         explicitUnquoteOnly);
     return args;
 }
 
-static AstFarg *substituteSyntaxFarg(AstFarg *arg,
-                                     SyntaxExprBindings *bindings) {
+static AstFarg *substituteSyntaxFarg(AstFarg *arg, SyntaxExprBindings *bindings,
+                                     PrattParser *parser,
+                                     bool explicitUnquoteOnly) {
     if (arg == NULL) {
         return NULL;
+    }
+
+    HashSymbol *unquoteName = NULL;
+    if (syntaxUnquoteFargName(arg, &unquoteName)) {
+        if (!explicitUnquoteOnly) {
+            parserErrorAt(CPI(arg), parser,
+                          "unquote is only valid inside quote templates");
+            return newAstFarg_WildCard(CPI(arg));
+        }
+        if (unquoteName == NULL) {
+            parserErrorAt(CPI(arg), parser,
+                          "unquote expects a single bound name");
+            return newAstFarg_WildCard(CPI(arg));
+        }
+
+        HashSymbol *bound = lookupSyntaxBindingSymbol(bindings, unquoteName);
+        if (bound == NULL) {
+            parserErrorAt(CPI(arg), parser,
+                          "syntax unquote %s is not bound as a name",
+                          unquoteName->name);
+            return newAstFarg_WildCard(CPI(arg));
+        }
+
+        return newAstFarg_Symbol(CPI(arg), bound);
     }
 
     switch (arg->type) {
@@ -2863,30 +3023,33 @@ static AstFarg *substituteSyntaxFarg(AstFarg *arg,
     case AST_FARG_TYPE_CHARACTER:
         return arg;
     case AST_FARG_TYPE_SYMBOL: {
-        HashSymbol *bound =
-            lookupSyntaxBindingSymbol(bindings, getAstFarg_Symbol(arg));
-        if (bound != NULL) {
-            setAstFarg_Symbol(arg, bound);
+        if (!explicitUnquoteOnly) {
+            HashSymbol *bound =
+                lookupSyntaxBindingSymbol(bindings, getAstFarg_Symbol(arg));
+            if (bound != NULL) {
+                setAstFarg_Symbol(arg, bound);
+            }
         }
         return arg;
     }
     case AST_FARG_TYPE_NAMED:
-        getAstFarg_Named(arg)->arg =
-            substituteSyntaxFarg(getAstFarg_Named(arg)->arg, bindings);
+        getAstFarg_Named(arg)->arg = substituteSyntaxFarg(
+            getAstFarg_Named(arg)->arg, bindings, parser, explicitUnquoteOnly);
         return arg;
     case AST_FARG_TYPE_UNPACK:
         getAstFarg_Unpack(arg)->argList =
-            substituteSyntaxFargList(getAstFarg_Unpack(arg)->argList,
-                                     bindings);
+            substituteSyntaxFargList(getAstFarg_Unpack(arg)->argList, bindings,
+                                     parser, explicitUnquoteOnly);
         return arg;
     case AST_FARG_TYPE_UNPACKSTRUCT:
-        getAstFarg_UnpackStruct(arg)->argList =
-            substituteSyntaxTaggedArgList(
-                getAstFarg_UnpackStruct(arg)->argList, bindings);
+        getAstFarg_UnpackStruct(arg)->argList = substituteSyntaxTaggedArgList(
+            getAstFarg_UnpackStruct(arg)->argList, bindings, parser,
+            explicitUnquoteOnly);
         return arg;
     case AST_FARG_TYPE_TUPLE:
         setAstFarg_Tuple(arg, substituteSyntaxFargList(getAstFarg_Tuple(arg),
-                                                       bindings));
+                                                       bindings, parser,
+                                                       explicitUnquoteOnly));
         return arg;
     }
 
@@ -2894,9 +3057,10 @@ static AstFarg *substituteSyntaxFarg(AstFarg *arg,
                 astFargTypeName(arg->type));
 }
 
-static AstDefinitions *
-substituteSyntaxDefinitions(AstDefinitions *definitions,
-                            SyntaxExprBindings *bindings) {
+static AstDefinitions *substituteSyntaxDefinitions(AstDefinitions *definitions,
+                                                   SyntaxExprBindings *bindings,
+                                                   PrattParser *parser,
+                                                   bool explicitUnquoteOnly) {
     if (definitions == NULL) {
         return NULL;
     }
@@ -2905,19 +3069,19 @@ substituteSyntaxDefinitions(AstDefinitions *definitions,
         getAstDefinition_Define(definitions->definition)->expression =
             substituteSyntaxExpression(
                 getAstDefinition_Define(definitions->definition)->expression,
-                bindings);
+                bindings, parser, explicitUnquoteOnly);
         break;
     case AST_DEFINITION_TYPE_MULTI:
         getAstDefinition_Multi(definitions->definition)->expression =
             substituteSyntaxExpression(
                 getAstDefinition_Multi(definitions->definition)->expression,
-                bindings);
+                bindings, parser, explicitUnquoteOnly);
         break;
     case AST_DEFINITION_TYPE_LAZY:
         getAstDefinition_Lazy(definitions->definition)->definition =
             substituteSyntaxAltFunction(
                 getAstDefinition_Lazy(definitions->definition)->definition,
-                bindings);
+                bindings, parser, explicitUnquoteOnly);
         break;
     case AST_DEFINITION_TYPE_ALIAS:
     case AST_DEFINITION_TYPE_TYPEDEF:
@@ -2925,79 +3089,109 @@ substituteSyntaxDefinitions(AstDefinitions *definitions,
     case AST_DEFINITION_TYPE_BUILTINSSLOT:
         break;
     }
-    definitions->next =
-        substituteSyntaxDefinitions(definitions->next, bindings);
+    definitions->next = substituteSyntaxDefinitions(
+        definitions->next, bindings, parser, explicitUnquoteOnly);
     return definitions;
 }
 
-static AstAltFunction *
-substituteSyntaxAltFunction(AstAltFunction *function,
-                            SyntaxExprBindings *bindings) {
+static AstAltFunction *substituteSyntaxAltFunction(AstAltFunction *function,
+                                                   SyntaxExprBindings *bindings,
+                                                   PrattParser *parser,
+                                                   bool explicitUnquoteOnly) {
     if (function == NULL) {
         return NULL;
     }
-    function->altArgs = substituteSyntaxAltArgs(function->altArgs, bindings);
-    function->nest = substituteSyntaxNest(function->nest, bindings);
+    function->altArgs = substituteSyntaxAltArgs(function->altArgs, bindings,
+                                                parser, explicitUnquoteOnly);
+    function->nest = substituteSyntaxNest(function->nest, bindings, parser,
+                                          explicitUnquoteOnly);
     return function;
 }
 
-static AstCompositeFunction *
-substituteSyntaxCompositeFunction(AstCompositeFunction *function,
-                                  SyntaxExprBindings *bindings) {
+static AstCompositeFunction *substituteSyntaxCompositeFunction(
+    AstCompositeFunction *function, SyntaxExprBindings *bindings,
+    PrattParser *parser, bool explicitUnquoteOnly) {
     if (function == NULL) {
         return NULL;
     }
-    function->function->argList =
-        substituteSyntaxFargList(function->function->argList, bindings);
-    function->function->nest =
-        substituteSyntaxNest(function->function->nest, bindings);
-    function->next =
-        substituteSyntaxCompositeFunction(function->next, bindings);
+    function->function->argList = substituteSyntaxFargList(
+        function->function->argList, bindings, parser, explicitUnquoteOnly);
+    function->function->nest = substituteSyntaxNest(
+        function->function->nest, bindings, parser, explicitUnquoteOnly);
+    function->next = substituteSyntaxCompositeFunction(
+        function->next, bindings, parser, explicitUnquoteOnly);
     return function;
 }
 
-static AstTaggedExpressions *
-substituteSyntaxTaggedExpressions(AstTaggedExpressions *expressions,
-                                  SyntaxExprBindings *bindings) {
+static AstTaggedExpressions *substituteSyntaxTaggedExpressions(
+    AstTaggedExpressions *expressions, SyntaxExprBindings *bindings,
+    PrattParser *parser, bool explicitUnquoteOnly) {
     if (expressions == NULL) {
         return NULL;
     }
-    expressions->expression =
-        substituteSyntaxExpression(expressions->expression, bindings);
-    expressions->next =
-        substituteSyntaxTaggedExpressions(expressions->next, bindings);
+    expressions->expression = substituteSyntaxExpression(
+        expressions->expression, bindings, parser, explicitUnquoteOnly);
+    expressions->next = substituteSyntaxTaggedExpressions(
+        expressions->next, bindings, parser, explicitUnquoteOnly);
     return expressions;
 }
 
-static AstExpressions *
-substituteSyntaxExpressions(AstExpressions *expressions,
-                            SyntaxExprBindings *bindings) {
+static AstExpressions *substituteSyntaxExpressions(AstExpressions *expressions,
+                                                   SyntaxExprBindings *bindings,
+                                                   PrattParser *parser,
+                                                   bool explicitUnquoteOnly) {
     if (expressions == NULL) {
         return NULL;
     }
-    expressions->expression =
-        substituteSyntaxExpression(expressions->expression, bindings);
-    expressions->next =
-        substituteSyntaxExpressions(expressions->next, bindings);
+    expressions->expression = substituteSyntaxExpression(
+        expressions->expression, bindings, parser, explicitUnquoteOnly);
+    expressions->next = substituteSyntaxExpressions(
+        expressions->next, bindings, parser, explicitUnquoteOnly);
     return expressions;
 }
 
 static AstNest *substituteSyntaxNest(AstNest *nest,
-                                     SyntaxExprBindings *bindings) {
+                                     SyntaxExprBindings *bindings,
+                                     PrattParser *parser,
+                                     bool explicitUnquoteOnly) {
     if (nest == NULL) {
         return NULL;
     }
-    nest->definitions =
-        substituteSyntaxDefinitions(nest->definitions, bindings);
-    nest->expressions =
-        substituteSyntaxExpressions(nest->expressions, bindings);
+    nest->definitions = substituteSyntaxDefinitions(
+        nest->definitions, bindings, parser, explicitUnquoteOnly);
+    nest->expressions = substituteSyntaxExpressions(
+        nest->expressions, bindings, parser, explicitUnquoteOnly);
     return nest;
 }
 
 static AstExpression *substituteSyntaxExpression(AstExpression *expression,
-                                                 SyntaxExprBindings *bindings) {
+                                                 SyntaxExprBindings *bindings,
+                                                 PrattParser *parser,
+                                                 bool explicitUnquoteOnly) {
     if (expression == NULL) {
         return NULL;
+    }
+
+    HashSymbol *unquoteName = NULL;
+    if (syntaxUnquoteExpressionName(expression, &unquoteName)) {
+        if (!explicitUnquoteOnly) {
+            parserErrorAt(CPI(expression), parser,
+                          "unquote is only valid inside quote templates");
+            return errorExpression(CPI(expression));
+        }
+        if (unquoteName == NULL) {
+            parserErrorAt(CPI(expression), parser,
+                          "unquote expects a single bound name");
+            return errorExpression(CPI(expression));
+        }
+
+        AstExpression *bound = lookupSyntaxBindingCopy(bindings, unquoteName);
+        if (bound == NULL) {
+            parserErrorAt(CPI(expression), parser,
+                          "syntax unquote %s is not bound", unquoteName->name);
+            return errorExpression(CPI(expression));
+        }
+        return bound;
     }
 
     switch (expression->type) {
@@ -3009,76 +3203,95 @@ static AstExpression *substituteSyntaxExpression(AstExpression *expression,
         return expression;
     case AST_EXPRESSION_TYPE_ALIAS:
         getAstExpression_Alias(expression)->value = substituteSyntaxExpression(
-            getAstExpression_Alias(expression)->value, bindings);
+            getAstExpression_Alias(expression)->value, bindings, parser,
+            explicitUnquoteOnly);
         return expression;
     case AST_EXPRESSION_TYPE_ANNOTATEDSYMBOL:
         getAstExpression_AnnotatedSymbol(expression)->originalImpl =
             substituteSyntaxExpression(
                 getAstExpression_AnnotatedSymbol(expression)->originalImpl,
-                bindings);
+                bindings, parser, explicitUnquoteOnly);
         return expression;
     case AST_EXPRESSION_TYPE_FUNCALL:
         getAstExpression_FunCall(expression)->function =
             substituteSyntaxExpression(
-                getAstExpression_FunCall(expression)->function, bindings);
+                getAstExpression_FunCall(expression)->function, bindings,
+                parser, explicitUnquoteOnly);
         getAstExpression_FunCall(expression)->arguments =
             substituteSyntaxExpressions(
-                getAstExpression_FunCall(expression)->arguments, bindings);
+                getAstExpression_FunCall(expression)->arguments, bindings,
+                parser, explicitUnquoteOnly);
         return expression;
     case AST_EXPRESSION_TYPE_LOOKUP:
         getAstExpression_LookUp(expression)->expression =
             substituteSyntaxExpression(
-                getAstExpression_LookUp(expression)->expression, bindings);
+                getAstExpression_LookUp(expression)->expression, bindings,
+                parser, explicitUnquoteOnly);
         return expression;
     case AST_EXPRESSION_TYPE_SYMBOL: {
-        AstExpression *bound = lookupSyntaxBindingCopy(
-            bindings, getAstExpression_Symbol(expression));
-        return bound != NULL ? bound : expression;
+        if (!explicitUnquoteOnly) {
+            AstExpression *bound = lookupSyntaxBindingCopy(
+                bindings, getAstExpression_Symbol(expression));
+            return bound != NULL ? bound : expression;
+        }
+        return expression;
     }
     case AST_EXPRESSION_TYPE_FUN:
         substituteSyntaxCompositeFunction(getAstExpression_Fun(expression),
-                                          bindings);
+                                          bindings, parser,
+                                          explicitUnquoteOnly);
         return expression;
     case AST_EXPRESSION_TYPE_NEST:
         getAstExpression_Nest(expression)->definitions =
             substituteSyntaxDefinitions(
-                getAstExpression_Nest(expression)->definitions, bindings);
+                getAstExpression_Nest(expression)->definitions, bindings,
+                parser, explicitUnquoteOnly);
         getAstExpression_Nest(expression)->expressions =
             substituteSyntaxExpressions(
-                getAstExpression_Nest(expression)->expressions, bindings);
+                getAstExpression_Nest(expression)->expressions, bindings,
+                parser, explicitUnquoteOnly);
         return expression;
     case AST_EXPRESSION_TYPE_IFF:
-        getAstExpression_Iff(expression)->test = substituteSyntaxExpression(
-            getAstExpression_Iff(expression)->test, bindings);
-        getAstExpression_Iff(expression)->consequent = substituteSyntaxNest(
-            getAstExpression_Iff(expression)->consequent, bindings);
-        getAstExpression_Iff(expression)->alternative = substituteSyntaxNest(
-            getAstExpression_Iff(expression)->alternative, bindings);
+        getAstExpression_Iff(expression)->test =
+            substituteSyntaxExpression(getAstExpression_Iff(expression)->test,
+                                       bindings, parser, explicitUnquoteOnly);
+        getAstExpression_Iff(expression)->consequent =
+            substituteSyntaxNest(getAstExpression_Iff(expression)->consequent,
+                                 bindings, parser, explicitUnquoteOnly);
+        getAstExpression_Iff(expression)->alternative =
+            substituteSyntaxNest(getAstExpression_Iff(expression)->alternative,
+                                 bindings, parser, explicitUnquoteOnly);
         return expression;
     case AST_EXPRESSION_TYPE_PRINT:
-        getAstExpression_Print(expression)->exp = substituteSyntaxExpression(
-            getAstExpression_Print(expression)->exp, bindings);
+        getAstExpression_Print(expression)->exp =
+            substituteSyntaxExpression(getAstExpression_Print(expression)->exp,
+                                       bindings, parser, explicitUnquoteOnly);
         return expression;
     case AST_EXPRESSION_TYPE_TYPEOF:
-        getAstExpression_TypeOf(expression)->exp = substituteSyntaxExpression(
-            getAstExpression_TypeOf(expression)->exp, bindings);
+        getAstExpression_TypeOf(expression)->exp =
+            substituteSyntaxExpression(getAstExpression_TypeOf(expression)->exp,
+                                       bindings, parser, explicitUnquoteOnly);
         return expression;
     case AST_EXPRESSION_TYPE_TUPLE:
-        expression->val.tuple = substituteSyntaxExpressions(
-            getAstExpression_Tuple(expression), bindings);
+        expression->val.tuple =
+            substituteSyntaxExpressions(getAstExpression_Tuple(expression),
+                                        bindings, parser, explicitUnquoteOnly);
         return expression;
     case AST_EXPRESSION_TYPE_STRUCTURE:
         getAstExpression_Structure(expression)->expressions =
             substituteSyntaxTaggedExpressions(
-                getAstExpression_Structure(expression)->expressions, bindings);
+                getAstExpression_Structure(expression)->expressions, bindings,
+                parser, explicitUnquoteOnly);
         return expression;
     case AST_EXPRESSION_TYPE_ASSERTION:
-        expression->val.assertion = substituteSyntaxExpression(
-            getAstExpression_Assertion(expression), bindings);
+        expression->val.assertion =
+            substituteSyntaxExpression(getAstExpression_Assertion(expression),
+                                       bindings, parser, explicitUnquoteOnly);
         return expression;
     case AST_EXPRESSION_TYPE_ERROR:
-        expression->val.error = substituteSyntaxExpression(
-            getAstExpression_Error(expression), bindings);
+        expression->val.error =
+            substituteSyntaxExpression(getAstExpression_Error(expression),
+                                       bindings, parser, explicitUnquoteOnly);
         return expression;
     }
 
@@ -3086,13 +3299,10 @@ static AstExpression *substituteSyntaxExpression(AstExpression *expression,
                 astExpressionTypeName(expression->type));
 }
 
-static AstExpression *expandSyntaxAlternative(PrattParser *parser,
-                                              PrattToken *tok,
-                                              PrattMacroSpec *spec,
-                                              PrattMacroPatternItems *patternItems,
-                                              AstExpression *template,
-                                              bool headAlreadyConsumed,
-                                              SyntaxExprBindings *inherited) {
+static AstExpression *expandSyntaxAlternative(
+    PrattParser *parser, PrattToken *tok, PrattMacroSpec *spec,
+    PrattMacroPatternItems *patternItems, AstExpression *template,
+    bool headAlreadyConsumed, SyntaxExprBindings *inherited) {
     if (template == NULL) {
         parserError(parser, "syntax %s has no template body",
                     spec->headSymbol->name);
@@ -3143,7 +3353,8 @@ static AstExpression *expandSyntaxAlternative(PrattParser *parser,
     }
 
     for (Index i = 0; i < itemCount; ++i) {
-        PrattMacroPatternItem *item = getPrattMacroPatternItems(patternItems, i);
+        PrattMacroPatternItem *item =
+            getPrattMacroPatternItems(patternItems, i);
         if (item->type == PRATTMACROPATTERNITEM_TYPE_QUOTEDTERMINAL) {
             HashSymbol *expected =
                 getPrattMacroPatternItem_QuotedTerminal(item);
@@ -3187,7 +3398,10 @@ static AstExpression *expandSyntaxAlternative(PrattParser *parser,
 
     AstExpression *templateCopy = copyAstExpression(template);
     PROTECT(templateCopy);
-    AstExpression *result = substituteSyntaxExpression(templateCopy, &bindings);
+    AstExpression *quotedTemplate = unwrapSyntaxQuotedTemplate(templateCopy);
+    AstExpression *result = substituteSyntaxExpression(
+        quotedTemplate != NULL ? quotedTemplate : templateCopy, &bindings,
+        parser, quotedTemplate != NULL);
     PROTECT(result);
     free(names);
     UNPROTECT(save);
@@ -3198,8 +3412,7 @@ static bool syntaxAlternativeIsEmpty(PrattMacroAlternative *alternative) {
     return countPrattMacroPatternItems(alternative->patternItems) == 0;
 }
 
-static AstExpression *trySyntaxAlternative(PrattParser *parser,
-                                           PrattToken *tok,
+static AstExpression *trySyntaxAlternative(PrattParser *parser, PrattToken *tok,
                                            PrattMacroSpec *spec,
                                            PrattMacroAlternative *alternative,
                                            bool headAlreadyConsumed,
@@ -3239,7 +3452,8 @@ static AstExpression *
 expandSyntaxExprWithBindings(PrattParser *parser, PrattToken *tok,
                              PrattMacroSpec *spec, bool headAlreadyConsumed,
                              SyntaxExprBindings *inherited) {
-    if (spec->alternatives == NULL || sizePrattMacroAlternatives(spec->alternatives) == 0) {
+    if (spec->alternatives == NULL ||
+        sizePrattMacroAlternatives(spec->alternatives) == 0) {
         return expandSyntaxAlternative(parser, tok, spec, spec->patternItems,
                                        spec->template, headAlreadyConsumed,
                                        inherited);
@@ -3254,7 +3468,8 @@ expandSyntaxExprWithBindings(PrattParser *parser, PrattToken *tok,
                 getPrattMacroAlternatives(spec->alternatives, i);
             bool isEmpty = syntaxAlternativeIsEmpty(alternative);
 
-            if (helperOnly && ((pass == 0 && isEmpty) || (pass == 1 && !isEmpty))) {
+            if (helperOnly &&
+                ((pass == 0 && isEmpty) || (pass == 1 && !isEmpty))) {
                 continue;
             }
 
