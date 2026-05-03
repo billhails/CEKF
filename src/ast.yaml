@@ -439,6 +439,269 @@ structs:
             expression: AstExpression
             next: AstTaggedExpressions
 
+    AstSyntaxDecl:
+        meta:
+            brief: AST syntax declaration
+            description: >-
+                A durable syntax declaration that survives parsing and remains
+                available until syntax lowering removes it from the AST.
+        data:
+            declarationId: int
+            ruleName: HashSymbol
+            surfaceHead: HashSymbol=NULL
+            parameters: SymbolArray=NULL
+            entryKind: AstSyntaxEntryKind=AST_SYNTAXENTRYKIND_TYPE_HELPER
+            resultKind: AstSyntaxResultKind=AST_SYNTAXRESULTKIND_TYPE_EXPR
+            alternatives: AstSyntaxAlternatives
+
+    AstSyntaxAlternative:
+        meta:
+            brief: AST syntax alternative
+            description: >-
+                One ordered pattern plus its template body.
+        data:
+            patternItems: AstSyntaxPatternItems
+            template: AstSyntaxTemplate
+
+    AstSyntaxHole:
+        meta:
+            brief: AST syntax hole
+            description: >-
+                One bound syntax component in a syntax pattern.
+        data:
+            syntaxClass: AstSyntaxClass
+            name: HashSymbol
+            callTarget: HashSymbol=NULL
+            callArguments: SymbolArray=NULL
+
+    AstSyntaxBinding:
+        meta:
+            brief: Captured or inherited syntax binding
+            description: >-
+                One binding collected during syntax matching. All phase-1
+                captures lower to ordinary AstExpression fragments.
+        data:
+            name: HashSymbol
+            value: AstExpression
+            inherited: bool=false
+
+    AstExprSyntaxUse:
+        meta:
+            brief: Expression-position syntax use
+            description: >-
+                A matched syntax use in expression position. It refers back to
+                the declaration by id and stores the bindings captured at the
+                use site.
+        data:
+            declarationId: int
+            alternativeIndex: int
+            bindings: AstSyntaxBindings
+
+    AstDefSyntaxUse:
+        meta:
+            brief: Definition-position syntax use
+            description: >-
+                A matched syntax use in definition position.
+        data:
+            declarationId: int
+            alternativeIndex: int
+            bindings: AstSyntaxBindings
+
+    AstSyntaxTemplate:
+        meta:
+            brief: Syntax template root
+            description: >-
+                A syntax template with an explicit result kind and a dedicated
+                template IR rather than ordinary AST.
+        data:
+            resultKind: AstSyntaxResultKind
+            expr: AstSyntaxTemplateExpr=NULL
+            definition: AstSyntaxTemplateDefinition=NULL
+
+    AstSyntaxLiteralRef:
+        meta:
+            brief: Definition-site literal reference
+            description: >-
+                An identifier written directly in the template. The prepare pass
+                resolves it to the declaration-site binding.
+        data:
+            writtenName: HashSymbol
+            resolvedName: HashSymbol=NULL
+
+    AstSyntaxIntroducedBinder:
+        meta:
+            brief: Template-introduced binder
+            description: >-
+                A binder introduced by the template itself. The lowerer will
+                freshen it and rewrite matching introduced references.
+        data:
+            binderId: int
+            writtenName: HashSymbol
+
+    AstSyntaxIntroducedRef:
+        meta:
+            brief: Reference to a template-introduced binder
+            description: >-
+                A reference tied to a previously parsed introduced binder by id.
+        data:
+            binderId: int
+
+    AstSyntaxUnquote:
+        meta:
+            brief: Template unquote site
+            description: >-
+                A splice of a captured or inherited syntax binding.
+        data:
+            bindingName: HashSymbol
+            syntaxClass: AstSyntaxClass
+
+    AstSyntaxTemplateFunCall:
+        meta:
+            brief: Template function call
+        data:
+            function: AstSyntaxTemplateExpr
+            arguments: AstSyntaxTemplateExprs
+
+    AstSyntaxTemplateLookUp:
+        meta:
+            brief: Template namespace lookup
+        data:
+            nsSymbol: HashSymbol
+            expression: AstSyntaxTemplateExpr
+
+    AstSyntaxTemplateIff:
+        meta:
+            brief: Template conditional expression
+        data:
+            test: AstSyntaxTemplateExpr
+            consequent: AstSyntaxTemplateNest
+            alternative: AstSyntaxTemplateNest
+
+    AstSyntaxTemplatePrint:
+        meta:
+            brief: Template print expression
+        data:
+            expression: AstSyntaxTemplateExpr
+
+    AstSyntaxTemplateTypeOf:
+        meta:
+            brief: Template typeof expression
+        data:
+            expression: AstSyntaxTemplateExpr
+
+    AstSyntaxTemplateStruct:
+        meta:
+            brief: Template structure expression
+        data:
+            symbol: AstLookUpOrSymbol
+            expressions: AstSyntaxTemplateTaggedExpressions
+
+    AstSyntaxTemplateNest:
+        meta:
+            brief: Template nest
+        data:
+            definitions: AstSyntaxTemplateDefinitions
+            expressions: AstSyntaxTemplateExprs
+
+    AstSyntaxTemplateFunction:
+        meta:
+            brief: Template composite function
+        data:
+            function: AstSyntaxTemplateAltFunction
+            next: AstSyntaxTemplateFunction=NULL
+            unsafe: bool=false
+
+    AstSyntaxTemplateAltFunction:
+        meta:
+            brief: Template alternative function body
+        data:
+            altArgs: AstSyntaxTemplateAltArgs
+            nest: AstSyntaxTemplateNest
+
+    AstSyntaxTemplateDefine:
+        meta:
+            brief: Template single definition
+        data:
+            symbol: AstSyntaxTemplateBinder
+            expression: AstSyntaxTemplateExpr
+
+    AstSyntaxTemplateMultiDefine:
+        meta:
+            brief: Template multi-definition
+        data:
+            symbols: AstSyntaxTemplateBinders
+            expression: AstSyntaxTemplateExpr
+
+    AstSyntaxTemplateDefLazy:
+        meta:
+            brief: Template lazy definition
+        data:
+            name: AstSyntaxTemplateBinder
+            definition: AstSyntaxTemplateAltFunction
+
+    AstSyntaxTemplateAlias:
+        meta:
+            brief: Template type alias
+        data:
+            name: AstSyntaxTemplateBinder
+            type: AstType
+
+    AstSyntaxTemplateTypeDef:
+        meta:
+            brief: Template typedef
+        data:
+            typeSig: AstTypeSig
+            typeBody: AstTypeBody
+
+    AstSyntaxTemplateNamedArg:
+        meta:
+            brief: Template named argument
+        data:
+            name: HashSymbol
+            arg: AstSyntaxTemplateFarg
+
+    AstSyntaxTemplateUnpack:
+        meta:
+            brief: Template unpack argument
+        data:
+            symbol: AstLookUpOrSymbol
+            argList: AstSyntaxTemplateFargList
+
+    AstSyntaxTemplateUnpackStruct:
+        meta:
+            brief: Template unpack-struct argument
+        data:
+            symbol: AstLookUpOrSymbol
+            argList: AstSyntaxTemplateTaggedArgs
+
+    AstSyntaxTemplateAltArgs:
+        meta:
+            brief: Template alternative argument list
+        data:
+            argList: AstSyntaxTemplateFargList
+            next: AstSyntaxTemplateAltArgs=NULL
+
+    AstSyntaxTemplateTaggedArg:
+        meta:
+            brief: Template tagged argument
+        data:
+            tag: HashSymbol
+            arg: AstSyntaxTemplateFarg
+
+    AstSyntaxTemplateTaggedExpression:
+        meta:
+            brief: Template tagged expression
+        data:
+            tag: HashSymbol
+            expression: AstSyntaxTemplateExpr
+
+    AstSyntaxTemplateDefinitions:
+        meta:
+            brief: Linked list of template definitions
+        data:
+            definition: AstSyntaxTemplateDefinition
+            next: AstSyntaxTemplateDefinitions=NULL
+
 enums:
     AstPosition:
         meta:
@@ -449,6 +712,42 @@ enums:
           - PREFIX
           - INFIX
           - POSTFIX
+
+    AstSyntaxEntryKind:
+        meta:
+            brief: Syntax entry kind
+            description: >-
+                Whether a syntax rule is entered from expression position,
+                definition position, or is a helper rule callable from other
+                rules.
+        data:
+          - EXPR
+          - DEF
+          - HELPER
+
+    AstSyntaxResultKind:
+        meta:
+            brief: Syntax result kind
+            description: >-
+                Whether the output of expanding a syntax rule is an expression
+                or a definition.
+        data:
+          - EXPR
+          - DEF
+
+    AstSyntaxClass:
+        meta:
+            brief: Syntax hole class
+            description: >-
+                The syntactic class of a syntax hole, controlling what the
+                parser will accept as a capture for that hole.
+        data:
+          - EXPR
+          - NAME
+          - NEST
+          - STRING
+          - TYPE
+          - SYNTAX
 
 unions:
     AstTypeConstructorArgs:
@@ -485,6 +784,8 @@ unions:
             alias: AstAlias
             blank: void_ptr
             builtinsSlot: void_ptr # Placeholder for builtins slot
+            syntaxDecl: AstSyntaxDecl
+            syntaxUse: AstDefSyntaxUse
 
     AstTypeClause:
         meta:
@@ -542,6 +843,85 @@ unions:
             structure: AstStruct
             assertion: AstExpression
             error: AstExpression
+            syntaxUse: AstExprSyntaxUse
+
+    AstSyntaxTemplateBinder:
+        meta:
+            brief: Template binder occurrence
+            description: >-
+                A binder position in a template. Either a fresh introduced
+                binder or an explicit unquote of a captured name.
+        data:
+            introduced: AstSyntaxIntroducedBinder
+            unquote: AstSyntaxUnquote
+
+    AstSyntaxTemplateNameRef:
+        meta:
+            brief: Template name reference
+            description: >-
+                A non-binder identifier occurrence in a template.
+        data:
+            literal: AstSyntaxLiteralRef
+            introduced: AstSyntaxIntroducedRef
+            unquote: AstSyntaxUnquote
+
+    AstSyntaxPatternItem:
+        meta:
+            brief: Syntax pattern item stored in the AST
+        data:
+            quotedTerminal: HashSymbol
+            typedHole: AstSyntaxHole
+
+    AstSyntaxTemplateDefinition:
+        meta:
+            brief: Template definition node
+        data:
+            define: AstSyntaxTemplateDefine
+            multi: AstSyntaxTemplateMultiDefine
+            lazy: AstSyntaxTemplateDefLazy
+            alias: AstSyntaxTemplateAlias
+            typeDef: AstSyntaxTemplateTypeDef
+
+    AstSyntaxTemplateExpr:
+        meta:
+            brief: Template expression node
+            description: >-
+                The template expression IR. It mirrors the expression forms
+                currently needed by quote bodies while replacing raw names with
+                explicit provenance-carrying variants.
+        data:
+            back: void_ptr
+            wildCard: void_ptr
+            nameRef: AstSyntaxTemplateNameRef
+            number: MaybeBigInt
+            character: character
+            funCall: AstSyntaxTemplateFunCall
+            lookUp: AstSyntaxTemplateLookUp
+            fun: AstSyntaxTemplateFunction
+            nest: AstSyntaxTemplateNest
+            iff: AstSyntaxTemplateIff
+            print: AstSyntaxTemplatePrint
+            typeOf: AstSyntaxTemplateTypeOf
+            tuple: AstSyntaxTemplateExprs
+            structure: AstSyntaxTemplateStruct
+            assertion: AstSyntaxTemplateExpr
+            error: AstSyntaxTemplateExpr
+
+    AstSyntaxTemplateFarg:
+        meta:
+            brief: Template formal argument node
+            description: >-
+                Binder-aware mirror of AstFarg for function syntax quote bodies.
+        data:
+            wildCard: void_ptr
+            binder: AstSyntaxTemplateBinder
+            lookUp: AstLookUpSymbol
+            named: AstSyntaxTemplateNamedArg
+            unpack: AstSyntaxTemplateUnpack
+            unpackStruct: AstSyntaxTemplateUnpackStruct
+            number: MaybeBigInt
+            character: character
+            tuple: AstSyntaxTemplateFargList
 
 arrays:
     AstNameSpaceArray:
@@ -569,6 +949,54 @@ arrays:
                 A simple array of AST expressions, used by the Pratt parser.
         data:
             entries: AstExpression
+
+    AstSyntaxAlternatives:
+        meta:
+            brief: Array of syntax alternatives
+        data:
+            entries: AstSyntaxAlternative
+
+    AstSyntaxBindings:
+        meta:
+            brief: Array of syntax bindings
+        data:
+            entries: AstSyntaxBinding
+
+    AstSyntaxPatternItems:
+        meta:
+            brief: Array of syntax pattern items
+        data:
+            entries: AstSyntaxPatternItem
+
+    AstSyntaxTemplateBinders:
+        meta:
+            brief: Array of template binders
+        data:
+            entries: AstSyntaxTemplateBinder
+
+    AstSyntaxTemplateExprs:
+        meta:
+            brief: Array of template expressions
+        data:
+            entries: AstSyntaxTemplateExpr
+
+    AstSyntaxTemplateFargList:
+        meta:
+            brief: Array of template formal arguments
+        data:
+            entries: AstSyntaxTemplateFarg
+
+    AstSyntaxTemplateTaggedArgs:
+        meta:
+            brief: Array of template tagged arguments
+        data:
+            entries: AstSyntaxTemplateTaggedArg
+
+    AstSyntaxTemplateTaggedExpressions:
+        meta:
+            brief: Array of template tagged expressions
+        data:
+            entries: AstSyntaxTemplateTaggedExpression
 
 primitives: !include primitives.yaml
 

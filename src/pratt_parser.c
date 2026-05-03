@@ -3105,6 +3105,9 @@ static AstDefinitions *substituteSyntaxDefinitions(AstDefinitions *definitions,
     case AST_DEFINITION_TYPE_BLANK:
     case AST_DEFINITION_TYPE_BUILTINSSLOT:
         break;
+    case AST_DEFINITION_TYPE_SYNTAXDECL:
+    case AST_DEFINITION_TYPE_SYNTAXUSE:
+        cant_happen("syntax carrier in substituteSyntaxDefinitions");
     }
     definitions->next = substituteSyntaxDefinitions(
         definitions->next, bindings, parser, explicitUnquoteOnly);
@@ -3310,6 +3313,8 @@ static AstExpression *substituteSyntaxExpression(AstExpression *expression,
             substituteSyntaxExpression(getAstExpression_Error(expression),
                                        bindings, parser, explicitUnquoteOnly);
         return expression;
+    case AST_EXPRESSION_TYPE_SYNTAXUSE:
+        cant_happen("syntax carrier in substituteSyntaxExpression");
     }
 
     cant_happen("unrecognised expression type %s in substituteSyntaxExpression",
