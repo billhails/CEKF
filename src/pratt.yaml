@@ -191,6 +191,41 @@ structs:
             patternItems: PrattMacroPatternItems
             template: AstExpression
 
+    SyntaxExprBindings:
+        meta:
+            brief: Captured and inherited bindings for syntax expansion.
+            description: >-
+                Tracks names and their bound expressions while matching syntax
+                alternatives and performing template substitution.
+        data:
+            names: SymbolArray
+            values: AstExpressionArray
+
+    SyntaxLexerSnapshot:
+        meta:
+            brief: One lexer buffer snapshot entry.
+            description: >-
+                Stores buffer pointer and lexer cursor state for one linked
+                buffer in a rollback checkpoint.
+        data:
+            bufList: PrattBufList
+            start: wstring=NULL
+            offset: int=0
+            lineNo: int=0
+            next: SyntaxLexerSnapshot=NULL
+
+    SyntaxLexerCheckpoint:
+        meta:
+            brief: Rollback checkpoint for syntax alternative parsing.
+            description: >-
+                Captures lexer queue, buffer state, and parser panic mode so a
+                failed syntax alternative can restore parser state.
+        data:
+            bufList: PrattBufList
+            queuedTokens: PrattTokens=NULL
+            snapshots: SyntaxLexerSnapshot=NULL
+            panicMode: bool=false
+
 enums:
     PrattAssoc:
         meta:

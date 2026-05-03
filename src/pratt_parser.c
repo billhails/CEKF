@@ -49,22 +49,6 @@
 
 typedef enum { DEFUN_FUNCTION, DEFUN_PRINTER, DEFUN_COMPARATOR } DefunType;
 
-typedef struct {
-    HashSymbol **names;
-    AstExpressionArray *values;
-} SyntaxExprBindings;
-
-typedef struct {
-    PrattBufList *bufList;
-    PrattTokens *queuedTokens;
-    Index snapshotCount;
-    PrattBufList **buffers;
-    Character **starts;
-    int *offsets;
-    int *lineNos;
-    bool panicMode;
-} SyntaxLexerCheckpoint;
-
 // minimal multiplier for converting declared precedence levels to
 // internal values, to guarantee that adding or subtracting 1 from
 // an internal precedence will not overlap with an adjacent internal
@@ -203,11 +187,9 @@ static PrattRecord *fetchRecord(PrattParser *, HashSymbol *);
 static PrattMacroSpec *findLocalSyntaxSpecForHead(PrattParser *, HashSymbol *);
 static PrattMacroSpec *findSyntaxSpecByName(PrattParser *, HashSymbol *);
 static PrattMacroSpec *findSyntaxSpecForHead(PrattParser *, HashSymbol *);
-static Index countSyntaxLexerBuffers(PrattBufList *);
 static SyntaxLexerCheckpoint captureSyntaxLexerCheckpoint(PrattParser *parser);
 static void restoreSyntaxLexerCheckpoint(PrattParser *parser,
                                          SyntaxLexerCheckpoint *checkpoint);
-static void freeSyntaxLexerCheckpoint(SyntaxLexerCheckpoint *checkpoint);
 static PrattTrie *makePrattTrie(PrattParser *, PrattTrie *);
 static WCharArray *rawString(PrattParser *);
 static WCharArray *str(PrattParser *);
@@ -219,16 +201,16 @@ static bool symbolArrayContains(SymbolArray *symbols, HashSymbol *symbol);
 static SymbolArray *parseOptionalSyntaxParameters(PrattParser *parser);
 static PrattMacroAlternative *parseSyntaxAlternative(PrattParser *parser);
 static bool syntaxPatternNameEquivalent(HashSymbol *left, HashSymbol *right,
-                                        HashSymbol **leftNames,
-                                        HashSymbol **rightNames,
+                                        SymbolArray *leftNames,
+                                        SymbolArray *rightNames,
                                         Index mappedCount);
 static bool recordSyntaxPatternNameMap(HashSymbol *left, HashSymbol *right,
-                                       HashSymbol **leftNames,
-                                       HashSymbol **rightNames,
+                                       SymbolArray *leftNames,
+                                       SymbolArray *rightNames,
                                        Index *mappedCount);
 static bool syntaxCallArgumentsEquivalent(SymbolArray *left, SymbolArray *right,
-                                          HashSymbol **leftNames,
-                                          HashSymbol **rightNames,
+                                          SymbolArray *leftNames,
+                                          SymbolArray *rightNames,
                                           Index mappedCount);
 static bool syntaxPatternItemsMatch(PrattMacroPatternItems *leftItems,
                                     PrattMacroPatternItems *rightItems,
@@ -246,8 +228,6 @@ static void registerExprSyntaxHead(PrattParser *parser, HashSymbol *head);
 static AstExpression *parseSyntaxHoleExpression(PrattParser *parser,
                                                 PrattMacroHole *hole,
                                                 SyntaxExprBindings *bindings);
-static bool hasSyntaxBindingName(HashSymbol **names, Index count,
-                                 HashSymbol *name);
 static HashSymbol *syntaxQuoteSymbol(void);
 static HashSymbol *syntaxUnquoteSymbol(void);
 static bool isSyntaxQuoteToken(PrattToken *token);
@@ -394,57 +374,42 @@ static PrattMacroSpec *findSyntaxSpecForHead(PrattParser *parser,
     }
 }
 
-static Index countSyntaxLexerBuffers(PrattBufList *bufList) {
-    Index count = 0;
-    while (bufList != NULL) {
-        ++count;
-        bufList = bufList->next;
-    }
-    return count;
-}
-
 static SyntaxLexerCheckpoint captureSyntaxLexerCheckpoint(PrattParser *parser) {
     PrattLexer *lexer = parser->lexer;
     SyntaxLexerCheckpoint checkpoint = {
         .bufList = lexer->bufList,
         .queuedTokens = NULL,
-        .snapshotCount = countSyntaxLexerBuffers(lexer->bufList),
-        .buffers = NULL,
-        .starts = NULL,
-        .offsets = NULL,
-        .lineNos = NULL,
+        .snapshots = NULL,
         .panicMode = parser->panicMode,
     };
+    int save = STARTPROTECT();
 
     if (lexer->tokenHead != NULL) {
         checkpoint.queuedTokens = newPrattTokens();
-        int save = PROTECT(checkpoint.queuedTokens);
+        PROTECT(checkpoint.queuedTokens);
         for (PrattToken *token = lexer->tokenHead; token != NULL;
              token = token->next) {
             pushPrattTokens(checkpoint.queuedTokens, token);
         }
-        UNPROTECT(save);
     }
 
-    if (checkpoint.snapshotCount == 0) {
-        return checkpoint;
+    SyntaxLexerSnapshot *tail = NULL;
+    for (PrattBufList *bufList = lexer->bufList; bufList != NULL;
+         bufList = bufList->next) {
+        SyntaxLexerSnapshot *snapshot = newSyntaxLexerSnapshot(bufList);
+        snapshot->start = bufList->buffer->start;
+        snapshot->offset = bufList->buffer->offset;
+        snapshot->lineNo = bufList->lineNo;
+        if (checkpoint.snapshots == NULL) {
+            checkpoint.snapshots = snapshot;
+            PROTECT(checkpoint.snapshots);
+        } else {
+            tail->next = snapshot;
+        }
+        tail = snapshot;
     }
 
-    checkpoint.buffers =
-        calloc(checkpoint.snapshotCount, sizeof(PrattBufList *));
-    checkpoint.starts = calloc(checkpoint.snapshotCount, sizeof(Character *));
-    checkpoint.offsets = calloc(checkpoint.snapshotCount, sizeof(int));
-    checkpoint.lineNos = calloc(checkpoint.snapshotCount, sizeof(int));
-
-    PrattBufList *bufList = lexer->bufList;
-    for (Index i = 0; i < checkpoint.snapshotCount; ++i) {
-        checkpoint.buffers[i] = bufList;
-        checkpoint.starts[i] = bufList->buffer->start;
-        checkpoint.offsets[i] = bufList->buffer->offset;
-        checkpoint.lineNos[i] = bufList->lineNo;
-        bufList = bufList->next;
-    }
-
+    UNPROTECT(save);
     return checkpoint;
 }
 
@@ -452,10 +417,11 @@ static void restoreSyntaxLexerCheckpoint(PrattParser *parser,
                                          SyntaxLexerCheckpoint *checkpoint) {
     parser->lexer->bufList = checkpoint->bufList;
 
-    for (Index i = 0; i < checkpoint->snapshotCount; ++i) {
-        checkpoint->buffers[i]->buffer->start = checkpoint->starts[i];
-        checkpoint->buffers[i]->buffer->offset = checkpoint->offsets[i];
-        checkpoint->buffers[i]->lineNo = checkpoint->lineNos[i];
+    for (SyntaxLexerSnapshot *snapshot = checkpoint->snapshots;
+         snapshot != NULL; snapshot = snapshot->next) {
+        snapshot->bufList->buffer->start = snapshot->start;
+        snapshot->bufList->buffer->offset = snapshot->offset;
+        snapshot->bufList->lineNo = snapshot->lineNo;
     }
 
     if (checkpoint->queuedTokens == NULL ||
@@ -476,13 +442,6 @@ static void restoreSyntaxLexerCheckpoint(PrattParser *parser,
     }
 
     parser->panicMode = checkpoint->panicMode;
-}
-
-static void freeSyntaxLexerCheckpoint(SyntaxLexerCheckpoint *checkpoint) {
-    free(checkpoint->buffers);
-    free(checkpoint->starts);
-    free(checkpoint->offsets);
-    free(checkpoint->lineNos);
 }
 
 /**
@@ -2540,16 +2499,16 @@ static PrattMacroAlternative *parseSyntaxAlternative(PrattParser *parser) {
 }
 
 static bool syntaxPatternNameEquivalent(HashSymbol *left, HashSymbol *right,
-                                        HashSymbol **leftNames,
-                                        HashSymbol **rightNames,
+                                        SymbolArray *leftNames,
+                                        SymbolArray *rightNames,
                                         Index mappedCount) {
     bool rightMapped = false;
 
     for (Index i = 0; i < mappedCount; ++i) {
-        if (leftNames[i] == left) {
-            return rightNames[i] == right;
+        if (getSymbolArray(leftNames, i) == left) {
+            return getSymbolArray(rightNames, i) == right;
         }
-        if (rightNames[i] == right) {
+        if (getSymbolArray(rightNames, i) == right) {
             rightMapped = true;
         }
     }
@@ -2562,27 +2521,27 @@ static bool syntaxPatternNameEquivalent(HashSymbol *left, HashSymbol *right,
 }
 
 static bool recordSyntaxPatternNameMap(HashSymbol *left, HashSymbol *right,
-                                       HashSymbol **leftNames,
-                                       HashSymbol **rightNames,
+                                       SymbolArray *leftNames,
+                                       SymbolArray *rightNames,
                                        Index *mappedCount) {
     for (Index i = 0; i < *mappedCount; ++i) {
-        if (leftNames[i] == left) {
-            return rightNames[i] == right;
+        if (getSymbolArray(leftNames, i) == left) {
+            return getSymbolArray(rightNames, i) == right;
         }
-        if (rightNames[i] == right) {
+        if (getSymbolArray(rightNames, i) == right) {
             return false;
         }
     }
 
-    leftNames[*mappedCount] = left;
-    rightNames[*mappedCount] = right;
+    pushSymbolArray(leftNames, left);
+    pushSymbolArray(rightNames, right);
     (*mappedCount)++;
     return true;
 }
 
 static bool syntaxCallArgumentsEquivalent(SymbolArray *left, SymbolArray *right,
-                                          HashSymbol **leftNames,
-                                          HashSymbol **rightNames,
+                                          SymbolArray *leftNames,
+                                          SymbolArray *rightNames,
                                           Index mappedCount) {
     if (left == NULL || right == NULL) {
         return left == right;
@@ -2617,10 +2576,10 @@ static bool syntaxPatternItemsMatch(PrattMacroPatternItems *leftItems,
         return false;
     }
 
-    HashSymbol **leftNames =
-        calloc(leftCount == 0 ? 1 : leftCount, sizeof(HashSymbol *));
-    HashSymbol **rightNames =
-        calloc(leftCount == 0 ? 1 : leftCount, sizeof(HashSymbol *));
+    SymbolArray *leftNames = newSymbolArray();
+    int save = PROTECT(leftNames);
+    SymbolArray *rightNames = newSymbolArray();
+    PROTECT(rightNames);
     bool matched = true;
     Index mappedCount = 0;
 
@@ -2659,8 +2618,7 @@ static bool syntaxPatternItemsMatch(PrattMacroPatternItems *leftItems,
         }
     }
 
-    free(leftNames);
-    free(rightNames);
+    UNPROTECT(save);
     return matched;
 }
 
@@ -2841,8 +2799,7 @@ static AstExpression *parseSyntaxHoleExpression(PrattParser *parser,
         }
 
         SyntaxExprBindings inherited = {
-            .names =
-                spec->parameters != NULL ? spec->parameters->entries : NULL,
+            .names = spec->parameters,
             .values = inheritedValues,
         };
         PrattToken *start = peek(parser);
@@ -2859,23 +2816,13 @@ static AstExpression *parseSyntaxHoleExpression(PrattParser *parser,
     }
 }
 
-static bool hasSyntaxBindingName(HashSymbol **names, Index count,
-                                 HashSymbol *name) {
-    for (Index i = 0; i < count; ++i) {
-        if (names[i] == name) {
-            return true;
-        }
-    }
-    return false;
-}
-
 static AstExpression *lookupSyntaxBindingCopy(SyntaxExprBindings *bindings,
                                               HashSymbol *name) {
     if (bindings == NULL) {
         return NULL;
     }
     for (Index i = 0; i < sizeAstExpressionArray(bindings->values); ++i) {
-        if (bindings->names[i] == name) {
+        if (getSymbolArray(bindings->names, i) == name) {
             return copyAstExpression(
                 getAstExpressionArray(bindings->values, i));
         }
@@ -2889,7 +2836,7 @@ static HashSymbol *lookupSyntaxBindingSymbol(SyntaxExprBindings *bindings,
         return NULL;
     }
     for (Index i = 0; i < sizeAstExpressionArray(bindings->values); ++i) {
-        if (bindings->names[i] == name) {
+        if (getSymbolArray(bindings->names, i) == name) {
             AstExpression *value = getAstExpressionArray(bindings->values, i);
             if (value->type == AST_EXPRESSION_TYPE_SYMBOL) {
                 return getAstExpression_Symbol(value);
@@ -3322,18 +3269,18 @@ static AstExpression *expandSyntaxAlternative(
 
     Index itemCount = countPrattMacroPatternItems(patternItems);
     Index bindingCapacity = parameterCount + itemCount;
-    HashSymbol **names = calloc(bindingCapacity == 0 ? 1 : bindingCapacity,
-                                sizeof(HashSymbol *));
+    (void)bindingCapacity;
+    SymbolArray *names = newSymbolArray();
     AstExpressionArray *values = newAstExpressionArray();
     int save = STARTPROTECT();
+    PROTECT(names);
     PROTECT(values);
 
     for (Index i = 0; i < parameterCount; ++i) {
         AstExpression *value =
             copyAstExpression(getAstExpressionArray(inherited->values, i));
         int save2 = PROTECT(value);
-        names[sizeAstExpressionArray(values)] =
-            getSymbolArray(spec->parameters, i);
+        pushSymbolArray(names, getSymbolArray(spec->parameters, i));
         pushAstExpressionArray(values, value);
         UNPROTECT(save2);
     }
@@ -3344,7 +3291,6 @@ static AstExpression *expandSyntaxAlternative(
     if (spec->isExprEntry && !headAlreadyConsumed) {
         PrattToken *nextTok = peek(parser);
         if (!isTokenTypeOrAtom(nextTok, spec->headSymbol)) {
-            free(names);
             UNPROTECT(save);
             return NULL;
         }
@@ -3364,7 +3310,6 @@ static AstExpression *expandSyntaxAlternative(
                     parserErrorAt(TOKPI(nextTok), parser,
                                   "expected syntax token '%s'", expected->name);
                 }
-                free(names);
                 UNPROTECT(save);
                 return consumedPattern ? errorExpression(TOKPI(nextTok)) : NULL;
             }
@@ -3372,11 +3317,9 @@ static AstExpression *expandSyntaxAlternative(
             consumedPattern = true;
         } else {
             PrattMacroHole *hole = getPrattMacroPatternItem_TypedHole(item);
-            if (hasSyntaxBindingName(names, sizeAstExpressionArray(values),
-                                     hole->name)) {
+            if (symbolArrayContains(names, hole->name)) {
                 parserError(parser, "syntax binding %s already defined",
                             hole->name->name);
-                free(names);
                 UNPROTECT(save);
                 return errorExpression(TOKPI(tok));
             }
@@ -3384,12 +3327,11 @@ static AstExpression *expandSyntaxAlternative(
                 parseSyntaxHoleExpression(parser, hole, &bindings);
             if (value == NULL) {
                 PrattToken *nextTok = peek(parser);
-                free(names);
                 UNPROTECT(save);
                 return consumedPattern ? errorExpression(TOKPI(nextTok)) : NULL;
             }
             int save2 = PROTECT(value);
-            names[sizeAstExpressionArray(values)] = hole->name;
+            pushSymbolArray(names, hole->name);
             pushAstExpressionArray(values, value);
             UNPROTECT(save2);
             consumedPattern = true;
@@ -3403,7 +3345,6 @@ static AstExpression *expandSyntaxAlternative(
         quotedTemplate != NULL ? quotedTemplate : templateCopy, &bindings,
         parser, quotedTemplate != NULL);
     PROTECT(result);
-    free(names);
     UNPROTECT(save);
     return result;
 }
@@ -3436,13 +3377,11 @@ static AstExpression *trySyntaxAlternative(PrattParser *parser, PrattToken *tok,
     parser->suppressErrors = suppressErrors;
 
     if (!alternativeFailed && result != NULL) {
-        freeSyntaxLexerCheckpoint(&checkpoint);
         UNPROTECT(save);
         return result;
     }
 
     restoreSyntaxLexerCheckpoint(parser, &checkpoint);
-    freeSyntaxLexerCheckpoint(&checkpoint);
     UNPROTECT(save);
     *hadCommittedFailure = *hadCommittedFailure || alternativeFailed;
     return NULL;

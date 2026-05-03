@@ -60,6 +60,17 @@ PrattMacroSpec --importNsRef--> int
 PrattMacroSpec --importNsSymbol--> HashSymbol
 PrattMacroAlternative --patternItems--> PrattMacroPatternItems
 PrattMacroAlternative --template--> AstExpression
+SyntaxExprBindings --names--> SymbolArray
+SyntaxExprBindings --values--> AstExpressionArray
+SyntaxLexerSnapshot --bufList--> PrattBufList
+SyntaxLexerSnapshot --start--> wstring
+SyntaxLexerSnapshot --offset--> int
+SyntaxLexerSnapshot --lineNo--> int
+SyntaxLexerSnapshot --next--> SyntaxLexerSnapshot
+SyntaxLexerCheckpoint --bufList--> PrattBufList
+SyntaxLexerCheckpoint --queuedTokens--> PrattTokens
+SyntaxLexerCheckpoint --snapshots--> SyntaxLexerSnapshot
+SyntaxLexerCheckpoint --panicMode--> bool
 PrattFixityConfig --op--> PrattParselet
 PrattFixityConfig --prec--> int
 PrattFixityConfig --originalImpl--> AstExpression
