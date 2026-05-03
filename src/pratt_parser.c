@@ -431,6 +431,10 @@ static AstExpression *errorExpression(ParserInfo I) {
     return newAstExpression_Symbol(I, TOK_ERROR());
 }
 
+AstExpression *prattErrorExpression(ParserInfo PI) {
+    return errorExpression(PI);
+}
+
 /**
  * @brief Add a record to the PrattRecordTable.
  *
@@ -3026,8 +3030,8 @@ expandSyntaxExprWithBindings(PrattParser *parser, PrattToken *tok,
     return NULL;
 }
 
-static AstExpression *expandSyntaxExpr(PrattParser *parser, PrattToken *tok,
-                                       PrattMacroSpec *spec) {
+static AstExpression *__attribute__((unused))
+expandSyntaxExpr(PrattParser *parser, PrattToken *tok, PrattMacroSpec *spec) {
     return expandSyntaxExprWithBindings(parser, tok, spec, true, NULL);
 }
 
@@ -3038,7 +3042,7 @@ static AstExpression *userSyntaxExpr(PrattRecord *record, PrattParser *parser,
     if (spec == NULL) {
         return NULL;
     }
-    return expandSyntaxExpr(parser, tok, spec);
+    return prattExpandSyntaxExpr(parser, tok, spec);
 }
 
 static AstDefinition *syntaxDefinition(PrattParser *parser) {
@@ -4575,6 +4579,8 @@ static WCharArray *str(PrattParser *parser) {
     return this;
 }
 
+WCharArray *prattString(PrattParser *parser) { return str(parser); }
+
 /**
  * @brief parses a composite (or simple) function body
  */
@@ -5417,6 +5423,10 @@ static AstFunCall *makeStringList(ParserInfo PI, WCharArray *str) {
     return res;
 }
 
+AstFunCall *prattMakeStringList(ParserInfo PI, WCharArray *str) {
+    return makeStringList(PI, str);
+}
+
 /**
  * @brief parselet triggered by a string.
  */
@@ -5505,4 +5515,8 @@ static AstExpression *expressionPrecedence(PrattParser *parser,
     LEAVE(expressionPrecedence);
     UNPROTECT(save);
     return lhs;
+}
+
+AstExpression *prattExpressionPrecedence(PrattParser *parser, int precedence) {
+    return expressionPrecedence(parser, precedence);
 }

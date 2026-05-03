@@ -30,4 +30,12 @@ PrattMacroSpec *prattFindSyntaxSpecForHead(PrattParser *parser,
 void prattValidateSyntaxAlternatives(PrattParser *parser, HashSymbol *ruleName,
                                      PrattMacroAlternatives *alternatives);
 
+AstExpression *prattExpandSyntaxExprWithBindings(PrattParser *parser,
+                                                 PrattToken *tok,
+                                                 PrattMacroSpec *spec,
+                                                 bool headAlreadyConsumed,
+                                                 SyntaxExprBindings *inherited);
+AstExpression *prattExpandSyntaxExpr(PrattParser *parser, PrattToken *tok,
+                                     PrattMacroSpec *spec);
+
 #endif
