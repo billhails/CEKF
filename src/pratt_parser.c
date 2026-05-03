@@ -2436,7 +2436,7 @@ static HashSymbol *syntaxUnquoteSymbol(void) {
 }
 
 static bool isSyntaxQuoteToken(PrattToken *token) {
-    return isAtomSymbol(token, syntaxQuoteSymbol());
+    return isTokenTypeOrAtom(token, syntaxQuoteSymbol());
 }
 
 static AstExpression *makeSyntaxQuotedTemplate(ParserInfo PI,
@@ -2471,10 +2471,31 @@ static PrattMacroAlternative *parseSyntaxAlternative(PrattParser *parser) {
     PrattMacroPatternItems *patternItems = macroPatternItems(parser);
     int save = PROTECT(patternItems);
     AstExpression *template = NULL;
-    if (check(parser, TOK_ATOM()) && isSyntaxQuoteToken(peek(parser))) {
+    if (isSyntaxQuoteToken(peek(parser))) {
         PrattToken *quoteToken = next(parser);
         int save2 = PROTECT(quoteToken);
+
+        // In template mode, unquote(...) must parse as an identifier call,
+        // even if user code defines a dedicated unquote_ operator token.
+        HashSymbol *unquote = syntaxUnquoteSymbol();
+        PrattRecord *previousUnquoteRecord = NULL;
+        getPrattRecordTable(parser->rules, unquote, &previousUnquoteRecord);
+        PrattRecord *overrideUnquoteRecord = NULL;
+        if (previousUnquoteRecord != NULL) {
+            overrideUnquoteRecord = copyPrattRecord(previousUnquoteRecord);
+            int save3 = PROTECT(overrideUnquoteRecord);
+            overrideUnquoteRecord->prefix.op = makeAtom;
+            overrideUnquoteRecord->prefix.prec = 0;
+            setPrattRecordTable(parser->rules, unquote, overrideUnquoteRecord);
+            UNPROTECT(save3);
+        }
+
         AstNest *body = nest(parser);
+
+        if (previousUnquoteRecord != NULL) {
+            setPrattRecordTable(parser->rules, unquote, previousUnquoteRecord);
+        }
+
         if (body != NULL) {
             PROTECT(body);
             AstExpression *quotedBody = newAstExpression_Nest(CPI(body), body);
@@ -2854,8 +2875,16 @@ static bool syntaxUnquoteExpressionName(AstExpression *expression,
     }
 
     AstFunCall *call = getAstExpression_FunCall(expression);
-    if (call->function->type != AST_EXPRESSION_TYPE_SYMBOL ||
-        getAstExpression_Symbol(call->function) != syntaxUnquoteSymbol()) {
+    if (call->function->type == AST_EXPRESSION_TYPE_SYMBOL) {
+        if (getAstExpression_Symbol(call->function) != syntaxUnquoteSymbol()) {
+            return false;
+        }
+    } else if (call->function->type == AST_EXPRESSION_TYPE_ANNOTATEDSYMBOL) {
+        if (getAstExpression_AnnotatedSymbol(call->function)->symbol !=
+            syntaxUnquoteSymbol()) {
+            return false;
+        }
+    } else {
         return false;
     }
 
@@ -4348,6 +4377,9 @@ static AstLookUpOrSymbol *astFunctionToLos(PrattParser *parser,
     case AST_EXPRESSION_TYPE_SYMBOL:
         return astSymbolToLos(CPI(function), function->val.symbol);
     case AST_EXPRESSION_TYPE_ANNOTATEDSYMBOL:
+        if (function->val.annotatedSymbol->symbol == syntaxUnquoteSymbol()) {
+            return astSymbolToLos(CPI(function), syntaxUnquoteSymbol());
+        }
         // For annotated symbols (hygienic operators), extract the original
         // implementation This allows operators like @ (cons) to be used in
         // patterns

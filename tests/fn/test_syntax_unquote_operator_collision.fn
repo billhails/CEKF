@@ -1,0 +1,10 @@
+let
+    operator "unquote_" 10 fn (x) { x };
+
+    syntax quotedIdentity: Expr ::= "qidentity" x: Name quote {
+        fn (unquote(x)) { unquote(x) }
+    };
+
+    id = qidentity value;
+in
+    assert(42 == id(42))
