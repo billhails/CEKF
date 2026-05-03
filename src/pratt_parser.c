@@ -37,6 +37,8 @@
 #include "preamble.h"
 #include "print_generator.h"
 #include "symbols.h"
+#include "syntax_parse.h"
+#include "syntax_template.h"
 #include "unicode.h"
 #include "utils.h"
 #include "wrapper_synthesis.h"
@@ -184,9 +186,6 @@ static AstType *typeType(PrattParser *);
 static HashSymbol *symbol(PrattParser *);
 static HashSymbol *typeVariable(PrattParser *);
 static PrattRecord *fetchRecord(PrattParser *, HashSymbol *);
-static PrattMacroSpec *findLocalSyntaxSpecForHead(PrattParser *, HashSymbol *);
-static PrattMacroSpec *findSyntaxSpecByName(PrattParser *, HashSymbol *);
-static PrattMacroSpec *findSyntaxSpecForHead(PrattParser *, HashSymbol *);
 static SyntaxLexerCheckpoint captureSyntaxLexerCheckpoint(PrattParser *parser);
 static void restoreSyntaxLexerCheckpoint(PrattParser *parser,
                                          SyntaxLexerCheckpoint *checkpoint);
@@ -198,44 +197,12 @@ static void synchronize(PrattParser *parser);
 static PrattExportedOps *captureNameSpaceOperatorExports(PrattParser *parser);
 static PrattRecord *ensureTargetRecord(PrattParser *parser, HashSymbol *op);
 static bool symbolArrayContains(SymbolArray *symbols, HashSymbol *symbol);
-static SymbolArray *parseOptionalSyntaxParameters(PrattParser *parser);
-static PrattMacroAlternative *parseSyntaxAlternative(PrattParser *parser,
-                                                     SymbolArray *parameters);
-static bool syntaxPatternNameEquivalent(HashSymbol *left, HashSymbol *right,
-                                        SymbolArray *leftNames,
-                                        SymbolArray *rightNames,
-                                        Index mappedCount);
-static bool recordSyntaxPatternNameMap(HashSymbol *left, HashSymbol *right,
-                                       SymbolArray *leftNames,
-                                       SymbolArray *rightNames,
-                                       Index *mappedCount);
-static bool syntaxCallArgumentsEquivalent(SymbolArray *left, SymbolArray *right,
-                                          SymbolArray *leftNames,
-                                          SymbolArray *rightNames,
-                                          Index mappedCount);
-static bool syntaxPatternItemsMatch(PrattMacroPatternItems *leftItems,
-                                    PrattMacroPatternItems *rightItems,
-                                    bool requireRightLonger);
-static bool syntaxAlternativesEquivalent(PrattMacroAlternative *left,
-                                         PrattMacroAlternative *right);
-static bool syntaxAlternativeShadows(PrattMacroAlternative *earlier,
-                                     PrattMacroAlternative *later);
-static void validateSyntaxAlternatives(PrattParser *parser,
-                                       HashSymbol *ruleName,
-                                       PrattMacroAlternatives *alternatives);
 static bool parseOptionalExprSyntaxEntry(PrattParser *parser);
-static SymbolArray *parseSyntaxCallArguments(PrattParser *parser);
 static void registerExprSyntaxHead(PrattParser *parser, HashSymbol *head);
-static HashSymbol *syntaxSymbol(PrattParser *parser);
 static AstExpression *parseSyntaxHoleExpression(PrattParser *parser,
                                                 PrattMacroHole *hole,
                                                 SyntaxExprBindings *bindings);
-static HashSymbol *syntaxQuoteSymbol(void);
 static HashSymbol *syntaxUnquoteSymbol(void);
-static bool isSyntaxQuoteToken(PrattToken *token);
-static bool isSyntaxPatternBoundaryToken(PrattToken *token);
-static AstExpression *makeSyntaxQuotedTemplate(ParserInfo PI,
-                                               AstExpression *body);
 static AstExpression *unwrapSyntaxQuotedTemplate(AstExpression *template);
 static AstExpression *lookupSyntaxBindingCopy(SyntaxExprBindings *bindings,
                                               HashSymbol *name);
@@ -316,7 +283,7 @@ static PrattNsOpsArray *nsOpsCache = NULL;
  * the token type. Otherwise it will be returned as the value of
  * an atom type.
  */
-static HashSymbol *getTokenTypeOrAtom(PrattToken *token) {
+HashSymbol *prattTokenTypeOrAtom(PrattToken *token) {
     if (token->type == TOK_ATOM()) {
         return getPrattValue_Atom(token->value);
     } else {
@@ -333,48 +300,16 @@ static HashSymbol *getTokenTypeOrAtom(PrattToken *token) {
  * the token type. Otherwise it will be returned as the value of
  * an atom type.
  */
-static bool isTokenTypeOrAtom(PrattToken *token, HashSymbol *type) {
-    return getTokenTypeOrAtom(token) == type;
+bool prattIsTokenTypeOrAtom(PrattToken *token, HashSymbol *type) {
+    return prattTokenTypeOrAtom(token) == type;
 }
 
-/* Syntax definitions are keyed by rule name, but Expr dispatch resolves by
- * the quoted surface head token.
- */
-static PrattMacroSpec *findLocalSyntaxSpecForHead(PrattParser *parser,
-                                                  HashSymbol *head) {
-    Index i = 0;
-    PrattMacroSpec *spec = NULL;
-    while (iteratePrattMacroTable(parser->macros, &i, &spec) != NULL) {
-        if (spec != NULL && spec->isExprEntry && spec->headSymbol == head) {
-            return spec;
-        }
-    }
-    return NULL;
+static inline HashSymbol *getTokenTypeOrAtom(PrattToken *token) {
+    return prattTokenTypeOrAtom(token);
 }
 
-static PrattMacroSpec *findSyntaxSpecByName(PrattParser *parser,
-                                            HashSymbol *name) {
-    PrattMacroSpec *spec = NULL;
-    getPrattMacroTable(parser->macros, name, &spec);
-    if (spec != NULL) {
-        return spec;
-    } else if (parser->next != NULL) {
-        return findSyntaxSpecByName(parser->next, name);
-    } else {
-        return NULL;
-    }
-}
-
-static PrattMacroSpec *findSyntaxSpecForHead(PrattParser *parser,
-                                             HashSymbol *head) {
-    PrattMacroSpec *spec = findLocalSyntaxSpecForHead(parser, head);
-    if (spec != NULL) {
-        return spec;
-    } else if (parser->next != NULL) {
-        return findSyntaxSpecForHead(parser->next, head);
-    } else {
-        return NULL;
-    }
+static inline bool isTokenTypeOrAtom(PrattToken *token, HashSymbol *type) {
+    return prattIsTokenTypeOrAtom(token, type);
 }
 
 static SyntaxLexerCheckpoint captureSyntaxLexerCheckpoint(PrattParser *parser) {
@@ -2286,41 +2221,6 @@ static void checkTerminal(PrattParser *parser, WCharArray *string) {
     }
 }
 
-static PrattMacroHole *typedHole(PrattParser *parser) {
-    PrattToken *token = next(parser);
-    int save = PROTECT(token);
-    HashSymbol *bindingName = getTokenTypeOrAtom(token);
-    consume(parser, TOK_COLON());
-    token = next(parser);
-    REPLACE_PROTECT(save, token);
-    PrattMacroHole *result = NULL;
-    if (isTokenTypeOrAtom(token, TOK_EXPRTYPE())) {
-        result = newPrattMacroHole(PRATTSYNTAXCLASS_TYPE_EXPR, bindingName);
-    } else if (isTokenTypeOrAtom(token, TOK_NAMETYPE())) {
-        result = newPrattMacroHole(PRATTSYNTAXCLASS_TYPE_NAME, bindingName);
-    } else if (isTokenTypeOrAtom(token, TOK_NESTTYPE())) {
-        result = newPrattMacroHole(PRATTSYNTAXCLASS_TYPE_NEST, bindingName);
-    } else if (isTokenTypeOrAtom(token, TOK_STRINGTYPE()) ||
-               isTokenTypeOrAtom(token, newSymbol("String"))) {
-        result = newPrattMacroHole(PRATTSYNTAXCLASS_TYPE_STRING, bindingName);
-    } else if (isTokenTypeOrAtom(token, TOK_TYPETYPE())) {
-        result = newPrattMacroHole(PRATTSYNTAXCLASS_TYPE_TYPE, bindingName);
-    } else if (isTokenTypeOrAtom(token, newSymbol("Syntax"))) {
-        result = newPrattMacroHole(PRATTSYNTAXCLASS_TYPE_SYNTAX, bindingName);
-        int save2 = PROTECT(result);
-        consume(parser, TOK_OPEN());
-        result->callTarget = syntaxSymbol(parser);
-        result->callArguments = parseSyntaxCallArguments(parser);
-        consume(parser, TOK_CLOSE());
-        UNPROTECT(save2);
-    } else {
-        parserError(parser, "unrecognised syntax class %s",
-                    getTokenTypeOrAtom(token)->name);
-    }
-    UNPROTECT(save);
-    return result;
-}
-
 static bool symbolArrayContains(SymbolArray *symbols, HashSymbol *symbol) {
     if (symbols == NULL) {
         return false;
@@ -2334,402 +2234,26 @@ static bool symbolArrayContains(SymbolArray *symbols, HashSymbol *symbol) {
 }
 
 static SymbolArray *parseOptionalSyntaxParameters(PrattParser *parser) {
-    if (!match(parser, TOK_OPEN())) {
-        return NULL;
-    }
-
-    SymbolArray *parameters = newSymbolArray();
-    int save = PROTECT(parameters);
-
-    for (;;) {
-        HashSymbol *parameter = syntaxSymbol(parser);
-        if (symbolArrayContains(parameters, parameter)) {
-            parserError(parser, "duplicate syntax parameter %s",
-                        parameter->name);
-        } else {
-            pushSymbolArray(parameters, parameter);
-        }
-        if (!match(parser, TOK_COMMA())) {
-            break;
-        }
-    }
-
-    consume(parser, TOK_CLOSE());
-    UNPROTECT(save);
-    return parameters;
-}
-
-static PrattMacroPatternItems *macroPatternItems(PrattParser *parser) {
-    PrattMacroPatternItems *result = newPrattMacroPatternItems();
-    int save = PROTECT(result);
-    for (;;) {
-        if (check(parser, TOK_STRING())) {
-            WCharArray *str = rawString(parser);
-            int save2 = PROTECT(str);
-            checkTerminal(parser, str);
-            HashSymbol *symbol = unicodeToSymbol(str);
-            PrattMacroPatternItem *this =
-                newPrattMacroPatternItem_QuotedTerminal(symbol);
-            PROTECT(this);
-            pushPrattMacroPatternItems(result, this);
-            UNPROTECT(save2);
-        } else if (!isSyntaxPatternBoundaryToken(peek(parser))) {
-            if (isSyntaxQuoteToken(peek(parser))) {
-                break;
-            }
-            PrattMacroHole *hole = typedHole(parser);
-            if (hole == NULL)
-                break;
-            else {
-                int save2 = PROTECT(hole);
-                PrattMacroPatternItem *this =
-                    newPrattMacroPatternItem_TypedHole(hole);
-                PROTECT(this);
-                pushPrattMacroPatternItems(result, this);
-                UNPROTECT(save2);
-            }
-        } else {
-            break;
-        }
-    }
-    UNPROTECT(save);
-    return result;
-}
-
-static SymbolArray *parseSyntaxCallArguments(PrattParser *parser) {
-    if (!match(parser, TOK_OPEN())) {
-        return NULL;
-    }
-
-    SymbolArray *arguments = newSymbolArray();
-    int save = PROTECT(arguments);
-
-    for (;;) {
-        pushSymbolArray(arguments, syntaxSymbol(parser));
-        if (!match(parser, TOK_COMMA())) {
-            break;
-        }
-    }
-
-    consume(parser, TOK_CLOSE());
-    UNPROTECT(save);
-    return arguments;
-}
-
-static HashSymbol *syntaxQuoteSymbol(void) {
-    static HashSymbol *symbol = NULL;
-    if (symbol == NULL) {
-        symbol = newSymbol("quote");
-    }
-    return symbol;
+    return prattParseOptionalSyntaxParameters(parser);
 }
 
 static HashSymbol *syntaxUnquoteSymbol(void) {
-    static HashSymbol *symbol = NULL;
-    if (symbol == NULL) {
-        symbol = newSymbol("unquote");
-    }
-    return symbol;
-}
-
-static bool isSyntaxQuoteToken(PrattToken *token) {
-    return isTokenTypeOrAtom(token, syntaxQuoteSymbol());
-}
-
-static bool isSyntaxPatternBoundaryToken(PrattToken *token) {
-    return isSyntaxQuoteToken(token) || token->type == TOK_LCURLY() ||
-           token->type == TOK_PIPE() || token->type == TOK_SEMI() ||
-           token->type == TOK_EOF();
-}
-
-static AstExpression *makeSyntaxQuotedTemplate(ParserInfo PI,
-                                               AstExpression *body) {
-    AstExpression *quoteSymbol =
-        newAstExpression_Symbol(PI, syntaxQuoteSymbol());
-    int save = PROTECT(quoteSymbol);
-    AstExpressions *arguments = newAstExpressions(PI, body, NULL);
-    PROTECT(arguments);
-    AstExpression *result =
-        makeAstExpression_FunCall(PI, quoteSymbol, arguments);
-    UNPROTECT(save);
-    return result;
+    return prattSyntaxUnquoteSymbol();
 }
 
 static AstExpression *unwrapSyntaxQuotedTemplate(AstExpression *template) {
-    if (template == NULL || template->type != AST_EXPRESSION_TYPE_FUNCALL) {
-        return NULL;
-    }
-
-    AstFunCall *call = getAstExpression_FunCall(template);
-    if (call->function->type != AST_EXPRESSION_TYPE_SYMBOL ||
-        getAstExpression_Symbol(call->function) != syntaxQuoteSymbol() ||
-        call->arguments == NULL || call->arguments->next != NULL) {
-        return NULL;
-    }
-
-    return call->arguments->expression;
+    return prattUnwrapSyntaxQuotedTemplate(template);
 }
 
 static PrattMacroAlternative *parseSyntaxAlternative(PrattParser *parser,
                                                      SymbolArray *parameters) {
-    PrattMacroPatternItems *patternItems = macroPatternItems(parser);
-    int save = PROTECT(patternItems);
-    AstExpression *template = NULL;
-    if (isSyntaxQuoteToken(peek(parser))) {
-        PrattToken *quoteToken = next(parser);
-        int save2 = PROTECT(quoteToken);
-
-        SymbolArray *overrideSymbols = newSymbolArray();
-        int save3 = PROTECT(overrideSymbols);
-        pushSymbolArray(overrideSymbols, syntaxUnquoteSymbol());
-        for (Index i = 0; i < countPrattMacroPatternItems(patternItems); ++i) {
-            PrattMacroPatternItem *item =
-                getPrattMacroPatternItems(patternItems, i);
-            if (item->type == PRATTMACROPATTERNITEM_TYPE_TYPEDHOLE) {
-                HashSymbol *name =
-                    getPrattMacroPatternItem_TypedHole(item)->name;
-                if (!symbolArrayContains(overrideSymbols, name)) {
-                    pushSymbolArray(overrideSymbols, name);
-                }
-            }
-        }
-        if (parameters != NULL) {
-            for (Index i = 0; i < sizeSymbolArray(parameters); ++i) {
-                HashSymbol *name = getSymbolArray(parameters, i);
-                if (!symbolArrayContains(overrideSymbols, name)) {
-                    pushSymbolArray(overrideSymbols, name);
-                }
-            }
-        }
-
-        Index overrideCount = sizeSymbolArray(overrideSymbols);
-        PrattRecord **savedRecords = calloc(
-            overrideCount == 0 ? 1 : overrideCount, sizeof(PrattRecord *));
-        for (Index i = 0; i < overrideCount; ++i) {
-            HashSymbol *symbol = getSymbolArray(overrideSymbols, i);
-            getPrattRecordTable(parser->rules, symbol, &savedRecords[i]);
-            if (savedRecords[i] != NULL) {
-                PrattRecord *overrideRecord = copyPrattRecord(savedRecords[i]);
-                int save4 = PROTECT(overrideRecord);
-                overrideRecord->prefix.op = makeAtom;
-                overrideRecord->prefix.prec = 0;
-                setPrattRecordTable(parser->rules, symbol, overrideRecord);
-                UNPROTECT(save4);
-            }
-        }
-
-        AstNest *body = nest(parser);
-
-        for (Index i = 0; i < overrideCount; ++i) {
-            if (savedRecords[i] != NULL) {
-                setPrattRecordTable(parser->rules,
-                                    getSymbolArray(overrideSymbols, i),
-                                    savedRecords[i]);
-            }
-        }
-        free(savedRecords);
-        UNPROTECT(save3);
-
-        if (body != NULL) {
-            PROTECT(body);
-            AstExpression *quotedBody = newAstExpression_Nest(CPI(body), body);
-            PROTECT(quotedBody);
-            template = makeSyntaxQuotedTemplate(TOKPI(quoteToken), quotedBody);
-            PROTECT(template);
-        }
-        UNPROTECT(save2);
-    } else {
-        AstNest *body = nest(parser);
-        if (body != NULL) {
-            PROTECT(body);
-            template = newAstExpression_Nest(CPI(body), body);
-            PROTECT(template);
-        }
-    }
-    PrattMacroAlternative *alternative =
-        newPrattMacroAlternative(patternItems, template);
-    PROTECT(alternative);
-    UNPROTECT(save);
-    return alternative;
-}
-
-static bool syntaxPatternNameEquivalent(HashSymbol *left, HashSymbol *right,
-                                        SymbolArray *leftNames,
-                                        SymbolArray *rightNames,
-                                        Index mappedCount) {
-    bool rightMapped = false;
-
-    for (Index i = 0; i < mappedCount; ++i) {
-        if (getSymbolArray(leftNames, i) == left) {
-            return getSymbolArray(rightNames, i) == right;
-        }
-        if (getSymbolArray(rightNames, i) == right) {
-            rightMapped = true;
-        }
-    }
-
-    if (rightMapped) {
-        return false;
-    }
-
-    return left == right;
-}
-
-static bool recordSyntaxPatternNameMap(HashSymbol *left, HashSymbol *right,
-                                       SymbolArray *leftNames,
-                                       SymbolArray *rightNames,
-                                       Index *mappedCount) {
-    for (Index i = 0; i < *mappedCount; ++i) {
-        if (getSymbolArray(leftNames, i) == left) {
-            return getSymbolArray(rightNames, i) == right;
-        }
-        if (getSymbolArray(rightNames, i) == right) {
-            return false;
-        }
-    }
-
-    pushSymbolArray(leftNames, left);
-    pushSymbolArray(rightNames, right);
-    (*mappedCount)++;
-    return true;
-}
-
-static bool syntaxCallArgumentsEquivalent(SymbolArray *left, SymbolArray *right,
-                                          SymbolArray *leftNames,
-                                          SymbolArray *rightNames,
-                                          Index mappedCount) {
-    if (left == NULL || right == NULL) {
-        return left == right;
-    }
-
-    if (sizeSymbolArray(left) != sizeSymbolArray(right)) {
-        return false;
-    }
-
-    for (Index i = 0; i < sizeSymbolArray(left); ++i) {
-        if (!syntaxPatternNameEquivalent(getSymbolArray(left, i),
-                                         getSymbolArray(right, i), leftNames,
-                                         rightNames, mappedCount)) {
-            return false;
-        }
-    }
-
-    return true;
-}
-
-static bool syntaxPatternItemsMatch(PrattMacroPatternItems *leftItems,
-                                    PrattMacroPatternItems *rightItems,
-                                    bool requireRightLonger) {
-    Index leftCount = countPrattMacroPatternItems(leftItems);
-    Index rightCount = countPrattMacroPatternItems(rightItems);
-
-    if (requireRightLonger) {
-        if (leftCount >= rightCount) {
-            return false;
-        }
-    } else if (leftCount != rightCount) {
-        return false;
-    }
-
-    SymbolArray *leftNames = newSymbolArray();
-    int save = PROTECT(leftNames);
-    SymbolArray *rightNames = newSymbolArray();
-    PROTECT(rightNames);
-    bool matched = true;
-    Index mappedCount = 0;
-
-    for (Index i = 0; i < leftCount; ++i) {
-        PrattMacroPatternItem *leftItem =
-            getPrattMacroPatternItems(leftItems, i);
-        PrattMacroPatternItem *rightItem =
-            getPrattMacroPatternItems(rightItems, i);
-        if (leftItem->type != rightItem->type) {
-            matched = false;
-            break;
-        }
-
-        if (leftItem->type == PRATTMACROPATTERNITEM_TYPE_QUOTEDTERMINAL) {
-            if (getPrattMacroPatternItem_QuotedTerminal(leftItem) !=
-                getPrattMacroPatternItem_QuotedTerminal(rightItem)) {
-                matched = false;
-                break;
-            }
-            continue;
-        }
-
-        PrattMacroHole *leftHole = getPrattMacroPatternItem_TypedHole(leftItem);
-        PrattMacroHole *rightHole =
-            getPrattMacroPatternItem_TypedHole(rightItem);
-
-        if (leftHole->syntaxClass != rightHole->syntaxClass ||
-            leftHole->callTarget != rightHole->callTarget ||
-            !syntaxCallArgumentsEquivalent(leftHole->callArguments,
-                                           rightHole->callArguments, leftNames,
-                                           rightNames, mappedCount) ||
-            !recordSyntaxPatternNameMap(leftHole->name, rightHole->name,
-                                        leftNames, rightNames, &mappedCount)) {
-            matched = false;
-            break;
-        }
-    }
-
-    UNPROTECT(save);
-    return matched;
-}
-
-static bool syntaxAlternativesEquivalent(PrattMacroAlternative *left,
-                                         PrattMacroAlternative *right) {
-    return syntaxPatternItemsMatch(left->patternItems, right->patternItems,
-                                   false);
-}
-
-static bool syntaxAlternativeShadows(PrattMacroAlternative *earlier,
-                                     PrattMacroAlternative *later) {
-    if (countPrattMacroPatternItems(earlier->patternItems) == 0) {
-        return false;
-    }
-
-    return syntaxPatternItemsMatch(earlier->patternItems, later->patternItems,
-                                   true);
+    return prattParseSyntaxAlternative(parser, parameters);
 }
 
 static void validateSyntaxAlternatives(PrattParser *parser,
                                        HashSymbol *ruleName,
                                        PrattMacroAlternatives *alternatives) {
-    bool sawEmpty = false;
-
-    for (Index i = 0; i < sizePrattMacroAlternatives(alternatives); ++i) {
-        PrattMacroAlternative *alternative =
-            getPrattMacroAlternatives(alternatives, i);
-        if (countPrattMacroPatternItems(alternative->patternItems) == 0) {
-            if (sawEmpty) {
-                parserError(parser,
-                            "syntax %s has more than one empty alternative",
-                            ruleName->name);
-                return;
-            }
-            sawEmpty = true;
-        }
-
-        for (Index j = 0; j < i; ++j) {
-            PrattMacroAlternative *earlier =
-                getPrattMacroAlternatives(alternatives, j);
-            if (syntaxAlternativesEquivalent(earlier, alternative)) {
-                parserError(
-                    parser,
-                    "syntax %s alternative %ld duplicates alternative %ld",
-                    ruleName->name, (long)(i + 1), (long)(j + 1));
-                return;
-            }
-            if (syntaxAlternativeShadows(earlier, alternative)) {
-                parserError(
-                    parser,
-                    "syntax %s alternative %ld is shadowed by alternative %ld",
-                    ruleName->name, (long)(i + 1), (long)(j + 1));
-                return;
-            }
-        }
-    }
+    prattValidateSyntaxAlternatives(parser, ruleName, alternatives);
 }
 
 static bool parseOptionalExprSyntaxEntry(PrattParser *parser) {
@@ -2772,11 +2296,6 @@ static void registerExprSyntaxHead(PrattParser *parser, HashSymbol *head) {
     record->prefix.op = userSyntaxExpr;
     setPrattRecordTable(parser->rules, head, record);
     UNPROTECT(save);
-}
-
-static HashSymbol *syntaxSymbol(PrattParser *parser) {
-    PrattToken *token = next(parser);
-    return getTokenTypeOrAtom(token);
 }
 
 static AstExpression *parseSyntaxHoleExpression(PrattParser *parser,
@@ -2822,7 +2341,8 @@ static AstExpression *parseSyntaxHoleExpression(PrattParser *parser,
         return result;
     }
     case PRATTSYNTAXCLASS_TYPE_SYNTAX: {
-        PrattMacroSpec *spec = findSyntaxSpecByName(parser, hole->callTarget);
+        PrattMacroSpec *spec =
+            prattFindSyntaxSpecByName(parser, hole->callTarget);
         if (spec == NULL) {
             parserError(parser, "unknown syntax helper %s",
                         hole->callTarget->name);
@@ -3514,7 +3034,7 @@ static AstExpression *expandSyntaxExpr(PrattParser *parser, PrattToken *tok,
 static AstExpression *userSyntaxExpr(PrattRecord *record, PrattParser *parser,
                                      AstExpression *lhs __attribute__((unused)),
                                      PrattToken *tok) {
-    PrattMacroSpec *spec = findSyntaxSpecForHead(parser, record->symbol);
+    PrattMacroSpec *spec = prattFindSyntaxSpecForHead(parser, record->symbol);
     if (spec == NULL) {
         return NULL;
     }
@@ -3525,7 +3045,7 @@ static AstDefinition *syntaxDefinition(PrattParser *parser) {
     ENTER(syntaxDefinition);
     PrattToken *tok = peek(parser);
     int save = PROTECT(tok);
-    HashSymbol *ruleName = syntaxSymbol(parser);
+    HashSymbol *ruleName = prattSyntaxSymbol(parser);
     SymbolArray *parameters = parseOptionalSyntaxParameters(parser);
     if (parameters != NULL) {
         PROTECT(parameters);
@@ -3564,7 +3084,7 @@ static AstDefinition *syntaxDefinition(PrattParser *parser) {
                     ruleName->name);
     }
     if (isExprEntry &&
-        findLocalSyntaxSpecForHead(parser, surfaceHead) != NULL) {
+        prattFindLocalSyntaxSpecForHead(parser, surfaceHead) != NULL) {
         parserError(
             parser,
             "expression syntax head %s already defined in current scope",
@@ -4250,6 +3770,8 @@ static AstNest *nest(PrattParser *parser) {
     UNPROTECT(save);
     return body;
 }
+
+AstNest *prattNest(PrattParser *parser) { return nest(parser); }
 
 /**
  * @brief Parse the body of a nested block, which can contain definitions or
@@ -5017,6 +4539,8 @@ static WCharArray *rawString(PrattParser *parser) {
         return err;
     }
 }
+
+WCharArray *prattRawString(PrattParser *parser) { return rawString(parser); }
 
 /**
  * @brief parses a subsequent string, appending it to the current.
@@ -5819,6 +5343,11 @@ static AstExpression *makeAtom(PrattRecord *record __attribute__((unused)),
     }
 
     return newAstExpression_Symbol(TOKPI(tok), name);
+}
+
+AstExpression *prattMakeAtomParselet(PrattRecord *record, PrattParser *parser,
+                                     AstExpression *lhs, PrattToken *tok) {
+    return makeAtom(record, parser, lhs, tok);
 }
 
 /**

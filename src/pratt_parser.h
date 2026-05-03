@@ -35,4 +35,11 @@ AstNest *prattParseStandaloneString(char *, char *);
 AstProg *prattParseFile(char *);
 AstProg *prattParseString(char *, char *);
 
+HashSymbol *prattTokenTypeOrAtom(PrattToken *token);
+bool prattIsTokenTypeOrAtom(PrattToken *token, HashSymbol *type);
+WCharArray *prattRawString(PrattParser *parser);
+AstNest *prattNest(PrattParser *parser);
+AstExpression *prattMakeAtomParselet(PrattRecord *record, PrattParser *parser,
+                                     AstExpression *lhs, PrattToken *tok);
+
 #endif
