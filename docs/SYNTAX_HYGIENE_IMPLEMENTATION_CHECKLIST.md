@@ -270,19 +270,20 @@ definition forms, not new annotated-definition syntax.
 
 ### Files (Phase 9)
 
-- [ ] [src/lambda_conversion.c](src/lambda_conversion.c)
-- [ ] [src/main.c](src/main.c)
-- [ ] [src/syntax_lower.c](src/syntax_lower.c)
+- [x] [src/lambda_conversion.c](src/lambda_conversion.c)
+- [x] [src/main.c](src/main.c)
+- [x] [src/ast_lower.c](src/ast_lower.c)
 
 ### Tasks (Phase 9)
 
-- [ ] Add defensive assert or error if syntax carriers leak past lowering.
-- [ ] Add clear diagnostics for result-kind mismatch in lowering.
-- [ ] Add clear diagnostics for unresolved declarationId at lowering time.
+- [x] Add defensive assert or error if syntax carriers leak past lowering.
+- [x] Add clear diagnostics for result-kind mismatch in lowering.
+- [x] Add clear diagnostics for unresolved declarationId at lowering time.
 
 ### Validation (Phase 9)
 
-- [ ] Negative tests for mismatched kinds produce explicit errors.
+- [x] Negative tests for mismatched kinds produce explicit errors.
+- [x] `make test`
 
 ## Phase 10: Test Migration And Expansion
 

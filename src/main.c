@@ -542,6 +542,9 @@ int main(int argc, char *argv[]) {
         ///////////////////
         prog = lowerAst(prog);
         REPLACE_PROTECT(save2, prog);
+        if (hadErrors()) {
+            exit(1);
+        }
 
         if (ast_flag) {
             ppAstProg(stdout, prog);

@@ -26,6 +26,7 @@
 #include "ast.h"
 #include "memory.h"
 #include "symbol.h"
+#include "symbols.h"
 #include "utils_helper.h"
 
 #include "ast_lower.h"
@@ -274,6 +275,8 @@ static AstExpression *instantiateSyntaxUseExpression(AstExprSyntaxUse *node,
                                                      VisitorContext *context);
 static AstDefinition *instantiateSyntaxUseDefinition(AstDefSyntaxUse *node,
                                                      VisitorContext *context);
+static AstExpression *makeSyntaxLoweringErrorExpression(ParserInfo PI);
+static AstDefinition *makeSyntaxLoweringErrorDefinition(ParserInfo PI);
 static AstExpression *instantiateTemplateExpr(AstSyntaxTemplateExpr *node,
                                               ExpansionContext *context);
 static AstExpressions *instantiateTemplateExprs(AstSyntaxTemplateExprs *node,
@@ -342,6 +345,18 @@ static AstSyntaxDecl *findSyntaxDeclaration(int declarationId,
         context = context->next;
     }
     return NULL;
+}
+
+static AstExpression *makeSyntaxLoweringErrorExpression(ParserInfo PI) {
+    AstExpression *inner = newAstExpression_Symbol(PI, errorSymbol());
+    int save = PROTECT(inner);
+    AstExpression *result = newAstExpression_Error(PI, inner);
+    UNPROTECT(save);
+    return result;
+}
+
+static AstDefinition *makeSyntaxLoweringErrorDefinition(ParserInfo PI) {
+    return newAstDefinition_Blank(PI);
 }
 
 static AstSyntaxBinding *findSyntaxBinding(HashSymbol *name,
@@ -994,10 +1009,20 @@ static AstExpression *instantiateSyntaxUseExpression(AstExprSyntaxUse *node,
     AstSyntaxDecl *declaration =
         findSyntaxDeclaration(node->declarationId, context);
 
-    if (declaration == NULL ||
-        declaration->resultKind != AST_SYNTAXRESULTKIND_TYPE_EXPR) {
-        cant_happen("invalid syntax expression use for declaration %d",
-                    node->declarationId);
+    if (declaration == NULL) {
+        can_happen(CPI(node),
+                   "unresolved syntax declaration %d during lowering of Expr "
+                   "syntax use",
+                   node->declarationId);
+        return makeSyntaxLoweringErrorExpression(CPI(node));
+    }
+
+    if (declaration->resultKind != AST_SYNTAXRESULTKIND_TYPE_EXPR) {
+        can_happen(CPI(node),
+                   "syntax declaration %d produces %s but was used as Expr",
+                   node->declarationId,
+                   astSyntaxResultKindName(declaration->resultKind));
+        return makeSyntaxLoweringErrorExpression(CPI(node));
     }
 
     AstSyntaxAlternative *alternative =
@@ -1027,10 +1052,20 @@ static AstDefinition *instantiateSyntaxUseDefinition(AstDefSyntaxUse *node,
     AstSyntaxDecl *declaration =
         findSyntaxDeclaration(node->declarationId, context);
 
-    if (declaration == NULL ||
-        declaration->resultKind != AST_SYNTAXRESULTKIND_TYPE_DEF) {
-        cant_happen("invalid syntax definition use for declaration %d",
-                    node->declarationId);
+    if (declaration == NULL) {
+        can_happen(CPI(node),
+                   "unresolved syntax declaration %d during lowering of Def "
+                   "syntax use",
+                   node->declarationId);
+        return makeSyntaxLoweringErrorDefinition(CPI(node));
+    }
+
+    if (declaration->resultKind != AST_SYNTAXRESULTKIND_TYPE_DEF) {
+        can_happen(CPI(node),
+                   "syntax declaration %d produces %s but was used as Def",
+                   node->declarationId,
+                   astSyntaxResultKindName(declaration->resultKind));
+        return makeSyntaxLoweringErrorDefinition(CPI(node));
     }
 
     AstSyntaxAlternative *alternative =
