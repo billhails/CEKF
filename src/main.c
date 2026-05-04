@@ -29,6 +29,7 @@
 #include "arithmetic_next.h"
 #include "ast.h"
 #include "ast_debug.h"
+#include "ast_lower.h"
 #include "ast_ns.h"
 #include "ast_pp.h"
 #include "ast_prepare.h"
@@ -534,6 +535,12 @@ int main(int argc, char *argv[]) {
         // Syntax Preparation
         //////////////////////
         prog = prepareAst(prog);
+        REPLACE_PROTECT(save2, prog);
+
+        ///////////////////
+        // Syntax Lowering
+        ///////////////////
+        prog = lowerAst(prog);
         REPLACE_PROTECT(save2, prog);
 
         if (ast_flag) {

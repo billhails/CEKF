@@ -798,15 +798,7 @@ static AstExpression *instantiateTemplateExpr(AstSyntaxTemplateExpr *node,
     }
     case AST_SYNTAXTEMPLATEEXPR_TYPE_LOOKUP: {
         AstSyntaxTemplateLookUp *lookUp = getAstSyntaxTemplateExpr_LookUp(node);
-        AstExpression *expression =
-            instantiateTemplateExpr(lookUp->expression, context);
-        int save = PROTECT(expression);
-        AstLookUp *result = newAstLookUp(CPI(lookUp), lookUp->nsId,
-                                         lookUp->nsSymbol, expression);
-        PROTECT(result);
-        AstExpression *wrapped = newAstExpression_LookUp(CPI(node), result);
-        UNPROTECT(save);
-        return wrapped;
+        return instantiateTemplateExpr(lookUp->expression, context);
     }
     case AST_SYNTAXTEMPLATEEXPR_TYPE_FUN: {
         AstCompositeFunction *function = instantiateTemplateCompositeFunction(
@@ -912,12 +904,12 @@ instantiateTemplateDefinition(AstSyntaxTemplateDefinition *node,
     case AST_SYNTAXTEMPLATEDEFINITION_TYPE_DEFINE: {
         AstSyntaxTemplateDefine *define =
             getAstSyntaxTemplateDefinition_Define(node);
+        HashSymbol *symbol = instantiateTemplateBinder(define->symbol, context);
+        int save = STARTPROTECT();
         AstExpression *expression =
             instantiateTemplateExpr(define->expression, context);
-        int save = PROTECT(expression);
-        AstDefine *result = newAstDefine(
-            CPI(define), instantiateTemplateBinder(define->symbol, context),
-            expression);
+        PROTECT(expression);
+        AstDefine *result = newAstDefine(CPI(define), symbol, expression);
         PROTECT(result);
         AstDefinition *wrapped = newAstDefinition_Define(CPI(node), result);
         UNPROTECT(save);
@@ -942,12 +934,12 @@ instantiateTemplateDefinition(AstSyntaxTemplateDefinition *node,
     case AST_SYNTAXTEMPLATEDEFINITION_TYPE_LAZY: {
         AstSyntaxTemplateDefLazy *lazy =
             getAstSyntaxTemplateDefinition_Lazy(node);
+        HashSymbol *name = instantiateTemplateBinder(lazy->name, context);
+        int save = STARTPROTECT();
         AstAltFunction *definition =
             instantiateTemplateAltFunction(lazy->definition, context);
-        int save = PROTECT(definition);
-        AstDefLazy *result = newAstDefLazy(
-            CPI(lazy), instantiateTemplateBinder(lazy->name, context),
-            definition);
+        PROTECT(definition);
+        AstDefLazy *result = newAstDefLazy(CPI(lazy), name, definition);
         PROTECT(result);
         AstDefinition *wrapped = newAstDefinition_Lazy(CPI(node), result);
         UNPROTECT(save);

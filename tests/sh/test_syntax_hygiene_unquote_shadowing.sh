@@ -14,11 +14,14 @@ test -n "$outer_x"
 test -n "$inner_x"
 test "$outer_x" != "$inner_x"
 
-printf '%s\n' "$body" | grep -F 'syntax-decl[1 captureUseSite ' >/dev/null
-printf '%s\n' "$body" | grep -F 'syntax-use-expr[decl=1 alt=0] (' >/dev/null
-printf '%s\n' "$body" | grep -F "y := $inner_x" >/dev/null
+printf '%s\n' "$body" | grep -F "                $inner_x;" >/dev/null
 
-if printf '%s\n' "$body" | grep -F "y := $outer_x" >/dev/null; then
-    printf 'unquote captured declaration-site x instead of use-site x\n' >&2
+if printf '%s\n' "$body" | grep -F "                $outer_x;" >/dev/null; then
+    printf 'syntax lowering captured declaration-site x instead of use-site x\n' >&2
+    exit 1
+fi
+
+if printf '%s\n' "$body" | grep -E 'syntax-decl|syntax-use-expr|template\[' >/dev/null; then
+    printf 'syntax carriers survived lowering in dump-ast output\n' >&2
     exit 1
 fi

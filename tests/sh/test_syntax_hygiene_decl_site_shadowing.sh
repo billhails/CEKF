@@ -15,11 +15,14 @@ test -n "$outer_helper"
 test -n "$inner_helper"
 test "$outer_helper" != "$inner_helper"
 
-printf '%s\n' "$body" | grep -F 'syntax-decl[1 callHelper ' >/dev/null
-printf '%s\n' "$body" | grep -F 'syntax-use-expr[decl=1 alt=0] (' >/dev/null
-printf '%s\n' "$body" | grep -F 'arg := 41' >/dev/null
+printf '%s\n' "$body" | grep -F "$outer_helper(41);" >/dev/null
 
-if printf '%s\n' "$body" | grep -F 'helper :=' >/dev/null; then
-    printf 'unexpected helper capture in syntax-use bindings\n' >&2
+if printf '%s\n' "$body" | grep -F "$inner_helper(41);" >/dev/null; then
+    printf 'syntax lowering captured the use-site helper instead of the declaration-site helper\n' >&2
+    exit 1
+fi
+
+if printf '%s\n' "$body" | grep -E 'syntax-decl|syntax-use-expr|template\[' >/dev/null; then
+    printf 'syntax carriers survived lowering in dump-ast output\n' >&2
     exit 1
 fi

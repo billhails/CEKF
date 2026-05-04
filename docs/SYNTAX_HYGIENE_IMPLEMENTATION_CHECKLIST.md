@@ -194,7 +194,7 @@ Current code anchors:
 
 - [x] [src/ast_lower.h](src/ast_lower.h)
 - [x] [src/ast_lower.c](src/ast_lower.c)
-- [ ] [src/main.c](src/main.c)
+- [x] [src/main.c](src/main.c)
 
 ### Tasks (Phase 7)
 
@@ -205,13 +205,13 @@ Current code anchors:
 - [x] Splice unquotes from prepared captures.
 - [x] Apply declaration-site resolved literal references.
 - [x] Remove syntax declaration nodes from final AST.
-- [ ] Insert lowering call in pipeline after `syntaxPrepareAst` and before
+- [x] Insert lowering call in pipeline after `syntaxPrepareAst` and before
       `lamConvertProg`.
 
 ### Validation (Phase 7)
 
-- [ ] `--dump-ast` after lowering has no syntax carriers.
-- [ ] Pipeline reaches lambda conversion without syntax node crashes.
+- [x] `--dump-ast` after lowering has no syntax carriers.
+- [x] Pipeline reaches lambda conversion without syntax node crashes.
 
 ## Phase 8: Remove Old Parser Substitution Path
 

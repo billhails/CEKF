@@ -361,8 +361,15 @@ convertTemplateNameRef(AstExpression *expr, TemplateContext *context) {
 static AstSyntaxTemplateBinder *
 convertTemplateBinderFromFarg(AstFarg *farg, TemplateContext *context) {
     if (farg->type == AST_FARG_TYPE_SYMBOL) {
-        return makeTemplateIntroducedBinder(CPI(farg), getAstFarg_Symbol(farg),
-                                            context);
+        HashSymbol *name = getAstFarg_Symbol(farg);
+        AstSyntaxClass syntaxClass = AST_SYNTAXCLASS_TYPE_NAME;
+
+        if (!context->quotedTemplate &&
+            lookupTemplateBindingClass(name, context, &syntaxClass)) {
+            return makeTemplateUnquoteBinder(CPI(farg), name, syntaxClass);
+        }
+
+        return makeTemplateIntroducedBinder(CPI(farg), name, context);
     }
 
     if (farg->type == AST_FARG_TYPE_UNPACK) {
