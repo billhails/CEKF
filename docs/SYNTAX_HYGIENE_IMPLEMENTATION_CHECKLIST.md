@@ -35,8 +35,8 @@ Current code anchors:
 
 ### Validation (Phase 0)
 
-- [x] Run `make test` and capture failures if any.
-- [x] Run one focused syntax test file manually through `bin/fn` if useful.
+- [x] Build baseline test status before changes.
+- [x] Run representative syntax dump before refactor.
 
 ## Phase 1: Introduce AST Schema Carriers And Template IR
 
@@ -169,24 +169,24 @@ Current code anchors:
 
 ### Files (Phase 6)
 
-- [ ] [src/syntax_prepare.h](src/syntax_prepare.h)
-- [ ] [src/syntax_prepare.c](src/syntax_prepare.c)
-- [ ] [src/main.c](src/main.c)
+- [x] [src/ast_prepare.h](src/ast_prepare.h)
+- [x] [src/ast_prepare.c](src/ast_prepare.c)
+- [x] [src/main.c](src/main.c)
 
 ### Tasks (Phase 6)
 
-- [ ] Implement lexical walk of AST before syntax lowering.
-- [ ] Introduce temporary unique-symbol assignment for ordinary binders and refs
+- [x] Implement lexical walk of AST before syntax lowering.
+- [x] Introduce temporary unique-symbol assignment for ordinary binders and refs
       in this pass scope.
-- [ ] Resolve template literal refs to declaration-site bindings.
-- [ ] Preserve use-site identity for captured bindings.
-- [ ] Keep syntax carriers intact for lowering.
-- [ ] Insert call into pipeline after `nsAstProg` and before `syntaxLowerAst`.
+- [x] Resolve template literal refs to declaration-site bindings.
+- [x] Preserve use-site identity for captured bindings.
+- [x] Keep syntax carriers intact for lowering.
+- [x] Insert call into pipeline after `nsAstProg` and before `syntaxLowerAst`.
 
 ### Validation (Phase 6)
 
-- [ ] Shadowing-focused test proves declaration-site literal resolution.
-- [ ] Shadowing-focused test proves use-site unquote preservation.
+- [x] Shadowing-focused test proves declaration-site literal resolution.
+- [x] Shadowing-focused test proves use-site unquote preservation.
 
 ## Phase 7: Implement Syntax Lowering Pass
 

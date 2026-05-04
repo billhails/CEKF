@@ -23,6 +23,8 @@
 
 #include "ast.h"
 #include "memory.h"
+#include "symbol.h"
+#include "utils_helper.h"
 
 #include "ast_prepare.h"
 
@@ -33,8 +35,243 @@
 #endif
 
 typedef struct VisitorContext {
-    int unused;
+    struct VisitorContext *next;
+    SymbolMap *alphaTable;
+    SymbolSet *fixedNames;
+    bool renameDefinitions;
 } VisitorContext;
+
+static void initVisitorContext(VisitorContext *child, VisitorContext *parent,
+                               SymbolMap *alphaTable, SymbolSet *fixedNames,
+                               bool renameDefinitions) {
+    child->next = parent;
+    child->alphaTable = alphaTable;
+    child->fixedNames = fixedNames;
+    child->renameDefinitions = renameDefinitions;
+}
+
+static HashSymbol *wildCardSymbol(void) {
+    static HashSymbol *symbol = NULL;
+    if (symbol == NULL) {
+        symbol = newSymbol("_");
+    }
+    return symbol;
+}
+
+static bool getPreparedName(HashSymbol *name, VisitorContext *context,
+                            HashSymbol **resolved) {
+    while (context != NULL) {
+        if (getSymbolMap(context->alphaTable, name, resolved)) {
+            return true;
+        }
+        context = context->next;
+    }
+    return false;
+}
+
+static bool isFixedName(HashSymbol *name, VisitorContext *context) {
+    while (context != NULL) {
+        if (getSymbolSet(context->fixedNames, name)) {
+            return true;
+        }
+        context = context->next;
+    }
+    return false;
+}
+
+static bool hasGeneratedDollarSuffix(HashSymbol *name) {
+    char *dollar = strrchr(name->name, '$');
+
+    if (dollar == NULL || dollar[1] == '\0') {
+        return false;
+    }
+
+    for (char *cursor = dollar + 1; *cursor != '\0'; cursor++) {
+        if (*cursor < '0' || *cursor > '9') {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+static bool shouldPrepareSymbol(HashSymbol *name) {
+    return strncmp(name->name, "builtin$", 8) != 0 &&
+           strncmp(name->name, "eq$", 3) != 0 &&
+           strncmp(name->name, "print$", 6) != 0 &&
+           !hasGeneratedDollarSuffix(name);
+}
+
+static HashSymbol *resolvePreparedName(HashSymbol *name,
+                                       VisitorContext *context) {
+    HashSymbol *resolved = NULL;
+    if (getPreparedName(name, context, &resolved)) {
+        return resolved;
+    }
+    return name;
+}
+
+static void addUniqueNameToContext(HashSymbol *name, VisitorContext *context) {
+    HashSymbol *resolved = NULL;
+
+    if (context == NULL || name == NULL || name == wildCardSymbol() ||
+        !shouldPrepareSymbol(name) || isFixedName(name, context)) {
+        return;
+    }
+
+    if (getSymbolMap(context->alphaTable, name, &resolved)) {
+        return;
+    }
+
+    setSymbolMap(context->alphaTable, name, genSymDollar(name->name));
+}
+
+static void populateAstFargBinders(AstFarg *node, VisitorContext *context);
+
+static void populateAstFargListBinders(AstFargList *node,
+                                       VisitorContext *context) {
+    while (node != NULL) {
+        populateAstFargBinders(node->arg, context);
+        node = node->next;
+    }
+}
+
+static void populateAstTaggedArgListBinders(AstTaggedArgList *node,
+                                            VisitorContext *context) {
+    while (node != NULL) {
+        populateAstFargBinders(node->arg, context);
+        node = node->next;
+    }
+}
+
+static void populateAstAltArgsBinders(AstAltArgs *node,
+                                      VisitorContext *context) {
+    while (node != NULL) {
+        populateAstFargListBinders(node->argList, context);
+        node = node->next;
+    }
+}
+
+static void populateAstFargBinders(AstFarg *node, VisitorContext *context) {
+    if (node == NULL) {
+        return;
+    }
+
+    switch (node->type) {
+    case AST_FARG_TYPE_WILDCARD:
+    case AST_FARG_TYPE_LOOKUP:
+    case AST_FARG_TYPE_NUMBER:
+    case AST_FARG_TYPE_CHARACTER:
+        return;
+    case AST_FARG_TYPE_SYMBOL:
+        addUniqueNameToContext(getAstFarg_Symbol(node), context);
+        return;
+    case AST_FARG_TYPE_NAMED:
+        addUniqueNameToContext(getAstFarg_Named(node)->name, context);
+        populateAstFargBinders(getAstFarg_Named(node)->arg, context);
+        return;
+    case AST_FARG_TYPE_UNPACK:
+        populateAstFargListBinders(getAstFarg_Unpack(node)->argList, context);
+        return;
+    case AST_FARG_TYPE_UNPACKSTRUCT:
+        populateAstTaggedArgListBinders(getAstFarg_UnpackStruct(node)->argList,
+                                        context);
+        return;
+    case AST_FARG_TYPE_TUPLE:
+        populateAstFargListBinders(getAstFarg_Tuple(node), context);
+        return;
+    default:
+        cant_happen("unrecognized AstFarg type %d", node->type);
+    }
+}
+
+static void recordDefinitionBinders(AstDefinition *node,
+                                    VisitorContext *context) {
+    AstSymbolList *symbols = NULL;
+
+    if (node == NULL) {
+        return;
+    }
+
+    switch (node->type) {
+    case AST_DEFINITION_TYPE_DEFINE:
+        addUniqueNameToContext(getAstDefinition_Define(node)->symbol, context);
+        return;
+    case AST_DEFINITION_TYPE_MULTI:
+        symbols = getAstDefinition_Multi(node)->symbols;
+        while (symbols != NULL) {
+            addUniqueNameToContext(symbols->symbol, context);
+            symbols = symbols->next;
+        }
+        return;
+    case AST_DEFINITION_TYPE_LAZY:
+        addUniqueNameToContext(getAstDefinition_Lazy(node)->name, context);
+        return;
+    case AST_DEFINITION_TYPE_ALIAS:
+    case AST_DEFINITION_TYPE_TYPEDEF:
+    case AST_DEFINITION_TYPE_BLANK:
+    case AST_DEFINITION_TYPE_BUILTINSSLOT:
+    case AST_DEFINITION_TYPE_SYNTAXDECL:
+    case AST_DEFINITION_TYPE_SYNTAXUSE:
+        return;
+    default:
+        cant_happen("unrecognized AstDefinition type %d", node->type);
+    }
+}
+
+static void recordTypeConstructors(AstTypeBody *body, VisitorContext *context) {
+    while (body != NULL) {
+        setSymbolSet(context->fixedNames, body->typeConstructor->symbol);
+        body = body->next;
+    }
+}
+
+static void recordDefinitionConstructorNames(AstDefinition *node,
+                                             VisitorContext *context) {
+    if (node == NULL || context == NULL) {
+        return;
+    }
+
+    if (node->type == AST_DEFINITION_TYPE_TYPEDEF) {
+        recordTypeConstructors(getAstDefinition_TypeDef(node)->typeBody,
+                               context);
+    }
+}
+
+static bool definitionBindsBeforePreparation(AstDefinition *node) {
+    switch (node->type) {
+    case AST_DEFINITION_TYPE_LAZY:
+        return true;
+    case AST_DEFINITION_TYPE_DEFINE: {
+        AstDefine *define = getAstDefinition_Define(node);
+        return define->expression != NULL &&
+               define->expression->type == AST_EXPRESSION_TYPE_FUN;
+    }
+    case AST_DEFINITION_TYPE_MULTI:
+    case AST_DEFINITION_TYPE_ALIAS:
+    case AST_DEFINITION_TYPE_TYPEDEF:
+    case AST_DEFINITION_TYPE_BLANK:
+    case AST_DEFINITION_TYPE_BUILTINSSLOT:
+    case AST_DEFINITION_TYPE_SYNTAXDECL:
+    case AST_DEFINITION_TYPE_SYNTAXUSE:
+        return false;
+    default:
+        cant_happen("unrecognized AstDefinition "
+                    "type %d",
+                    node->type);
+    }
+}
+
+static void predeclareRecursiveDefinitionBinders(AstDefinitions *node,
+                                                 VisitorContext *context) {
+    if (node == NULL) {
+        return;
+    }
+    if (definitionBindsBeforePreparation(node->definition)) {
+        recordDefinitionBinders(node->definition, context);
+    }
+    predeclareRecursiveDefinitionBinders(node->next, context);
+}
 
 static FileId *prepareFileId(FileId *node, VisitorContext *context) {
     (void)context;
@@ -209,6 +446,8 @@ prepareAstTypeConstructorArgs(AstTypeConstructorArgs *node,
                               VisitorContext *context);
 static AstLookUpOrSymbol *prepareAstLookUpOrSymbol(AstLookUpOrSymbol *node,
                                                    VisitorContext *context);
+static AstSymbolList *renamePreparedSymbolList(AstSymbolList *node,
+                                               VisitorContext *context);
 static AstDefinition *prepareAstDefinition(AstDefinition *node,
                                            VisitorContext *context);
 static AstTypeClause *prepareAstTypeClause(AstTypeClause *node,
@@ -267,8 +506,15 @@ prepareAstSyntaxTemplateTaggedExpressions(
     AstSyntaxTemplateTaggedExpressions *node, VisitorContext *context);
 
 AstProg *prepareAst(AstProg *node) {
-    VisitorContext context = {.unused = 0};
-    return prepareAstProg(node, &context);
+    SymbolMap *alphaTable = newSymbolMap();
+    int save = PROTECT(alphaTable);
+    SymbolSet *fixedNames = newSymbolSet();
+    PROTECT(fixedNames);
+    VisitorContext context;
+    initVisitorContext(&context, NULL, alphaTable, fixedNames, false);
+    AstProg *result = prepareAstProg(node, &context);
+    UNPROTECT(save);
+    return result;
 }
 
 ///////////////////////////
@@ -279,16 +525,22 @@ static AstProg *prepareAstProg(AstProg *node, VisitorContext *context) {
     if (node == NULL)
         return NULL;
     ENTER(prepareAstProg);
+    SymbolMap *alphaTable = newSymbolMap();
+    int save = PROTECT(alphaTable);
+    SymbolSet *fixedNames = newSymbolSet();
+    PROTECT(fixedNames);
+    VisitorContext scopeContext;
+    initVisitorContext(&scopeContext, context, alphaTable, fixedNames, false);
     bool changed = false;
     AstDefinitions *new_preamble =
-        prepareAstDefinitions(node->preamble, context);
-    int save = PROTECT(new_preamble);
+        prepareAstDefinitions(node->preamble, &scopeContext);
+    PROTECT(new_preamble);
     changed = changed || (new_preamble != node->preamble);
     AstNameSpaceArray *new_nameSpaces =
-        prepareAstNameSpaceArray(node->nameSpaces, context);
+        prepareAstNameSpaceArray(node->nameSpaces, &scopeContext);
     PROTECT(new_nameSpaces);
     changed = changed || (new_nameSpaces != node->nameSpaces);
-    AstExpressions *new_body = prepareAstExpressions(node->body, context);
+    AstExpressions *new_body = prepareAstExpressions(node->body, &scopeContext);
     PROTECT(new_body);
     changed = changed || (new_body != node->body);
     AstProg *result = node;
@@ -304,13 +556,20 @@ static AstNest *prepareAstNest(AstNest *node, VisitorContext *context) {
     if (node == NULL)
         return NULL;
     ENTER(prepareAstNest);
+    SymbolMap *alphaTable = newSymbolMap();
+    int save = PROTECT(alphaTable);
+    SymbolSet *fixedNames = newSymbolSet();
+    PROTECT(fixedNames);
+    VisitorContext scopeContext;
+    initVisitorContext(&scopeContext, context, alphaTable, fixedNames, true);
+    predeclareRecursiveDefinitionBinders(node->definitions, &scopeContext);
     bool changed = false;
     AstDefinitions *new_definitions =
-        prepareAstDefinitions(node->definitions, context);
-    int save = PROTECT(new_definitions);
+        prepareAstDefinitions(node->definitions, &scopeContext);
+    PROTECT(new_definitions);
     changed = changed || (new_definitions != node->definitions);
     AstExpressions *new_expressions =
-        prepareAstExpressions(node->expressions, context);
+        prepareAstExpressions(node->expressions, &scopeContext);
     PROTECT(new_expressions);
     changed = changed || (new_expressions != node->expressions);
     AstNest *result = node;
@@ -327,15 +586,22 @@ static AstNameSpaceImpl *prepareAstNameSpaceImpl(AstNameSpaceImpl *node,
     if (node == NULL)
         return NULL;
     ENTER(prepareAstNameSpaceImpl);
+    SymbolMap *alphaTable = newSymbolMap();
+    int save = PROTECT(alphaTable);
+    SymbolSet *fixedNames = newSymbolSet();
+    PROTECT(fixedNames);
+    VisitorContext scopeContext;
+    initVisitorContext(&scopeContext, context, alphaTable, fixedNames, false);
     bool changed = false;
-    FileId *new_id = prepareFileId(node->id, context);
-    int save = PROTECT(new_id);
+    FileId *new_id = prepareFileId(node->id, &scopeContext);
+    PROTECT(new_id);
     changed = changed || (new_id != node->id);
     AstDefinitions *new_definitions =
-        prepareAstDefinitions(node->definitions, context);
+        prepareAstDefinitions(node->definitions, &scopeContext);
     PROTECT(new_definitions);
     changed = changed || (new_definitions != node->definitions);
-    SymbolMap *new_replacements = prepareSymbolMap(node->replacements, context);
+    SymbolMap *new_replacements =
+        prepareSymbolMap(node->replacements, &scopeContext);
     PROTECT(new_replacements);
     changed = changed || (new_replacements != node->replacements);
     AstNameSpaceImpl *result = node;
@@ -354,8 +620,93 @@ static AstNameSpace *prepareAstNameSpace(AstNameSpace *node,
         return NULL;
     ENTER(prepareAstNameSpace);
     AstNameSpace *result = node;
-    (void)context; // Unused parameter - all fields are pass-through
+    (void)context; // Unused parameter -
+                   // all fields are
+                   // pass-through
     LEAVE(prepareAstNameSpace);
+    return result;
+}
+
+static AstDefinition *renamePreparedDefinitionBinders(AstDefinition *node,
+                                                      VisitorContext *context) {
+    if (node == NULL) {
+        return NULL;
+    }
+
+    switch (node->type) {
+    case AST_DEFINITION_TYPE_DEFINE: {
+        AstDefine *variant = getAstDefinition_Define(node);
+        HashSymbol *new_symbol = resolvePreparedName(variant->symbol, context);
+        if (new_symbol != variant->symbol) {
+            AstDefine *new_variant =
+                newAstDefine(CPI(variant), new_symbol, variant->expression);
+            int save = PROTECT(new_variant);
+            AstDefinition *result =
+                newAstDefinition_Define(CPI(node), new_variant);
+            UNPROTECT(save);
+            return result;
+        }
+        return node;
+    }
+    case AST_DEFINITION_TYPE_MULTI: {
+        AstMultiDefine *variant = getAstDefinition_Multi(node);
+        AstSymbolList *new_symbols =
+            renamePreparedSymbolList(variant->symbols, context);
+        if (new_symbols != variant->symbols) {
+            int save = STARTPROTECT();
+            PROTECT(new_symbols);
+            AstMultiDefine *new_variant = newAstMultiDefine(
+                CPI(variant), new_symbols, variant->expression);
+            PROTECT(new_variant);
+            AstDefinition *result =
+                newAstDefinition_Multi(CPI(node), new_variant);
+            UNPROTECT(save);
+            return result;
+        }
+        return node;
+    }
+    case AST_DEFINITION_TYPE_LAZY: {
+        AstDefLazy *variant = getAstDefinition_Lazy(node);
+        HashSymbol *new_name = resolvePreparedName(variant->name, context);
+        if (new_name != variant->name) {
+            AstDefLazy *new_variant =
+                newAstDefLazy(CPI(variant), new_name, variant->definition);
+            int save = PROTECT(new_variant);
+            AstDefinition *result =
+                newAstDefinition_Lazy(CPI(node), new_variant);
+            UNPROTECT(save);
+            return result;
+        }
+        return node;
+    }
+    case AST_DEFINITION_TYPE_ALIAS:
+    case AST_DEFINITION_TYPE_TYPEDEF:
+    case AST_DEFINITION_TYPE_BLANK:
+    case AST_DEFINITION_TYPE_BUILTINSSLOT:
+    case AST_DEFINITION_TYPE_SYNTAXDECL:
+    case AST_DEFINITION_TYPE_SYNTAXUSE:
+        return node;
+    default:
+        cant_happen("unrecognized AstDefinition type %d", node->type);
+    }
+}
+
+static AstSymbolList *renamePreparedSymbolList(AstSymbolList *node,
+                                               VisitorContext *context) {
+    if (node == NULL) {
+        return NULL;
+    }
+
+    HashSymbol *new_symbol = resolvePreparedName(node->symbol, context);
+    AstSymbolList *new_next = renamePreparedSymbolList(node->next, context);
+
+    if (new_symbol == node->symbol && new_next == node->next) {
+        return node;
+    }
+
+    int save = PROTECT(new_next);
+    AstSymbolList *result = newAstSymbolList(CPI(node), new_symbol, new_next);
+    UNPROTECT(save);
     return result;
 }
 
@@ -365,10 +716,28 @@ static AstDefinitions *prepareAstDefinitions(AstDefinitions *node,
         return NULL;
     ENTER(prepareAstDefinitions);
     bool changed = false;
+    recordDefinitionConstructorNames(node->definition, context);
+    bool bindsBefore = context->renameDefinitions &&
+                       definitionBindsBeforePreparation(node->definition);
+    if (bindsBefore) {
+        recordDefinitionBinders(node->definition, context);
+    }
     AstDefinition *new_definition =
         prepareAstDefinition(node->definition, context);
     int save = PROTECT(new_definition);
     changed = changed || (new_definition != node->definition);
+    if (context->renameDefinitions) {
+        if (!bindsBefore) {
+            recordDefinitionBinders(node->definition, context);
+        }
+        AstDefinition *renamed_definition =
+            renamePreparedDefinitionBinders(new_definition, context);
+        if (renamed_definition != new_definition) {
+            REPLACE_PROTECT(save, renamed_definition);
+            new_definition = renamed_definition;
+            changed = true;
+        }
+    }
     AstDefinitions *new_next = prepareAstDefinitions(node->next, context);
     PROTECT(new_next);
     changed = changed || (new_next != node->next);
@@ -462,12 +831,14 @@ static AstExprAlias *prepareAstExprAlias(AstExprAlias *node,
         return NULL;
     ENTER(prepareAstExprAlias);
     bool changed = false;
+    HashSymbol *new_name = resolvePreparedName(node->name, context);
+    changed = changed || (new_name != node->name);
     AstExpression *new_value = prepareAstExpression(node->value, context);
     int save = PROTECT(new_value);
     changed = changed || (new_value != node->value);
     AstExprAlias *result = node;
     if (changed) {
-        result = newAstExprAlias(CPI(node), node->name, new_value);
+        result = newAstExprAlias(CPI(node), new_name, new_value);
     }
     UNPROTECT(save);
     LEAVE(prepareAstExprAlias);
@@ -480,14 +851,15 @@ static AstAnnotatedSymbol *prepareAstAnnotatedSymbol(AstAnnotatedSymbol *node,
         return NULL;
     ENTER(prepareAstAnnotatedSymbol);
     bool changed = false;
+    HashSymbol *new_symbol = resolvePreparedName(node->symbol, context);
+    changed = changed || (new_symbol != node->symbol);
     AstExpression *new_originalImpl =
         prepareAstExpression(node->originalImpl, context);
     int save = PROTECT(new_originalImpl);
     changed = changed || (new_originalImpl != node->originalImpl);
     AstAnnotatedSymbol *result = node;
     if (changed) {
-        result =
-            newAstAnnotatedSymbol(CPI(node), node->symbol, new_originalImpl);
+        result = newAstAnnotatedSymbol(CPI(node), new_symbol, new_originalImpl);
         result->isLazy = node->isLazy;
     }
     UNPROTECT(save);
@@ -727,11 +1099,19 @@ static AstFunction *prepareAstFunction(AstFunction *node,
     if (node == NULL)
         return NULL;
     ENTER(prepareAstFunction);
+    SymbolMap *alphaTable = newSymbolMap();
+    int save = PROTECT(alphaTable);
+    SymbolSet *fixedNames = newSymbolSet();
+    PROTECT(fixedNames);
+    VisitorContext scopeContext;
+    initVisitorContext(&scopeContext, context, alphaTable, fixedNames,
+                       context->renameDefinitions);
+    populateAstFargListBinders(node->argList, &scopeContext);
     bool changed = false;
-    AstFargList *new_argList = prepareAstFargList(node->argList, context);
-    int save = PROTECT(new_argList);
+    AstFargList *new_argList = prepareAstFargList(node->argList, &scopeContext);
+    PROTECT(new_argList);
     changed = changed || (new_argList != node->argList);
-    AstNest *new_nest = prepareAstNest(node->nest, context);
+    AstNest *new_nest = prepareAstNest(node->nest, &scopeContext);
     PROTECT(new_nest);
     changed = changed || (new_nest != node->nest);
     AstFunction *result = node;
@@ -811,11 +1191,19 @@ static AstAltFunction *prepareAstAltFunction(AstAltFunction *node,
     if (node == NULL)
         return NULL;
     ENTER(prepareAstAltFunction);
+    SymbolMap *alphaTable = newSymbolMap();
+    int save = PROTECT(alphaTable);
+    SymbolSet *fixedNames = newSymbolSet();
+    PROTECT(fixedNames);
+    VisitorContext scopeContext;
+    initVisitorContext(&scopeContext, context, alphaTable, fixedNames,
+                       context->renameDefinitions);
+    populateAstAltArgsBinders(node->altArgs, &scopeContext);
     bool changed = false;
-    AstAltArgs *new_altArgs = prepareAstAltArgs(node->altArgs, context);
-    int save = PROTECT(new_altArgs);
+    AstAltArgs *new_altArgs = prepareAstAltArgs(node->altArgs, &scopeContext);
+    PROTECT(new_altArgs);
     changed = changed || (new_altArgs != node->altArgs);
-    AstNest *new_nest = prepareAstNest(node->nest, context);
+    AstNest *new_nest = prepareAstNest(node->nest, &scopeContext);
     PROTECT(new_nest);
     changed = changed || (new_nest != node->nest);
     AstAltFunction *result = node;
@@ -877,12 +1265,14 @@ static AstNamedArg *prepareAstNamedArg(AstNamedArg *node,
         return NULL;
     ENTER(prepareAstNamedArg);
     bool changed = false;
+    HashSymbol *new_name = resolvePreparedName(node->name, context);
+    changed = changed || (new_name != node->name);
     AstFarg *new_arg = prepareAstFarg(node->arg, context);
     int save = PROTECT(new_arg);
     changed = changed || (new_arg != node->arg);
     AstNamedArg *result = node;
     if (changed) {
-        result = newAstNamedArg(CPI(node), node->name, new_arg);
+        result = newAstNamedArg(CPI(node), new_name, new_arg);
     }
     UNPROTECT(save);
     LEAVE(prepareAstNamedArg);
@@ -940,7 +1330,9 @@ static AstLookUpSymbol *prepareAstLookUpSymbol(AstLookUpSymbol *node,
         return NULL;
     ENTER(prepareAstLookUpSymbol);
     AstLookUpSymbol *result = node;
-    (void)context; // Unused parameter - all fields are pass-through
+    (void)context; // Unused parameter
+                   // - all fields are
+                   // pass-through
     LEAVE(prepareAstLookUpSymbol);
     return result;
 }
@@ -1232,7 +1624,12 @@ prepareAstSyntaxLiteralRef(AstSyntaxLiteralRef *node, VisitorContext *context) {
         return NULL;
     ENTER(prepareAstSyntaxLiteralRef);
     AstSyntaxLiteralRef *result = node;
-    (void)context; // Unused parameter - all fields are pass-through
+    HashSymbol *resolvedName = NULL;
+    if (getPreparedName(node->writtenName, context, &resolvedName) &&
+        resolvedName != node->resolvedName) {
+        result = newAstSyntaxLiteralRef(CPI(node), node->writtenName);
+        result->resolvedName = resolvedName;
+    }
     LEAVE(prepareAstSyntaxLiteralRef);
     return result;
 }
@@ -1244,7 +1641,9 @@ prepareAstSyntaxIntroducedBinder(AstSyntaxIntroducedBinder *node,
         return NULL;
     ENTER(prepareAstSyntaxIntroducedBinder);
     AstSyntaxIntroducedBinder *result = node;
-    (void)context; // Unused parameter - all fields are pass-through
+    (void)context; // Unused parameter
+                   // - all fields are
+                   // pass-through
     LEAVE(prepareAstSyntaxIntroducedBinder);
     return result;
 }
@@ -1256,7 +1655,9 @@ prepareAstSyntaxIntroducedRef(AstSyntaxIntroducedRef *node,
         return NULL;
     ENTER(prepareAstSyntaxIntroducedRef);
     AstSyntaxIntroducedRef *result = node;
-    (void)context; // Unused parameter - all fields are pass-through
+    (void)context; // Unused parameter
+                   // - all fields are
+                   // pass-through
     LEAVE(prepareAstSyntaxIntroducedRef);
     return result;
 }
@@ -1267,7 +1668,9 @@ static AstSyntaxUnquote *prepareAstSyntaxUnquote(AstSyntaxUnquote *node,
         return NULL;
     ENTER(prepareAstSyntaxUnquote);
     AstSyntaxUnquote *result = node;
-    (void)context; // Unused parameter - all fields are pass-through
+    (void)context; // Unused parameter
+                   // - all fields are
+                   // pass-through
     LEAVE(prepareAstSyntaxUnquote);
     return result;
 }
@@ -1799,7 +2202,10 @@ prepareAstTypeConstructorArgs(AstTypeConstructorArgs *node,
         break;
     }
     default:
-        cant_happen("unrecognized AstTypeConstructorArgs type %d", node->type);
+        cant_happen("unrecognized "
+                    "AstTypeConstruct"
+                    "orArgs type %d",
+                    node->type);
     }
     UNPROTECT(save);
     LEAVE(prepareAstTypeConstructorArgs);
@@ -1816,6 +2222,7 @@ static AstLookUpOrSymbol *prepareAstLookUpOrSymbol(AstLookUpOrSymbol *node,
     switch (node->type) {
     case AST_LOOKUPORSYMBOL_TYPE_SYMBOL: {
         // HashSymbol
+        (void)context;
         break;
     }
     case AST_LOOKUPORSYMBOL_TYPE_LOOKUP: {
@@ -1829,7 +2236,10 @@ static AstLookUpOrSymbol *prepareAstLookUpOrSymbol(AstLookUpOrSymbol *node,
         break;
     }
     default:
-        cant_happen("unrecognized AstLookUpOrSymbol type %d", node->type);
+        cant_happen("unrecognized "
+                    "AstLookUpOrSymbo"
+                    "l type %d",
+                    node->type);
     }
     UNPROTECT(save);
     LEAVE(prepareAstLookUpOrSymbol);
@@ -1923,7 +2333,9 @@ static AstDefinition *prepareAstDefinition(AstDefinition *node,
         break;
     }
     default:
-        cant_happen("unrecognized AstDefinition type %d", node->type);
+        cant_happen("unrecognized "
+                    "AstDefinition type %d",
+                    node->type);
     }
     UNPROTECT(save);
     LEAVE(prepareAstDefinition);
@@ -1971,7 +2383,9 @@ static AstTypeClause *prepareAstTypeClause(AstTypeClause *node,
         break;
     }
     default:
-        cant_happen("unrecognized AstTypeClause type %d", node->type);
+        cant_happen("unrecognized "
+                    "AstTypeClause type %d",
+                    node->type);
     }
     UNPROTECT(save);
     LEAVE(prepareAstTypeClause);
@@ -1990,7 +2404,11 @@ static AstFarg *prepareAstFarg(AstFarg *node, VisitorContext *context) {
         break;
     }
     case AST_FARG_TYPE_SYMBOL: {
-        // HashSymbol
+        HashSymbol *variant = getAstFarg_Symbol(node);
+        HashSymbol *new_variant = resolvePreparedName(variant, context);
+        if (new_variant != variant) {
+            result = newAstFarg_Symbol(CPI(node), new_variant);
+        }
         break;
     }
     case AST_FARG_TYPE_LOOKUP: {
@@ -2052,7 +2470,9 @@ static AstFarg *prepareAstFarg(AstFarg *node, VisitorContext *context) {
         break;
     }
     default:
-        cant_happen("unrecognized AstFarg type %d", node->type);
+        cant_happen("unrecognized "
+                    "AstFarg type %d",
+                    node->type);
     }
     UNPROTECT(save);
     LEAVE(prepareAstFarg);
@@ -2118,6 +2538,11 @@ static AstExpression *prepareAstExpression(AstExpression *node,
     }
     case AST_EXPRESSION_TYPE_SYMBOL: {
         // HashSymbol
+        HashSymbol *variant = getAstExpression_Symbol(node);
+        HashSymbol *new_variant = resolvePreparedName(variant, context);
+        if (new_variant != variant) {
+            result = newAstExpression_Symbol(CPI(node), new_variant);
+        }
         break;
     }
     case AST_EXPRESSION_TYPE_NUMBER: {
@@ -2235,7 +2660,9 @@ static AstExpression *prepareAstExpression(AstExpression *node,
         break;
     }
     default:
-        cant_happen("unrecognized AstExpression type %d", node->type);
+        cant_happen("unrecognized "
+                    "AstExpression type %d",
+                    node->type);
     }
     UNPROTECT(save);
     LEAVE(prepareAstExpression);
@@ -2276,7 +2703,10 @@ prepareAstSyntaxTemplateBinder(AstSyntaxTemplateBinder *node,
         break;
     }
     default:
-        cant_happen("unrecognized AstSyntaxTemplateBinder type %d", node->type);
+        cant_happen("unrecognized "
+                    "AstSyntaxTemplat"
+                    "eBinder type %d",
+                    node->type);
     }
     UNPROTECT(save);
     LEAVE(prepareAstSyntaxTemplateBinder);
@@ -2331,7 +2761,9 @@ prepareAstSyntaxTemplateNameRef(AstSyntaxTemplateNameRef *node,
         break;
     }
     default:
-        cant_happen("unrecognized AstSyntaxTemplateNameRef type %d",
+        cant_happen("unrecognized "
+                    "AstSyntaxTemplateNameRef"
+                    " type %d",
                     node->type);
     }
     UNPROTECT(save);
@@ -2363,7 +2795,10 @@ prepareAstSyntaxPatternItem(AstSyntaxPatternItem *node,
         break;
     }
     default:
-        cant_happen("unrecognized AstSyntaxPatternItem type %d", node->type);
+        cant_happen("unrecognized "
+                    "AstSyntaxPattern"
+                    "Item type %d",
+                    node->type);
     }
     UNPROTECT(save);
     LEAVE(prepareAstSyntaxPatternItem);
@@ -2445,7 +2880,9 @@ prepareAstSyntaxTemplateDefinition(AstSyntaxTemplateDefinition *node,
         break;
     }
     default:
-        cant_happen("unrecognized AstSyntaxTemplateDefinition type %d",
+        cant_happen("unrecognized "
+                    "AstSyntaxTemplateDefinit"
+                    "ion type %d",
                     node->type);
     }
     UNPROTECT(save);
@@ -2617,7 +3054,10 @@ prepareAstSyntaxTemplateExpr(AstSyntaxTemplateExpr *node,
         break;
     }
     default:
-        cant_happen("unrecognized AstSyntaxTemplateExpr type %d", node->type);
+        cant_happen("unrecognized "
+                    "AstSyntaxTemplat"
+                    "eExpr type %d",
+                    node->type);
     }
     UNPROTECT(save);
     LEAVE(prepareAstSyntaxTemplateExpr);
@@ -2717,7 +3157,10 @@ prepareAstSyntaxTemplateFarg(AstSyntaxTemplateFarg *node,
         break;
     }
     default:
-        cant_happen("unrecognized AstSyntaxTemplateFarg type %d", node->type);
+        cant_happen("unrecognized "
+                    "AstSyntaxTemplat"
+                    "eFarg type %d",
+                    node->type);
     }
     UNPROTECT(save);
     LEAVE(prepareAstSyntaxTemplateFarg);

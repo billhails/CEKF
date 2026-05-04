@@ -1,0 +1,14 @@
+let
+    x = 10;
+
+    syntax captureUseSite: Expr ::= "captureUseSite" y: Expr quote {
+        fn (x) { unquote(y) }
+    };
+in
+    {
+        let
+            x = 20;
+            f = captureUseSite x;
+        in
+            f;
+    }
