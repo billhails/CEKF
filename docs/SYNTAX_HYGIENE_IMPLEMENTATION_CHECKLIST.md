@@ -131,7 +131,7 @@ Current code anchors:
       blank definition.
 - [ ] Update expression entry path to emit AST expression syntax-use node.
 - [ ] Keep helper matching recursive behavior but store captures in carrier.
-- [ ] Remove direct dependency on `substituteSyntax*` for successful paths.
+- [x] Remove direct dependency on `substituteSyntax*` for successful paths.
 
 ### Validation (Phase 4)
 
@@ -216,10 +216,15 @@ Current code anchors:
 
 ### Tasks (Phase 8)
 
-- [ ] Delete unused `substituteSyntax*` function family.
+- [x] Delete unused `substituteSyntax*` function family.
 - [ ] Delete old quote-wrapper hack helpers no longer needed.
 - [ ] Remove obsolete temporary parser overrides if now centralized.
 - [ ] Keep rollback and mismatch/error distinction behavior intact.
+
+### Notes (Phase 8)
+
+- The `substituteSyntax*` family was removed once carrier emission made it dead
+  code. Remaining Phase 8 work is limited to any residual parser-only cleanup.
 
 ### Validation (Phase 8)
 
