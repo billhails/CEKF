@@ -1,0 +1,10 @@
+let
+    syntax annotate: Def ::= "annotate" name: Name "=" value: Expr {
+        name = value
+    };
+
+    annotate answer = 42;
+    annotate ok = true;
+in
+    assert(answer == 42);
+    assert(ok)

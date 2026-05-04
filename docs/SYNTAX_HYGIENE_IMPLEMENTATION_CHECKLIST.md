@@ -208,6 +208,30 @@ Current code anchors:
 - [x] Insert lowering call in pipeline after `syntaxPrepareAst` and before
       `lamConvertProg`.
 
+### Definition Syntax Follow-Up (Phase 7)
+
+- [x] Add parser-side Definition template conversion in
+  [src/syntax_template.h](src/syntax_template.h) and
+  [src/syntax_template.c](src/syntax_template.c).
+- [x] Route syntax declarations in [src/pratt_parser.c](src/pratt_parser.c)
+  to build Expression or Definition templates based on result kind.
+- [x] Validate Definition syntax with focused `--dump-ast` and end-to-end test
+  cases before widening the syntax suite.
+- [x] Mark Phase 7 Definition lowering complete only after Definition syntax
+  templates execute through the main pipeline.
+
+Current focused validation covers the supported single-definition form lowered
+from a bare `name = expr` template body. Annotated forms such as
+`name: Type = expr` remain separate work.
+
+Definition syntax should stay scoped to definition forms the language already
+has. Phase 7 does not introduce explicit typed definitions outside `typedef`,
+and syntax-extension work should not widen the core surface language by
+accident.
+
+The next widening step should therefore be more coverage of existing core
+definition forms, not new annotated-definition syntax.
+
 ### Validation (Phase 7)
 
 - [x] `--dump-ast` after lowering has no syntax carriers.

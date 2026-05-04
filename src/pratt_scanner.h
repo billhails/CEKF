@@ -70,6 +70,7 @@ HashSymbol *TOK_CHAR(void);
 HashSymbol *TOK_CLOSE(void);
 HashSymbol *TOK_COLON(void);
 HashSymbol *TOK_COMMA(void);
+HashSymbol *TOK_DEFTYPE(void);
 HashSymbol *TOK_ELSE(void);
 HashSymbol *TOK_EOF(void);
 HashSymbol *TOK_EQ(void);

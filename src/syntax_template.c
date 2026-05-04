@@ -305,6 +305,19 @@ makeTemplateUnquoteBinder(ParserInfo PI, HashSymbol *bindingName,
     return result;
 }
 
+static AstSyntaxTemplateBinder *
+convertTemplateBinderSymbol(ParserInfo PI, HashSymbol *name,
+                            TemplateContext *context) {
+    AstSyntaxClass syntaxClass = AST_SYNTAXCLASS_TYPE_NAME;
+
+    if (!context->quotedTemplate &&
+        lookupTemplateBindingClass(name, context, &syntaxClass)) {
+        return makeTemplateUnquoteBinder(PI, name, syntaxClass);
+    }
+
+    return makeTemplateIntroducedBinder(PI, name, context);
+}
+
 static AstSyntaxTemplateExpr *
 wrapTemplateNameRef(ParserInfo PI, AstSyntaxTemplateNameRef *nameRef) {
     int save = PROTECT(nameRef);
@@ -361,15 +374,8 @@ convertTemplateNameRef(AstExpression *expr, TemplateContext *context) {
 static AstSyntaxTemplateBinder *
 convertTemplateBinderFromFarg(AstFarg *farg, TemplateContext *context) {
     if (farg->type == AST_FARG_TYPE_SYMBOL) {
-        HashSymbol *name = getAstFarg_Symbol(farg);
-        AstSyntaxClass syntaxClass = AST_SYNTAXCLASS_TYPE_NAME;
-
-        if (!context->quotedTemplate &&
-            lookupTemplateBindingClass(name, context, &syntaxClass)) {
-            return makeTemplateUnquoteBinder(CPI(farg), name, syntaxClass);
-        }
-
-        return makeTemplateIntroducedBinder(CPI(farg), name, context);
+        return convertTemplateBinderSymbol(CPI(farg), getAstFarg_Symbol(farg),
+                                           context);
     }
 
     if (farg->type == AST_FARG_TYPE_UNPACK) {
@@ -437,8 +443,8 @@ convertTemplateBinders(AstSymbolList *symbols, TemplateContext *context) {
     int save = PROTECT(result);
 
     for (; symbols != NULL; symbols = symbols->next) {
-        AstSyntaxTemplateBinder *binder = makeTemplateIntroducedBinder(
-            CPI(symbols), symbols->symbol, context);
+        AstSyntaxTemplateBinder *binder =
+            convertTemplateBinderSymbol(CPI(symbols), symbols->symbol, context);
         PROTECT(binder);
         pushAstSyntaxTemplateBinders(result, binder);
     }
@@ -670,7 +676,7 @@ convertTemplateDefinition(AstDefinition *definition, TemplateContext *context) {
     case AST_DEFINITION_TYPE_DEFINE: {
         AstDefine *define = getAstDefinition_Define(definition);
         AstSyntaxTemplateBinder *binder =
-            makeTemplateIntroducedBinder(CPI(define), define->symbol, context);
+            convertTemplateBinderSymbol(CPI(define), define->symbol, context);
         int save = PROTECT(binder);
         AstSyntaxTemplateExpr *expression =
             convertTemplateExpr(define->expression, context);
@@ -702,7 +708,7 @@ convertTemplateDefinition(AstDefinition *definition, TemplateContext *context) {
     case AST_DEFINITION_TYPE_LAZY: {
         AstDefLazy *lazy = getAstDefinition_Lazy(definition);
         AstSyntaxTemplateBinder *binder =
-            makeTemplateIntroducedBinder(CPI(lazy), lazy->name, context);
+            convertTemplateBinderSymbol(CPI(lazy), lazy->name, context);
         int save = PROTECT(binder);
         AstSyntaxTemplateAltFunction *altFunction =
             convertTemplateLazyAltFunction(lazy->definition, context);
@@ -718,7 +724,7 @@ convertTemplateDefinition(AstDefinition *definition, TemplateContext *context) {
     case AST_DEFINITION_TYPE_ALIAS: {
         AstAlias *alias = getAstDefinition_Alias(definition);
         AstSyntaxTemplateBinder *binder =
-            makeTemplateIntroducedBinder(CPI(alias), alias->name, context);
+            convertTemplateBinderSymbol(CPI(alias), alias->name, context);
         int save = PROTECT(binder);
         AstSyntaxTemplateAlias *result =
             newAstSyntaxTemplateAlias(CPI(alias), binder, alias->type);
@@ -1279,6 +1285,85 @@ prattConvertSyntaxExprTemplate(PrattParser *parser, ParserInfo PI,
             result->expr = convertTemplateExpr(body, &context);
         } else {
             result->expr = convertTemplateExpr(template, &context);
+        }
+    }
+
+    UNPROTECT(save);
+    return result;
+}
+
+AstSyntaxTemplate *
+prattConvertSyntaxDefTemplate(PrattParser *parser, ParserInfo PI,
+                              AstExpression *template, SymbolArray *parameters,
+                              PrattMacroPatternItems *patternItems) {
+    AstSyntaxTemplate *result =
+        newAstSyntaxTemplate(PI, AST_SYNTAXRESULTKIND_TYPE_DEF);
+    int save = PROTECT(result);
+    SymbolMap *introducedBinders = newSymbolMap();
+    PROTECT(introducedBinders);
+
+    TemplateContext context = {
+        .parser = parser,
+        .patternItems = patternItems,
+        .parameters = parameters,
+        .introducedBinders = introducedBinders,
+        .quotedTemplate = false,
+        .nextBinderId = 1,
+    };
+
+    if (template != NULL) {
+        AstExpression *body = prattUnwrapSyntaxQuotedTemplate(template);
+        if (body != NULL) {
+            context.quotedTemplate = true;
+        } else {
+            body = template;
+        }
+
+        if (body->type != AST_EXPRESSION_TYPE_NEST) {
+            parserErrorAt(CPI(body), parser,
+                          "definition syntax template must be a block");
+            UNPROTECT(save);
+            return result;
+        }
+
+        AstNest *nest = getAstExpression_Nest(body);
+        if (nest->definitions != NULL &&
+            nest->definitions->definition != NULL &&
+            nest->definitions->next == NULL && nest->expressions == NULL) {
+            result->definition = convertTemplateDefinition(
+                nest->definitions->definition, &context);
+            UNPROTECT(save);
+            return result;
+        }
+
+        if (nest->definitions == NULL && nest->expressions != NULL &&
+            nest->expressions->next == NULL &&
+            nest->expressions->expression != NULL &&
+            nest->expressions->expression->type == AST_EXPRESSION_TYPE_ALIAS) {
+            AstExprAlias *alias =
+                getAstExpression_Alias(nest->expressions->expression);
+            AstSyntaxTemplateBinder *binder =
+                convertTemplateBinderSymbol(CPI(alias), alias->name, &context);
+            int save2 = PROTECT(binder);
+            AstSyntaxTemplateExpr *expression =
+                convertTemplateExpr(alias->value, &context);
+            PROTECT(expression);
+            AstSyntaxTemplateDefine *define =
+                newAstSyntaxTemplateDefine(CPI(alias), binder, expression);
+            PROTECT(define);
+            result->definition =
+                newAstSyntaxTemplateDefinition_Define(CPI(alias), define);
+            UNPROTECT(save2);
+            UNPROTECT(save);
+            return result;
+        }
+
+        {
+            parserErrorAt(CPI(body), parser,
+                          "definition syntax template must contain exactly one "
+                          "definition and no trailing expressions");
+            UNPROTECT(save);
+            return result;
         }
     }
 

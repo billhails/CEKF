@@ -38,5 +38,9 @@ AstSyntaxTemplate *
 prattConvertSyntaxExprTemplate(PrattParser *parser, ParserInfo PI,
                                AstExpression *template, SymbolArray *parameters,
                                PrattMacroPatternItems *patternItems);
+AstSyntaxTemplate *
+prattConvertSyntaxDefTemplate(PrattParser *parser, ParserInfo PI,
+                              AstExpression *template, SymbolArray *parameters,
+                              PrattMacroPatternItems *patternItems);
 
 #endif

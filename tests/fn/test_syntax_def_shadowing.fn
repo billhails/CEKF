@@ -1,0 +1,11 @@
+let
+    name = 100;
+
+    syntax defineSame: Def ::= "defineSame" name: Name "=" value: Expr {
+        name = value
+    };
+
+    defineSame local = name + 1;
+in
+    assert(name == 100);
+    assert(local == 101)

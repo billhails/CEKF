@@ -229,7 +229,7 @@ l' &= (\mathtt{letrec}\ (( x_0:\ \lambda'_0)\dots ( x_n:\ \lambda'_n))\ e') && \
 \\
 K &= \set{x_0\dots x_n} && \text{(3)}
 \\
-\vec{D} &= \set{ x_i \rarr x_j | x_i \in K,\ x_j \in \mathcal{F}\lambda'_i \cap K} && \text{(4)}
+\vec{D} &= \set{ x_i \rightarrow x_j | x_i \in K,\ x_j \in \mathcal{F}\lambda'_i \cap K} && \text{(4)}
 \\
 B &= \mathcal{F}e' \cap K && \text{(5)}
 \\

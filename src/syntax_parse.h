@@ -22,10 +22,16 @@
 
 PrattMacroSpec *prattFindLocalSyntaxSpecForHead(PrattParser *parser,
                                                 HashSymbol *head);
+PrattMacroSpec *
+prattFindLocalSyntaxSpecForHeadAndEntry(PrattParser *parser, HashSymbol *head,
+                                        PrattSyntaxEntryKind entryKind);
 PrattMacroSpec *prattFindSyntaxSpecByName(PrattParser *parser,
                                           HashSymbol *name);
 PrattMacroSpec *prattFindSyntaxSpecForHead(PrattParser *parser,
                                            HashSymbol *head);
+PrattMacroSpec *
+prattFindSyntaxSpecForHeadAndEntry(PrattParser *parser, HashSymbol *head,
+                                   PrattSyntaxEntryKind entryKind);
 
 void prattValidateSyntaxAlternatives(PrattParser *parser, HashSymbol *ruleName,
                                      PrattMacroAlternatives *alternatives);
@@ -37,6 +43,8 @@ AstExpression *prattExpandSyntaxExprWithBindings(PrattParser *parser,
                                                  SyntaxExprBindings *inherited);
 AstExpression *prattExpandSyntaxExpr(PrattParser *parser, PrattToken *tok,
                                      PrattMacroSpec *spec);
+AstDefinition *prattExpandSyntaxDef(PrattParser *parser, PrattToken *tok,
+                                    PrattMacroSpec *spec);
 int prattNextDeclarationId(void);
 AstSyntaxPatternItems *prattConvertPatternItems(ParserInfo PI,
                                                 PrattMacroPatternItems *items);

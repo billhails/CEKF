@@ -193,7 +193,13 @@ static void storeNameSpace(PrattParser *, AstNameSpace *);
 static void synchronize(PrattParser *parser);
 static PrattExportedOps *captureNameSpaceOperatorExports(PrattParser *parser);
 static PrattRecord *ensureTargetRecord(PrattParser *parser, HashSymbol *op);
-static bool parseOptionalExprSyntaxEntry(PrattParser *parser);
+static AstSyntaxEntryKind
+convertPrattSyntaxEntryKind(PrattSyntaxEntryKind entryKind);
+static AstSyntaxResultKind
+convertPrattSyntaxResultKind(PrattSyntaxResultKind resultKind);
+static bool parseOptionalSyntaxEntry(PrattParser *parser,
+                                     PrattSyntaxEntryKind *entryKind,
+                                     PrattSyntaxResultKind *resultKind);
 static void registerExprSyntaxHead(PrattParser *parser, HashSymbol *head);
 static void mergeFixityImport(PrattParser *parser, PrattRecord *target,
                               PrattRecord *source, int nsRef,
@@ -351,6 +357,7 @@ static PrattParser *makePrattParser(void) {
     addRecord(table, TOK_CLOSE(), NULL, 0, NULL, 0, NULL, 0);
     addRecord(table, TOK_COLON(), NULL, 0, NULL, 0, NULL, 0);
     addRecord(table, TOK_COMMA(), NULL, 0, NULL, 0, NULL, 0);
+    addRecord(table, TOK_DEFTYPE(), NULL, 0, NULL, 0, NULL, 0);
     addRecord(table, TOK_ELSE(), NULL, 0, NULL, 0, NULL, 0);
     addRecord(table, TOK_EOF(), NULL, 0, NULL, 0, NULL, 0);
     addRecord(table, TOK_EQ(), NULL, 0, NULL, 0, NULL, 0);
@@ -2110,17 +2117,58 @@ static void validateSyntaxAlternatives(PrattParser *parser,
     prattValidateSyntaxAlternatives(parser, ruleName, alternatives);
 }
 
-static bool parseOptionalExprSyntaxEntry(PrattParser *parser) {
+static AstSyntaxEntryKind
+convertPrattSyntaxEntryKind(PrattSyntaxEntryKind entryKind) {
+    switch (entryKind) {
+    case PRATTSYNTAXENTRYKIND_TYPE_EXPR:
+        return AST_SYNTAXENTRYKIND_TYPE_EXPR;
+    case PRATTSYNTAXENTRYKIND_TYPE_DEF:
+        return AST_SYNTAXENTRYKIND_TYPE_DEF;
+    case PRATTSYNTAXENTRYKIND_TYPE_HELPER:
+        return AST_SYNTAXENTRYKIND_TYPE_HELPER;
+    default:
+        cant_happen("unrecognised PrattSyntaxEntryKind %d", entryKind);
+    }
+}
+
+static AstSyntaxResultKind
+convertPrattSyntaxResultKind(PrattSyntaxResultKind resultKind) {
+    switch (resultKind) {
+    case PRATTSYNTAXRESULTKIND_TYPE_EXPR:
+        return AST_SYNTAXRESULTKIND_TYPE_EXPR;
+    case PRATTSYNTAXRESULTKIND_TYPE_DEF:
+        return AST_SYNTAXRESULTKIND_TYPE_DEF;
+    default:
+        cant_happen("unrecognised PrattSyntaxResultKind %d", resultKind);
+    }
+}
+
+static bool parseOptionalSyntaxEntry(PrattParser *parser,
+                                     PrattSyntaxEntryKind *entryKind,
+                                     PrattSyntaxResultKind *resultKind) {
+    *entryKind = PRATTSYNTAXENTRYKIND_TYPE_HELPER;
+    *resultKind = PRATTSYNTAXRESULTKIND_TYPE_EXPR;
+
     if (!match(parser, TOK_COLON())) {
         return false;
     }
+
     PrattToken *token = next(parser);
-    if (!isTokenTypeOrAtom(token, TOK_EXPRTYPE())) {
-        parserError(parser, "unrecognised syntax entry class %s",
-                    getTokenTypeOrAtom(token)->name);
-        return false;
+    if (isTokenTypeOrAtom(token, TOK_EXPRTYPE())) {
+        *entryKind = PRATTSYNTAXENTRYKIND_TYPE_EXPR;
+        *resultKind = PRATTSYNTAXRESULTKIND_TYPE_EXPR;
+        return true;
     }
-    return true;
+
+    if (isTokenTypeOrAtom(token, TOK_DEFTYPE())) {
+        *entryKind = PRATTSYNTAXENTRYKIND_TYPE_DEF;
+        *resultKind = PRATTSYNTAXRESULTKIND_TYPE_DEF;
+        return true;
+    }
+
+    parserError(parser, "unrecognised syntax entry class %s",
+                getTokenTypeOrAtom(token)->name);
+    return false;
 }
 
 static void registerExprSyntaxHead(PrattParser *parser, HashSymbol *head) {
@@ -2171,12 +2219,16 @@ static AstDefinition *syntaxDefinition(PrattParser *parser) {
     if (parameters != NULL) {
         PROTECT(parameters);
     }
-    bool isExprEntry = parseOptionalExprSyntaxEntry(parser);
+    PrattSyntaxEntryKind entryKind;
+    PrattSyntaxResultKind resultKind;
+    bool isInitiatingEntry =
+        parseOptionalSyntaxEntry(parser, &entryKind, &resultKind);
+    bool isExprEntry = entryKind == PRATTSYNTAXENTRYKIND_TYPE_EXPR;
     consume(parser, TOK_PRODUCTION());
     PrattMacroAlternatives *alternatives = newPrattMacroAlternatives();
     PROTECT(alternatives);
     HashSymbol *surfaceHead = ruleName;
-    if (isExprEntry) {
+    if (isInitiatingEntry) {
         WCharArray *headText = rawString(parser);
         int save2 = PROTECT(headText);
         checkTerminal(parser, headText);
@@ -2225,6 +2277,8 @@ static AstDefinition *syntaxDefinition(PrattParser *parser) {
     PROTECT(spec);
     spec->parameters = parameters;
     spec->alternatives = alternatives;
+    spec->entryKind = entryKind;
+    spec->resultKind = resultKind;
     spec->isExprEntry = isExprEntry;
     int declarationId = prattNextDeclarationId();
     spec->declarationId = declarationId;
@@ -2241,8 +2295,14 @@ static AstDefinition *syntaxDefinition(PrattParser *parser) {
         AstSyntaxPatternItems *astPatItems =
             prattConvertPatternItems(TOKPI(tok), alt->patternItems);
         int save3 = PROTECT(astPatItems);
-        AstSyntaxTemplate *astTmpl = prattConvertSyntaxExprTemplate(
-            parser, TOKPI(tok), alt->template, parameters, alt->patternItems);
+        AstSyntaxTemplate *astTmpl =
+            resultKind == PRATTSYNTAXRESULTKIND_TYPE_DEF
+                ? prattConvertSyntaxDefTemplate(parser, TOKPI(tok),
+                                                alt->template, parameters,
+                                                alt->patternItems)
+                : prattConvertSyntaxExprTemplate(parser, TOKPI(tok),
+                                                 alt->template, parameters,
+                                                 alt->patternItems);
         PROTECT(astTmpl);
         AstSyntaxAlternative *astAlt =
             newAstSyntaxAlternative(TOKPI(tok), astPatItems, astTmpl);
@@ -2256,8 +2316,8 @@ static AstDefinition *syntaxDefinition(PrattParser *parser) {
     AstSyntaxDecl *syntaxDecl = getAstDefinition_SyntaxDecl(decl);
     syntaxDecl->surfaceHead = surfaceHead;
     syntaxDecl->parameters = parameters;
-    syntaxDecl->entryKind = isExprEntry ? AST_SYNTAXENTRYKIND_TYPE_EXPR
-                                        : AST_SYNTAXENTRYKIND_TYPE_HELPER;
+    syntaxDecl->entryKind = convertPrattSyntaxEntryKind(entryKind);
+    syntaxDecl->resultKind = convertPrattSyntaxResultKind(resultKind);
 
     LEAVE(syntaxDefinition);
     UNPROTECT(save2);
@@ -2287,7 +2347,20 @@ static AstDefinition *definition(PrattParser *parser) {
         res = syntaxDefinition(parser);
         save = PROTECT(res);
     } else if (check(parser, TOK_ATOM())) {
-        res = assignment(parser);
+        PrattToken *tok = peek(parser);
+        PrattMacroSpec *syntaxSpec = NULL;
+        if (tok->value != NULL && tok->value->type == PRATTVALUE_TYPE_ATOM) {
+            syntaxSpec = prattFindSyntaxSpecForHeadAndEntry(
+                parser, tok->value->val.atom, PRATTSYNTAXENTRYKIND_TYPE_DEF);
+        }
+        if (syntaxSpec != NULL) {
+            res = prattExpandSyntaxDef(parser, tok, syntaxSpec);
+            if (res == NULL) {
+                res = assignment(parser);
+            }
+        } else {
+            res = assignment(parser);
+        }
         save = PROTECT(res);
     } else if (match(parser, TOK_TUPLE())) {
         res = multiDefinition(parser);
