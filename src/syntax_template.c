@@ -1014,6 +1014,14 @@ HashSymbol *prattSyntaxUnquoteSymbol(void) {
     return symbol;
 }
 
+static HashSymbol *prattSyntaxEmptyPatternSymbol(void) {
+    static HashSymbol *symbol = NULL;
+    if (symbol == NULL) {
+        symbol = newSymbol("empty");
+    }
+    return symbol;
+}
+
 bool prattIsSyntaxQuoteToken(PrattToken *token) {
     return prattIsTokenTypeOrAtom(token, prattSyntaxQuoteSymbol());
 }
@@ -1098,6 +1106,9 @@ static PrattMacroPatternItems *macroPatternItems(PrattParser *parser) {
             PROTECT(this);
             pushPrattMacroPatternItems(result, this);
             UNPROTECT(save2);
+        } else if (prattIsTokenTypeOrAtom(peek(parser),
+                                          prattSyntaxEmptyPatternSymbol())) {
+            next(parser);
         } else if (!prattIsSyntaxPatternBoundaryToken(peek(parser))) {
             if (prattIsSyntaxQuoteToken(peek(parser))) {
                 break;

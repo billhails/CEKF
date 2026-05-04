@@ -1,0 +1,14 @@
+let
+    syntax chooseZero(flag) ::= "," next: Expr {
+        flag + next
+    }
+    | empty {
+        flag
+    };
+
+    syntax choose: Expr ::= "choose" "(" first: Expr tail: Syntax(chooseZero(first)) ")" {
+        tail
+    };
+in
+    assert(5 == choose(5));
+    assert(12 == choose(5, 7))

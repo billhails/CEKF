@@ -146,6 +146,10 @@ Useful component kinds are:
 - SyntaxCall: invoke another syntax rule, optionally with inherited arguments.
 - Empty: match nothing, useful for explicit base cases.
 
+Phase 1 also allows a bare unquoted `empty` token anywhere a positional
+component could appear in a pattern. It is ignored completely and exists only
+as a readability marker for branches whose pattern is otherwise empty.
+
 This is enough to express the lco, where, and filter example without forcing
 the problem back into prefix or infix operator machinery.
 

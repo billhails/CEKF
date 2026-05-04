@@ -75,6 +75,7 @@ declarations.
 
 <syntax-component> ::= <quoted-terminal>
                      | <bound-component>
+                     | "empty"
 
 <quoted-terminal> ::= <string-literal>
 
@@ -110,6 +111,10 @@ Phase-1 notes:
   list in phase 1, so empty `()` is not part of the planned surface syntax.
 - The empty alternative is represented by `ε` in `<syntax-pattern>`, which is
   how a rule such as `syntax where(x, xs) ::= { xs } | ... ;` is modeled.
+- A bare unquoted `empty` token is also accepted anywhere a positional
+  component could appear and is ignored completely. This is only a readability
+  marker for action-only branches; it does not contribute a terminal or a
+  binding.
 - In the current implementation, initiating rules are a narrower subset than
   the grammar above: they accept one alternative, while helper-only rules use
   `<syntax-alternative-list>`.
