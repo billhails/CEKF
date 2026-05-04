@@ -1,0 +1,18 @@
+let
+    x = 10;
+
+    syntax applyFresh: Expr ::= "applyFresh" y: Expr quote {
+        {
+            let
+                x = fn (z) { z + 1 };
+            in
+                x(unquote(y));
+        }
+    };
+in
+    {
+        let
+            x = 20;
+        in
+            assert((applyFresh x) == 21);
+    }

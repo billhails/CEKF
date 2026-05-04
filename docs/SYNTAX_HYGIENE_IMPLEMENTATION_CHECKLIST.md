@@ -289,29 +289,30 @@ definition forms, not new annotated-definition syntax.
 
 ### Files (Phase 10)
 
-- [ ] Existing syntax and macro tests under [tests/fn](tests/fn)
-- [ ] New stage-5 hygiene tests under [tests/fn](tests/fn)
+- [x] Existing syntax and macro tests under [tests/fn](tests/fn)
+- [x] New stage-5 hygiene tests under [tests/fn](tests/fn)
 
 ### Tasks (Phase 10)
 
-- [ ] Keep these existing tests green during migration:
+- [x] Keep these existing tests green during migration:
   - [tests/fn/test_macro_definitions.fn](tests/fn/test_macro_definitions.fn)
   - [tests/fn/test_macro_list_comprehension.fn](tests/fn/test_macro_list_comprehension.fn)
   - [tests/fn/test_macro_recursive_helpers.fn](tests/fn/test_macro_recursive_helpers.fn)
   - [tests/fn/test_macro_quote_unquote.fn](tests/fn/test_macro_quote_unquote.fn)
   - [tests/fn/test_macro_for_loop.fn](tests/fn/test_macro_for_loop.fn)
-- [ ] Keep operator-collision syntax tests green:
+- [x] Keep operator-collision syntax tests green:
   - [tests/fn/test_syntax_quote_operator_collision.fn](tests/fn/test_syntax_quote_operator_collision.fn)
   - [tests/fn/test_syntax_unquote_operator_collision.fn](tests/fn/test_syntax_unquote_operator_collision.fn)
-- [ ] Add new tests:
+- [x] Add new tests:
   - declaration-site literal ref under shadowing
   - use-site unquote under shadowing
   - introduced binder freshness under shadowing
-  - no-carrier-leak smoke test (if supported via debug/assert path)
+  - no-carrier-leak smoke test via dump-ast shell checks and
+    [tests/src/test_ast_lower.c](tests/src/test_ast_lower.c)
 
 ### Validation (Phase 10)
 
-- [ ] Run `make test` and verify full pass.
+- [x] Run `make test` and verify full pass.
 
 ## Phase 11: Cleanup And Follow-On
 
