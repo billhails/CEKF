@@ -5,29 +5,32 @@
 ```fn
 // list comprehensions
 syntax lco: Expr ::= "lco" "["
-    exp: Expr
-    "for" x: Name "in" xs: Expr
-    filters: Syntax(where(x, xs)) // new "Syntax(id)" refers to other syntax
-                                  // Syntax(id(arg,...)) allows passing data
-"]" {
-    quote { map(fn (unquote x) { unquote exp }, unquote filters) }
-};
+                     exp: Expr
+                     "for" x: Name
+                     "in" xs: Expr
+                     filters: Syntax(where(x, xs))
+                     "]"
+                     quote {
+                       list.map(fn (unquote x) { unquote exp }, unquote filters)
+                     };
 
-syntax where(x, xs) ::= "where" cond: Expr rest: Syntax(filter(x, xs)) {
-                           quote { filter(fn (unquote x) { unquote cond }, unquote rest) }
-                       }
-             | { xs };
+syntax where(x, xs) ::= "where" cond: Expr
+                        rest: Syntax(conds(x, xs))
+                        quote {
+                          list.filter(fn (unquote x) { unquote cond }, unquote rest)
+                        }
+                      | empty { xs };
 
-syntax filter(x, xs) ::= "," cond: Expr rest: Syntax(filter(x, xs)) {
-                           quote { filter(fn (unquote x) { unquote cond }, unquote rest) }
-                       }
-             | { xs }
+syntax conds(x, xs) ::= "," cond: Expr
+                        rest: Syntax(conds(x, xs))
+                        quote {
+                          list.filter(fn (unquote x) { unquote cond }, unquote rest)
+                        }
+                      | empty { xs };
 ```
 
-The current parser does not implement `quote` and `unquote` yet, but the same
-shape can now be demonstrated with plain template blocks because captured
-`Name` bindings substitute into function-binder positions. See
-`tests/fn/test_macro_list_comprehension.fn` for the working phase-1 version.
+`empty` is not required syntax, in fact it is completely ignored but aids
+readablity.
 
 In phase 1, the explicit `: Expr` or `: Def` annotation is a good surface
 marker for initiating rules.

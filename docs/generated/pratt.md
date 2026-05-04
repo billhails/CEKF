@@ -34,6 +34,7 @@ PrattParser --trie--> PrattTrie
 PrattParser --panicMode--> bool
 PrattParser --suppressErrors--> bool
 PrattParser --isPreamble--> bool
+PrattParser --quotedAtomSymbols--> SymbolArray
 PrattParser --next--> PrattParser
 PrattRecord --symbol--> HashSymbol
 PrattRecord --prefix--> PrattFixityConfig
