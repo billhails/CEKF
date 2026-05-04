@@ -1181,32 +1181,12 @@ PrattMacroAlternative *prattParseSyntaxAlternative(PrattParser *parser,
             }
         }
 
-        Index overrideCount = sizeSymbolArray(overrideSymbols);
-        PrattRecord **savedRecords = calloc(
-            overrideCount == 0 ? 1 : overrideCount, sizeof(PrattRecord *));
-        for (Index i = 0; i < overrideCount; ++i) {
-            HashSymbol *symbol = getSymbolArray(overrideSymbols, i);
-            getPrattRecordTable(parser->rules, symbol, &savedRecords[i]);
-            if (savedRecords[i] != NULL) {
-                PrattRecord *overrideRecord = copyPrattRecord(savedRecords[i]);
-                int save4 = PROTECT(overrideRecord);
-                overrideRecord->prefix.op = prattMakeAtomParselet;
-                overrideRecord->prefix.prec = 0;
-                setPrattRecordTable(parser->rules, symbol, overrideRecord);
-                UNPROTECT(save4);
-            }
-        }
+        SymbolArray *savedQuotedAtoms = parser->quotedAtomSymbols;
+        parser->quotedAtomSymbols = overrideSymbols;
 
         AstNest *body = prattNest(parser);
 
-        for (Index i = 0; i < overrideCount; ++i) {
-            if (savedRecords[i] != NULL) {
-                setPrattRecordTable(parser->rules,
-                                    getSymbolArray(overrideSymbols, i),
-                                    savedRecords[i]);
-            }
-        }
-        free(savedRecords);
+        parser->quotedAtomSymbols = savedQuotedAtoms;
         UNPROTECT(save2);
 
         if (body != NULL) {

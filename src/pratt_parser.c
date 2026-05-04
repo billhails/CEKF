@@ -185,6 +185,7 @@ static AstTypeSymbols *typeVariables(PrattParser *);
 static AstType *typeType(PrattParser *);
 static HashSymbol *symbol(PrattParser *);
 static HashSymbol *typeVariable(PrattParser *);
+static PrattRecord *fetchRawRecord(PrattParser *, HashSymbol *);
 static PrattRecord *fetchRecord(PrattParser *, HashSymbol *);
 static PrattTrie *makePrattTrie(PrattParser *, PrattTrie *);
 static WCharArray *rawString(PrattParser *);
@@ -206,6 +207,20 @@ static void mergeFixityImport(PrattParser *parser, PrattRecord *target,
                               HashSymbol *nsSymbol, bool importPrefix,
                               bool importInfix, bool importPostfix,
                               HashSymbol *op);
+
+static bool symbolArrayContains(SymbolArray *symbols, HashSymbol *symbol) {
+    if (symbols == NULL) {
+        return false;
+    }
+
+    for (Index i = 0; i < sizeSymbolArray(symbols); ++i) {
+        if (getSymbolArray(symbols, i) == symbol) {
+            return true;
+        }
+    }
+
+    return false;
+}
 // if you're wondering where the arithmetic primitives are, they're
 // defined in the preamble.
 
@@ -1086,6 +1101,7 @@ static PrattParser *makeChildParser(PrattParser *parent) {
     // child-specific additions will persistently extend this trie without
     // mutating the parent's structure.
     child->trie = parent->trie;
+    child->quotedAtomSymbols = parent->quotedAtomSymbols;
     // NameSpaces and rules resolve through the parent via parser->next;
     // child will add its own bindings locally as needed.
     return child;
@@ -3842,15 +3858,24 @@ static AstCompositeFunction *functions(PrattParser *parser) {
 /**
  * @brief find a parser record for a token in a (nested) PrattParser.
  */
-static PrattRecord *fetchRecord(PrattParser *parser, HashSymbol *symbol) {
+static PrattRecord *fetchRawRecord(PrattParser *parser, HashSymbol *symbol) {
     PrattRecord *record = NULL;
     if (getPrattRecordTable(parser->rules, symbol, &record)) {
         return record;
     } else if (parser->next != NULL) {
-        return fetchRecord(parser->next, symbol);
+        return fetchRawRecord(parser->next, symbol);
     } else {
         return NULL;
     }
+}
+
+static PrattRecord *fetchRecord(PrattParser *parser, HashSymbol *symbol) {
+    if (parser->quotedAtomSymbols != NULL &&
+        symbolArrayContains(parser->quotedAtomSymbols, symbol)) {
+        return fetchRawRecord(parser, TOK_ATOM());
+    }
+
+    return fetchRawRecord(parser, symbol);
 }
 
 /**
@@ -4568,11 +4593,6 @@ static AstExpression *makeAtom(PrattRecord *record __attribute__((unused)),
     }
 
     return newAstExpression_Symbol(TOKPI(tok), name);
-}
-
-AstExpression *prattMakeAtomParselet(PrattRecord *record, PrattParser *parser,
-                                     AstExpression *lhs, PrattToken *tok) {
-    return makeAtom(record, parser, lhs, tok);
 }
 
 /**

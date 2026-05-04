@@ -241,7 +241,7 @@ definition forms, not new annotated-definition syntax.
 
 ### Files (Phase 8)
 
-- [ ] [src/pratt_parser.c](src/pratt_parser.c)
+- [x] [src/pratt_parser.c](src/pratt_parser.c)
 - [ ] [src/syntax_parse.c](src/syntax_parse.c)
 - [x] [src/syntax_template.h](src/syntax_template.h)
 - [x] [src/syntax_template.c](src/syntax_template.c)
@@ -250,17 +250,21 @@ definition forms, not new annotated-definition syntax.
 
 - [x] Delete unused `substituteSyntax*` function family.
 - [x] Delete old quote-wrapper hack helpers no longer needed.
-- [ ] Remove obsolete temporary parser overrides if now centralized.
+- [x] Remove obsolete temporary parser overrides if now centralized.
 - [x] Keep rollback and mismatch/error distinction behavior intact.
 
 ### Notes (Phase 8)
 
 - The `substituteSyntax*` family was removed once carrier emission made it dead
-  code. Remaining Phase 8 work is limited to any residual parser-only cleanup.
+  code.
+- Quoted-template atom forcing now lives in parser state via
+  `quotedAtomSymbols` and `fetchRecord(...)`, so the temporary rule-table
+  override path is gone.
 
 ### Validation (Phase 8)
 
 - [x] Build clean with no dead code warnings related to syntax substitution.
+- [x] `make test`
 
 ## Phase 9: Add Defensive Checks And Diagnostics
 

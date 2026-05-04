@@ -111,6 +111,7 @@ structs:
             panicMode: bool=false
             suppressErrors: bool=false
             isPreamble: bool=false
+            quotedAtomSymbols: SymbolArray=NULL
             next: PrattParser
 
     PrattRecord:
