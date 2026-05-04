@@ -27,6 +27,9 @@ syntax conds(x, xs) ::= "," cond: Expr
                           list.filter(fn (unquote x) { unquote cond }, unquote rest)
                         }
                       | empty { xs };
+
+// use
+lco [ x + 1 for x in [1, 2, 3] where x > 1 ]; // [3, 4]
 ```
 
 `empty` is not required syntax, in fact it is completely ignored but aids
@@ -718,6 +721,135 @@ current design does not yet include:
 
 That suggests the current plan is strong enough for an MVP, and also makes the
 most natural second-wave extensions fairly clear.
+
+## Follow-Up Candidate Syntaxes
+
+Beyond `time`, `unless`, and the basic `for` shape, the current phase-1 system
+already looks strong enough to justify a few more substantial follow-up
+candidates. The best near-term targets are not the ones that require new
+fragment kinds. They are the ones that stay expression- or definition-shaped
+while taking advantage of recursive helpers, inherited parameters, and hygienic
+template expansion.
+
+### Query Comprehensions
+
+The list-comprehension example can likely be broadened into a more serious
+query-style surface with optional recursive tails.
+
+```fn
+syntax query: Expr ::= "query" "["
+                       projection: Expr
+                       "from" x: Name
+                       "in" xs: Expr
+                       clauses: Syntax(queryClauses(x, xs))
+                       "]" quote {
+  unquote clauses
+}
+```
+
+The interesting part here is not the head form itself but the helper family
+that could parse `where`, `order`, `join`, `group`, or similar clause tails.
+That would exercise the same machinery as list comprehensions, but in a domain
+that feels more like a real embedded query language than a single expression
+sugar.
+
+### Nondeterministic Search DSL
+
+Given the language's `amb` orientation, a search-oriented syntax family looks
+like a natural fit.
+
+```fn
+search [ (x, y)
+         from x in xs
+         from y in ys
+         where ok(x, y)
+         yield score(x, y) ]
+```
+
+This is structurally close to a comprehension, but semantically richer. The
+helper rules would not just collect filters. They could lower into nested
+choice, guard, and scoring or pruning combinators. That would make syntax a
+front end for a real search DSL rather than just collection mapping.
+
+### Recursion And Iteration Families
+
+The current machinery should also be able to support a family of expression
+forms that lower into explicit recursion with hygienically introduced binders.
+
+Possible examples include:
+
+- `repeat body until cond`
+- `fold name = init over xs with step`
+- `scan name = init over xs with step`
+- bounded search or accumulator loops with optional `where`-like guards
+
+These would all reuse the same strengths already demonstrated by `for`: fixed
+header tokens, captured binders, and templates that introduce internal helper
+functions without variable capture.
+
+### Structured Pipeline Syntax
+
+A pipeline DSL is another realistic candidate if plain operator chaining is too
+weak or too ambiguous for some domains.
+
+```fn
+pipe value
+|> map(fn (x) { x + 1 })
+|> filter(fn (x) { x > 2 })
+|> take(10)
+```
+
+The advantage over ordinary operators is that the syntax layer can give a small
+local grammar to the staged clauses, normalize them uniformly, and lower them
+into explicit composition or nested library calls. If some stages later need
+binders or optional guard clauses, recursive helper rules already provide a
+path for that.
+
+### Definition Wrappers
+
+Definition-position initiation makes it possible to express more than toy
+declaration sugar.
+
+Possible examples include:
+
+- `lazy name = expr`
+- `cached name = expr`
+- `benchmark name = expr`
+- `test name = expr`
+
+These are still single-definition results, so they remain inside the current
+phase-1 boundary. The expansion can introduce support bindings hygienically,
+resolve helper names at declaration site, and give a lightweight declaration
+DSL without needing multi-definition output.
+
+### Guarded Binding Forms
+
+Another promising area is local binding syntax that remains expression-shaped
+but wants a more structured header than ordinary `let` forms provide.
+
+Possible examples include:
+
+- `iflet x = expr then yes else no`
+- `whenlet x = expr body else fallback`
+- small guarded destructuring forms if the existing surface is awkward
+
+These are often useful in practice, and they sit squarely in the current sweet
+spot: expression result, a compact grammar, and hygiene requirements around the
+captured binder.
+
+### Best Near-Term Demonstrators
+
+If the goal is to show that the system is genuinely powerful before extending
+it further, the strongest concrete next examples are probably:
+
+1. a query-comprehension family
+2. a nondeterministic search DSL
+3. a richer recursion or iteration family beyond `for`
+4. one or two definition wrappers such as `lazy` or `test`
+
+Those would demonstrate different aspects of the existing design without
+requiring clause-list fragments, multi-definition expansion, or syntax-object
+pattern matching.
 
 ## Ordered Backlog After MVP
 
