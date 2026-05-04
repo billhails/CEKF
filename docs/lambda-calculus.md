@@ -229,11 +229,11 @@ l' &= (\mathtt{letrec}\ (( x_0:\ \lambda'_0)\dots ( x_n:\ \lambda'_n))\ e') && \
 \\
 K &= \set{x_0\dots x_n} && \text{(3)}
 \\
-\vec{D} &= \set{x_i \mapsto \  \set{x_j\dots x_k} | x_i \in K,\ x_j\dots x_k \in K \cap \mathcal{F}\lambda'_i} && \text{(4)}
+\vec{D} &= \set{ x_i \rarr x_j | x_i \in K,\ x_j \in \mathcal{F}\lambda'_i \cap K} && \text{(4)}
 \\
 B &= \mathcal{F}e' \cap K && \text{(5)}
 \\
-L &= \bigcup_{x\in B} \vec{D}^{\ast}(x) && \text{(6)}
+L &= \bigcup_{x\in B} \vec{D}^{\ast}x && \text{(6)}
 \\
 \mathcal{T}l &=
 (\mathtt{letrec}\ (\set{(x_i:\ \lambda'_i) | x_i \in L})\ e')
@@ -247,12 +247,12 @@ $$
 The preliminaries are just navigating to the `letrec`. Having got there:
 
 1. Let $l$ be a `letrec` with keys $x_0\dots x_n$, lambdas $\lambda_0\dots\lambda_n$ and body $e$.
-2. Let $l'$ be the same `letrec` with $\mathcal{T}$ applied to its lambdas and its body, generating equivalent $\lambda'$ and $e'$.
+2. Let $l'$ be the same `letrec` with $\mathcal{T}$ applied to $\lambda_0\dots\lambda_n$ and $e$, yielding equivalent $\lambda'_0\dots\lambda'_n$ and $e'$.
 3. Let $K$ be the set of just the keys of $l$.
-4. Let $\vec{D}$ be the relation of each $x_i$ in $K$ to a set of other $\set{x_j\dots x_k}$ in $K$ where $x_j\dots x_k$ are free in $x_i$'s associated tree-shook lambda $\mathcal{T}\lambda_i$. Essentially a map from the lambda name to any letrec bound variables in its body.
-5. Let $B$ be the set of elements of $K$ that are free in the tree-shook body $\mathcal{T}e$.
-6. Let $L$ be the set of live variables: those $x_i$ in $K$ that are reachable from $e$ via zero or more applications of $\vec{D}$.
-7. Then $\mathcal{T}l$ is the tree-shook letrec $l$, With bindings restricted to those whose keys are members of $L$.
+4. Let $\vec{D}$ be the set of mappings from each $x_i$ in $K$ to each $x_j$ in the free variables of $\lambda'_i$. Essentially a map from the lambda name to any letrec bound variables in its body.
+5. Let $B$ be the set of elements of $K$ that are free in $e'$.
+6. Let $L$ be the set of live variables: those $x_i$ in $K$ that are reachable from $B$ via zero or more applications of $\vec{D}$.
+7. Then $\mathcal{T}l$ is $l'$, With bindings restricted to those whose keys are in $L$.
 8. Finally, though not properly part of tree shaking,
 if the result is a `letrec` with no bindings it reduces
 to just the tree-shook body.

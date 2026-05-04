@@ -192,19 +192,19 @@ Current code anchors:
 
 ### Files (Phase 7)
 
-- [ ] [src/syntax_lower.h](src/syntax_lower.h)
-- [ ] [src/syntax_lower.c](src/syntax_lower.c)
+- [x] [src/ast_lower.h](src/ast_lower.h)
+- [x] [src/ast_lower.c](src/ast_lower.c)
 - [ ] [src/main.c](src/main.c)
 
 ### Tasks (Phase 7)
 
-- [ ] Lower expression syntax-use carriers to ordinary `AstExpression`.
+- [x] Lower expression syntax-use carriers to ordinary `AstExpression`.
 - [ ] Lower definition syntax-use carriers to ordinary `AstDefinition`.
-- [ ] Freshen introduced binders with stable mapping per expansion instance.
-- [ ] Rewrite introduced refs to freshened names.
-- [ ] Splice unquotes from prepared captures.
-- [ ] Apply declaration-site resolved literal references.
-- [ ] Remove syntax declaration nodes from final AST.
+- [x] Freshen introduced binders with stable mapping per expansion instance.
+- [x] Rewrite introduced refs to freshened names.
+- [x] Splice unquotes from prepared captures.
+- [x] Apply declaration-site resolved literal references.
+- [x] Remove syntax declaration nodes from final AST.
 - [ ] Insert lowering call in pipeline after `syntaxPrepareAst` and before
       `lamConvertProg`.
 

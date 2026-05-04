@@ -34,5 +34,9 @@ SymbolArray *prattParseSyntaxCallArguments(PrattParser *parser);
 SymbolArray *prattParseOptionalSyntaxParameters(PrattParser *parser);
 PrattMacroAlternative *prattParseSyntaxAlternative(PrattParser *parser,
                                                    SymbolArray *parameters);
+AstSyntaxTemplate *
+prattConvertSyntaxExprTemplate(PrattParser *parser, ParserInfo PI,
+                               AstExpression *template, SymbolArray *parameters,
+                               PrattMacroPatternItems *patternItems);
 
 #endif

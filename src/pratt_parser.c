@@ -2241,9 +2241,8 @@ static AstDefinition *syntaxDefinition(PrattParser *parser) {
         AstSyntaxPatternItems *astPatItems =
             prattConvertPatternItems(TOKPI(tok), alt->patternItems);
         int save3 = PROTECT(astPatItems);
-        // Template IR conversion is deferred to later phases; placeholder only.
-        AstSyntaxTemplate *astTmpl =
-            newAstSyntaxTemplate(TOKPI(tok), AST_SYNTAXRESULTKIND_TYPE_EXPR);
+        AstSyntaxTemplate *astTmpl = prattConvertSyntaxExprTemplate(
+            parser, TOKPI(tok), alt->template, parameters, alt->patternItems);
         PROTECT(astTmpl);
         AstSyntaxAlternative *astAlt =
             newAstSyntaxAlternative(TOKPI(tok), astPatItems, astTmpl);
