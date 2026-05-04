@@ -2297,12 +2297,12 @@ static AstDefinition *syntaxDefinition(PrattParser *parser) {
         int save3 = PROTECT(astPatItems);
         AstSyntaxTemplate *astTmpl =
             resultKind == PRATTSYNTAXRESULTKIND_TYPE_DEF
-                ? prattConvertSyntaxDefTemplate(parser, TOKPI(tok),
-                                                alt->template, parameters,
-                                                alt->patternItems)
-                : prattConvertSyntaxExprTemplate(parser, TOKPI(tok),
-                                                 alt->template, parameters,
-                                                 alt->patternItems);
+                ? prattConvertSyntaxDefTemplate(
+                      parser, TOKPI(tok), alt->template, parameters,
+                      alt->patternItems, alt->quotedTemplate)
+                : prattConvertSyntaxExprTemplate(
+                      parser, TOKPI(tok), alt->template, parameters,
+                      alt->patternItems, alt->quotedTemplate);
         PROTECT(astTmpl);
         AstSyntaxAlternative *astAlt =
             newAstSyntaxAlternative(TOKPI(tok), astPatItems, astTmpl);

@@ -63,6 +63,7 @@ PrattMacroSpec --importNsRef--> int
 PrattMacroSpec --importNsSymbol--> HashSymbol
 PrattMacroAlternative --patternItems--> PrattMacroPatternItems
 PrattMacroAlternative --template--> AstExpression
+PrattMacroAlternative --quotedTemplate--> bool
 SyntaxExprBindings --names--> SymbolArray
 SyntaxExprBindings --values--> AstExpressionArray
 SyntaxLexerSnapshot --bufList--> PrattBufList

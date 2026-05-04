@@ -1024,34 +1024,6 @@ bool prattIsSyntaxPatternBoundaryToken(PrattToken *token) {
            token->type == TOK_EOF();
 }
 
-AstExpression *prattMakeSyntaxQuotedTemplate(ParserInfo PI,
-                                             AstExpression *body) {
-    AstExpression *quoteSymbol =
-        newAstExpression_Symbol(PI, prattSyntaxQuoteSymbol());
-    int save = PROTECT(quoteSymbol);
-    AstExpressions *arguments = newAstExpressions(PI, body, NULL);
-    PROTECT(arguments);
-    AstExpression *result =
-        makeAstExpression_FunCall(PI, quoteSymbol, arguments);
-    UNPROTECT(save);
-    return result;
-}
-
-AstExpression *prattUnwrapSyntaxQuotedTemplate(AstExpression *template) {
-    if (template == NULL || template->type != AST_EXPRESSION_TYPE_FUNCALL) {
-        return NULL;
-    }
-
-    AstFunCall *call = getAstExpression_FunCall(template);
-    if (call->function->type != AST_EXPRESSION_TYPE_SYMBOL ||
-        getAstExpression_Symbol(call->function) != prattSyntaxQuoteSymbol() ||
-        call->arguments == NULL || call->arguments->next != NULL) {
-        return NULL;
-    }
-
-    return call->arguments->expression;
-}
-
 HashSymbol *prattSyntaxSymbol(PrattParser *parser) {
     PrattToken *token = next(parser);
     return prattTokenTypeOrAtom(token);
@@ -1180,12 +1152,14 @@ PrattMacroAlternative *prattParseSyntaxAlternative(PrattParser *parser,
     PrattMacroPatternItems *patternItems = macroPatternItems(parser);
     int save = PROTECT(patternItems);
     AstExpression *template = NULL;
+    bool quotedTemplate = false;
     if (prattIsSyntaxQuoteToken(peek(parser))) {
-        PrattToken *quoteToken = next(parser);
-        int save2 = PROTECT(quoteToken);
+        next(parser);
+        validateLastAlloc();
+        quotedTemplate = true;
 
         SymbolArray *overrideSymbols = newSymbolArray();
-        int save3 = PROTECT(overrideSymbols);
+        int save2 = PROTECT(overrideSymbols);
         pushSymbolArray(overrideSymbols, prattSyntaxUnquoteSymbol());
         for (Index i = 0; i < countPrattMacroPatternItems(patternItems); ++i) {
             PrattMacroPatternItem *item =
@@ -1233,17 +1207,13 @@ PrattMacroAlternative *prattParseSyntaxAlternative(PrattParser *parser,
             }
         }
         free(savedRecords);
-        UNPROTECT(save3);
+        UNPROTECT(save2);
 
         if (body != NULL) {
             PROTECT(body);
-            AstExpression *quotedBody = newAstExpression_Nest(CPI(body), body);
-            PROTECT(quotedBody);
-            template =
-                prattMakeSyntaxQuotedTemplate(TOKPI(quoteToken), quotedBody);
+            template = newAstExpression_Nest(CPI(body), body);
             PROTECT(template);
         }
-        UNPROTECT(save2);
     } else {
         AstNest *body = prattNest(parser);
         if (body != NULL) {
@@ -1255,6 +1225,7 @@ PrattMacroAlternative *prattParseSyntaxAlternative(PrattParser *parser,
     PrattMacroAlternative *alternative =
         newPrattMacroAlternative(patternItems, template);
     PROTECT(alternative);
+    alternative->quotedTemplate = quotedTemplate;
     UNPROTECT(save);
     return alternative;
 }
@@ -1262,7 +1233,8 @@ PrattMacroAlternative *prattParseSyntaxAlternative(PrattParser *parser,
 AstSyntaxTemplate *
 prattConvertSyntaxExprTemplate(PrattParser *parser, ParserInfo PI,
                                AstExpression *template, SymbolArray *parameters,
-                               PrattMacroPatternItems *patternItems) {
+                               PrattMacroPatternItems *patternItems,
+                               bool quotedTemplate) {
     AstSyntaxTemplate *result =
         newAstSyntaxTemplate(PI, AST_SYNTAXRESULTKIND_TYPE_EXPR);
     int save = PROTECT(result);
@@ -1274,18 +1246,12 @@ prattConvertSyntaxExprTemplate(PrattParser *parser, ParserInfo PI,
         .patternItems = patternItems,
         .parameters = parameters,
         .introducedBinders = introducedBinders,
-        .quotedTemplate = false,
+        .quotedTemplate = quotedTemplate,
         .nextBinderId = 1,
     };
 
     if (template != NULL) {
-        AstExpression *body = prattUnwrapSyntaxQuotedTemplate(template);
-        if (body != NULL) {
-            context.quotedTemplate = true;
-            result->expr = convertTemplateExpr(body, &context);
-        } else {
-            result->expr = convertTemplateExpr(template, &context);
-        }
+        result->expr = convertTemplateExpr(template, &context);
     }
 
     UNPROTECT(save);
@@ -1295,7 +1261,8 @@ prattConvertSyntaxExprTemplate(PrattParser *parser, ParserInfo PI,
 AstSyntaxTemplate *
 prattConvertSyntaxDefTemplate(PrattParser *parser, ParserInfo PI,
                               AstExpression *template, SymbolArray *parameters,
-                              PrattMacroPatternItems *patternItems) {
+                              PrattMacroPatternItems *patternItems,
+                              bool quotedTemplate) {
     AstSyntaxTemplate *result =
         newAstSyntaxTemplate(PI, AST_SYNTAXRESULTKIND_TYPE_DEF);
     int save = PROTECT(result);
@@ -1307,17 +1274,12 @@ prattConvertSyntaxDefTemplate(PrattParser *parser, ParserInfo PI,
         .patternItems = patternItems,
         .parameters = parameters,
         .introducedBinders = introducedBinders,
-        .quotedTemplate = false,
+        .quotedTemplate = quotedTemplate,
         .nextBinderId = 1,
     };
 
     if (template != NULL) {
-        AstExpression *body = prattUnwrapSyntaxQuotedTemplate(template);
-        if (body != NULL) {
-            context.quotedTemplate = true;
-        } else {
-            body = template;
-        }
+        AstExpression *body = template;
 
         if (body->type != AST_EXPRESSION_TYPE_NEST) {
             parserErrorAt(CPI(body), parser,

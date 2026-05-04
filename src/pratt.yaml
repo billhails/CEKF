@@ -194,6 +194,7 @@ structs:
         data:
             patternItems: PrattMacroPatternItems
             template: AstExpression
+            quotedTemplate: bool=false
 
     SyntaxExprBindings:
         meta:

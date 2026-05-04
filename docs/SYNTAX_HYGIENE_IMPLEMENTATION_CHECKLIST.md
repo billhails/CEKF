@@ -243,13 +243,15 @@ definition forms, not new annotated-definition syntax.
 
 - [ ] [src/pratt_parser.c](src/pratt_parser.c)
 - [ ] [src/syntax_parse.c](src/syntax_parse.c)
+- [x] [src/syntax_template.h](src/syntax_template.h)
+- [x] [src/syntax_template.c](src/syntax_template.c)
 
 ### Tasks (Phase 8)
 
 - [x] Delete unused `substituteSyntax*` function family.
-- [ ] Delete old quote-wrapper hack helpers no longer needed.
+- [x] Delete old quote-wrapper hack helpers no longer needed.
 - [ ] Remove obsolete temporary parser overrides if now centralized.
-- [ ] Keep rollback and mismatch/error distinction behavior intact.
+- [x] Keep rollback and mismatch/error distinction behavior intact.
 
 ### Notes (Phase 8)
 
@@ -258,7 +260,7 @@ definition forms, not new annotated-definition syntax.
 
 ### Validation (Phase 8)
 
-- [ ] Build clean with no dead code warnings related to syntax substitution.
+- [x] Build clean with no dead code warnings related to syntax substitution.
 
 ## Phase 9: Add Defensive Checks And Diagnostics
 

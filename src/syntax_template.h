@@ -25,9 +25,6 @@ HashSymbol *prattSyntaxQuoteSymbol(void);
 HashSymbol *prattSyntaxUnquoteSymbol(void);
 bool prattIsSyntaxQuoteToken(PrattToken *token);
 bool prattIsSyntaxPatternBoundaryToken(PrattToken *token);
-AstExpression *prattMakeSyntaxQuotedTemplate(ParserInfo PI,
-                                             AstExpression *body);
-AstExpression *prattUnwrapSyntaxQuotedTemplate(AstExpression *template);
 
 HashSymbol *prattSyntaxSymbol(PrattParser *parser);
 SymbolArray *prattParseSyntaxCallArguments(PrattParser *parser);
@@ -37,10 +34,12 @@ PrattMacroAlternative *prattParseSyntaxAlternative(PrattParser *parser,
 AstSyntaxTemplate *
 prattConvertSyntaxExprTemplate(PrattParser *parser, ParserInfo PI,
                                AstExpression *template, SymbolArray *parameters,
-                               PrattMacroPatternItems *patternItems);
+                               PrattMacroPatternItems *patternItems,
+                               bool quotedTemplate);
 AstSyntaxTemplate *
 prattConvertSyntaxDefTemplate(PrattParser *parser, ParserInfo PI,
                               AstExpression *template, SymbolArray *parameters,
-                              PrattMacroPatternItems *patternItems);
+                              PrattMacroPatternItems *patternItems,
+                              bool quotedTemplate);
 
 #endif
