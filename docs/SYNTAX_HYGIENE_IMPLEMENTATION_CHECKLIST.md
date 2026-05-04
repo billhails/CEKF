@@ -29,14 +29,14 @@ Current code anchors:
 
 ### Tasks (Phase 0)
 
-- [ ] Record baseline test status before refactor.
-- [ ] Confirm no unrelated working-tree conflicts in target files.
-- [ ] Capture baseline output for a representative syntax test.
+- [x] Record baseline test status before refactor.
+- [x] Confirm no unrelated working-tree conflicts in target files.
+- [x] Capture baseline output for a representative syntax test.
 
 ### Validation (Phase 0)
 
-- [ ] Run `make test` and capture failures if any.
-- [ ] Run one focused syntax test file manually through `bin/fn` if useful.
+- [x] Run `make test` and capture failures if any.
+- [x] Run one focused syntax test file manually through `bin/fn` if useful.
 
 ## Phase 1: Introduce AST Schema Carriers And Template IR
 
@@ -46,18 +46,18 @@ Current code anchors:
 
 ### Tasks (Phase 1)
 
-- [ ] Add AST syntax declaration carrier type.
-- [ ] Add AST expression syntax-use carrier type.
-- [ ] Add AST definition syntax-use carrier type.
-- [ ] Add syntax binding array/struct type for captured and inherited bindings.
-- [ ] Add syntax enums for entry kind, result kind, and syntax class.
-- [ ] Add template IR node family with explicit provenance nodes:
+- [x] Add AST syntax declaration carrier type.
+- [x] Add AST expression syntax-use carrier type.
+- [x] Add AST definition syntax-use carrier type.
+- [x] Add syntax binding array/struct type for captured and inherited bindings.
+- [x] Add syntax enums for entry kind, result kind, and syntax class.
+- [x] Add template IR node family with explicit provenance nodes:
   - literal reference
   - introduced binder
   - introduced reference
   - unquote site
-- [ ] Extend `AstDefinition` union with syntax-related variants.
-- [ ] Extend `AstExpression` union with expression syntax-use variant.
+- [x] Extend `AstDefinition` union with syntax-related variants.
+- [x] Extend `AstExpression` union with expression syntax-use variant.
 
 ### Notes (Phase 1)
 
@@ -65,98 +65,104 @@ Current code anchors:
 
 ### Validation (Phase 1)
 
-- [ ] Build generated artifacts with `make`.
-- [ ] Confirm generated AST headers/sources compile.
+- [x] Build generated artifacts with `make`.
+- [x] Confirm generated AST headers/sources compile.
 
 ## Phase 2: Slim Pratt Schema To Parser-Only Matcher Metadata
 
 ### Files (Phase 2)
 
-- [ ] [src/pratt.yaml](src/pratt.yaml)
+- [x] [src/pratt.yaml](src/pratt.yaml)
 
 ### Tasks (Phase 2)
 
-- [ ] Add `declarationId` to parser syntax spec metadata.
-- [ ] Keep parser-side pattern matching data only.
-- [ ] Remove durable template ownership from Pratt alternative/spec types.
-- [ ] Keep parser-side binding helper type only if needed during match.
-- [ ] Preserve existing compatibility naming (`PrattMacro*`) for this phase.
+- [x] Add `declarationId` to parser syntax spec metadata.
+- [x] Keep parser-side pattern matching data only.
+- [x] Remove durable template ownership from Pratt alternative/spec types.
+- [x] Keep parser-side binding helper type only if needed during match.
+- [x] Preserve existing compatibility naming (`PrattMacro*`) for this phase.
 
 ### Validation (Phase 2)
 
-- [ ] Rebuild generated Pratt artifacts.
-- [ ] Compile parser with no functional behavior change yet.
+- [x] Rebuild generated Pratt artifacts.
+- [x] Compile parser with no functional behavior change yet.
 
 ## Phase 3: Extract Parser Syntax Code Into New Modules
 
 ### Files (Phase 3)
 
-- [ ] [src/syntax_parse.h](src/syntax_parse.h)
-- [ ] [src/syntax_parse.c](src/syntax_parse.c)
-- [ ] [src/syntax_template.h](src/syntax_template.h)
-- [ ] [src/syntax_template.c](src/syntax_template.c)
-- [ ] [src/pratt_parser.c](src/pratt_parser.c)
-- [ ] [src/pratt_parser.h](src/pratt_parser.h)
-- [ ] [Makefile](Makefile) if new units must be listed explicitly
+- [x] [src/syntax_parse.h](src/syntax_parse.h)
+- [x] [src/syntax_parse.c](src/syntax_parse.c)
+- [x] [src/syntax_template.h](src/syntax_template.h)
+- [x] [src/syntax_template.c](src/syntax_template.c)
+- [x] [src/pratt_parser.c](src/pratt_parser.c)
+- [x] [src/pratt_parser.h](src/pratt_parser.h)
 
 ### Tasks (Phase 3)
 
-- [ ] Move parser-side syntax declaration parsing helpers from
+- [x] Move parser-side syntax declaration parsing helpers from
   [src/pratt_parser.c](src/pratt_parser.c):
   - optional parameters parsing
   - alternative parsing
   - alternative validation
-- [ ] Move quote/unquote token/template parsing helpers to `syntax_template`.
-- [ ] Move syntax matching engine helpers to `syntax_parse`.
-- [ ] Keep `definition()` and `userSyntaxExpr()` in parser as thin dispatchers.
-- [ ] Expose minimal non-static parser utility APIs needed by new modules.
-- [ ] Avoid behavior changes in this extraction phase.
+- [x] Move quote/unquote token/template parsing helpers to `syntax_template`.
+- [x] Move syntax matching engine helpers to `syntax_parse`.
+- [x] Keep `definition()` and `userSyntaxExpr()` in parser as thin dispatchers.
+- [x] Expose minimal non-static parser utility APIs needed by new modules.
+- [x] Avoid behavior changes in this extraction phase.
 
 ### Validation (Phase 3)
 
-- [ ] Parser still builds.
-- [ ] Existing syntax-related tests still pass unchanged.
+- [x] Parser still builds.
+- [x] Existing syntax-related tests still pass unchanged.
 
 ## Phase 4: Emit AST Syntax Carriers Instead Of Parser-Time Expansion
 
 ### Files (Phase 4)
 
-- [ ] [src/syntax_parse.c](src/syntax_parse.c)
-- [ ] [src/pratt_parser.c](src/pratt_parser.c)
+- [x] [src/syntax_parse.c](src/syntax_parse.c)
+- [x] [src/pratt_parser.c](src/pratt_parser.c)
 
 ### Tasks (Phase 4)
 
-- [ ] Replace parser-time substitution result path with carrier construction.
-- [ ] Update syntax declaration parsing to emit AST declaration node instead of
+- [x] Replace parser-time substitution result path with carrier construction.
+- [x] Update syntax declaration parsing to emit AST declaration node instead of
       blank definition.
-- [ ] Update expression entry path to emit AST expression syntax-use node.
-- [ ] Keep helper matching recursive behavior but store captures in carrier.
+- [x] Update expression entry path to emit AST expression syntax-use node.
+- [x] Keep helper matching recursive behavior but store captures in carrier.
 - [x] Remove direct dependency on `substituteSyntax*` for successful paths.
 
 ### Validation (Phase 4)
 
-- [ ] `--dump-ast` shows syntax declaration and syntax-use nodes.
-- [ ] Parser accepts same syntax test files as before.
+- [x] `--dump-ast` shows syntax declaration and syntax-use nodes.
+- [x] Parser accepts same syntax test files as before.
 
 ## Phase 5: Add Syntax Awareness To Namespace Rewrite Pass
 
 ### Files (Phase 5)
 
-- [ ] [src/ast_ns.c](src/ast_ns.c)
+- [x] [src/ast_ns.c](src/ast_ns.c)
 
 ### Tasks (Phase 5)
 
-- [ ] Add visitor cases for syntax declaration carriers.
-- [ ] Add visitor cases for syntax-use carriers.
-- [ ] Ensure declaration-site literal template refs are rewritten in declaration
+- [x] Add visitor cases for syntax declaration carriers.
+- [x] Add visitor cases for syntax-use carriers.
+- [x] Ensure declaration-site literal template refs are rewritten in declaration
       context.
-- [ ] Ensure captured use-site fragments are rewritten in use-site context.
-- [ ] Do not lower syntax in namespace pass.
+- [x] Ensure captured use-site fragments are rewritten in use-site context.
+- [x] Do not lower syntax in namespace pass.
+
+### Notes (Phase 5)
+
+- `AstSyntaxTemplateLookUp` now carries `nsId` as well as `nsSymbol`. That was
+  worth fixing in Phase 5 because template namespace rewrites need the resolved
+  namespace id to switch into the referenced replacement table; the raw symbol
+  alone was not enough.
 
 ### Validation (Phase 5)
 
-- [ ] Namespace tests still pass.
-- [ ] Syntax tests with namespace-qualified references pass or fail only for
+- [x] Namespace tests still pass.
+- [x] Syntax tests with namespace-qualified references pass or fail only for
       expected unimplemented stage-6 behavior.
 
 ## Phase 6: Implement Syntax Preparation Pass

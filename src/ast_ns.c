@@ -89,6 +89,44 @@ static AstTypeConstructorArgs *
 nsAstTypeConstructorArgs(AstTypeConstructorArgs *, VisitorContext);
 static AstLookUpOrSymbol *nsAstLookUpOrSymbol(AstLookUpOrSymbol *,
                                               VisitorContext);
+static AstSyntaxDecl *nsAstSyntaxDecl(AstSyntaxDecl *, VisitorContext);
+static AstSyntaxAlternatives *nsAstSyntaxAlternatives(AstSyntaxAlternatives *,
+                                                      VisitorContext);
+static AstSyntaxAlternative *nsAstSyntaxAlternative(AstSyntaxAlternative *,
+                                                    VisitorContext);
+static AstSyntaxTemplate *nsAstSyntaxTemplate(AstSyntaxTemplate *,
+                                              VisitorContext);
+static AstSyntaxTemplateDefinitions *
+nsAstSyntaxTemplateDefinitions(AstSyntaxTemplateDefinitions *, VisitorContext);
+static AstSyntaxTemplateDefinition *
+nsAstSyntaxTemplateDefinition(AstSyntaxTemplateDefinition *, VisitorContext);
+static AstSyntaxTemplateNameRef *
+nsAstSyntaxTemplateNameRef(AstSyntaxTemplateNameRef *, VisitorContext);
+static AstSyntaxTemplateBinder *
+nsAstSyntaxTemplateBinder(AstSyntaxTemplateBinder *, VisitorContext);
+static AstSyntaxTemplateBinders *
+nsAstSyntaxTemplateBinders(AstSyntaxTemplateBinders *, VisitorContext);
+static AstSyntaxTemplateExpr *nsAstSyntaxTemplateExpr(AstSyntaxTemplateExpr *,
+                                                      VisitorContext);
+static AstSyntaxTemplateExprs *
+nsAstSyntaxTemplateExprs(AstSyntaxTemplateExprs *, VisitorContext);
+static AstSyntaxTemplateNest *nsAstSyntaxTemplateNest(AstSyntaxTemplateNest *,
+                                                      VisitorContext);
+static AstSyntaxTemplateFunction *
+nsAstSyntaxTemplateFunction(AstSyntaxTemplateFunction *, VisitorContext);
+static AstSyntaxTemplateAltFunction *
+nsAstSyntaxTemplateAltFunction(AstSyntaxTemplateAltFunction *, VisitorContext);
+static AstSyntaxTemplateAltArgs *
+nsAstSyntaxTemplateAltArgs(AstSyntaxTemplateAltArgs *, VisitorContext);
+static AstSyntaxTemplateFarg *nsAstSyntaxTemplateFarg(AstSyntaxTemplateFarg *,
+                                                      VisitorContext);
+static AstSyntaxTemplateFargList *
+nsAstSyntaxTemplateFargList(AstSyntaxTemplateFargList *, VisitorContext);
+static AstSyntaxTemplateTaggedArgs *
+nsAstSyntaxTemplateTaggedArgs(AstSyntaxTemplateTaggedArgs *, VisitorContext);
+static AstSyntaxTemplateTaggedExpressions *
+nsAstSyntaxTemplateTaggedExpressions(AstSyntaxTemplateTaggedExpressions *,
+                                     VisitorContext);
 static AstSyntaxBinding *nsAstSyntaxBinding(AstSyntaxBinding *, VisitorContext);
 static AstSyntaxBindings *nsAstSyntaxBindings(AstSyntaxBindings *,
                                               VisitorContext);
@@ -1277,6 +1315,843 @@ static AstLookUpOrSymbol *nsAstLookUpOrSymbol(AstLookUpOrSymbol *node,
     return result;
 }
 
+static AstSyntaxDecl *nsAstSyntaxDecl(AstSyntaxDecl *node,
+                                      VisitorContext context) {
+    if (node == NULL) {
+        return NULL;
+    }
+    ENTER(nsAstSyntaxDecl);
+    bool changed = false;
+    AstSyntaxAlternatives *new_alternatives =
+        nsAstSyntaxAlternatives(node->alternatives, context);
+    int save = PROTECT(new_alternatives);
+    changed = changed || (new_alternatives != node->alternatives);
+    AstSyntaxDecl *result = node;
+    if (changed) {
+        result = newAstSyntaxDecl(CPI(node), node->declarationId,
+                                  node->ruleName, new_alternatives);
+        result->surfaceHead = node->surfaceHead;
+        result->parameters = node->parameters;
+        result->entryKind = node->entryKind;
+        result->resultKind = node->resultKind;
+    }
+    UNPROTECT(save);
+    LEAVE(nsAstSyntaxDecl);
+    return result;
+}
+
+static AstSyntaxAlternatives *
+nsAstSyntaxAlternatives(AstSyntaxAlternatives *node, VisitorContext context) {
+    if (node == NULL) {
+        return NULL;
+    }
+    ENTER(nsAstSyntaxAlternatives);
+    bool changed = false;
+    AstSyntaxAlternatives *result = newAstSyntaxAlternatives();
+    int save = PROTECT(result);
+    for (Index i = 0; i < sizeAstSyntaxAlternatives(node); ++i) {
+        AstSyntaxAlternative *alternative = getAstSyntaxAlternatives(node, i);
+        AstSyntaxAlternative *new_alternative =
+            nsAstSyntaxAlternative(alternative, context);
+        int save2 = PROTECT(new_alternative);
+        changed = changed || (new_alternative != alternative);
+        pushAstSyntaxAlternatives(result, new_alternative);
+        UNPROTECT(save2);
+    }
+    UNPROTECT(save);
+    LEAVE(nsAstSyntaxAlternatives);
+    return changed ? result : node;
+}
+
+static AstSyntaxAlternative *nsAstSyntaxAlternative(AstSyntaxAlternative *node,
+                                                    VisitorContext context) {
+    if (node == NULL) {
+        return NULL;
+    }
+    ENTER(nsAstSyntaxAlternative);
+    bool changed = false;
+    AstSyntaxTemplate *new_template =
+        nsAstSyntaxTemplate(node->template, context);
+    int save = PROTECT(new_template);
+    changed = changed || (new_template != node->template);
+    AstSyntaxAlternative *result = node;
+    if (changed) {
+        result = newAstSyntaxAlternative(CPI(node), node->patternItems,
+                                         new_template);
+    }
+    UNPROTECT(save);
+    LEAVE(nsAstSyntaxAlternative);
+    return result;
+}
+
+static AstSyntaxTemplate *nsAstSyntaxTemplate(AstSyntaxTemplate *node,
+                                              VisitorContext context) {
+    if (node == NULL) {
+        return NULL;
+    }
+    ENTER(nsAstSyntaxTemplate);
+    bool changed = false;
+    AstSyntaxTemplateExpr *new_expr =
+        nsAstSyntaxTemplateExpr(node->expr, context);
+    int save = PROTECT(new_expr);
+    changed = changed || (new_expr != node->expr);
+    AstSyntaxTemplateDefinition *new_definition =
+        nsAstSyntaxTemplateDefinition(node->definition, context);
+    PROTECT(new_definition);
+    changed = changed || (new_definition != node->definition);
+    AstSyntaxTemplate *result = node;
+    if (changed) {
+        result = newAstSyntaxTemplate(CPI(node), node->resultKind);
+        result->expr = new_expr;
+        result->definition = new_definition;
+    }
+    UNPROTECT(save);
+    LEAVE(nsAstSyntaxTemplate);
+    return result;
+}
+
+static AstSyntaxTemplateDefinitions *
+nsAstSyntaxTemplateDefinitions(AstSyntaxTemplateDefinitions *node,
+                               VisitorContext context) {
+    if (node == NULL) {
+        return NULL;
+    }
+    ENTER(nsAstSyntaxTemplateDefinitions);
+    bool changed = false;
+    AstSyntaxTemplateDefinition *new_definition =
+        nsAstSyntaxTemplateDefinition(node->definition, context);
+    int save = PROTECT(new_definition);
+    changed = changed || (new_definition != node->definition);
+    AstSyntaxTemplateDefinitions *new_next =
+        nsAstSyntaxTemplateDefinitions(node->next, context);
+    PROTECT(new_next);
+    changed = changed || (new_next != node->next);
+    AstSyntaxTemplateDefinitions *result = node;
+    if (changed) {
+        result = newAstSyntaxTemplateDefinitions(CPI(node), new_definition);
+        result->next = new_next;
+    }
+    UNPROTECT(save);
+    LEAVE(nsAstSyntaxTemplateDefinitions);
+    return result;
+}
+
+static AstSyntaxTemplateDefinition *
+nsAstSyntaxTemplateDefinition(AstSyntaxTemplateDefinition *node,
+                              VisitorContext context) {
+    if (node == NULL) {
+        return NULL;
+    }
+    ENTER(nsAstSyntaxTemplateDefinition);
+    int save = STARTPROTECT();
+    AstSyntaxTemplateDefinition *result = node;
+    switch (node->type) {
+    case AST_SYNTAXTEMPLATEDEFINITION_TYPE_DEFINE: {
+        AstSyntaxTemplateDefine *variant =
+            getAstSyntaxTemplateDefinition_Define(node);
+        bool changed = false;
+        AstSyntaxTemplateBinder *new_symbol =
+            nsAstSyntaxTemplateBinder(variant->symbol, context);
+        PROTECT(new_symbol);
+        changed = changed || (new_symbol != variant->symbol);
+        AstSyntaxTemplateExpr *new_expression =
+            nsAstSyntaxTemplateExpr(variant->expression, context);
+        PROTECT(new_expression);
+        changed = changed || (new_expression != variant->expression);
+        if (changed) {
+            AstSyntaxTemplateDefine *new_variant = newAstSyntaxTemplateDefine(
+                CPI(variant), new_symbol, new_expression);
+            PROTECT(new_variant);
+            result =
+                newAstSyntaxTemplateDefinition_Define(CPI(node), new_variant);
+        }
+        break;
+    }
+    case AST_SYNTAXTEMPLATEDEFINITION_TYPE_MULTI: {
+        AstSyntaxTemplateMultiDefine *variant =
+            getAstSyntaxTemplateDefinition_Multi(node);
+        bool changed = false;
+        AstSyntaxTemplateBinders *new_symbols =
+            nsAstSyntaxTemplateBinders(variant->symbols, context);
+        PROTECT(new_symbols);
+        changed = changed || (new_symbols != variant->symbols);
+        AstSyntaxTemplateExpr *new_expression =
+            nsAstSyntaxTemplateExpr(variant->expression, context);
+        PROTECT(new_expression);
+        changed = changed || (new_expression != variant->expression);
+        if (changed) {
+            AstSyntaxTemplateMultiDefine *new_variant =
+                newAstSyntaxTemplateMultiDefine(CPI(variant), new_symbols,
+                                                new_expression);
+            PROTECT(new_variant);
+            result =
+                newAstSyntaxTemplateDefinition_Multi(CPI(node), new_variant);
+        }
+        break;
+    }
+    case AST_SYNTAXTEMPLATEDEFINITION_TYPE_LAZY: {
+        AstSyntaxTemplateDefLazy *variant =
+            getAstSyntaxTemplateDefinition_Lazy(node);
+        bool changed = false;
+        AstSyntaxTemplateBinder *new_name =
+            nsAstSyntaxTemplateBinder(variant->name, context);
+        PROTECT(new_name);
+        changed = changed || (new_name != variant->name);
+        AstSyntaxTemplateAltFunction *new_definition =
+            nsAstSyntaxTemplateAltFunction(variant->definition, context);
+        PROTECT(new_definition);
+        changed = changed || (new_definition != variant->definition);
+        if (changed) {
+            AstSyntaxTemplateDefLazy *new_variant = newAstSyntaxTemplateDefLazy(
+                CPI(variant), new_name, new_definition);
+            PROTECT(new_variant);
+            result =
+                newAstSyntaxTemplateDefinition_Lazy(CPI(node), new_variant);
+        }
+        break;
+    }
+    case AST_SYNTAXTEMPLATEDEFINITION_TYPE_ALIAS: {
+        AstSyntaxTemplateAlias *variant =
+            getAstSyntaxTemplateDefinition_Alias(node);
+        bool changed = false;
+        AstSyntaxTemplateBinder *new_name =
+            nsAstSyntaxTemplateBinder(variant->name, context);
+        PROTECT(new_name);
+        changed = changed || (new_name != variant->name);
+        AstType *new_type = nsAstType(variant->type, context);
+        PROTECT(new_type);
+        changed = changed || (new_type != variant->type);
+        if (changed) {
+            AstSyntaxTemplateAlias *new_variant =
+                newAstSyntaxTemplateAlias(CPI(variant), new_name, new_type);
+            PROTECT(new_variant);
+            result =
+                newAstSyntaxTemplateDefinition_Alias(CPI(node), new_variant);
+        }
+        break;
+    }
+    case AST_SYNTAXTEMPLATEDEFINITION_TYPE_TYPEDEF: {
+        AstSyntaxTemplateTypeDef *variant =
+            getAstSyntaxTemplateDefinition_TypeDef(node);
+        bool changed = false;
+        AstTypeSig *new_typeSig = nsAstTypeSig(variant->typeSig, context);
+        PROTECT(new_typeSig);
+        changed = changed || (new_typeSig != variant->typeSig);
+        AstTypeBody *new_typeBody = nsAstTypeBody(variant->typeBody, context);
+        PROTECT(new_typeBody);
+        changed = changed || (new_typeBody != variant->typeBody);
+        if (changed) {
+            AstSyntaxTemplateTypeDef *new_variant = newAstSyntaxTemplateTypeDef(
+                CPI(variant), new_typeSig, new_typeBody);
+            PROTECT(new_variant);
+            result =
+                newAstSyntaxTemplateDefinition_TypeDef(CPI(node), new_variant);
+        }
+        break;
+    }
+    default:
+        cant_happen("unrecognized %s",
+                    astSyntaxTemplateDefinitionTypeName(node->type));
+    }
+    UNPROTECT(save);
+    LEAVE(nsAstSyntaxTemplateDefinition);
+    return result;
+}
+
+static AstSyntaxTemplateNameRef *
+nsAstSyntaxTemplateNameRef(AstSyntaxTemplateNameRef *node,
+                           VisitorContext context) {
+    if (node == NULL) {
+        return NULL;
+    }
+    ENTER(nsAstSyntaxTemplateNameRef);
+    int save = STARTPROTECT();
+    AstSyntaxTemplateNameRef *result = node;
+    switch (node->type) {
+    case AST_SYNTAXTEMPLATENAMEREF_TYPE_LITERAL: {
+        AstSyntaxLiteralRef *variant =
+            getAstSyntaxTemplateNameRef_Literal(node);
+        HashSymbol *resolved = variant->resolvedName != NULL
+                                   ? variant->resolvedName
+                                   : variant->writtenName;
+        HashSymbol *new_resolved = nsSymbol(resolved, context);
+        if (new_resolved != resolved) {
+            AstSyntaxLiteralRef *new_variant =
+                newAstSyntaxLiteralRef(CPI(variant), variant->writtenName);
+            PROTECT(new_variant);
+            new_variant->resolvedName = new_resolved;
+            result =
+                newAstSyntaxTemplateNameRef_Literal(CPI(node), new_variant);
+        }
+        break;
+    }
+    case AST_SYNTAXTEMPLATENAMEREF_TYPE_INTRODUCED:
+    case AST_SYNTAXTEMPLATENAMEREF_TYPE_UNQUOTE:
+        break;
+    default:
+        cant_happen("unrecognized %s",
+                    astSyntaxTemplateNameRefTypeName(node->type));
+    }
+    UNPROTECT(save);
+    LEAVE(nsAstSyntaxTemplateNameRef);
+    return result;
+}
+
+static AstSyntaxTemplateBinder *
+nsAstSyntaxTemplateBinder(AstSyntaxTemplateBinder *node,
+                          VisitorContext context) {
+    (void)context;
+    if (node == NULL) {
+        return NULL;
+    }
+    ENTER(nsAstSyntaxTemplateBinder);
+    LEAVE(nsAstSyntaxTemplateBinder);
+    return node;
+}
+
+static AstSyntaxTemplateBinders *
+nsAstSyntaxTemplateBinders(AstSyntaxTemplateBinders *node,
+                           VisitorContext context) {
+    if (node == NULL) {
+        return NULL;
+    }
+    ENTER(nsAstSyntaxTemplateBinders);
+    bool changed = false;
+    AstSyntaxTemplateBinders *result = newAstSyntaxTemplateBinders();
+    int save = PROTECT(result);
+    for (Index i = 0; i < sizeAstSyntaxTemplateBinders(node); ++i) {
+        AstSyntaxTemplateBinder *binder = getAstSyntaxTemplateBinders(node, i);
+        AstSyntaxTemplateBinder *new_binder =
+            nsAstSyntaxTemplateBinder(binder, context);
+        int save2 = PROTECT(new_binder);
+        changed = changed || (new_binder != binder);
+        pushAstSyntaxTemplateBinders(result, new_binder);
+        UNPROTECT(save2);
+    }
+    UNPROTECT(save);
+    LEAVE(nsAstSyntaxTemplateBinders);
+    return changed ? result : node;
+}
+
+static AstSyntaxTemplateExprs *
+nsAstSyntaxTemplateExprs(AstSyntaxTemplateExprs *node, VisitorContext context) {
+    if (node == NULL) {
+        return NULL;
+    }
+    ENTER(nsAstSyntaxTemplateExprs);
+    bool changed = false;
+    AstSyntaxTemplateExprs *result = newAstSyntaxTemplateExprs();
+    int save = PROTECT(result);
+    for (Index i = 0; i < sizeAstSyntaxTemplateExprs(node); ++i) {
+        AstSyntaxTemplateExpr *expression = getAstSyntaxTemplateExprs(node, i);
+        AstSyntaxTemplateExpr *new_expression =
+            nsAstSyntaxTemplateExpr(expression, context);
+        int save2 = PROTECT(new_expression);
+        changed = changed || (new_expression != expression);
+        pushAstSyntaxTemplateExprs(result, new_expression);
+        UNPROTECT(save2);
+    }
+    UNPROTECT(save);
+    LEAVE(nsAstSyntaxTemplateExprs);
+    return changed ? result : node;
+}
+
+static AstSyntaxTemplateNest *
+nsAstSyntaxTemplateNest(AstSyntaxTemplateNest *node, VisitorContext context) {
+    if (node == NULL) {
+        return NULL;
+    }
+    ENTER(nsAstSyntaxTemplateNest);
+    bool changed = false;
+    AstSyntaxTemplateDefinitions *new_definitions =
+        nsAstSyntaxTemplateDefinitions(node->definitions, context);
+    int save = PROTECT(new_definitions);
+    changed = changed || (new_definitions != node->definitions);
+    AstSyntaxTemplateExprs *new_expressions =
+        nsAstSyntaxTemplateExprs(node->expressions, context);
+    PROTECT(new_expressions);
+    changed = changed || (new_expressions != node->expressions);
+    AstSyntaxTemplateNest *result = node;
+    if (changed) {
+        result = newAstSyntaxTemplateNest(CPI(node), new_definitions,
+                                          new_expressions);
+    }
+    UNPROTECT(save);
+    LEAVE(nsAstSyntaxTemplateNest);
+    return result;
+}
+
+static AstSyntaxTemplateFunction *
+nsAstSyntaxTemplateFunction(AstSyntaxTemplateFunction *node,
+                            VisitorContext context) {
+    if (node == NULL) {
+        return NULL;
+    }
+    ENTER(nsAstSyntaxTemplateFunction);
+    bool changed = false;
+    AstSyntaxTemplateAltFunction *new_function =
+        nsAstSyntaxTemplateAltFunction(node->function, context);
+    int save = PROTECT(new_function);
+    changed = changed || (new_function != node->function);
+    AstSyntaxTemplateFunction *new_next =
+        nsAstSyntaxTemplateFunction(node->next, context);
+    PROTECT(new_next);
+    changed = changed || (new_next != node->next);
+    AstSyntaxTemplateFunction *result = node;
+    if (changed) {
+        result = newAstSyntaxTemplateFunction(CPI(node), new_function);
+        result->next = new_next;
+        result->unsafe = node->unsafe;
+    }
+    UNPROTECT(save);
+    LEAVE(nsAstSyntaxTemplateFunction);
+    return result;
+}
+
+static AstSyntaxTemplateAltFunction *
+nsAstSyntaxTemplateAltFunction(AstSyntaxTemplateAltFunction *node,
+                               VisitorContext context) {
+    if (node == NULL) {
+        return NULL;
+    }
+    ENTER(nsAstSyntaxTemplateAltFunction);
+    bool changed = false;
+    AstSyntaxTemplateAltArgs *new_altArgs =
+        nsAstSyntaxTemplateAltArgs(node->altArgs, context);
+    int save = PROTECT(new_altArgs);
+    changed = changed || (new_altArgs != node->altArgs);
+    AstSyntaxTemplateNest *new_nest =
+        nsAstSyntaxTemplateNest(node->nest, context);
+    PROTECT(new_nest);
+    changed = changed || (new_nest != node->nest);
+    AstSyntaxTemplateAltFunction *result = node;
+    if (changed) {
+        result =
+            newAstSyntaxTemplateAltFunction(CPI(node), new_altArgs, new_nest);
+    }
+    UNPROTECT(save);
+    LEAVE(nsAstSyntaxTemplateAltFunction);
+    return result;
+}
+
+static AstSyntaxTemplateAltArgs *
+nsAstSyntaxTemplateAltArgs(AstSyntaxTemplateAltArgs *node,
+                           VisitorContext context) {
+    if (node == NULL) {
+        return NULL;
+    }
+    ENTER(nsAstSyntaxTemplateAltArgs);
+    bool changed = false;
+    AstSyntaxTemplateFargList *new_argList =
+        nsAstSyntaxTemplateFargList(node->argList, context);
+    int save = PROTECT(new_argList);
+    changed = changed || (new_argList != node->argList);
+    AstSyntaxTemplateAltArgs *new_next =
+        nsAstSyntaxTemplateAltArgs(node->next, context);
+    PROTECT(new_next);
+    changed = changed || (new_next != node->next);
+    AstSyntaxTemplateAltArgs *result = node;
+    if (changed) {
+        result = newAstSyntaxTemplateAltArgs(CPI(node), new_argList);
+        result->next = new_next;
+    }
+    UNPROTECT(save);
+    LEAVE(nsAstSyntaxTemplateAltArgs);
+    return result;
+}
+
+static AstSyntaxTemplateFargList *
+nsAstSyntaxTemplateFargList(AstSyntaxTemplateFargList *node,
+                            VisitorContext context) {
+    if (node == NULL) {
+        return NULL;
+    }
+    ENTER(nsAstSyntaxTemplateFargList);
+    bool changed = false;
+    AstSyntaxTemplateFargList *result = newAstSyntaxTemplateFargList();
+    int save = PROTECT(result);
+    for (Index i = 0; i < sizeAstSyntaxTemplateFargList(node); ++i) {
+        AstSyntaxTemplateFarg *arg = getAstSyntaxTemplateFargList(node, i);
+        AstSyntaxTemplateFarg *new_arg = nsAstSyntaxTemplateFarg(arg, context);
+        int save2 = PROTECT(new_arg);
+        changed = changed || (new_arg != arg);
+        pushAstSyntaxTemplateFargList(result, new_arg);
+        UNPROTECT(save2);
+    }
+    UNPROTECT(save);
+    LEAVE(nsAstSyntaxTemplateFargList);
+    return changed ? result : node;
+}
+
+static AstSyntaxTemplateTaggedArgs *
+nsAstSyntaxTemplateTaggedArgs(AstSyntaxTemplateTaggedArgs *node,
+                              VisitorContext context) {
+    if (node == NULL) {
+        return NULL;
+    }
+    ENTER(nsAstSyntaxTemplateTaggedArgs);
+    bool changed = false;
+    AstSyntaxTemplateTaggedArgs *result = newAstSyntaxTemplateTaggedArgs();
+    int save = PROTECT(result);
+    for (Index i = 0; i < sizeAstSyntaxTemplateTaggedArgs(node); ++i) {
+        AstSyntaxTemplateTaggedArg *arg =
+            getAstSyntaxTemplateTaggedArgs(node, i);
+        AstSyntaxTemplateFarg *new_arg =
+            nsAstSyntaxTemplateFarg(arg->arg, context);
+        int save2 = PROTECT(new_arg);
+        changed = changed || (new_arg != arg->arg);
+        AstSyntaxTemplateTaggedArg *new_tagged = arg;
+        if (new_arg != arg->arg) {
+            new_tagged =
+                newAstSyntaxTemplateTaggedArg(CPI(arg), arg->tag, new_arg);
+        }
+        PROTECT(new_tagged);
+        pushAstSyntaxTemplateTaggedArgs(result, new_tagged);
+        UNPROTECT(save2);
+    }
+    UNPROTECT(save);
+    LEAVE(nsAstSyntaxTemplateTaggedArgs);
+    return changed ? result : node;
+}
+
+static AstSyntaxTemplateTaggedExpressions *
+nsAstSyntaxTemplateTaggedExpressions(AstSyntaxTemplateTaggedExpressions *node,
+                                     VisitorContext context) {
+    if (node == NULL) {
+        return NULL;
+    }
+    ENTER(nsAstSyntaxTemplateTaggedExpressions);
+    bool changed = false;
+    AstSyntaxTemplateTaggedExpressions *result =
+        newAstSyntaxTemplateTaggedExpressions();
+    int save = PROTECT(result);
+    for (Index i = 0; i < sizeAstSyntaxTemplateTaggedExpressions(node); ++i) {
+        AstSyntaxTemplateTaggedExpression *expression =
+            getAstSyntaxTemplateTaggedExpressions(node, i);
+        AstSyntaxTemplateExpr *new_expression =
+            nsAstSyntaxTemplateExpr(expression->expression, context);
+        int save2 = PROTECT(new_expression);
+        changed = changed || (new_expression != expression->expression);
+        AstSyntaxTemplateTaggedExpression *new_tagged = expression;
+        if (new_expression != expression->expression) {
+            new_tagged = newAstSyntaxTemplateTaggedExpression(
+                CPI(expression), expression->tag, new_expression);
+        }
+        PROTECT(new_tagged);
+        pushAstSyntaxTemplateTaggedExpressions(result, new_tagged);
+        UNPROTECT(save2);
+    }
+    UNPROTECT(save);
+    LEAVE(nsAstSyntaxTemplateTaggedExpressions);
+    return changed ? result : node;
+}
+
+static AstSyntaxTemplateFarg *
+nsAstSyntaxTemplateFarg(AstSyntaxTemplateFarg *node, VisitorContext context) {
+    if (node == NULL) {
+        return NULL;
+    }
+    ENTER(nsAstSyntaxTemplateFarg);
+    int save = STARTPROTECT();
+    AstSyntaxTemplateFarg *result = node;
+    switch (node->type) {
+    case AST_SYNTAXTEMPLATEFARG_TYPE_WILDCARD:
+    case AST_SYNTAXTEMPLATEFARG_TYPE_NUMBER:
+    case AST_SYNTAXTEMPLATEFARG_TYPE_CHARACTER:
+        break;
+    case AST_SYNTAXTEMPLATEFARG_TYPE_BINDER: {
+        AstSyntaxTemplateBinder *variant =
+            getAstSyntaxTemplateFarg_Binder(node);
+        AstSyntaxTemplateBinder *new_variant =
+            nsAstSyntaxTemplateBinder(variant, context);
+        if (new_variant != variant) {
+            PROTECT(new_variant);
+            result = newAstSyntaxTemplateFarg_Binder(CPI(node), new_variant);
+        }
+        break;
+    }
+    case AST_SYNTAXTEMPLATEFARG_TYPE_LOOKUP: {
+        AstLookUpSymbol *variant = getAstSyntaxTemplateFarg_LookUp(node);
+        HashSymbol *new_symbol = nsAstLookUpSymbol(variant, context);
+        if (new_symbol != variant->symbol) {
+            AstLookUpSymbol *new_variant = newAstLookUpSymbol(
+                CPI(variant), variant->nsId, variant->nsSymbol, new_symbol);
+            PROTECT(new_variant);
+            result = newAstSyntaxTemplateFarg_LookUp(CPI(node), new_variant);
+        }
+        break;
+    }
+    case AST_SYNTAXTEMPLATEFARG_TYPE_NAMED: {
+        AstSyntaxTemplateNamedArg *variant =
+            getAstSyntaxTemplateFarg_Named(node);
+        bool changed = false;
+        HashSymbol *new_name = nsSymbol(variant->name, context);
+        changed = changed || (new_name != variant->name);
+        AstSyntaxTemplateFarg *new_arg =
+            nsAstSyntaxTemplateFarg(variant->arg, context);
+        PROTECT(new_arg);
+        changed = changed || (new_arg != variant->arg);
+        if (changed) {
+            AstSyntaxTemplateNamedArg *new_variant =
+                newAstSyntaxTemplateNamedArg(CPI(variant), new_name, new_arg);
+            PROTECT(new_variant);
+            result = newAstSyntaxTemplateFarg_Named(CPI(node), new_variant);
+        }
+        break;
+    }
+    case AST_SYNTAXTEMPLATEFARG_TYPE_UNPACK: {
+        AstSyntaxTemplateUnpack *variant =
+            getAstSyntaxTemplateFarg_Unpack(node);
+        bool changed = false;
+        AstLookUpOrSymbol *new_symbol =
+            nsAstLookUpOrSymbol(variant->symbol, context);
+        PROTECT(new_symbol);
+        changed = changed || (new_symbol != variant->symbol);
+        AstSyntaxTemplateFargList *new_argList =
+            nsAstSyntaxTemplateFargList(variant->argList, context);
+        PROTECT(new_argList);
+        changed = changed || (new_argList != variant->argList);
+        if (changed) {
+            AstSyntaxTemplateUnpack *new_variant = newAstSyntaxTemplateUnpack(
+                CPI(variant), new_symbol, new_argList);
+            PROTECT(new_variant);
+            result = newAstSyntaxTemplateFarg_Unpack(CPI(node), new_variant);
+        }
+        break;
+    }
+    case AST_SYNTAXTEMPLATEFARG_TYPE_UNPACKSTRUCT: {
+        AstSyntaxTemplateUnpackStruct *variant =
+            getAstSyntaxTemplateFarg_UnpackStruct(node);
+        bool changed = false;
+        AstLookUpOrSymbol *new_symbol =
+            nsAstLookUpOrSymbol(variant->symbol, context);
+        PROTECT(new_symbol);
+        changed = changed || (new_symbol != variant->symbol);
+        AstSyntaxTemplateTaggedArgs *new_argList =
+            nsAstSyntaxTemplateTaggedArgs(variant->argList, context);
+        PROTECT(new_argList);
+        changed = changed || (new_argList != variant->argList);
+        if (changed) {
+            AstSyntaxTemplateUnpackStruct *new_variant =
+                newAstSyntaxTemplateUnpackStruct(CPI(variant), new_symbol,
+                                                 new_argList);
+            PROTECT(new_variant);
+            result =
+                newAstSyntaxTemplateFarg_UnpackStruct(CPI(node), new_variant);
+        }
+        break;
+    }
+    case AST_SYNTAXTEMPLATEFARG_TYPE_TUPLE: {
+        AstSyntaxTemplateFargList *variant =
+            getAstSyntaxTemplateFarg_Tuple(node);
+        AstSyntaxTemplateFargList *new_variant =
+            nsAstSyntaxTemplateFargList(variant, context);
+        if (new_variant != variant) {
+            PROTECT(new_variant);
+            result = newAstSyntaxTemplateFarg_Tuple(CPI(node), new_variant);
+        }
+        break;
+    }
+    default:
+        cant_happen("unrecognized %s",
+                    astSyntaxTemplateFargTypeName(node->type));
+    }
+    UNPROTECT(save);
+    LEAVE(nsAstSyntaxTemplateFarg);
+    return result;
+}
+
+static AstSyntaxTemplateExpr *
+nsAstSyntaxTemplateExpr(AstSyntaxTemplateExpr *node, VisitorContext context) {
+    if (node == NULL) {
+        return NULL;
+    }
+    ENTER(nsAstSyntaxTemplateExpr);
+    int save = STARTPROTECT();
+    AstSyntaxTemplateExpr *result = node;
+    switch (node->type) {
+    case AST_SYNTAXTEMPLATEEXPR_TYPE_BACK:
+    case AST_SYNTAXTEMPLATEEXPR_TYPE_WILDCARD:
+    case AST_SYNTAXTEMPLATEEXPR_TYPE_NUMBER:
+    case AST_SYNTAXTEMPLATEEXPR_TYPE_CHARACTER:
+        break;
+    case AST_SYNTAXTEMPLATEEXPR_TYPE_NAMEREF: {
+        AstSyntaxTemplateNameRef *variant =
+            getAstSyntaxTemplateExpr_NameRef(node);
+        AstSyntaxTemplateNameRef *new_variant =
+            nsAstSyntaxTemplateNameRef(variant, context);
+        if (new_variant != variant) {
+            PROTECT(new_variant);
+            result = newAstSyntaxTemplateExpr_NameRef(CPI(node), new_variant);
+        }
+        break;
+    }
+    case AST_SYNTAXTEMPLATEEXPR_TYPE_FUNCALL: {
+        AstSyntaxTemplateFunCall *variant =
+            getAstSyntaxTemplateExpr_FunCall(node);
+        bool changed = false;
+        AstSyntaxTemplateExpr *new_function =
+            nsAstSyntaxTemplateExpr(variant->function, context);
+        PROTECT(new_function);
+        changed = changed || (new_function != variant->function);
+        AstSyntaxTemplateExprs *new_arguments =
+            nsAstSyntaxTemplateExprs(variant->arguments, context);
+        PROTECT(new_arguments);
+        changed = changed || (new_arguments != variant->arguments);
+        if (changed) {
+            AstSyntaxTemplateFunCall *new_variant = newAstSyntaxTemplateFunCall(
+                CPI(variant), new_function, new_arguments);
+            PROTECT(new_variant);
+            result = newAstSyntaxTemplateExpr_FunCall(CPI(node), new_variant);
+        }
+        break;
+    }
+    case AST_SYNTAXTEMPLATEEXPR_TYPE_LOOKUP: {
+        AstSyntaxTemplateLookUp *variant =
+            getAstSyntaxTemplateExpr_LookUp(node);
+        VisitorContext lookupContext =
+            getNsReplacements(context, variant->nsId);
+        AstSyntaxTemplateExpr *new_expression =
+            nsAstSyntaxTemplateExpr(variant->expression, lookupContext);
+        if (new_expression != variant->expression) {
+            PROTECT(new_expression);
+            AstSyntaxTemplateLookUp *new_variant = newAstSyntaxTemplateLookUp(
+                CPI(variant), variant->nsId, variant->nsSymbol, new_expression);
+            PROTECT(new_variant);
+            result = newAstSyntaxTemplateExpr_LookUp(CPI(node), new_variant);
+        }
+        break;
+    }
+    case AST_SYNTAXTEMPLATEEXPR_TYPE_FUN: {
+        AstSyntaxTemplateFunction *variant = getAstSyntaxTemplateExpr_Fun(node);
+        AstSyntaxTemplateFunction *new_variant =
+            nsAstSyntaxTemplateFunction(variant, context);
+        if (new_variant != variant) {
+            PROTECT(new_variant);
+            result = newAstSyntaxTemplateExpr_Fun(CPI(node), new_variant);
+        }
+        break;
+    }
+    case AST_SYNTAXTEMPLATEEXPR_TYPE_NEST: {
+        AstSyntaxTemplateNest *variant = getAstSyntaxTemplateExpr_Nest(node);
+        AstSyntaxTemplateNest *new_variant =
+            nsAstSyntaxTemplateNest(variant, context);
+        if (new_variant != variant) {
+            PROTECT(new_variant);
+            result = newAstSyntaxTemplateExpr_Nest(CPI(node), new_variant);
+        }
+        break;
+    }
+    case AST_SYNTAXTEMPLATEEXPR_TYPE_IFF: {
+        AstSyntaxTemplateIff *variant = getAstSyntaxTemplateExpr_Iff(node);
+        bool changed = false;
+        AstSyntaxTemplateExpr *new_test =
+            nsAstSyntaxTemplateExpr(variant->test, context);
+        PROTECT(new_test);
+        changed = changed || (new_test != variant->test);
+        AstSyntaxTemplateNest *new_consequent =
+            nsAstSyntaxTemplateNest(variant->consequent, context);
+        PROTECT(new_consequent);
+        changed = changed || (new_consequent != variant->consequent);
+        AstSyntaxTemplateNest *new_alternative =
+            nsAstSyntaxTemplateNest(variant->alternative, context);
+        PROTECT(new_alternative);
+        changed = changed || (new_alternative != variant->alternative);
+        if (changed) {
+            AstSyntaxTemplateIff *new_variant = newAstSyntaxTemplateIff(
+                CPI(variant), new_test, new_consequent, new_alternative);
+            PROTECT(new_variant);
+            result = newAstSyntaxTemplateExpr_Iff(CPI(node), new_variant);
+        }
+        break;
+    }
+    case AST_SYNTAXTEMPLATEEXPR_TYPE_PRINT: {
+        AstSyntaxTemplatePrint *variant = getAstSyntaxTemplateExpr_Print(node);
+        AstSyntaxTemplateExpr *new_expression =
+            nsAstSyntaxTemplateExpr(variant->expression, context);
+        if (new_expression != variant->expression) {
+            PROTECT(new_expression);
+            AstSyntaxTemplatePrint *new_variant =
+                newAstSyntaxTemplatePrint(CPI(variant), new_expression);
+            PROTECT(new_variant);
+            result = newAstSyntaxTemplateExpr_Print(CPI(node), new_variant);
+        }
+        break;
+    }
+    case AST_SYNTAXTEMPLATEEXPR_TYPE_TYPEOF: {
+        AstSyntaxTemplateTypeOf *variant =
+            getAstSyntaxTemplateExpr_TypeOf(node);
+        AstSyntaxTemplateExpr *new_expression =
+            nsAstSyntaxTemplateExpr(variant->expression, context);
+        if (new_expression != variant->expression) {
+            PROTECT(new_expression);
+            AstSyntaxTemplateTypeOf *new_variant =
+                newAstSyntaxTemplateTypeOf(CPI(variant), new_expression);
+            PROTECT(new_variant);
+            result = newAstSyntaxTemplateExpr_TypeOf(CPI(node), new_variant);
+        }
+        break;
+    }
+    case AST_SYNTAXTEMPLATEEXPR_TYPE_TUPLE: {
+        AstSyntaxTemplateExprs *variant = getAstSyntaxTemplateExpr_Tuple(node);
+        AstSyntaxTemplateExprs *new_variant =
+            nsAstSyntaxTemplateExprs(variant, context);
+        if (new_variant != variant) {
+            PROTECT(new_variant);
+            result = newAstSyntaxTemplateExpr_Tuple(CPI(node), new_variant);
+        }
+        break;
+    }
+    case AST_SYNTAXTEMPLATEEXPR_TYPE_STRUCTURE: {
+        AstSyntaxTemplateStruct *variant =
+            getAstSyntaxTemplateExpr_Structure(node);
+        bool changed = false;
+        AstLookUpOrSymbol *new_symbol =
+            nsAstLookUpOrSymbol(variant->symbol, context);
+        PROTECT(new_symbol);
+        changed = changed || (new_symbol != variant->symbol);
+        AstSyntaxTemplateTaggedExpressions *new_expressions =
+            nsAstSyntaxTemplateTaggedExpressions(variant->expressions, context);
+        PROTECT(new_expressions);
+        changed = changed || (new_expressions != variant->expressions);
+        if (changed) {
+            AstSyntaxTemplateStruct *new_variant = newAstSyntaxTemplateStruct(
+                CPI(variant), new_symbol, new_expressions);
+            PROTECT(new_variant);
+            result = newAstSyntaxTemplateExpr_Structure(CPI(node), new_variant);
+        }
+        break;
+    }
+    case AST_SYNTAXTEMPLATEEXPR_TYPE_ASSERTION: {
+        AstSyntaxTemplateExpr *variant =
+            getAstSyntaxTemplateExpr_Assertion(node);
+        AstSyntaxTemplateExpr *new_variant =
+            nsAstSyntaxTemplateExpr(variant, context);
+        if (new_variant != variant) {
+            PROTECT(new_variant);
+            result = newAstSyntaxTemplateExpr_Assertion(CPI(node), new_variant);
+        }
+        break;
+    }
+    case AST_SYNTAXTEMPLATEEXPR_TYPE_ERROR: {
+        AstSyntaxTemplateExpr *variant = getAstSyntaxTemplateExpr_Error(node);
+        AstSyntaxTemplateExpr *new_variant =
+            nsAstSyntaxTemplateExpr(variant, context);
+        if (new_variant != variant) {
+            PROTECT(new_variant);
+            result = newAstSyntaxTemplateExpr_Error(CPI(node), new_variant);
+        }
+        break;
+    }
+    default:
+        cant_happen("unrecognized %s",
+                    astSyntaxTemplateExprTypeName(node->type));
+    }
+    UNPROTECT(save);
+    LEAVE(nsAstSyntaxTemplateExpr);
+    return result;
+}
+
 static AstSyntaxBinding *nsAstSyntaxBinding(AstSyntaxBinding *node,
                                             VisitorContext context) {
     if (node == NULL) {
@@ -1422,6 +2297,12 @@ static AstDefinition *nsAstDefinition(AstDefinition *node,
         break;
     }
     case AST_DEFINITION_TYPE_SYNTAXDECL: {
+        AstSyntaxDecl *variant = getAstDefinition_SyntaxDecl(node);
+        AstSyntaxDecl *new_variant = nsAstSyntaxDecl(variant, context);
+        if (new_variant != variant) {
+            PROTECT(new_variant);
+            result = newAstDefinition_SyntaxDecl(CPI(node), new_variant);
+        }
         break;
     }
     case AST_DEFINITION_TYPE_SYNTAXUSE: {

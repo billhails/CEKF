@@ -1097,8 +1097,7 @@ static void ppAstSyntaxTemplateExpr(FILE *out,
     case AST_SYNTAXTEMPLATEEXPR_TYPE_LOOKUP: {
         AstSyntaxTemplateLookUp *lookUp =
             getAstSyntaxTemplateExpr_LookUp(expression);
-        ppAstHashSymbol(out, lookUp->nsSymbol);
-        fprintf(out, ".");
+        fprintf(out, "<%d>.", lookUp->nsId);
         ppAstSyntaxTemplateExpr(out, lookUp->expression);
         break;
     }

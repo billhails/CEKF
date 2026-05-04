@@ -566,6 +566,7 @@ structs:
         meta:
             brief: Template namespace lookup
         data:
+            nsId: int
             nsSymbol: HashSymbol
             expression: AstSyntaxTemplateExpr
 

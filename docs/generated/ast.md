@@ -125,6 +125,7 @@ AstSyntaxUnquote --bindingName--> HashSymbol
 AstSyntaxUnquote --syntaxClass--> AstSyntaxClass
 AstSyntaxTemplateFunCall --function--> AstSyntaxTemplateExpr
 AstSyntaxTemplateFunCall --arguments--> AstSyntaxTemplateExprs
+AstSyntaxTemplateLookUp --nsId--> int
 AstSyntaxTemplateLookUp --nsSymbol--> HashSymbol
 AstSyntaxTemplateLookUp --expression--> AstSyntaxTemplateExpr
 AstSyntaxTemplateIff --test--> AstSyntaxTemplateExpr
