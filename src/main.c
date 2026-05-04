@@ -31,6 +31,7 @@
 #include "ast_debug.h"
 #include "ast_ns.h"
 #include "ast_pp.h"
+#include "ast_prepare.h"
 #include "bigint.h"
 #include "builtins_helper.h"
 #include "bytecode.h"
@@ -527,6 +528,12 @@ int main(int argc, char *argv[]) {
         // Namespace Desugaring
         ////////////////////////
         prog = nsAstProg(prog);
+        REPLACE_PROTECT(save2, prog);
+
+        //////////////////////
+        // Syntax Preparation
+        //////////////////////
+        prog = prepareAst(prog);
         REPLACE_PROTECT(save2, prog);
 
         if (ast_flag) {
