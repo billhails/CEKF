@@ -2226,14 +2226,44 @@ static AstDefinition *syntaxDefinition(PrattParser *parser) {
     spec->parameters = parameters;
     spec->alternatives = alternatives;
     spec->isExprEntry = isExprEntry;
+    int declarationId = prattNextDeclarationId();
+    spec->declarationId = declarationId;
     setPrattMacroTable(parser->macros, ruleName, spec);
     if (isExprEntry && !parser->panicMode) {
         registerExprSyntaxHead(parser, surfaceHead);
     }
 
+    // Build AstSyntaxAlternatives for the durable declaration carrier.
+    AstSyntaxAlternatives *astAlts = newAstSyntaxAlternatives();
+    int save2 = PROTECT(astAlts);
+    for (Index i = 0; i < sizePrattMacroAlternatives(alternatives); ++i) {
+        PrattMacroAlternative *alt = getPrattMacroAlternatives(alternatives, i);
+        AstSyntaxPatternItems *astPatItems =
+            prattConvertPatternItems(TOKPI(tok), alt->patternItems);
+        int save3 = PROTECT(astPatItems);
+        // Template IR conversion is deferred to later phases; placeholder only.
+        AstSyntaxTemplate *astTmpl =
+            newAstSyntaxTemplate(TOKPI(tok), AST_SYNTAXRESULTKIND_TYPE_EXPR);
+        PROTECT(astTmpl);
+        AstSyntaxAlternative *astAlt =
+            newAstSyntaxAlternative(TOKPI(tok), astPatItems, astTmpl);
+        PROTECT(astAlt);
+        pushAstSyntaxAlternatives(astAlts, astAlt);
+        UNPROTECT(save3);
+    }
+    AstDefinition *decl = makeAstDefinition_SyntaxDecl(
+        TOKPI(tok), declarationId, ruleName, astAlts);
+    PROTECT(decl);
+    AstSyntaxDecl *syntaxDecl = getAstDefinition_SyntaxDecl(decl);
+    syntaxDecl->surfaceHead = surfaceHead;
+    syntaxDecl->parameters = parameters;
+    syntaxDecl->entryKind = isExprEntry ? AST_SYNTAXENTRYKIND_TYPE_EXPR
+                                        : AST_SYNTAXENTRYKIND_TYPE_HELPER;
+
     LEAVE(syntaxDefinition);
+    UNPROTECT(save2);
     UNPROTECT(save);
-    return newAstDefinition_Blank(LEXPI(parser->lexer));
+    return decl;
 }
 
 /**

@@ -37,5 +37,8 @@ AstExpression *prattExpandSyntaxExprWithBindings(PrattParser *parser,
                                                  SyntaxExprBindings *inherited);
 AstExpression *prattExpandSyntaxExpr(PrattParser *parser, PrattToken *tok,
                                      PrattMacroSpec *spec);
+int prattNextDeclarationId(void);
+AstSyntaxPatternItems *prattConvertPatternItems(ParserInfo PI,
+                                                PrattMacroPatternItems *items);
 
 #endif

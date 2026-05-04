@@ -305,7 +305,7 @@ $(TEST_DEP): $(DEPDIR)/%.d: $(TSTDIR)/src/%.c .generated | $(DEPDIR)
 	$(CC) $(INCLUDE_PATHS) -MM -MT $(patsubst $(DEPDIR)/%,$(OBJDIR)/%,$(patsubst %.d,%.o,$@)) -o $@ $<
 
 test: $(TEST_TARGETS) $(TARGET) $(UNIDIR)/unicode.db
-	for t in $(TSTDIR)/fn/test_*.fn ; do echo '***' $$t '***' ; ./$(TARGET) --include=fn --assertions-accumulate $$t || exit 1 ; done
+	for t in $(TSTDIR)/fn/test_*.fn ; do echo '***' $$t '***' ; opts='--include=fn --assertions-accumulate' ; if grep -qw syntax $$t ; then opts="$$opts --dump-ast" ; fi ; ./$(TARGET) $$opts $$t || exit 1 ; done
 	for t in $(TSTDIR)/fn/fail_*.fn ; do echo '***' $$t '***' ; ! ./$(TARGET) --include=fn --assertions-accumulate $$t >/dev/null 2>&1 || exit 1 ; done
 	for t in $(TEST_TARGETS) ; do echo '***' $$t '***' ; $$t || exit 1 ; done
 	@echo "All tests passed."

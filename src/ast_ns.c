@@ -89,6 +89,11 @@ static AstTypeConstructorArgs *
 nsAstTypeConstructorArgs(AstTypeConstructorArgs *, VisitorContext);
 static AstLookUpOrSymbol *nsAstLookUpOrSymbol(AstLookUpOrSymbol *,
                                               VisitorContext);
+static AstSyntaxBinding *nsAstSyntaxBinding(AstSyntaxBinding *, VisitorContext);
+static AstSyntaxBindings *nsAstSyntaxBindings(AstSyntaxBindings *,
+                                              VisitorContext);
+static AstExprSyntaxUse *nsAstExprSyntaxUse(AstExprSyntaxUse *, VisitorContext);
+static AstDefSyntaxUse *nsAstDefSyntaxUse(AstDefSyntaxUse *, VisitorContext);
 static AstDefinition *nsAstDefinition(AstDefinition *, VisitorContext);
 static AstTypeClause *nsAstTypeClause(AstTypeClause *, VisitorContext);
 static AstFarg *nsAstFarg(AstFarg *, VisitorContext);
@@ -209,6 +214,9 @@ static void populateReplacementsFromDefinitions(AstDefinitions *definitions,
     case AST_DEFINITION_TYPE_TYPEDEF:
         populateReplacementsFromTypeDef(getAstDefinition_TypeDef(def), id,
                                         context);
+        break;
+    case AST_DEFINITION_TYPE_SYNTAXDECL:
+    case AST_DEFINITION_TYPE_SYNTAXUSE:
         break;
     default:
         cant_happen("unrecognized %s", astDefinitionTypeName(def->type));
@@ -1269,6 +1277,90 @@ static AstLookUpOrSymbol *nsAstLookUpOrSymbol(AstLookUpOrSymbol *node,
     return result;
 }
 
+static AstSyntaxBinding *nsAstSyntaxBinding(AstSyntaxBinding *node,
+                                            VisitorContext context) {
+    if (node == NULL) {
+        return NULL;
+    }
+    ENTER(nsAstSyntaxBinding);
+    bool changed = false;
+    AstExpression *new_value = nsAstExpression(node->value, context);
+    int save = PROTECT(new_value);
+    changed = changed || (new_value != node->value);
+    AstSyntaxBinding *result = node;
+    if (changed) {
+        result = newAstSyntaxBinding(CPI(node), node->name, new_value);
+        result->inherited = node->inherited;
+    }
+    UNPROTECT(save);
+    LEAVE(nsAstSyntaxBinding);
+    return result;
+}
+
+static AstSyntaxBindings *nsAstSyntaxBindings(AstSyntaxBindings *node,
+                                              VisitorContext context) {
+    if (node == NULL) {
+        return NULL;
+    }
+    ENTER(nsAstSyntaxBindings);
+    bool changed = false;
+    AstSyntaxBindings *result = newAstSyntaxBindings();
+    int save = PROTECT(result);
+    for (Index i = 0; i < sizeAstSyntaxBindings(node); ++i) {
+        AstSyntaxBinding *binding = getAstSyntaxBindings(node, i);
+        AstSyntaxBinding *new_binding = nsAstSyntaxBinding(binding, context);
+        int save2 = PROTECT(new_binding);
+        changed = changed || (new_binding != binding);
+        pushAstSyntaxBindings(result, new_binding);
+        UNPROTECT(save2);
+    }
+    UNPROTECT(save);
+    LEAVE(nsAstSyntaxBindings);
+    return changed ? result : node;
+}
+
+static AstExprSyntaxUse *nsAstExprSyntaxUse(AstExprSyntaxUse *node,
+                                            VisitorContext context) {
+    if (node == NULL) {
+        return NULL;
+    }
+    ENTER(nsAstExprSyntaxUse);
+    bool changed = false;
+    AstSyntaxBindings *new_bindings =
+        nsAstSyntaxBindings(node->bindings, context);
+    int save = PROTECT(new_bindings);
+    changed = changed || (new_bindings != node->bindings);
+    AstExprSyntaxUse *result = node;
+    if (changed) {
+        result = newAstExprSyntaxUse(CPI(node), node->declarationId,
+                                     node->alternativeIndex, new_bindings);
+    }
+    UNPROTECT(save);
+    LEAVE(nsAstExprSyntaxUse);
+    return result;
+}
+
+static AstDefSyntaxUse *nsAstDefSyntaxUse(AstDefSyntaxUse *node,
+                                          VisitorContext context) {
+    if (node == NULL) {
+        return NULL;
+    }
+    ENTER(nsAstDefSyntaxUse);
+    bool changed = false;
+    AstSyntaxBindings *new_bindings =
+        nsAstSyntaxBindings(node->bindings, context);
+    int save = PROTECT(new_bindings);
+    changed = changed || (new_bindings != node->bindings);
+    AstDefSyntaxUse *result = node;
+    if (changed) {
+        result = newAstDefSyntaxUse(CPI(node), node->declarationId,
+                                    node->alternativeIndex, new_bindings);
+    }
+    UNPROTECT(save);
+    LEAVE(nsAstDefSyntaxUse);
+    return result;
+}
+
 static AstDefinition *nsAstDefinition(AstDefinition *node,
                                       VisitorContext context) {
     if (node == NULL) {
@@ -1329,8 +1421,21 @@ static AstDefinition *nsAstDefinition(AstDefinition *node,
     case AST_DEFINITION_TYPE_BUILTINSSLOT: {
         break;
     }
+    case AST_DEFINITION_TYPE_SYNTAXDECL: {
+        break;
+    }
+    case AST_DEFINITION_TYPE_SYNTAXUSE: {
+        AstDefSyntaxUse *variant = getAstDefinition_SyntaxUse(node);
+        AstDefSyntaxUse *new_variant = nsAstDefSyntaxUse(variant, context);
+        if (new_variant != variant) {
+            PROTECT(new_variant);
+            result = newAstDefinition_SyntaxUse(CPI(node), new_variant);
+        }
+        break;
+    }
     default:
-        cant_happen("unrecognized AstDefinition type %d", node->type);
+        cant_happen("unrecognized AstDefinition type %s",
+                    astDefinitionTypeName(node->type));
     }
     UNPROTECT(save);
     LEAVE(nsAstDefinition);
@@ -1582,8 +1687,18 @@ static AstExpression *nsAstExpression(AstExpression *node,
         }
         break;
     }
+    case AST_EXPRESSION_TYPE_SYNTAXUSE: {
+        AstExprSyntaxUse *variant = getAstExpression_SyntaxUse(node);
+        AstExprSyntaxUse *new_variant = nsAstExprSyntaxUse(variant, context);
+        if (new_variant != variant) {
+            PROTECT(new_variant);
+            result = newAstExpression_SyntaxUse(CPI(node), new_variant);
+        }
+        break;
+    }
     default:
-        cant_happen("unrecognized AstExpression type %d", node->type);
+        cant_happen("unrecognized AstExpression type %s",
+                    astExpressionTypeName(node->type));
     }
     UNPROTECT(save);
     LEAVE(nsAstExpression);

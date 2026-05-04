@@ -23,6 +23,59 @@
 #include "pratt_scanner.h"
 #include "syntax_template.h"
 
+static int sNextDeclarationId = 1;
+
+int prattNextDeclarationId(void) { return sNextDeclarationId++; }
+
+static AstSyntaxClass convertSyntaxClass(PrattSyntaxClass prattClass) {
+    switch (prattClass) {
+    case PRATTSYNTAXCLASS_TYPE_EXPR:
+        return AST_SYNTAXCLASS_TYPE_EXPR;
+    case PRATTSYNTAXCLASS_TYPE_NAME:
+        return AST_SYNTAXCLASS_TYPE_NAME;
+    case PRATTSYNTAXCLASS_TYPE_NEST:
+        return AST_SYNTAXCLASS_TYPE_NEST;
+    case PRATTSYNTAXCLASS_TYPE_STRING:
+        return AST_SYNTAXCLASS_TYPE_STRING;
+    case PRATTSYNTAXCLASS_TYPE_TYPE:
+        return AST_SYNTAXCLASS_TYPE_TYPE;
+    case PRATTSYNTAXCLASS_TYPE_SYNTAX:
+        return AST_SYNTAXCLASS_TYPE_SYNTAX;
+    default:
+        cant_happen("unrecognised PrattSyntaxClass %d", prattClass);
+    }
+}
+
+AstSyntaxPatternItems *prattConvertPatternItems(ParserInfo PI,
+                                                PrattMacroPatternItems *items) {
+    AstSyntaxPatternItems *result = newAstSyntaxPatternItems();
+    int save = PROTECT(result);
+    if (items != NULL) {
+        for (Index i = 0; i < countPrattMacroPatternItems(items); ++i) {
+            PrattMacroPatternItem *item = getPrattMacroPatternItems(items, i);
+            AstSyntaxPatternItem *astItem = NULL;
+            if (item->type == PRATTMACROPATTERNITEM_TYPE_QUOTEDTERMINAL) {
+                astItem = newAstSyntaxPatternItem_QuotedTerminal(
+                    PI, getPrattMacroPatternItem_QuotedTerminal(item));
+            } else {
+                PrattMacroHole *hole = getPrattMacroPatternItem_TypedHole(item);
+                AstSyntaxHole *astHole = newAstSyntaxHole(
+                    PI, convertSyntaxClass(hole->syntaxClass), hole->name);
+                int save2 = PROTECT(astHole);
+                astHole->callTarget = hole->callTarget;
+                astHole->callArguments = hole->callArguments;
+                astItem = newAstSyntaxPatternItem_TypedHole(PI, astHole);
+                UNPROTECT(save2);
+            }
+            int save2 = PROTECT(astItem);
+            pushAstSyntaxPatternItems(result, astItem);
+            UNPROTECT(save2);
+        }
+    }
+    UNPROTECT(save);
+    return result;
+}
+
 PrattMacroSpec *prattFindLocalSyntaxSpecForHead(PrattParser *parser,
                                                 HashSymbol *head) {
     Index i = 0;
@@ -884,14 +937,8 @@ static AstExpression *parseSyntaxHoleExpression(PrattParser *parser,
 
 static AstExpression *expandSyntaxAlternative(
     PrattParser *parser, PrattToken *tok, PrattMacroSpec *spec,
-    PrattMacroPatternItems *patternItems, AstExpression *template,
-    bool headAlreadyConsumed, SyntaxExprBindings *inherited) {
-    if (template == NULL) {
-        parserError(parser, "syntax %s has no template body",
-                    spec->headSymbol->name);
-        return prattErrorExpression(TOKPI(tok));
-    }
-
+    PrattMacroPatternItems *patternItems, bool headAlreadyConsumed,
+    SyntaxExprBindings *inherited, int alternativeIndex) {
     Index parameterCount =
         spec->parameters != NULL ? sizeSymbolArray(spec->parameters) : 0;
     Index inheritedCount =
@@ -974,13 +1021,22 @@ static AstExpression *expandSyntaxAlternative(
         }
     }
 
-    AstExpression *templateCopy = copyAstExpression(template);
-    PROTECT(templateCopy);
-    AstExpression *quotedTemplate =
-        prattUnwrapSyntaxQuotedTemplate(templateCopy);
-    AstExpression *result = substituteSyntaxExpression(
-        quotedTemplate != NULL ? quotedTemplate : templateCopy, &bindings,
-        parser, quotedTemplate != NULL);
+    // Build AstSyntaxBindings from collected captures.
+    AstSyntaxBindings *astBindings = newAstSyntaxBindings();
+    PROTECT(astBindings);
+    Index totalCount = sizeSymbolArray(names);
+    for (Index i = 0; i < totalCount; ++i) {
+        AstSyntaxBinding *binding =
+            newAstSyntaxBinding(TOKPI(tok), getSymbolArray(names, i),
+                                getAstExpressionArray(values, i));
+        int save2 = PROTECT(binding);
+        binding->inherited = (i < parameterCount);
+        pushAstSyntaxBindings(astBindings, binding);
+        UNPROTECT(save2);
+    }
+
+    AstExpression *result = makeAstExpression_SyntaxUse(
+        TOKPI(tok), spec->declarationId, alternativeIndex, astBindings);
     PROTECT(result);
     UNPROTECT(save);
     return result;
@@ -990,12 +1046,11 @@ static bool syntaxAlternativeIsEmpty(PrattMacroAlternative *alternative) {
     return countPrattMacroPatternItems(alternative->patternItems) == 0;
 }
 
-static AstExpression *trySyntaxAlternative(PrattParser *parser, PrattToken *tok,
-                                           PrattMacroSpec *spec,
-                                           PrattMacroAlternative *alternative,
-                                           bool headAlreadyConsumed,
-                                           SyntaxExprBindings *inherited,
-                                           bool *hadCommittedFailure) {
+static AstExpression *
+trySyntaxAlternative(PrattParser *parser, PrattToken *tok, PrattMacroSpec *spec,
+                     PrattMacroAlternative *alternative,
+                     bool headAlreadyConsumed, SyntaxExprBindings *inherited,
+                     bool *hadCommittedFailure, int alternativeIndex) {
     SyntaxLexerCheckpoint checkpoint = captureSyntaxLexerCheckpoint(parser);
     int save = STARTPROTECT();
     if (checkpoint.bufList != NULL) {
@@ -1008,8 +1063,8 @@ static AstExpression *trySyntaxAlternative(PrattParser *parser, PrattToken *tok,
     bool suppressErrors = parser->suppressErrors;
     parser->suppressErrors = true;
     AstExpression *result = expandSyntaxAlternative(
-        parser, tok, spec, alternative->patternItems, alternative->template,
-        headAlreadyConsumed, inherited);
+        parser, tok, spec, alternative->patternItems, headAlreadyConsumed,
+        inherited, alternativeIndex);
     bool alternativeFailed = parser->panicMode;
     parser->suppressErrors = suppressErrors;
 
@@ -1030,8 +1085,7 @@ AstExpression *prattExpandSyntaxExprWithBindings(
     if (spec->alternatives == NULL ||
         sizePrattMacroAlternatives(spec->alternatives) == 0) {
         return expandSyntaxAlternative(parser, tok, spec, spec->patternItems,
-                                       spec->template, headAlreadyConsumed,
-                                       inherited);
+                                       headAlreadyConsumed, inherited, 0);
     }
 
     bool hadCommittedFailure = false;
@@ -1050,7 +1104,7 @@ AstExpression *prattExpandSyntaxExprWithBindings(
 
             AstExpression *result = trySyntaxAlternative(
                 parser, tok, spec, alternative, headAlreadyConsumed, inherited,
-                &hadCommittedFailure);
+                &hadCommittedFailure, (int)i);
             if (result != NULL) {
                 return result;
             }
