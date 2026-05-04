@@ -320,11 +320,22 @@ The lco example would run roughly as follows:
    delegates to filter.
 8. filter either matches Empty and returns xs, or consumes a comma, captures a
    condition, and recurses.
-9. Once the recursive calls return, the corresponding templates are expanded
-   outward to produce the final expression AST.
+9. Once the recursive calls return, the parser emits syntax-use carriers with
+  captured bindings and selected alternatives. Those carriers are then
+  prepared and lowered by `prepareAst` and `lowerAst` before lambda
+  conversion.
 
 This gives the desired grammar-like structure while still reusing the existing
 expression parser where it matters.
+
+Current implementation note:
+
+- parser-time direct substitution is gone
+- syntax declarations and syntax uses survive parsing as AST carriers
+- hygienic lowering now happens after `nsAstProg()` via `prepareAst()` and
+  `lowerAst()`
+- definition-position initiating rules are supported for the current
+  single-definition phase-1 surface
 
 ## Scope And Storage
 
@@ -340,20 +351,21 @@ syntax rules into PrattRecord.
 
 ## Deferred Issues
 
-The sketch above intentionally leaves several issues open.
+The core phase-1 hygiene design is now implemented, including explicit template
+IR, AST carriers, and post-namespace lowering.
 
-- Hygiene is still unresolved.
-- Alternative selection needs a precise policy for error reporting versus
-  backtracking.
-- Template expansion needs a concrete representation for quoted binders and
-  quoted nests.
-- The first cut should support Expr and Def result kinds. Broader
-  fragment kinds such as Definitions, Statements, or type-level fragments can
-  remain deferred.
+The remaining open issues are narrower.
 
-Those are substantial design questions, but they are local to the syntax-rule
-engine. They do not undermine the core approach of entering through Pratt and
-delegating the rest to a separate rule matcher.
+- Broader fragment kinds beyond `Expr` and `Def` remain deferred.
+- General `splice`, repetition-oriented templates, and clause-sequence
+  fragments remain deferred.
+- Imported or exported syntax rules remain deferred.
+- Initiating rules are still narrower than helper-only rules: helper rules own
+  full ordered alternatives, while initiating rules currently use one entry
+  alternative each.
+
+Those are follow-on surface and entry-path questions. They no longer change the
+core parser-plus-lowering architecture.
 
 ## Minimum Concrete First Cut
 

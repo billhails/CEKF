@@ -318,15 +318,15 @@ definition forms, not new annotated-definition syntax.
 
 ### Files (Phase 11)
 
-- [ ] [docs/SYNTAX_IMPLEMENTATION_PLAN.md](docs/SYNTAX_IMPLEMENTATION_PLAN.md)
-- [ ] [docs/SYNTAX.md](docs/SYNTAX.md)
-- [ ] [docs/SYNTAX_HYGIENE_DESIGN.md](docs/SYNTAX_HYGIENE_DESIGN.md)
+- [x] [docs/SYNTAX_IMPLEMENTATION_PLAN.md](docs/SYNTAX_IMPLEMENTATION_PLAN.md)
+- [x] [docs/SYNTAX.md](docs/SYNTAX.md)
+- [x] [docs/SYNTAX_HYGIENE_DESIGN.md](docs/SYNTAX_HYGIENE_DESIGN.md)
 
 ### Tasks (Phase 11)
 
-- [ ] Update docs to reflect implemented pipeline and file boundaries.
-- [ ] Mark parser-time substitution path as removed.
-- [ ] Record remaining deferred items for stage 6 and beyond.
+- [x] Update docs to reflect implemented pipeline and file boundaries.
+- [x] Mark parser-time substitution path as removed.
+- [x] Record remaining deferred items for stage 6 and beyond.
 
 ## Suggested Delivery Slices
 

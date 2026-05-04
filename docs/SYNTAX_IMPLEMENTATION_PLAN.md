@@ -424,78 +424,60 @@ Success condition:
 - `time`, `unless`, and a non-hygienic first cut of `lco` can be matched and
   turned into syntax-use results
 
-## Stage 5: Template Representation And Hygienic Lowering
+## Implemented Outcome
 
-This is the most important semantic stage.
+The planned stage-5 through stage-10 work is now complete.
 
-The parser should not immediately lose the provenance needed for hygiene.
-The implementation should preserve enough information to distinguish:
+The implemented architecture is:
 
-- template-introduced identifiers
-- literal identifiers written in the template
-- unquoted identifiers and fragments coming from the use site
+```text
+Parse
+  -> nsAstProg
+  -> prepareAst
+  -> lowerAst
+  -> lamConvertProg
+  -> tc_analyze
+  -> ... existing later stages
+```
 
-Likely tasks:
+The important file boundaries are now stable.
 
-- parse `quote { ... }` into a syntax template representation
-- represent `unquote` as typed splice nodes
-- support binder-position unquote
-- introduce a dedicated syntax lowering pass before type checking
-- freshen template-introduced binders during lowering
-- preserve use-site identity for unquoted fragments
-- preserve definition-site resolution for literal template identifiers
+- [src/pratt_parser.c](../src/pratt_parser.c) owns syntax entry hooks,
+  scanner-trie registration, and parser-core behavior such as the
+  `quotedAtomSymbols` hook used while parsing quoted templates.
+- [src/syntax_parse.c](../src/syntax_parse.c) owns syntax declaration parsing,
+  rollback-aware matching, helper-rule invocation, and carrier construction.
+- [src/syntax_template.c](../src/syntax_template.c) owns template parsing and
+  the durable syntax-template IR.
+- [src/ast_prepare.c](../src/ast_prepare.c) resolves declaration-site literal
+  references and prepares syntax carriers after namespace processing.
+- [src/ast_lower.c](../src/ast_lower.c) instantiates syntax-use carriers,
+  freshens introduced binders, preserves use-site captures, erases syntax
+  carriers, and enforces syntax result kinds.
+- [src/lambda_conversion.c](../src/lambda_conversion.c) now only contains
+  defensive error reporting if a syntax carrier leaks past lowering.
 
-Likely touch points:
+What shipped:
 
-- [src/pratt_parser.c](../src/pratt_parser.c)
-- a new syntax lowering file or files
-- whichever AST or intermediate representation carries syntax-use nodes until
-  lowering
+- hygienic `quote` / `unquote` lowering through explicit AST carriers and a
+  dedicated template IR
+- helper-only recursive rules through `Syntax(rule(args))`
+- expression-position initiating rules
+- definition-position initiating rules for the supported single-definition
+  `name = expr` shape
+- parser-side direct substitution removal
+- parser-side quote-wrapper sentinel removal in favor of explicit template
+  metadata
+- focused diagnostics for lowering mismatches and unresolved syntax
+  declarations
+- test migration and expansion for phase-1 hygiene cases
 
-Success condition:
+The current implementation still has two intentional phase-1 limits.
 
-- `time` and `for` are hygienic
-- `lco` expands with the intended distinction between captured names and helper
-  identifiers
-
-## Stage 6: Definition-Position Initiation
-
-Once expression rules are stable, add definition-entry support.
-
-Likely tasks:
-
-- hook syntax dispatch into the existing definition parser
-- require `: Def` on initiating definition rules
-- lower `Def` templates to one `AstDefinition`
-- reject result-kind mismatches clearly
-
-Likely touch points:
-
-- [src/pratt_parser.c](../src/pratt_parser.c)
-- syntax lowering code from stage 5
-
-Success condition:
-
-- a simple `annotate`-style example works in definition position
-
-## Stage 7: Migration And Cleanup
-
-At this point the implementation exists. Then clean up the old naming and test
-surface.
-
-Likely tasks:
-
-- update tests that still say `macro`
-- rename or replace test files such as
-  [tests/fn/test_macro_definitions.fn](../tests/fn/test_macro_definitions.fn)
-- update older macro-oriented docs to point at the new syntax implementation
-- decide whether remaining internal `Macro` names are worth renaming now or can
-  wait for a later cleanup pass
-
-Success condition:
-
-- the parser surface is consistently `syntax`
-- tests no longer rely on `macro`
+- Initiating rules are currently single-alternative even though helper-only
+  rules support ordered alternatives.
+- Definition-position syntax is intentionally limited to existing core
+  definition forms rather than introducing new typed-definition surface syntax.
 
 ## Validation Plan
 
@@ -541,46 +523,37 @@ requirement.
 
 ## Deferred Work
 
-This plan deliberately leaves the following for later.
+The remaining deferred items are now follow-on work rather than blockers for
+phase-1 syntax.
 
-- clause-oriented fragments for `switch` and `do`
-- multi-definition results for `define_ast`
+- clause-oriented fragments for `switch`, `do`, or other non-Expr / non-Def
+  surfaces
+- multi-definition syntax results beyond the existing single-definition support
 - syntax-object pattern matching for `rewrite`
-- import or export of syntax rules
-- hoisting later syntax declarations to the start of a `let` block
-- general `splice`
-- hygiene escape hatches
+- import or export of syntax rules across namespace boundaries
+- hoisting later syntax declarations to the start of a `let` block so earlier
+  ordinary definitions may use them
+- general `splice` and repetition-oriented template features
+- explicit hygiene escape hatches
+- broadening initiating rules beyond the current single-alternative entry path
 
-## Main Risks
+## Remaining Risks
 
-### Rollback Semantics
+The largest remaining risks are now incremental rather than architectural.
 
-The matcher needs a precise distinction between recoverable mismatch and real
-parser error. If this boundary is not designed carefully, debugging syntax
-rules will be unpleasant.
+- Broadening the entry path from single-alternative initiating rules to full
+  ordered alternatives without regressing existing error reporting.
+- Deciding how imported or exported syntax rules should interact with current
+  declaration-site hygiene semantics.
+- Extending result kinds or template splicing without reintroducing parser-time
+  expansion shortcuts.
 
-### Deferred Lowering Carrier
+## Next Follow-On Slice
 
-If hygienic lowering is deferred until after parsing, the implementation needs a
-clean place to store syntax-use results without immediately flattening them to
-ordinary AST.
+The next coherent slice is documentation and surface cleanup for work beyond
+phase 1.
 
-### Rename Churn
-
-The codebase already has `Macro` names in parser metadata and tests. A total
-rename may be desirable, but it should not be allowed to block the first
-working syntax slice.
-
-## Recommended First Coding Slice
-
-If only one slice is attempted first, it should be:
-
-1. parse `syntax name: Expr ::= ...`
-2. register the initiating head token in the trie
-3. match a single-alternative expression rule
-4. lower a trivial quoted template without hygiene sophistication yet
-5. migrate [tests/fn/test_macro_definitions.fn](../tests/fn/test_macro_definitions.fn)
-   to the `syntax` keyword
-
-That slice is small enough to prove the end-to-end integration path before the
-recursive helper and hygiene-heavy examples are attempted.
+1. document the implemented file boundaries and pipeline
+2. describe the removal of parser-time substitution explicitly
+3. record the deferred work list above as the starting point for any later
+   phase-6-plus syntax expansion
