@@ -1,0 +1,64 @@
+let
+    link "ambutils.fn" as amb;
+    link "listutils.fn" as list;
+    import list operator "_except_";
+
+    syntax search: Expr ::= "search" "[" body: Syntax(searchClauses) "]" {
+        body
+    };
+
+    syntax searchClauses ::= "yield" result: Expr {
+        result
+    }
+    | "where" cond: Expr ";" rest: Syntax(searchClauses) quote {
+        fn (ignored) { unquote(rest) }(amb.require(unquote(cond)))
+    }
+    | "from" domain: Expr "some" values: Name ";" rest: Syntax(searchClauses) quote {
+        fn (unquote(values)) { unquote(rest) }(amb.some_of(unquote(domain)))
+    }
+    | "from" domain: Expr "pick" first: Name
+        used0: Syntax(pickStart)
+        rest: Syntax(pickTail(domain, used0, first)) {
+        rest
+    };
+
+    syntax pickStart ::= quote {
+        []
+    };
+
+    syntax pickNext(used, current) ::= quote {
+        unquote(used) @@ [unquote(current)]
+    };
+
+    syntax pickTail(domain, used, current) ::= ","
+        next: Name
+        used2: Syntax(pickNext(used, current))
+        tail: Syntax(pickTail(domain, used2, next)) quote {
+        fn (unquote(current)) { unquote(tail) }
+            (amb.one_of(unquote(domain) except unquote(used)))
+    }
+    | ";" rest: Syntax(searchClauses) quote {
+        fn (unquote(current)) { unquote(rest) }
+            (amb.one_of(unquote(domain) except unquote(used)))
+    };
+
+    fn test1() {
+        search [
+            from [1, 2, 3] pick x, y;
+            where x > 1;
+            yield [x, y]
+        ]
+    }
+
+    fn test2() {
+        search [
+            from [1, 2, 3] some values;
+            where values == [2, 3];
+            yield values
+        ]
+    }
+in
+    {
+        assert(test1() == [2, 1]);
+        assert(test2() == [2, 3])
+    }

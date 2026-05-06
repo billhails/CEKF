@@ -759,17 +759,386 @@ Given the language's `amb` orientation, a search-oriented syntax family looks
 like a natural fit.
 
 ```fn
-search [ (x, y)
-         from x in xs
-         from y in ys
-         where ok(x, y)
-         yield score(x, y) ]
+search [
+  from xs pick x;
+  from ys pick y;
+  where ok(x, y);
+  yield score(x, y)
+]
 ```
 
 This is structurally close to a comprehension, but semantically richer. The
 helper rules would not just collect filters. They could lower into nested
 choice, guard, and scoring or pruning combinators. That would make syntax a
 front end for a real search DSL rather than just collection mapping.
+
+The existing `amb` examples in `fn/` suggest a few more concrete follow-up
+surfaces.
+
+#### Multiple Dwellings
+
+`fn/multiple_dwellings.fn` is mostly a permutation search plus a list of
+constraints. A DSL can compress the repeated `one_of(exclude(...))` pattern
+into a single domain-first `pick` form.
+
+```fn
+search [
+  from [1,2,3,4,5] pick baker, cooper, fletcher, miller, smith;
+
+  require baker != 5;
+  require cooper != 1;
+  require fletcher != 5;
+  require fletcher != 1;
+  require miller > cooper;
+  require abs(smith - fletcher) != 1;
+  require abs(fletcher - cooper) != 1;
+
+  yield [
+    result("baker", baker),
+    result("cooper", cooper),
+    result("fletcher", fletcher),
+    result("miller", miller),
+    result("smith", smith)
+  ]
+]
+```
+
+This is a good example because the problem statement itself is already “assign
+distinct values, then apply guards”. The DSL surface can therefore reflect the
+logic directly instead of exposing the operational details of repeated list
+exclusion.
+
+#### Liars
+
+`fn/liars.fn` has the same permutation shape, but the interesting part is the
+constraint block rather than the assignment mechanics.
+
+```fn
+search [
+  from [1,2,3,4,5] pick betty, ethel, joan, kitty, mary;
+
+  require (kitty == 2) xor (betty == 3);
+  require (ethel == 1) xor (joan == 2);
+  require (joan == 3) xor (ethel == 5);
+  require (kitty == 2) xor (mary == 4);
+  require (mary == 4) xor (betty == 1);
+
+  yield sortBy(
+    fn (#(_, a), #(_, b)) { a <=> b },
+    [
+      #("Betty", betty),
+      #("Ethel", ethel),
+      #("Joan", joan),
+      #("Kitty", kitty),
+      #("Mary", mary)
+    ]
+  )
+]
+```
+
+The main value here is that a search DSL can make the code read like a compact
+logic puzzle rather than like a hand-written backtracking program.
+
+#### Barrels
+
+`fn/barrels.fn` suggests a second useful abstraction beyond `from xs pick ...`:
+subset choice from a remaining domain.
+
+```fn
+search [
+  from barrels pick beer;
+  from barrels except [beer] pick barrel_1;
+  from barrels except [beer, barrel_1] pick barrel_2;
+  from barrels except [beer, barrel_1, barrel_2] some purchase;
+
+  require (barrel_1 + barrel_2) * 2 == sum(purchase);
+
+  yield beer
+]
+```
+
+That is still the same underlying `amb` search, but it names the search moves
+more directly: choose one, choose two more from the remainder, choose some
+subset from what is left, then impose an arithmetic guard. The domain
+refinement itself does not need to be a syntax feature here because
+`listutils.fn` already provides `except` as an ordinary expression operator.
+
+#### Pythagorean Triples
+
+`fn/pythagoreanTriples.fn` is already close to a DSL because the library
+operators for ranges and guards are compact. Even so, it could likely be made
+more uniform with the same `search` surface.
+
+```fn
+search [
+  from 1 ... pick z;
+  from 1 .. z pick x;
+  from x .. z pick y;
+
+  require x**2 + y**2 == z**2;
+
+  yield [z, y, x]
+]
+```
+
+This is useful because it shows that the same DSL family can cover both finite
+puzzle search and open-ended numeric generation.
+
+#### Small Core Worth Prototyping
+
+Taken together, the current examples suggest that a very small search DSL could
+already go a long way if it provided just a few core moves.
+
+- `from xs pick x`
+- `from xs pick x, y, z`
+- `from xs some ys`
+- `require ...` or `where ...`
+- `yield ...`
+
+That would be enough to clean up the current `amb` examples substantially
+without needing a much more ambitious logic-programming system.
+
+I'm thinking to make this work we need to lower to a much more regular
+structure than would typically be written by hand. For example the
+multiple dwellings puzzle might lower to something like this (truncated for
+brevity)
+
+```fn
+{
+  let baker = one_of(dwellings)
+  in
+  {
+    let cooper = one_of(dwellings except [baker])
+    in
+    {
+      let fletcher = one_of(dwellings except [baker, cooper])
+      in
+      {
+        let tmp$1 = require(baker != 5)
+        in
+        {
+          let tmp$2 = require(cooper != 1)
+          in
+          {
+            let tmp$3 = require(fletcher != 1)
+            in
+            {
+              [baker, cooper, fletcher];
+            }
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+That's because we can't do
+
+```fn
+quote {
+  unquote constraint;
+  unquote yield;
+}
+```
+
+because the result isn't a syntactic unit. The result `[baker, cooper, fletcher]`
+must be unquoted first and the constraints and declarations around it must
+unquote in reverse order (if we follow the list comprehensions working example.)
+
+One useful way to make that more explicit is to treat the search body as a
+normalized clause list and lower it by a right fold.
+
+#### One Possible Normal Form
+
+The core clause forms could be normalized to something like:
+
+```text
+yield e
+require c ; rest
+from xs pick x ; rest
+from xs some ys ; rest
+```
+
+On that view, surface sugar such as
+
+```text
+from xs pick x, y, z
+```
+
+would not lower directly. It would first normalize to ordinary generator
+clauses:
+
+```text
+from xs pick x;
+from xs except [x] pick y;
+from xs except [x, y] pick z;
+```
+
+Only after that normalization step would the clause list lower to the ordinary
+core language.
+
+#### Right-Fold Lowering
+
+The lowering itself can then be stated as a right fold over the remaining
+clauses.
+
+```text
+lower(yield e) =
+  e
+
+lower(require c ; rest) =
+  let tmp$k = require(c)
+  in lower(rest)
+
+lower(from xs pick x ; rest) =
+  let x = one_of(xs)
+  in lower(rest)
+
+lower(from xs some ys ; rest) =
+  let ys = some_of(xs)
+  in lower(rest)
+```
+
+On that reading, `lower(rest)` is not “the next statement”. It is the entire
+open expression produced by lowering every remaining clause to the right.
+
+For example:
+
+```text
+lower(
+  require baker != 5;
+  require cooper != 1;
+  yield [baker, cooper]
+)
+```
+
+becomes:
+
+```fn
+let tmp$1 = require(baker != 5)
+in
+  let tmp$2 = require(cooper != 1)
+  in
+    [baker, cooper]
+```
+
+That expression is still open with respect to `baker` and `cooper`. Generator
+clauses then wrap around it:
+
+```text
+lower(
+  from dwellings pick baker;
+  from dwellings except [baker] pick cooper;
+  require baker != 5;
+  require cooper != 1;
+  yield [baker, cooper]
+)
+```
+
+becomes:
+
+```fn
+let baker = one_of(dwellings)
+in
+  let cooper = one_of(dwellings except [baker])
+  in
+    let tmp$1 = require(baker != 5)
+    in
+      let tmp$2 = require(cooper != 1)
+      in
+        [baker, cooper]
+```
+
+This suggests that the search DSL wants to thread context backward around the
+final yielded expression, rather than thread a forward value through helper
+rules the way the list-comprehension example does.
+
+#### Helper Sketch For `pick`
+
+One plausible current-syntax sketch is to keep the search DSL in the yield-last
+style, but make `pick` recurse over the comma-separated names while threading a
+`used` accumulator as an inherited helper parameter.
+
+```fn
+syntax search: Expr ::= "search" "[" body: Syntax(searchClauses) "]" {
+  body
+};
+
+syntax searchClauses ::= "yield" result: Expr {
+  result
+}
+| "where" cond: Expr ";" rest: Syntax(searchClauses) quote {
+  fn (ignored) { unquote(rest) }(require(unquote(cond)))
+}
+| "from" domain: Expr "some" values: Name ";" rest: Syntax(searchClauses) quote {
+  fn (unquote(values)) { unquote(rest) }(some_of(unquote(domain)))
+}
+| "from" domain: Expr "pick" first: Name
+  used0: Syntax(pickStart)
+  rest: Syntax(pickTail(domain, used0, first)) {
+  rest
+};
+
+syntax pickStart ::= quote {
+  []
+};
+
+syntax pickNext(used, current) ::= quote {
+  unquote(used) @@ [unquote(current)]
+};
+
+syntax pickTail(domain, used, current) ::= ","
+  next: Name
+  used2: Syntax(pickNext(used, current))
+  tail: Syntax(pickTail(domain, used2, next)) quote {
+  fn (unquote(current)) { unquote(tail) }
+    (one_of(unquote(domain) except unquote(used)))
+}
+| ";" rest: Syntax(searchClauses) quote {
+  fn (unquote(current)) { unquote(rest) }
+    (one_of(unquote(domain) except unquote(used)))
+};
+```
+
+This is interesting because it uses helper rules not just to match tokens but
+also to carry a computed expression accumulator. The empty helper `pickStart`
+manufactures the initial `[]`, and `pickNext` grows the accumulator as the name
+list recurses.
+
+This sketch is also now close to the working prototype in
+`tests/fn/test_amb_dsl.fn`, which is useful because it shows what the current
+implementation can really support rather than just what looks plausible on
+paper.
+
+The lambda-based administrative form is significant. In the current
+implementation, binder splicing is working reliably in function-argument
+position, so a step such as
+
+```text
+fn (unquote(current)) { ... }(one_of(...))
+```
+
+is a more robust first lowering target than trying to splice directly into an
+ordinary `let name = ...` binding.
+
+It also shows one real limit of the current implementation. The domain-first
+surface
+
+```text
+from xs pick x, y, z
+```
+
+fits naturally because the helper that walks the names already has `xs`
+available as an inherited parameter. The reversed surface
+
+```text
+pick x, y, z from xs
+```
+
+is much less natural with the current helper mechanism, because the recursive
+name parser would need the domain before it has been seen. That starts to push
+the design toward either a clause IR or a post-parse normalization step.
 
 ### Recursion And Iteration Families
 
