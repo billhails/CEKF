@@ -1,7 +1,9 @@
 let
     x = 10;
 
-    syntax captureUseSite: Expr ::= "captureUseSite" y: Expr quote {
+    macro captureUseSite: Expr captureUseSiteHelper;
+
+    syntax captureUseSiteHelper ::= y: Expr quote {
         fn (x) { unquote(y) }
     };
 in

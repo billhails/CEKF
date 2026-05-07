@@ -1,4 +1,7 @@
 let
+    macro sum: Expr internalSum;
+    macro sumfront: Expr internalSumFront;
+
     syntax sumTail(total) ::= "," next: Expr rest: Syntax(sumTail(next)) {
         total + rest
     }
@@ -13,11 +16,11 @@ let
         total + rest
     };
 
-    syntax internalSum: Expr ::= "sum" "(" first: Expr tail: Syntax(sumTail(first)) ")" {
+    syntax internalSum ::= "(" first: Expr tail: Syntax(sumTail(first)) ")" {
         tail
     };
 
-    syntax internalSumFront: Expr ::= "sumfront" "(" first: Expr tail: Syntax(sumTailFront(first)) ")" {
+    syntax internalSumFront ::= "(" first: Expr tail: Syntax(sumTailFront(first)) ")" {
         tail
     };
 in

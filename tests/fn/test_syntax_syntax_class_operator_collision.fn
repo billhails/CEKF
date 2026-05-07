@@ -1,7 +1,9 @@
 let
     operator "Syntax_" 10 fn (x) { x };
 
+    macro sid: Expr pass;
+
     syntax helper(x) ::= quote { unquote(x) };
-    syntax pass: Expr ::= "sid" x: Expr y: Syntax(helper(x)) quote { unquote(y) };
+    syntax pass ::= x: Expr y: Syntax(helper(x)) quote { unquote(y) };
 in
     assert(7 == sid 7)

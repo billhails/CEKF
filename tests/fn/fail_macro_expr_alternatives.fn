@@ -1,9 +1,9 @@
 let
-    syntax bad: Expr ::= "bad" value: Expr {
+    // Post-change rule: a macro may only target zero-arity helper syntax.
+    syntax badHelper(value) ::= {
         value
-    }
-    | other: Expr {
-        other
     };
+
+    macro bad: Expr badHelper;
 in
     bad 1

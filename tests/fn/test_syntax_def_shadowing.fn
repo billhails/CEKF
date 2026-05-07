@@ -1,7 +1,9 @@
 let
     name = 100;
 
-    syntax defineSame: Def ::= "defineSame" name: Name "=" value: Expr {
+    macro defineSame: Def defineSameHelper;
+
+    syntax defineSameHelper ::= name: Name "=" value: Expr {
         name = value
     };
 

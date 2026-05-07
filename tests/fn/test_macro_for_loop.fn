@@ -1,6 +1,8 @@
 let
-    syntax internalFor: Expr ::= "for" "(" name: Name "=" init: Expr ","
-                                   test: Expr "," step: Expr ")" body: Nest quote {
+    macro for: Expr internalFor;
+
+    syntax internalFor ::= "(" name: Name "=" init: Expr ","
+                            test: Expr "," step: Expr ")" body: Nest quote {
         let fn loop(unquote(name)) {
             if (unquote(test)) {
                 unquote(body);

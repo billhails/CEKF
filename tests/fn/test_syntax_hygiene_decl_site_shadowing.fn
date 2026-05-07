@@ -1,7 +1,9 @@
 let
     helper = fn (n) { n + 1 };
 
-    syntax callHelper: Expr ::= "callHelper" arg: Expr quote {
+    macro callHelper: Expr callHelperHelper;
+
+    syntax callHelperHelper ::= arg: Expr quote {
         helper(unquote(arg))
     };
 in

@@ -110,17 +110,21 @@ static AstExprSyntaxUse *firstExprSyntaxUse(AstProg *prog) {
 static AstDefSyntaxUse *firstDefSyntaxUse(AstProg *prog) {
     AstNest *nest = singleBodyNest(prog);
     assert(nest->definitions != NULL);
-    assert(nest->definitions->next != NULL);
-    assert(nest->definitions->next->definition->type ==
-           AST_DEFINITION_TYPE_SYNTAXUSE);
-    return getAstDefinition_SyntaxUse(nest->definitions->next->definition);
+    for (AstDefinitions *defs = nest->definitions; defs != NULL;
+         defs = defs->next) {
+        if (defs->definition->type == AST_DEFINITION_TYPE_SYNTAXUSE) {
+            return getAstDefinition_SyntaxUse(defs->definition);
+        }
+    }
+    assert(false);
+    return NULL;
 }
 
 static void test_expr_syntax_kind_mismatch_reports_error(void) {
     printf("test_expr_syntax_kind_mismatch_reports_error\n");
     AstProg *prog =
-        prepareStandalone("let syntax pass: Expr ::= \"sid\" x: Expr quote { "
-                          "unquote(x) }; in sid 7",
+        prepareStandalone("let macro sid: Expr pass; syntax pass ::= x: Expr "
+                          "quote { unquote(x) }; in sid 7",
                           "test_expr_syntax_kind_mismatch_reports_error");
     int save = PROTECT(prog);
     AstSyntaxDecl *decl = firstSyntaxDecl(prog);
@@ -142,8 +146,8 @@ static void test_expr_syntax_kind_mismatch_reports_error(void) {
 static void test_expr_syntax_unresolved_declaration_reports_error(void) {
     printf("test_expr_syntax_unresolved_declaration_reports_error\n");
     AstProg *prog = prepareStandalone(
-        "let syntax pass: Expr ::= \"sid\" x: Expr quote { unquote(x) }; in "
-        "sid 7",
+        "let macro sid: Expr pass; syntax pass ::= x: Expr quote { "
+        "unquote(x) }; in sid 7",
         "test_expr_syntax_unresolved_declaration_reports_error");
     int save = PROTECT(prog);
     AstExprSyntaxUse *use = firstExprSyntaxUse(prog);
@@ -162,7 +166,8 @@ static void test_expr_syntax_unresolved_declaration_reports_error(void) {
 static void test_def_syntax_kind_mismatch_reports_error(void) {
     printf("test_def_syntax_kind_mismatch_reports_error\n");
     AstProg *prog =
-        prepareStandalone("let syntax annotate: Def ::= \"annotate\" name: "
+        prepareStandalone("let macro annotate: Def annotateHelper; syntax "
+                          "annotateHelper ::= name: "
                           "Name \"=\" value: Expr { "
                           "name = value }; annotate answer = 42; in answer",
                           "test_def_syntax_kind_mismatch_reports_error");
@@ -188,8 +193,8 @@ static void test_def_syntax_kind_mismatch_reports_error(void) {
 static void test_lambda_conversion_reports_syntax_carrier_leak(void) {
     printf("test_lambda_conversion_reports_syntax_carrier_leak\n");
     AstProg *prog =
-        prepareStandalone("let syntax pass: Expr ::= \"sid\" x: Expr quote { "
-                          "unquote(x) }; in sid 7",
+        prepareStandalone("let macro sid: Expr pass; syntax pass ::= x: Expr "
+                          "quote { unquote(x) }; in sid 7",
                           "test_lambda_conversion_reports_syntax_carrier_leak");
     int save = PROTECT(prog);
 

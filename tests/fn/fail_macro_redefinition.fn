@@ -1,9 +1,13 @@
 let
-    syntax time: Expr ::= "time" expr: Expr {
+    macro time: Expr internalTime;
+
+    syntax internalTime ::= expr: Expr {
         expr
     };
 
-    syntax time: Expr ::= "time" value: Expr {
+    macro time: Expr internalTime2;
+
+    syntax internalTime2 ::= value: Expr {
         value
     };
 in

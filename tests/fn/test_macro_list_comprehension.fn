@@ -1,7 +1,9 @@
 let
     link "listutils.fn" as list;
 
-    syntax internalLco: Expr ::= "lco" "["
+    macro lco: Expr internalLco;
+
+    syntax internalLco ::= "["
         exp: Expr
         "for" x: Name
         "in" xs: Expr

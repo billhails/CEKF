@@ -1,7 +1,9 @@
 let
     operator "quote_" 10 fn (x) { x };
 
-    syntax quotedIdentity: Expr ::= "qidentity" x: Name quote {
+    macro qidentity: Expr quotedIdentity;
+
+    syntax quotedIdentity ::= x: Name quote {
         fn (unquote(x)) { unquote(x) }
     };
 

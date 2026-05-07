@@ -1,9 +1,15 @@
 let
-    syntax internalTime: Expr ::= "time" "(" expr: Expr ")" {
+    macro time: Expr internalTime;
+    macro echo: Expr internalEcho;
+    macro grab: Expr internalGrab;
+    macro unless: Expr internalUnless;
+    macro annotate: Def internalAnnotate;
+
+    syntax internalTime ::= "(" expr: Expr ")" {
         expr
     };
 
-    syntax internalEcho: Expr ::= "echo" message: String {
+    syntax internalEcho ::= message: String {
         message
     };
 
@@ -14,16 +20,16 @@ let
         replacement
     };
 
-    syntax internalGrab: Expr ::= "grab" "(" value: Expr ")" result: Syntax(chooseValue(value)) {
+    syntax internalGrab ::= "(" value: Expr ")" result: Syntax(chooseValue(value)) {
         result
     };
 
-    syntax unless ::= "unless" "(" cond: Expr ")" consequent: Nest "else" alternative: Nest {
+    syntax internalUnless ::= "(" cond: Expr ")" consequent: Nest "else" alternative: Nest {
         cond
     };
 
-    syntax annotate ::= "annotate" name: Name ":" annotation: Type "=" value: Expr {
-        value
+    syntax internalAnnotate ::= name: Name ":" annotation: Type "=" value: Expr {
+        name = value
     };
 in
     assert(42 == time(42));

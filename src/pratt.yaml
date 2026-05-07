@@ -105,6 +105,7 @@ structs:
         data:
             rules: PrattRecordTable
             macros: PrattMacroTable
+            pendingMacroFixups: PrattPendingMacroFixup=NULL
             nameSpaces: PrattNsIdTable
             lexer: PrattLexer=NULL
             trie: PrattTrie=NULL
@@ -177,6 +178,9 @@ structs:
             entryKind: PrattSyntaxEntryKind=PRATTSYNTAXENTRYKIND_TYPE_HELPER
             resultKind: PrattSyntaxResultKind=PRATTSYNTAXRESULTKIND_TYPE_EXPR
             headSymbol: HashSymbol
+            helperTarget: HashSymbol=NULL
+            macroTarget: HashSymbol=NULL
+            syntaxDecl: AstSyntaxDecl=NULL
             parameters: SymbolArray=NULL
             patternItems: PrattMacroPatternItems
             template: AstExpression
@@ -185,6 +189,18 @@ structs:
             export: bool=false
             importNsRef: int=-1
             importNsSymbol: HashSymbol=NULL
+
+    PrattPendingMacroFixup:
+        meta:
+            brief: Pending local macro-to-helper fixup.
+            description: >-
+                Tracks a `macro` declaration whose helper target has not yet
+                been resolved in the current binding group.
+        data:
+            helperName: HashSymbol
+            spec: PrattMacroSpec
+            syntaxDecl: AstSyntaxDecl
+            next: PrattPendingMacroFixup=NULL
 
     PrattMacroAlternative:
         meta:

@@ -1,6 +1,8 @@
 let
     operator "helper_" 10 fn (x) { x };
 
-    syntax helper: Expr ::= "sid" x: Expr quote { unquote(x) };
+    macro sid: Expr helper;
+
+    syntax helper ::= x: Expr quote { unquote(x) };
 in
     assert(7 == sid 7)

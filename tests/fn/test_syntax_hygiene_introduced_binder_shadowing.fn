@@ -1,7 +1,9 @@
 let
     x = 10;
 
-    syntax applyFresh: Expr ::= "applyFresh" y: Expr quote {
+    macro applyFresh: Expr applyFreshHelper;
+
+    syntax applyFreshHelper ::= y: Expr quote {
         {
             let
                 x = fn (z) { z + 1 };

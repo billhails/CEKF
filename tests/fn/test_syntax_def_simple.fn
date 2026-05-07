@@ -1,5 +1,7 @@
 let
-    syntax annotate: Def ::= "annotate" name: Name "=" value: Expr {
+    macro annotate: Def annotateHelper;
+
+    syntax annotateHelper ::= name: Name "=" value: Expr {
         name = value
     };
 

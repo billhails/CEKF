@@ -1,7 +1,10 @@
 let
     link "listutils.fn" as list;
 
-    syntax quotedIdentity: Expr ::= "qidentity" x: Name quote {
+    macro qidentity: Expr quotedIdentity;
+    macro qlco: Expr qlcoHelper;
+
+    syntax quotedIdentity ::= x: Name quote {
         fn (unquote(x)) { unquote(x) }
     };
 
@@ -19,7 +22,7 @@ let
         list.filter(fn (unquote(x)) { unquote(cond) }, unquote(rest))
     };
 
-    syntax qlco: Expr ::= "qlco" "["
+    syntax qlcoHelper ::= "["
         exp: Expr
         "for" x: Name
         "in" xs: Expr

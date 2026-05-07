@@ -91,6 +91,7 @@ static AstDefinition *assignment(PrattParser *);
 static AstDefinition *definition(PrattParser *);
 static AstDefinition *defLazy(PrattParser *);
 static AstDefinition *defun(PrattParser *, bool, DefunType);
+static AstDefinition *macroDefinition(PrattParser *);
 static AstDefinition *importOp(PrattParser *);
 static AstDefinition *exportOp(PrattParser *);
 static AstDefinition *link(PrattParser *);
@@ -201,6 +202,18 @@ convertPrattSyntaxResultKind(PrattSyntaxResultKind resultKind);
 static bool parseOptionalSyntaxEntry(PrattParser *parser,
                                      PrattSyntaxEntryKind *entryKind,
                                      PrattSyntaxResultKind *resultKind);
+static AstSyntaxAlternatives *buildAstSyntaxAlternatives(
+    PrattParser *parser, ParserInfo PI, PrattSyntaxResultKind resultKind,
+    SymbolArray *parameters, PrattMacroAlternatives *alternatives);
+static void materializeHelperSyntaxDecl(PrattParser *parser,
+                                        PrattMacroSpec *helperSpec);
+static void queuePendingMacroFixup(PrattParser *parser, HashSymbol *helperName,
+                                   PrattMacroSpec *spec,
+                                   AstSyntaxDecl *syntaxDecl);
+static void resolvePendingMacroFixupsForHelper(PrattParser *parser,
+                                               HashSymbol *helperName,
+                                               PrattMacroSpec *helperSpec);
+static void finalizePendingMacroFixups(PrattParser *parser);
 static void registerExprSyntaxHead(PrattParser *parser, HashSymbol *head);
 static void mergeFixityImport(PrattParser *parser, PrattRecord *target,
                               PrattRecord *source, int nsRef,
@@ -391,6 +404,7 @@ static PrattParser *makePrattParser(void) {
     addRecord(table, TOK_LINK(), NULL, 0, NULL, 0, NULL, 0);
     addRecord(table, TOK_LAZY(), NULL, 0, NULL, 0, NULL, 0);
     addRecord(table, TOK_LSQUARE(), list, 0, NULL, 0, NULL, 0);
+    addRecord(table, TOK_MACRO(), NULL, 0, NULL, 0, NULL, 0);
     addRecord(table, TOK_SYNTAX(), NULL, 0, NULL, 0, NULL, 0);
     addRecord(table, TOK_NAMESPACE(), NULL, 0, NULL, 0, NULL, 0);
     addRecord(table, TOK_NUMBER(), makeNumber, 0, NULL, 0, NULL, 0);
@@ -1257,10 +1271,12 @@ static AstDefinitions *prependBuiltinWrappers(ParserInfo PI,
 static AstDefinitions *definitions(PrattParser *parser, HashSymbol *terminal) {
     ENTER(definitions);
     if (check(parser, terminal)) {
+        finalizePendingMacroFixups(parser);
         LEAVE(definitions);
         return NULL;
     }
     if (check(parser, TOK_EOF())) {
+        finalizePendingMacroFixups(parser);
         LEAVE(definitions);
         return NULL;
     }
@@ -2099,7 +2115,8 @@ static AstDefinition *operator(PrattParser *parser, bool isLazy) {
     return def;
 }
 
-static void checkTerminal(PrattParser *parser, WCharArray *string) {
+static void __attribute__((unused)) checkTerminal(PrattParser *parser,
+                                                  WCharArray *string) {
     if (countWCharArray(string) == 0) {
         parserError(parser, "empty identifier string");
     }
@@ -2187,6 +2204,203 @@ static bool parseOptionalSyntaxEntry(PrattParser *parser,
     return false;
 }
 
+static void skipDefinitionTail(PrattParser *parser) {
+    while (!check(parser, TOK_SEMI()) && !check(parser, TOK_IN()) &&
+           !check(parser, TOK_EOF())) {
+        (void)next(parser);
+    }
+}
+
+static bool syntaxHelperHasParameters(PrattMacroSpec *spec) {
+    return spec->parameters != NULL && sizeSymbolArray(spec->parameters) > 0;
+}
+
+static PrattSyntaxResultKind inferHelperSyntaxResultKind(PrattParser *parser,
+                                                         HashSymbol *ruleName,
+                                                         ParserInfo PI) {
+    PrattSyntaxResultKind resultKind = PRATTSYNTAXRESULTKIND_TYPE_EXPR;
+    bool sawWrapper = false;
+    Index i = 0;
+    PrattMacroSpec *spec = NULL;
+
+    while (iteratePrattMacroTable(parser->macros, &i, &spec) != NULL) {
+        if (spec == NULL ||
+            spec->entryKind == PRATTSYNTAXENTRYKIND_TYPE_HELPER ||
+            spec->macroTarget != ruleName) {
+            continue;
+        }
+        if (!sawWrapper) {
+            resultKind = spec->resultKind;
+            sawWrapper = true;
+            continue;
+        }
+        if (resultKind != spec->resultKind) {
+            parserErrorAt(PI, parser,
+                          "helper syntax %s cannot serve both Expr and Def "
+                          "macros",
+                          ruleName->name);
+            return PRATTSYNTAXRESULTKIND_TYPE_EXPR;
+        }
+    }
+
+    return resultKind;
+}
+
+static AstSyntaxAlternatives *buildAstSyntaxAlternatives(
+    PrattParser *parser, ParserInfo PI, PrattSyntaxResultKind resultKind,
+    SymbolArray *parameters, PrattMacroAlternatives *alternatives) {
+    AstSyntaxAlternatives *astAlts = newAstSyntaxAlternatives();
+    int save = PROTECT(astAlts);
+
+    for (Index i = 0; i < sizePrattMacroAlternatives(alternatives); ++i) {
+        PrattMacroAlternative *alt = getPrattMacroAlternatives(alternatives, i);
+        AstSyntaxPatternItems *astPatItems =
+            prattConvertPatternItems(PI, alt->patternItems);
+        int save2 = PROTECT(astPatItems);
+        AstSyntaxTemplate *astTmpl =
+            resultKind == PRATTSYNTAXRESULTKIND_TYPE_DEF
+                ? prattConvertSyntaxDefTemplate(parser, PI, alt->template,
+                                                parameters, alt->patternItems,
+                                                alt->quotedTemplate)
+                : prattConvertSyntaxExprTemplate(parser, PI, alt->template,
+                                                 parameters, alt->patternItems,
+                                                 alt->quotedTemplate);
+        PROTECT(astTmpl);
+        AstSyntaxAlternative *astAlt =
+            newAstSyntaxAlternative(PI, astPatItems, astTmpl);
+        PROTECT(astAlt);
+        pushAstSyntaxAlternatives(astAlts, astAlt);
+        UNPROTECT(save2);
+    }
+
+    UNPROTECT(save);
+    return astAlts;
+}
+
+static void materializeHelperSyntaxDecl(PrattParser *parser,
+                                        PrattMacroSpec *helperSpec) {
+    if (helperSpec == NULL ||
+        helperSpec->entryKind != PRATTSYNTAXENTRYKIND_TYPE_HELPER ||
+        helperSpec->syntaxDecl == NULL || helperSpec->alternatives == NULL) {
+        return;
+    }
+
+    AstSyntaxDecl *syntaxDecl = helperSpec->syntaxDecl;
+    PrattSyntaxResultKind resultKind = inferHelperSyntaxResultKind(
+        parser, helperSpec->headSymbol, CPI(syntaxDecl));
+
+    helperSpec->resultKind = resultKind;
+    syntaxDecl->resultKind = convertPrattSyntaxResultKind(resultKind);
+    syntaxDecl->alternatives = buildAstSyntaxAlternatives(
+        parser, CPI(syntaxDecl), resultKind, helperSpec->parameters,
+        helperSpec->alternatives);
+}
+
+static bool validateMacroHelperTarget(PrattParser *parser,
+                                      AstSyntaxDecl *macroDecl,
+                                      PrattMacroSpec *helperSpec,
+                                      HashSymbol *helperName) {
+    if (helperSpec == NULL) {
+        parserErrorAt(CPI(macroDecl), parser,
+                      "macro %s references unknown helper syntax %s",
+                      macroDecl->ruleName->name, helperName->name);
+        return false;
+    }
+
+    if (helperSpec->entryKind != PRATTSYNTAXENTRYKIND_TYPE_HELPER ||
+        helperSpec->helperTarget != NULL) {
+        parserErrorAt(CPI(macroDecl), parser,
+                      "macro %s must target helper syntax %s",
+                      macroDecl->ruleName->name, helperName->name);
+        return false;
+    }
+
+    if (syntaxHelperHasParameters(helperSpec)) {
+        parserErrorAt(CPI(macroDecl), parser,
+                      "macro %s must target zero-arity helper syntax %s",
+                      macroDecl->ruleName->name, helperName->name);
+        return false;
+    }
+
+    return true;
+}
+
+static void resolveMacroFixup(PrattParser *parser,
+                              PrattPendingMacroFixup *pending,
+                              PrattMacroSpec *helperSpec) {
+    PrattMacroSpec *macroSpec = pending->spec;
+    AstSyntaxDecl *macroDecl = pending->syntaxDecl;
+
+    if (!validateMacroHelperTarget(parser, macroDecl, helperSpec,
+                                   pending->helperName)) {
+        return;
+    }
+
+    PrattMacroAlternative *firstAlternative =
+        getPrattMacroAlternatives(helperSpec->alternatives, 0);
+    macroSpec->patternItems = firstAlternative->patternItems;
+    macroSpec->template = firstAlternative->template;
+    macroSpec->alternatives = helperSpec->alternatives;
+    macroSpec->helperTarget = NULL;
+    macroSpec->isExprEntry =
+        macroSpec->entryKind == PRATTSYNTAXENTRYKIND_TYPE_EXPR;
+
+    macroDecl->alternatives = buildAstSyntaxAlternatives(
+        parser, CPI(macroDecl), macroSpec->resultKind, NULL,
+        helperSpec->alternatives);
+
+    if (macroSpec->entryKind == PRATTSYNTAXENTRYKIND_TYPE_EXPR &&
+        !parser->panicMode) {
+        registerExprSyntaxHead(parser, macroSpec->headSymbol);
+    }
+}
+
+static void queuePendingMacroFixup(PrattParser *parser, HashSymbol *helperName,
+                                   PrattMacroSpec *spec,
+                                   AstSyntaxDecl *syntaxDecl) {
+    PrattPendingMacroFixup *pending =
+        newPrattPendingMacroFixup(helperName, spec, syntaxDecl);
+    int save = PROTECT(pending);
+    pending->next = parser->pendingMacroFixups;
+    parser->pendingMacroFixups = pending;
+    UNPROTECT(save);
+}
+
+static void resolvePendingMacroFixupsForHelper(PrattParser *parser,
+                                               HashSymbol *helperName,
+                                               PrattMacroSpec *helperSpec) {
+    PrattPendingMacroFixup **link = &parser->pendingMacroFixups;
+
+    while (*link != NULL) {
+        PrattPendingMacroFixup *pending = *link;
+        if (pending->helperName == helperName) {
+            resolveMacroFixup(parser, pending, helperSpec);
+            *link = pending->next;
+        } else {
+            link = &pending->next;
+        }
+    }
+}
+
+static void finalizePendingMacroFixups(PrattParser *parser) {
+    PrattPendingMacroFixup *pending = parser->pendingMacroFixups;
+    parser->pendingMacroFixups = NULL;
+
+    while (pending != NULL) {
+        PrattPendingMacroFixup *nextPending = pending->next;
+        PrattMacroSpec *helperSpec =
+            prattFindSyntaxSpecByName(parser->next, pending->helperName);
+        resolveMacroFixup(parser, pending, helperSpec);
+        pending = nextPending;
+    }
+
+    Index i = 0;
+    PrattMacroSpec *spec = NULL;
+    while (iteratePrattMacroTable(parser->macros, &i, &spec) != NULL) {
+        materializeHelperSyntaxDecl(parser, spec);
+    }
+}
+
 static void registerExprSyntaxHead(PrattParser *parser, HashSymbol *head) {
     PrattRecord *record = NULL;
     getPrattRecordTable(parser->rules, head, &record);
@@ -2226,6 +2440,92 @@ static AstExpression *userSyntaxExpr(PrattRecord *record, PrattParser *parser,
     return prattExpandSyntaxExpr(parser, tok, spec);
 }
 
+static AstDefinition *macroDefinition(PrattParser *parser) {
+    ENTER(macroDefinition);
+    PrattToken *tok = peek(parser);
+    int save = PROTECT(tok);
+    HashSymbol *macroName = prattSyntaxSymbol(parser);
+
+    if (check(parser, TOK_OPEN())) {
+        parserErrorAt(TOKPI(tok), parser,
+                      "macro %s may not declare helper parameters",
+                      macroName->name);
+        skipDefinitionTail(parser);
+        LEAVE(macroDefinition);
+        UNPROTECT(save);
+        return newAstDefinition_Blank(TOKPI(tok));
+    }
+
+    PrattSyntaxEntryKind entryKind;
+    PrattSyntaxResultKind resultKind;
+    if (!parseOptionalSyntaxEntry(parser, &entryKind, &resultKind) ||
+        entryKind == PRATTSYNTAXENTRYKIND_TYPE_HELPER) {
+        parserErrorAt(TOKPI(tok), parser, "macro %s requires : Expr or : Def",
+                      macroName->name);
+        skipDefinitionTail(parser);
+        LEAVE(macroDefinition);
+        UNPROTECT(save);
+        return newAstDefinition_Blank(TOKPI(tok));
+    }
+
+    HashSymbol *helperName = prattSyntaxSymbol(parser);
+
+    if (getPrattMacroTable(parser->macros, macroName, NULL)) {
+        parserError(parser, "syntax %s already defined in current scope",
+                    macroName->name);
+        skipDefinitionTail(parser);
+        LEAVE(macroDefinition);
+        UNPROTECT(save);
+        return newAstDefinition_Blank(TOKPI(tok));
+    }
+
+    PrattMacroPatternItems *emptyPatternItems = newPrattMacroPatternItems();
+    PROTECT(emptyPatternItems);
+    AstExpression *placeholderTemplate = prattErrorExpression(TOKPI(tok));
+    PROTECT(placeholderTemplate);
+    PrattMacroSpec *spec =
+        newPrattMacroSpec(macroName, emptyPatternItems, placeholderTemplate);
+    PROTECT(spec);
+    spec->entryKind = entryKind;
+    spec->resultKind = resultKind;
+    spec->isExprEntry = entryKind == PRATTSYNTAXENTRYKIND_TYPE_EXPR;
+    spec->helperTarget = helperName;
+    spec->macroTarget = helperName;
+    int declarationId = prattNextDeclarationId();
+    spec->declarationId = declarationId;
+
+    AstSyntaxAlternatives *astAlts = newAstSyntaxAlternatives();
+    PROTECT(astAlts);
+    AstDefinition *decl = makeAstDefinition_SyntaxDecl(
+        TOKPI(tok), declarationId, macroName, astAlts);
+    PROTECT(decl);
+    AstSyntaxDecl *syntaxDecl = getAstDefinition_SyntaxDecl(decl);
+    spec->syntaxDecl = syntaxDecl;
+    syntaxDecl->surfaceHead = macroName;
+    syntaxDecl->entryKind = convertPrattSyntaxEntryKind(entryKind);
+    syntaxDecl->resultKind = convertPrattSyntaxResultKind(resultKind);
+
+    setPrattMacroTable(parser->macros, macroName, spec);
+
+    PrattMacroSpec *helperSpec = NULL;
+    getPrattMacroTable(parser->macros, helperName, &helperSpec);
+    if (helperSpec != NULL) {
+        PrattPendingMacroFixup pending = {
+            .helperName = helperName,
+            .spec = spec,
+            .syntaxDecl = syntaxDecl,
+            .next = NULL,
+        };
+        resolveMacroFixup(parser, &pending, helperSpec);
+    } else {
+        queuePendingMacroFixup(parser, helperName, spec, syntaxDecl);
+    }
+
+    LEAVE(macroDefinition);
+    UNPROTECT(save);
+    return decl;
+}
+
 static AstDefinition *syntaxDefinition(PrattParser *parser) {
     ENTER(syntaxDefinition);
     PrattToken *tok = peek(parser);
@@ -2235,50 +2535,31 @@ static AstDefinition *syntaxDefinition(PrattParser *parser) {
     if (parameters != NULL) {
         PROTECT(parameters);
     }
-    PrattSyntaxEntryKind entryKind;
-    PrattSyntaxResultKind resultKind;
-    bool isInitiatingEntry =
-        parseOptionalSyntaxEntry(parser, &entryKind, &resultKind);
-    bool isExprEntry = entryKind == PRATTSYNTAXENTRYKIND_TYPE_EXPR;
+    PrattSyntaxEntryKind entryKind = PRATTSYNTAXENTRYKIND_TYPE_HELPER;
+    PrattSyntaxResultKind resultKind = PRATTSYNTAXRESULTKIND_TYPE_EXPR;
+    if (parseOptionalSyntaxEntry(parser, &entryKind, &resultKind)) {
+        parserErrorAt(TOKPI(tok), parser,
+                      "initiating syntax must use macro, not syntax");
+        skipDefinitionTail(parser);
+        LEAVE(syntaxDefinition);
+        UNPROTECT(save);
+        return newAstDefinition_Blank(TOKPI(tok));
+    }
     consume(parser, TOK_PRODUCTION());
     PrattMacroAlternatives *alternatives = newPrattMacroAlternatives();
     PROTECT(alternatives);
-    HashSymbol *surfaceHead = ruleName;
-    if (isInitiatingEntry) {
-        WCharArray *headText = rawString(parser);
-        int save2 = PROTECT(headText);
-        checkTerminal(parser, headText);
-        surfaceHead = unicodeToSymbol(headText);
+    do {
         PrattMacroAlternative *alternative =
             parseSyntaxAlternative(parser, parameters);
-        int save3 = PROTECT(alternative);
+        int save2 = PROTECT(alternative);
         pushPrattMacroAlternatives(alternatives, alternative);
-        UNPROTECT(save3);
-        if (match(parser, TOK_PIPE())) {
-            parserError(parser,
-                        "initiating syntax does not yet support alternatives");
-        }
         UNPROTECT(save2);
-    } else {
-        do {
-            PrattMacroAlternative *alternative =
-                parseSyntaxAlternative(parser, parameters);
-            int save2 = PROTECT(alternative);
-            pushPrattMacroAlternatives(alternatives, alternative);
-            UNPROTECT(save2);
-        } while (match(parser, TOK_PIPE()));
-    }
+    } while (match(parser, TOK_PIPE()));
     if (getPrattMacroTable(parser->macros, ruleName, NULL)) {
         parserError(parser, "syntax %s already defined in current scope",
                     ruleName->name);
     }
-    if (isExprEntry &&
-        prattFindLocalSyntaxSpecForHead(parser, surfaceHead) != NULL) {
-        parserError(
-            parser,
-            "expression syntax head %s already defined in current scope",
-            surfaceHead->name);
-    }
+    resultKind = inferHelperSyntaxResultKind(parser, ruleName, TOKPI(tok));
     validateSyntaxAlternatives(parser, ruleName, alternatives);
     if (parser->panicMode) {
         LEAVE(syntaxDefinition);
@@ -2287,53 +2568,30 @@ static AstDefinition *syntaxDefinition(PrattParser *parser) {
     }
     PrattMacroAlternative *firstAlternative =
         getPrattMacroAlternatives(alternatives, 0);
-    PrattMacroSpec *spec =
-        newPrattMacroSpec(surfaceHead, firstAlternative->patternItems,
-                          firstAlternative->template);
+    PrattMacroSpec *spec = newPrattMacroSpec(
+        ruleName, firstAlternative->patternItems, firstAlternative->template);
     PROTECT(spec);
     spec->parameters = parameters;
     spec->alternatives = alternatives;
     spec->entryKind = entryKind;
     spec->resultKind = resultKind;
-    spec->isExprEntry = isExprEntry;
+    spec->isExprEntry = false;
     int declarationId = prattNextDeclarationId();
     spec->declarationId = declarationId;
     setPrattMacroTable(parser->macros, ruleName, spec);
-    if (isExprEntry && !parser->panicMode) {
-        registerExprSyntaxHead(parser, surfaceHead);
-    }
 
-    // Build AstSyntaxAlternatives for the durable declaration carrier.
     AstSyntaxAlternatives *astAlts = newAstSyntaxAlternatives();
     int save2 = PROTECT(astAlts);
-    for (Index i = 0; i < sizePrattMacroAlternatives(alternatives); ++i) {
-        PrattMacroAlternative *alt = getPrattMacroAlternatives(alternatives, i);
-        AstSyntaxPatternItems *astPatItems =
-            prattConvertPatternItems(TOKPI(tok), alt->patternItems);
-        int save3 = PROTECT(astPatItems);
-        AstSyntaxTemplate *astTmpl =
-            resultKind == PRATTSYNTAXRESULTKIND_TYPE_DEF
-                ? prattConvertSyntaxDefTemplate(
-                      parser, TOKPI(tok), alt->template, parameters,
-                      alt->patternItems, alt->quotedTemplate)
-                : prattConvertSyntaxExprTemplate(
-                      parser, TOKPI(tok), alt->template, parameters,
-                      alt->patternItems, alt->quotedTemplate);
-        PROTECT(astTmpl);
-        AstSyntaxAlternative *astAlt =
-            newAstSyntaxAlternative(TOKPI(tok), astPatItems, astTmpl);
-        PROTECT(astAlt);
-        pushAstSyntaxAlternatives(astAlts, astAlt);
-        UNPROTECT(save3);
-    }
     AstDefinition *decl = makeAstDefinition_SyntaxDecl(
         TOKPI(tok), declarationId, ruleName, astAlts);
     PROTECT(decl);
     AstSyntaxDecl *syntaxDecl = getAstDefinition_SyntaxDecl(decl);
-    syntaxDecl->surfaceHead = surfaceHead;
+    spec->syntaxDecl = syntaxDecl;
+    syntaxDecl->surfaceHead = NULL;
     syntaxDecl->parameters = parameters;
     syntaxDecl->entryKind = convertPrattSyntaxEntryKind(entryKind);
     syntaxDecl->resultKind = convertPrattSyntaxResultKind(resultKind);
+    resolvePendingMacroFixupsForHelper(parser, ruleName, spec);
 
     LEAVE(syntaxDefinition);
     UNPROTECT(save2);
@@ -2358,6 +2616,9 @@ static AstDefinition *definition(PrattParser *parser) {
     save = PROTECT(res);
     if (match(parser, TOK_BUILTINS())) {
         res = newAstDefinition_BuiltinsSlot(TOKPI(peek(parser)));
+        save = PROTECT(res);
+    } else if (match(parser, TOK_MACRO())) {
+        res = macroDefinition(parser);
         save = PROTECT(res);
     } else if (match(parser, TOK_SYNTAX())) {
         res = syntaxDefinition(parser);
@@ -2405,57 +2666,24 @@ static AstDefinition *definition(PrattParser *parser) {
             res = defLazy(parser);
         }
         save = PROTECT(res);
+    } else if (match(parser, TOK_OPERATOR())) {
+        res = operator(parser, false);
+        save = PROTECT(res);
     } else if (match(parser, TOK_LINK())) {
         res = link(parser);
         save = PROTECT(res);
     } else if (match(parser, TOK_ALIAS())) {
         res = alias(parser);
         save = PROTECT(res);
-    } else if (match(parser, TOK_IMPORT())) {
-        res = importOp(parser);
-        save = PROTECT(res);
     } else if (match(parser, TOK_EXPORT())) {
         res = exportOp(parser);
         save = PROTECT(res);
-    } else if (match(parser, TOK_OPERATOR())) {
-        res = operator(parser, false);
+    } else if (match(parser, TOK_IMPORT())) {
+        res = importOp(parser);
         save = PROTECT(res);
     } else {
-        PrattToken *tok = next(parser);
-        validateLastAlloc();
-        // Provide a more informative error message that includes the
-        // unexpected token kind and, where possible, its lexeme.
-        if (tok->type == TOK_ATOM() && tok->value &&
-            tok->value->type == PRATTVALUE_TYPE_ATOM && tok->value->val.atom) {
-            parserErrorAt(TOKPI(tok), parser,
-                          "expected definition; found atom '%s'",
-                          tok->value->val.atom->name);
-        } else if (tok->type == TOK_STRING() && tok->value &&
-                   tok->value->type == PRATTVALUE_TYPE_STRING &&
-                   tok->value->val.string) {
-            parserErrorAt(TOKPI(tok), parser,
-                          "expected definition; found string \"%ls\"",
-                          tok->value->val.string->entries);
-        } else if (tok->type == TOK_NUMBER() && tok->value &&
-                   tok->value->type == PRATTVALUE_TYPE_NUMBER &&
-                   tok->value->val.number) {
-            parserErrorAt(TOKPI(tok), parser,
-                          "expected definition; found number");
-        } else if (tok->type == TOK_CHAR() && tok->value &&
-                   tok->value->type == PRATTVALUE_TYPE_STRING &&
-                   tok->value->val.string) {
-            parserErrorAt(TOKPI(tok), parser,
-                          "expected definition; found character '%ls'",
-                          tok->value->val.string->entries);
-        } else if (tok->type && tok->type->name) {
-            parserErrorAt(TOKPI(tok), parser,
-                          "expected definition; found token %s",
-                          tok->type->name);
-        } else {
-            parserErrorAt(TOKPI(tok), parser,
-                          "expected definition; found unexpected token");
-        }
-        res = newAstDefinition_Blank(TOKPI(tok));
+        parserError(parser, "expected definition");
+        res = newAstDefinition_Blank(TOKPI(peek(parser)));
         save = PROTECT(res);
     }
     synchronize(parser);
@@ -2464,19 +2692,6 @@ static AstDefinition *definition(PrattParser *parser) {
     return res;
 }
 
-/**
- * @brief Parse an export directive and set export flags on operator records.
- *
- * Syntax supported (non-destructive, flags only):
- *   export operators;
- *   export prefix "op";
- *   export infix  "op";
- *   export postfix "op";
- *
- * Notes:
- * - Only operators defined in the current parser scope may be exported.
- * - Exporting a non-local operator raises a parser error.
- */
 static AstDefinition *exportOp(PrattParser *parser) {
     ENTER(exportOp);
     PrattToken *tok = peek(parser);
@@ -2548,8 +2763,8 @@ static AstDefinition *exportOp(PrattParser *parser) {
         }
     } else if (match(parser, TOK_OPERATOR())) {
         // for export operator, the syntax includes the definition of the
-        // operator: export operator <pattern> [<associativity>] <precedence>
-        // <implementation>; Parse the pattern string first
+        // operator: export operator <pattern> [<associativity>]
+        // <precedence> <implementation>; Parse the pattern string first
         PrattToken *opTok = peek(parser);
         PROTECT(opTok);
         WCharArray *str = rawString(parser);
@@ -2558,7 +2773,8 @@ static AstDefinition *exportOp(PrattParser *parser) {
             parseMixfixPattern(TOKPI(opTok), parser, str);
         PROTECT(pattern);
 
-        // Now parse the operator definition using the already-parsed pattern
+        // Now parse the operator definition using the already-parsed
+        // pattern
         res = operatorWithPattern(parser, opTok, pattern, false);
         PROTECT(res);
 
@@ -2735,9 +2951,9 @@ static AstDefinition *importOp(PrattParser *parser) {
 /**
  * @brief Parse an alias declaration.
  *
- * This function parses an alias definition, which consists of an alias name,
- * an assignment operator, and a type. It creates an AstAlias and wraps it in
- * an AstDefinition.
+ * This function parses an alias definition, which consists of an alias
+ * name, an assignment operator, and a type. It creates an AstAlias and
+ * wraps it in an AstDefinition.
  *
  * @param parser The PrattParser to use for parsing.
  * @return An AstDefinition representing the alias declaration.
@@ -2824,7 +3040,8 @@ static AstTypeClause *typeClause(PrattParser *parser) {
 }
 
 /**
- * @brief Parse a type variable, which is a hash symbol followed by a symbol.
+ * @brief Parse a type variable, which is a hash symbol followed by a
+ * symbol.
  *
  * This function consumes the hash token and then parses the symbol,
  * returning an AstTypeVariable representing the type variable.
@@ -2870,8 +3087,8 @@ static AstTypeList *typeList(PrattParser *parser) {
 /**
  * @brief Parse a type map, which is a mapping of symbols to types.
  *
- * This function parses a sequence of symbol-type pairs, separated by commas,
- * and constructs an AstTypeMap representing the parsed mapping.
+ * This function parses a sequence of symbol-type pairs, separated by
+ * commas, and constructs an AstTypeMap representing the parsed mapping.
  *
  * @param parser The PrattParser to use for parsing.
  * @return An AstTypeMap representing the parsed type mapping.
@@ -2898,10 +3115,11 @@ static AstTypeMap *typeMap(PrattParser *parser) {
 }
 
 /**
- * @brief Parse a single function definition within a composite function body.
+ * @brief Parse a single function definition within a composite function
+ * body.
  *
- * This function checks for an alt function definition, parses its arguments and
- * body, and constructs an AstAltFunction.
+ * This function checks for an alt function definition, parses its arguments
+ * and body, and constructs an AstAltFunction.
  *
  * @param parser The PrattParser to use for parsing.
  * @return An AstAltFunction representing the parsed function definition.
@@ -2948,7 +3166,8 @@ static AstTypeFunction *typeFunction(PrattParser *parser) {
  * parentheses, preceeded by a hash.
  *
  * This function consumes the hash and opening parenthesis, parses a list of
- * types, and then consumes the closing parenthesis, returning an AstTypeList.
+ * types, and then consumes the closing parenthesis, returning an
+ * AstTypeList.
  *
  * @param parser The PrattParser to use for parsing.
  * @return An AstTypeList representing the parsed tuple type.
@@ -2967,8 +3186,8 @@ static AstTypeList *typeTuple(PrattParser *parser) {
 /**
  * @brief Parse alternative arguments for a function, separated by pipes.
  *
- * This function recursively parses a list of function arguments, allowing for
- * multiple sets of arguments separated by the pipe token.
+ * This function recursively parses a list of function arguments, allowing
+ * for multiple sets of arguments separated by the pipe token.
  *
  * @param parser The PrattParser to use for parsing.
  * @return An AstAltArgs representing the parsed alternative arguments.
@@ -3016,13 +3235,13 @@ AstNest *prattNest(PrattParser *parser) { return nest(parser); }
  * @brief Parse the body of a nested block, which can contain definitions or
  * statements.
  *
- * This function creates a child parser and calls nestBody to parse the body.
- * then it consumes the closing curly brace.
+ * This function creates a child parser and calls nestBody to parse the
+ * body. then it consumes the closing curly brace.
  *
- * It differs from nest() above in that it does not consume the opening curly
- * brace, and it returns an AstExpression rather than a bare AstNest. Its
- * signature also matches the PrattParser's nestExpr function as it is called
- * directly by the parser.
+ * It differs from nest() above in that it does not consume the opening
+ * curly brace, and it returns an AstExpression rather than a bare AstNest.
+ * Its signature also matches the PrattParser's nestExpr function as it is
+ * called directly by the parser.
  *
  * @param parser The PrattParser to use for parsing.
  * @return An AstExpression representing the parsed body of the nest.
@@ -3144,8 +3363,8 @@ static AstLookUpOrSymbol *astLookUpToLos(PrattParser *parser,
  * @brief Create an AstLookUpOrSymbol representing an error.
  *
  * This function creates a new AstLookUpOrSymbol with a TOK_ERROR() symbol,
- * this is only so that the parser has something to return when it encounters an
- * error.
+ * this is only so that the parser has something to return when it
+ * encounters an error.
  *
  * @param PI The ParserInfo for the context of the error.
  * @return An AstLookUpOrSymbol representing the error.
@@ -3170,9 +3389,9 @@ static AstLookUpOrSymbol *astSymbolToLos(ParserInfo PI, HashSymbol *symbol) {
  * AstLookUpOrSymbol.
  *
  * This function checks the type of the expression and converts it to an
- * AstLookUpOrSymbol or returns an error if the expression is not a lookUp or a
- * symbol. It is used to parse type constructor names in the formal arguments to
- * functions.
+ * AstLookUpOrSymbol or returns an error if the expression is not a lookUp
+ * or a symbol. It is used to parse type constructor names in the formal
+ * arguments to functions.
  *
  * @param parser The PrattParser (used only for error reporting).
  * @param function The AstExpression representing the function.
@@ -3286,7 +3505,8 @@ static AstFarg *astFunCallToFarg(PrattParser *parser, AstFunCall *funCall) {
 }
 
 /**
- * @brief wraps an AstLookUp in an AstLookUpSymbol and wraps that in an AstFarg
+ * @brief wraps an AstLookUp in an AstLookUpSymbol and wraps that in an
+ * AstFarg
  *
  * @param parser The parser for error reporting.
  * @param lookUp the AstLookUp to wrap.
@@ -3460,8 +3680,8 @@ static AstFarg *astExpressionToFarg(PrattParser *parser, AstExpression *expr) {
 }
 
 /**
- * @brief validate that the lazy fn arguments are conforming (symbols only, and
- * no alternative args)
+ * @brief validate that the lazy fn arguments are conforming (symbols only,
+ * and no alternative args)
  */
 static void validateLazyArgs(PrattParser *parser, AstAltFunction *definition) {
     AstAltArgs *altArgs = definition->altArgs;
@@ -3699,7 +3919,8 @@ static AstTypeConstructor *typeConstructor(PrattParser *parser) {
 }
 
 /**
- * @brief parses the type variable arguments to the type signature of a typedef
+ * @brief parses the type variable arguments to the type signature of a
+ * typedef
  */
 static AstTypeSymbols *typeVariables(PrattParser *parser) {
     ENTER(typeVariables);
@@ -3917,8 +4138,8 @@ static AstExpression *makeConsExpression(ParserInfo PI, AstExpression *head,
 }
 
 /**
- * @brief parses a comma separated list of expressions up to a closing square
- * bracket.
+ * @brief parses a comma separated list of expressions up to a closing
+ * square bracket.
  * @return a nested chain of cons function applications.
  */
 static AstExpression *consList(PrattParser *parser) {
@@ -3947,7 +4168,8 @@ static AstExpression *consList(PrattParser *parser) {
 }
 
 /**
- * @brief parses a list in square brackets to a nested list of calls to cons.
+ * @brief parses a list in square brackets to a nested list of calls to
+ * cons.
  */
 static AstExpression *list(PrattRecord *record __attribute__((unused)),
                            PrattParser *parser,
@@ -4018,8 +4240,8 @@ static AstExpressions *expressions(PrattParser *parser) {
 }
 
 /**
- * @brief triggered by an infix open round brace (function application), parses
- * the arguments and creates the funcall.
+ * @brief triggered by an infix open round brace (function application),
+ * parses the arguments and creates the funcall.
  */
 static AstExpression *call(PrattRecord *record __attribute__((unused)),
                            PrattParser *parser, AstExpression *lhs,
@@ -4122,8 +4344,8 @@ static AstExpression *makeStruct(PrattRecord *record __attribute__((unused)),
 }
 
 /**
- * @brief parses a switch statement into an anonymous function definition and
- * application
+ * @brief parses a switch statement into an anonymous function definition
+ * and application
  *
  * This code is used by both safe and unsafe switch statement parsers.
  */
@@ -4390,8 +4612,8 @@ static AstExpression *exprAlias(PrattRecord *record, PrattParser *parser,
 }
 
 /**
- * @brief parselet installed at parser run time to handle a user-defined prefix
- * operator.
+ * @brief parselet installed at parser run time to handle a user-defined
+ * prefix operator.
  */
 static AstExpression *userPrefix(PrattRecord *record, PrattParser *parser,
                                  AstExpression *lhs __attribute__((unused)),
@@ -4476,8 +4698,8 @@ static AstExpression *userInfixCommon(PrattRecord *record, PrattParser *parser,
 }
 
 /**
- * @brief parselet installed at parser run time to handle a user-defined infix
- * nonassoc operator.
+ * @brief parselet installed at parser run time to handle a user-defined
+ * infix nonassoc operator.
  */
 static AstExpression *userInfixNone(PrattRecord *record, PrattParser *parser,
                                     AstExpression *lhs, PrattToken *tok) {
@@ -4485,8 +4707,8 @@ static AstExpression *userInfixNone(PrattRecord *record, PrattParser *parser,
 }
 
 /**
- * @brief parselet installed at parser run time to handle a user-defined infix
- * left operator.
+ * @brief parselet installed at parser run time to handle a user-defined
+ * infix left operator.
  */
 static AstExpression *userInfixLeft(PrattRecord *record, PrattParser *parser,
                                     AstExpression *lhs, PrattToken *tok) {
@@ -4494,8 +4716,8 @@ static AstExpression *userInfixLeft(PrattRecord *record, PrattParser *parser,
 }
 
 /**
- * @brief parselet installed at parser run time to handle a user-defined infix
- * right operator.
+ * @brief parselet installed at parser run time to handle a user-defined
+ * infix right operator.
  */
 static AstExpression *userInfixRight(PrattRecord *record, PrattParser *parser,
                                      AstExpression *lhs, PrattToken *tok) {
@@ -4503,8 +4725,8 @@ static AstExpression *userInfixRight(PrattRecord *record, PrattParser *parser,
 }
 
 /**
- * @brief parselet installed at parser run time to handle a user-defined postfix
- * operator.
+ * @brief parselet installed at parser run time to handle a user-defined
+ * postfix operator.
  */
 static AstExpression *userPostfix(PrattRecord *record,
                                   PrattParser *parser __attribute__((unused)),
@@ -4632,7 +4854,8 @@ static AstExpression *makeChar(PrattRecord *record __attribute__((unused)),
 }
 
 /**
- * @brief utility to convert a string to a nested list of conses of characters.
+ * @brief utility to convert a string to a nested list of conses of
+ * characters.
  */
 static AstFunCall *makeStringList(ParserInfo PI, WCharArray *str) {
     AstExpression *nil = newAstExpression_Symbol(PI, nilSymbol());
@@ -4725,7 +4948,8 @@ static AstExpression *expressionPrecedence(PrattParser *parser,
             PrattRecord *record = fetchRecord(parser, op->type);
             if (record == NULL) {
                 // allow tokens with no records to terminate expressions
-                // on the assumption that they are secondary mixfix operators
+                // on the assumption that they are secondary mixfix
+                // operators
                 DEBUG("NULL record for token: %s", op->type->name);
                 break;
             } else if (record->postfix.op != NULL) {

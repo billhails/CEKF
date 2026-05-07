@@ -1,9 +1,9 @@
 let
-    macro annotate: Def annotateHelper;
-
     syntax annotateHelper ::= name: Name "=" value: Expr {
         name = value
     };
+
+    macro annotate: Def annotateHelper;
 
     annotate answer = 42;
     annotate ok = true;

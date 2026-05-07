@@ -120,7 +120,7 @@ prattFindSyntaxSpecForHeadAndEntry(PrattParser *parser, HashSymbol *head,
                                    PrattSyntaxEntryKind entryKind) {
     PrattMacroSpec *spec =
         prattFindLocalSyntaxSpecForHeadAndEntry(parser, head, entryKind);
-    if (spec != NULL) {
+    if (spec != NULL && spec->helperTarget == NULL) {
         return spec;
     } else if (parser->next != NULL) {
         return prattFindSyntaxSpecForHeadAndEntry(parser->next, head,

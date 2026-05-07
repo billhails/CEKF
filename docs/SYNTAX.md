@@ -4,15 +4,17 @@
 
 ```fn
 // list comprehensions
-syntax lco: Expr ::= "lco" "["
-                     exp: Expr
-                     "for" x: Name
-                     "in" xs: Expr
-                     filters: Syntax(where(x, xs))
-                     "]"
-                     quote {
-                       list.map(fn (unquote x) { unquote exp }, unquote filters)
-                     };
+macro lco: Expr internalLco;
+
+syntax internalLco ::= "["
+                      exp: Expr
+                      "for" x: Name
+                      "in" xs: Expr
+                      filters: Syntax(where(x, xs))
+                      "]"
+                      quote {
+                        list.map(fn (unquote x) { unquote exp }, unquote filters)
+                      };
 
 syntax where(x, xs) ::= "where" cond: Expr
                         rest: Syntax(conds(x, xs))
@@ -38,14 +40,14 @@ readablity.
 In phase 1, the explicit `: Expr` or `: Def` annotation is a good surface
 marker for initiating rules.
 
-- `syntax lco: Expr ::= ...` means an expression-initiating rule.
-- `syntax annotate: Def ::= ...` means a definition-initiating rule.
+- `macro lco: Expr helper;` means an expression-initiating rule.
+- `macro annotate: Def helper;` means a definition-initiating rule.
 - `syntax where(...) ::= ...` means a helper-only rule.
 
-This avoids introducing another keyword just to mark triggers. Internally the
-implementation still needs both a result kind and an entry kind, but the first
-surface syntax can reuse the optional annotation to mark the common initiating
-cases.
+This keeps public entry rules visibly distinct from helper rules while still
+preserving the `: Expr` versus `: Def` distinction. Internally the
+implementation still needs both a result kind and an entry kind, and the
+surface syntax continues to expose both for initiating rules.
 
 Current phase-1 implementation note:
 
@@ -68,7 +70,7 @@ The clean split is:
 3. A separate syntax-rule engine handles ordered components, alternatives,
    recursive helper rules, inherited arguments, and template expansion.
 
-In other words, an initiating syntax declaration would be entered from either
+In other words, a `macro` declaration would be entered from either
 Pratt or the definition parser, but most of its body would not be parsed by the
 ordinary prefix or definition routines directly.
 
@@ -93,8 +95,8 @@ PrattRecord.
 
 That split matters for backtracking. A helper rule such as `chooseValue ::= "with"
 "skip" ... | "with" replacement: Expr ...` must be able to roll back before the
-first `"with"`, whereas an initiating rule such as `syntax time: Expr ::= "time"
-...` has already committed to its registered head token before rule matching
+first `"with"`, whereas an initiating rule such as `macro time: Expr timeBody;`
+has already committed to its registered head token before helper-rule matching
 starts.
 
 This keeps Pratt in charge of expression entry and the existing definition
@@ -116,11 +118,12 @@ Each rule should contain:
 - A template to build when an alternative matches.
 
 The result kind remains required internal metadata. In phase 1, the source
-surface can reuse the optional `: Expr` or `: Def` annotation as the marker for
-initiating rules rather than as a general-purpose annotation on every rule.
+surface uses `macro` plus the explicit `: Expr` or `: Def` annotation to mark
+initiating rules rather than attaching a general-purpose result annotation to
+every rule.
 
-- `syntax name: Expr ::= ...` means an expression-initiating rule.
-- `syntax name: Def ::= ...` means a definition-initiating rule.
+- `macro name: Expr helper;` means an expression-initiating rule.
+- `macro name: Def helper;` means a definition-initiating rule.
 - `syntax name ::= ...` means a helper-only rule, defaulting to an `Expr`
   result unless a later extension adds explicit helper result annotations.
 - Result kind and entry kind remain separate properties internally even if the
@@ -553,7 +556,9 @@ The `time` example fits the current plan cleanly.
 That is already aligned with the current SyntaxSpec shape and hygiene position.
 
 ```fn
-syntax time: Expr ::= "time" "(" expr: Expr ")" {
+macro time: Expr timeBody;
+
+syntax timeBody ::= "(" expr: Expr ")" {
     quote {
         let start = now()
         in
@@ -587,9 +592,11 @@ be treated as later than the core phase-1 design.
 This is still a strong MVP candidate.
 
 ```fn
-syntax unless: Expr ::= "unless" "(" cond: Expr ")"
-                        consequent: Nest "else"
-                        alternative: Nest {
+macro unless: Expr unlessBody;
+
+syntax unlessBody ::= "(" cond: Expr ")"
+            consequent: Nest "else"
+            alternative: Nest {
     quote {
         if (unquote cond) {
             unquote alternative
@@ -612,8 +619,10 @@ Those requirements are already visible in the current template and hygiene
 sections, so this remains a good stress test rather than a blocker.
 
 ```fn
-syntax for: Expr ::= "for" "(" name: Name "=" init: Expr ","
-                 test: Expr "," step: Expr ")" body: Nest quote {
+macro for: Expr forBody;
+
+syntax forBody ::= "(" name: Name "=" init: Expr ","
+                   test: Expr "," step: Expr ")" body: Nest quote {
   let fn loop(unquote(name)) {
     if (unquote(test)) {
       unquote(body);
@@ -737,12 +746,14 @@ The list-comprehension example can likely be broadened into a more serious
 query-style surface with optional recursive tails.
 
 ```fn
-syntax query: Expr ::= "query" "["
-                       projection: Expr
-                       "from" x: Name
-                       "in" xs: Expr
-                       clauses: Syntax(queryClauses(x, xs))
-                       "]" quote {
+macro query: Expr queryHead;
+
+syntax queryHead ::= "["
+                     projection: Expr
+                     "from" x: Name
+                     "in" xs: Expr
+                     clauses: Syntax(queryClauses(x, xs))
+                     "]" quote {
   unquote clauses
 }
 ```
@@ -1061,7 +1072,9 @@ style, but make `pick` recurse over the comma-separated names while threading a
 `used` accumulator as an inherited helper parameter.
 
 ```fn
-syntax search: Expr ::= "search" "[" body: Syntax(searchClauses) "]" {
+macro search: Expr searchHead;
+
+syntax searchHead ::= "[" body: Syntax(searchClauses) "]" {
   body
 };
 

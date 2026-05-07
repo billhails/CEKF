@@ -1,4 +1,6 @@
 let
+    macro choose: Expr chooseHelper;
+
     syntax chooseZero(flag) ::= "," next: Expr {
         flag + next
     }
@@ -6,7 +8,7 @@ let
         flag
     };
 
-    syntax choose: Expr ::= "choose" "(" first: Expr tail: Syntax(chooseZero(first)) ")" {
+    syntax chooseHelper ::= "(" first: Expr tail: Syntax(chooseZero(first)) ")" {
         tail
     };
 in

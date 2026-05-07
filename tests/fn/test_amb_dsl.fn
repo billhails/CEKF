@@ -3,7 +3,9 @@ let
     link "listutils.fn" as list;
     import list operator "_except_";
 
-    syntax search: Expr ::= "search" "[" body: Syntax(searchClauses) "]" {
+    macro search: Expr searchHead;
+
+    syntax searchHead ::= "[" body: Syntax(searchClauses) "]" {
         body
     };
 
