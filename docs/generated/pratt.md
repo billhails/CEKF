@@ -28,6 +28,8 @@ PrattLexer --tokenHead--> PrattToken
 PrattLexer --tokenTail--> PrattToken
 PrattParser --rules--> PrattRecordTable
 PrattParser --macros--> PrattMacroTable
+PrattParser --pendingMacroFixups--> PrattPendingMacroFixup
+PrattParser --pendingInjectedDefinitions--> AstDefinitions
 PrattParser --nameSpaces--> PrattNsIdTable
 PrattParser --lexer--> PrattLexer
 PrattParser --trie--> PrattTrie
@@ -41,6 +43,7 @@ PrattRecord --prefix--> PrattFixityConfig
 PrattRecord --infix--> PrattFixityConfig
 PrattRecord --postfix--> PrattFixityConfig
 PrattExportedOps --exportedRules--> PrattRecordTable
+PrattExportedOps --exportedMacros--> PrattMacroTable
 PrattMixfixPattern --keywords--> PrattStrings
 PrattMixfixPattern --arity--> int
 PrattMixfixPattern --associativity--> PrattAssoc
@@ -54,6 +57,9 @@ PrattMacroSpec --declarationId--> int
 PrattMacroSpec --entryKind--> PrattSyntaxEntryKind
 PrattMacroSpec --resultKind--> PrattSyntaxResultKind
 PrattMacroSpec --headSymbol--> HashSymbol
+PrattMacroSpec --helperTarget--> HashSymbol
+PrattMacroSpec --macroTarget--> HashSymbol
+PrattMacroSpec --syntaxDecl--> AstSyntaxDecl
 PrattMacroSpec --parameters--> SymbolArray
 PrattMacroSpec --patternItems--> PrattMacroPatternItems
 PrattMacroSpec --template--> AstExpression
@@ -62,6 +68,10 @@ PrattMacroSpec --isExprEntry--> bool
 PrattMacroSpec --export--> bool
 PrattMacroSpec --importNsRef--> int
 PrattMacroSpec --importNsSymbol--> HashSymbol
+PrattPendingMacroFixup --helperName--> HashSymbol
+PrattPendingMacroFixup --spec--> PrattMacroSpec
+PrattPendingMacroFixup --syntaxDecl--> AstSyntaxDecl
+PrattPendingMacroFixup --next--> PrattPendingMacroFixup
 PrattMacroAlternative --patternItems--> PrattMacroPatternItems
 PrattMacroAlternative --template--> AstExpression
 PrattMacroAlternative --quotedTemplate--> bool

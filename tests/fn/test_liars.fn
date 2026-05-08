@@ -1,72 +1,28 @@
 let
     link "ambutils.fn" as amb;
     link "listutils.fn" as list;
-    import list operator "_except_";
-
-    macro search: Expr searchHead;
-
-    syntax searchHead ::= "[" body: Syntax(searchClauses) "]" {
-        body
-    };
-
-    syntax searchClauses ::= "yield" result: Expr {
-        result
-    }
-    | "where" cond: Expr ";" rest: Syntax(searchClauses) quote {
-        fn (ignored) { unquote(rest) }(amb.require(unquote(cond)))
-    }
-    | "from" domain: Expr "some" values: Name ";" rest: Syntax(searchClauses) quote {
-        fn (unquote(values)) { unquote(rest) }(amb.some_of(unquote(domain)))
-    }
-    | "from" domain: Expr "pick" first: Name
-        used0: Syntax(pickStart)
-        rest: Syntax(pickTail(domain, used0, first)) {
-        rest
-    };
-
-    syntax pickStart ::= quote {
-        []
-    };
-
-    syntax pickNext(used, current) ::= quote {
-        unquote(used) @@ [unquote(current)]
-    };
-
-    syntax pickTail(domain, used, current) ::= ","
-        next: Name
-        used2: Syntax(pickNext(used, current))
-        tail: Syntax(pickTail(domain, used2, next)) quote {
-        fn (unquote(current)) { unquote(tail) }
-            (amb.one_of(unquote(domain) except unquote(used)))
-    }
-    | ";" rest: Syntax(searchClauses) quote {
-        fn (unquote(current)) { unquote(rest) }
-            (amb.one_of(unquote(domain) except unquote(used)))
-    };
-
+    import amb macro search;
+    import list operator "_::_";
 
     fn liars() {
-        let
-            ranks = list.range(1, 5);
-        in
-            search [
-                from ranks pick betty, ethel, joan, kitty, mary;
-                where (kitty == 2) xor (betty == 3);
-                where (ethel == 1) xor (joan  == 2);
-                where (joan  == 3) xor (ethel == 5);
-                where (kitty == 2) xor (mary  == 4);
-                where (mary  == 4) xor (betty == 1);
-                yield list.map(
-                    fn (#(x, _)) { x },
-                    list.sortBy(
-                        fn (#(_, a), #(_, b)) { a <=> b },
-                        list.zip(
-                            ["Betty", "Ethel", "Joan", "Kitty", "Mary"],
-                            [betty, ethel, joan, kitty, mary]
-                        )
+        search [
+            from 1::5 pick betty, ethel, joan, kitty, mary;
+            where (kitty == 2) xor (betty == 3);
+            where (ethel == 1) xor (joan  == 2);
+            where (joan  == 3) xor (ethel == 5);
+            where (kitty == 2) xor (mary  == 4);
+            where (mary  == 4) xor (betty == 1);
+            yield list.map(
+                fn (#(x, _)) { x },
+                list.sortBy(
+                    fn (#(_, a), #(_, b)) { a <=> b },
+                    list.zip(
+                        ["Betty", "Ethel", "Joan", "Kitty", "Mary"],
+                        [betty, ethel, joan, kitty, mary]
                     )
                 )
-            ]
+            )
+        ]
     }
 in
     assert(liars() == ["Kitty", "Joan", "Betty", "Mary", "Ethel"])

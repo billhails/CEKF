@@ -106,6 +106,7 @@ structs:
             rules: PrattRecordTable
             macros: PrattMacroTable
             pendingMacroFixups: PrattPendingMacroFixup=NULL
+            pendingInjectedDefinitions: AstDefinitions=NULL
             nameSpaces: PrattNsIdTable
             lexer: PrattLexer=NULL
             trie: PrattTrie=NULL
@@ -138,6 +139,7 @@ structs:
                 without reparsing.
         data:
             exportedRules: PrattRecordTable
+            exportedMacros: PrattMacroTable
 
     PrattMixfixPattern:
         meta:

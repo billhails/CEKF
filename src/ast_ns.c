@@ -138,6 +138,8 @@ static AstFarg *nsAstFarg(AstFarg *, VisitorContext);
 static AstExpression *nsAstExpression(AstExpression *, VisitorContext);
 static AstNameSpaceArray *nsAstNameSpaceArray(AstNameSpaceArray *,
                                               VisitorContext);
+static SymbolMap *ensureNameSpaceReplacements(AstNameSpaceArray *nameSpaces,
+                                              int nsId);
 static HashSymbol *nsSymbol(HashSymbol *, VisitorContext);
 
 /////////////////////////////////////
@@ -373,13 +375,42 @@ static VisitorContext getNsReplacements(VisitorContext context, int nsId) {
     if (context.nameSpaces->entries[nsId] == NULL) {
         cant_happen("namespace id %d has not been visited yet [1]", nsId);
     }
-    if (context.nameSpaces->entries[nsId]->replacements == NULL) {
-        cant_happen("namespace id %d has not been visited yet [2]", nsId);
-    }
 #endif
     // CBV
-    context.replacements = context.nameSpaces->entries[nsId]->replacements;
+    context.replacements =
+        ensureNameSpaceReplacements(context.nameSpaces, nsId);
     return context;
+}
+
+static SymbolMap *ensureNameSpaceReplacements(AstNameSpaceArray *nameSpaces,
+                                              int nsId) {
+#ifdef SAFETY_CHECKS
+    if (nsId < 0 || ((Index)nsId) >= nameSpaces->size) {
+        cant_happen("invalid namespace id %d", nsId);
+    }
+    if (nameSpaces->entries[nsId] == NULL) {
+        cant_happen("namespace id %d has not been parsed", nsId);
+    }
+#endif
+    AstNameSpaceImpl *impl = nameSpaces->entries[nsId];
+    if (impl->replacements != NULL) {
+        return impl->replacements;
+    }
+
+    SymbolMap *replacements = newSymbolMap();
+    int save = PROTECT(replacements);
+    VisitorContext context = {.nameSpaces = nameSpaces,
+                              .replacements = replacements};
+    AstDefinitions *defs = impl->definitions;
+    if (defs != NULL) {
+        defs = makeCurrentFileDefinition(impl->id->fileName->entries, CPI(impl),
+                                         impl->definitions);
+        PROTECT(defs);
+    }
+    populateReplacementsFromDefinitions(defs, impl->id, context);
+    impl->replacements = replacements;
+    UNPROTECT(save);
+    return replacements;
 }
 
 ///////////////////////
@@ -465,6 +496,30 @@ AstProg *nsAstProg(AstProg *node) {
     UNPROTECT(save);
     LEAVE(nsAstProg);
     return result;
+}
+
+AstExpression *nsAstExpressionForNameSpace(AstExpression *node,
+                                           AstNameSpaceArray *nameSpaces,
+                                           int nsId) {
+    if (node == NULL || nameSpaces == NULL || nsId < 0) {
+        return node;
+    }
+    VisitorContext context = {
+        .nameSpaces = nameSpaces,
+        .replacements = ensureNameSpaceReplacements(nameSpaces, nsId)};
+    return nsAstExpression(node, context);
+}
+
+AstSyntaxDecl *nsAstSyntaxDeclForNameSpace(AstSyntaxDecl *node,
+                                           AstNameSpaceArray *nameSpaces,
+                                           int nsId) {
+    if (node == NULL || nameSpaces == NULL || nsId < 0) {
+        return node;
+    }
+    VisitorContext context = {
+        .nameSpaces = nameSpaces,
+        .replacements = ensureNameSpaceReplacements(nameSpaces, nsId)};
+    return nsAstSyntaxDecl(node, context);
 }
 
 static AstNest *nsAstNest(AstNest *node, VisitorContext context) {

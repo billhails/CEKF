@@ -19,5 +19,11 @@
  */
 
 AstProg *nsAstProg(AstProg *node);
+AstExpression *nsAstExpressionForNameSpace(AstExpression *node,
+                                           AstNameSpaceArray *nameSpaces,
+                                           int nsId);
+AstSyntaxDecl *nsAstSyntaxDeclForNameSpace(AstSyntaxDecl *node,
+                                           AstNameSpaceArray *nameSpaces,
+                                           int nsId);
 
 #endif
