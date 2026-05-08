@@ -9,7 +9,10 @@ syntax searchHead ::= "[" body: Syntax(searchClauses) "]" {
     body
 };
 
-syntax searchClauses ::= "yield" result: Expr {
+syntax searchClauses ::= "yield" result: Expr ";" {
+    result
+}
+| "yield" result: Expr {
     result
 }
 | "where" cond: Expr ";" rest: Syntax(searchClauses) quote {

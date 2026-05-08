@@ -1,0 +1,5 @@
+let
+    link "ambutils.fn" as amb;
+    import amb macro search;
+in
+    assert(search [ yield 42; ] == 42)

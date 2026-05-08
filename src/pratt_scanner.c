@@ -326,17 +326,30 @@ static void advance(PrattBuffer *buffer) {
  */
 static inline PrattToken *_lookUpTrieSymbol(PrattParser *parser,
                                             PrattLexer *lexer) {
+    PrattBuffer *buffer = lexer->bufList->buffer;
     PrattParser *p = parser;
+    HashSymbol *bestSymbol = NULL;
+    int bestOffset = 0;
+
     while (p) {
-        HashSymbol *symbol =
-            lookUpTrieRecursive(p->trie, lexer->bufList->buffer, 0, NULL);
-        if (symbol != NULL) {
-            PrattToken *res = tokenFromSymbol(lexer->bufList, symbol, symbol);
-            advance(lexer->bufList->buffer);
-            return res;
+        buffer->offset = 0;
+        HashSymbol *symbol = lookUpTrieRecursive(p->trie, buffer, 0, NULL);
+        if (symbol != NULL && buffer->offset > bestOffset) {
+            bestSymbol = symbol;
+            bestOffset = buffer->offset;
         }
         p = p->next;
     }
+
+    if (bestSymbol != NULL) {
+        buffer->offset = bestOffset;
+        PrattToken *res =
+            tokenFromSymbol(lexer->bufList, bestSymbol, bestSymbol);
+        advance(buffer);
+        return res;
+    }
+
+    buffer->offset = 0;
     return NULL;
 }
 
