@@ -2928,6 +2928,24 @@ prepareAstSyntaxTemplateDefinition(AstSyntaxTemplateDefinition *node,
         }
         break;
     }
+    case AST_SYNTAXTEMPLATEDEFINITION_TYPE_SYNTAXUSE: {
+        // AstSyntaxTemplateSyntaxUse
+        AstSyntaxTemplateSyntaxUse *variant =
+            getAstSyntaxTemplateDefinition_SyntaxUse(node);
+        AstSyntaxTemplateBindings *new_bindings =
+            prepareAstSyntaxTemplateBindings(variant->bindings, context);
+        if (new_bindings != variant->bindings) {
+            PROTECT(new_bindings);
+            AstSyntaxTemplateSyntaxUse *new_variant =
+                newAstSyntaxTemplateSyntaxUse(
+                    CPI(variant), variant->declarationId,
+                    variant->alternativeIndex, new_bindings);
+            PROTECT(new_variant);
+            result = newAstSyntaxTemplateDefinition_SyntaxUse(CPI(node),
+                                                              new_variant);
+        }
+        break;
+    }
     default:
         cant_happen("unrecognized "
                     "AstSyntaxTemplateDefinit"

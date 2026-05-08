@@ -906,6 +906,7 @@ unions:
             lazy: AstSyntaxTemplateDefLazy
             alias: AstSyntaxTemplateAlias
             typeDef: AstSyntaxTemplateTypeDef
+            syntaxUse: AstSyntaxTemplateSyntaxUse
 
     AstSyntaxTemplateExpr:
         meta:

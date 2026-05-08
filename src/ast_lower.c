@@ -1042,6 +1042,20 @@ instantiateTemplateDefinition(AstSyntaxTemplateDefinition *node,
         UNPROTECT(save);
         return wrapped;
     }
+    case AST_SYNTAXTEMPLATEDEFINITION_TYPE_SYNTAXUSE: {
+        AstSyntaxTemplateSyntaxUse *syntaxUse =
+            getAstSyntaxTemplateDefinition_SyntaxUse(node);
+        AstSyntaxBindings *bindings =
+            instantiateTemplateBindings(syntaxUse->bindings, context);
+        int save = PROTECT(bindings);
+        AstDefSyntaxUse *result =
+            newAstDefSyntaxUse(CPI(syntaxUse), syntaxUse->declarationId,
+                               syntaxUse->alternativeIndex, bindings);
+        PROTECT(result);
+        AstDefinition *wrapped = newAstDefinition_SyntaxUse(CPI(node), result);
+        UNPROTECT(save);
+        return wrapped;
+    }
     default:
         cant_happen("unrecognized AstSyntaxTemplateDefinition type %d",
                     node->type);
@@ -3364,6 +3378,24 @@ lowerAstSyntaxTemplateDefinition(AstSyntaxTemplateDefinition *node,
             PROTECT(new_variant);
             result =
                 newAstSyntaxTemplateDefinition_TypeDef(CPI(node), new_variant);
+        }
+        break;
+    }
+    case AST_SYNTAXTEMPLATEDEFINITION_TYPE_SYNTAXUSE: {
+        // AstSyntaxTemplateSyntaxUse
+        AstSyntaxTemplateSyntaxUse *variant =
+            getAstSyntaxTemplateDefinition_SyntaxUse(node);
+        AstSyntaxTemplateBindings *new_bindings =
+            lowerAstSyntaxTemplateBindings(variant->bindings, context);
+        if (new_bindings != variant->bindings) {
+            PROTECT(new_bindings);
+            AstSyntaxTemplateSyntaxUse *new_variant =
+                newAstSyntaxTemplateSyntaxUse(
+                    CPI(variant), variant->declarationId,
+                    variant->alternativeIndex, new_bindings);
+            PROTECT(new_variant);
+            result = newAstSyntaxTemplateDefinition_SyntaxUse(CPI(node),
+                                                              new_variant);
         }
         break;
     }

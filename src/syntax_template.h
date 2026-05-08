@@ -29,8 +29,9 @@ bool prattIsSyntaxPatternBoundaryToken(PrattToken *token);
 HashSymbol *prattSyntaxSymbol(PrattParser *parser);
 SymbolArray *prattParseSyntaxCallArguments(PrattParser *parser);
 SymbolArray *prattParseOptionalSyntaxParameters(PrattParser *parser);
-PrattMacroAlternative *prattParseSyntaxAlternative(PrattParser *parser,
-                                                   SymbolArray *parameters);
+PrattMacroAlternative *
+prattParseSyntaxAlternative(PrattParser *parser, SymbolArray *parameters,
+                            PrattSyntaxResultKind expectedResultKind);
 AstSyntaxTemplate *
 prattConvertSyntaxExprTemplate(PrattParser *parser, ParserInfo PI,
                                AstExpression *template, SymbolArray *parameters,

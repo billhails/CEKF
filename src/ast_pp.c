@@ -911,6 +911,18 @@ ppAstSyntaxTemplateDefinition(FILE *out,
         fprintf(out, "}");
         break;
     }
+    case AST_SYNTAXTEMPLATEDEFINITION_TYPE_SYNTAXUSE: {
+        AstSyntaxTemplateSyntaxUse *syntaxUse =
+            getAstSyntaxTemplateDefinition_SyntaxUse(definition);
+        fprintf(out, "syntax-use-def[decl=%d alt=%d]", syntaxUse->declarationId,
+                syntaxUse->alternativeIndex);
+        if (syntaxUse->bindings != NULL &&
+            sizeAstSyntaxTemplateBindings(syntaxUse->bindings) > 0) {
+            fprintf(out, " ");
+            ppAstSyntaxTemplateBindings(out, syntaxUse->bindings);
+        }
+        break;
+    }
     default:
         cant_happen("unrecognised %s",
                     astSyntaxTemplateDefinitionTypeName(definition->type));

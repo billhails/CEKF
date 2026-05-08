@@ -1719,6 +1719,29 @@ nsAstSyntaxTemplateDefinition(AstSyntaxTemplateDefinition *node,
         }
         break;
     }
+    case AST_SYNTAXTEMPLATEDEFINITION_TYPE_SYNTAXUSE: {
+        AstSyntaxTemplateSyntaxUse *variant =
+            getAstSyntaxTemplateDefinition_SyntaxUse(node);
+        bool changed = false;
+        int new_declaration_id = variant->declarationId;
+        changed =
+            changed || lookupSyntaxDeclRemap(context, variant->declarationId,
+                                             &new_declaration_id);
+        AstSyntaxTemplateBindings *new_bindings =
+            nsAstSyntaxTemplateBindings(variant->bindings, context);
+        PROTECT(new_bindings);
+        changed = changed || (new_bindings != variant->bindings);
+        if (changed) {
+            AstSyntaxTemplateSyntaxUse *new_variant =
+                newAstSyntaxTemplateSyntaxUse(CPI(variant), new_declaration_id,
+                                              variant->alternativeIndex,
+                                              new_bindings);
+            PROTECT(new_variant);
+            result = newAstSyntaxTemplateDefinition_SyntaxUse(CPI(node),
+                                                              new_variant);
+        }
+        break;
+    }
     default:
         cant_happen("unrecognized %s",
                     astSyntaxTemplateDefinitionTypeName(node->type));

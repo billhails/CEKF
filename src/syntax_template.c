@@ -782,6 +782,20 @@ convertTemplateDefinition(AstDefinition *definition, TemplateContext *context) {
         UNPROTECT(save);
         return wrapped;
     }
+    case AST_DEFINITION_TYPE_SYNTAXUSE: {
+        AstDefSyntaxUse *syntaxUse = getAstDefinition_SyntaxUse(definition);
+        AstSyntaxTemplateBindings *bindings =
+            convertTemplateBindings(syntaxUse->bindings, context);
+        int save = PROTECT(bindings);
+        AstSyntaxTemplateSyntaxUse *result = newAstSyntaxTemplateSyntaxUse(
+            CPI(syntaxUse), syntaxUse->declarationId,
+            syntaxUse->alternativeIndex, bindings);
+        PROTECT(result);
+        AstSyntaxTemplateDefinition *wrapped =
+            newAstSyntaxTemplateDefinition_SyntaxUse(CPI(definition), result);
+        UNPROTECT(save);
+        return wrapped;
+    }
     default:
         parserErrorAt(CPI(definition), context->parser,
                       "unsupported definition in syntax template");
@@ -1210,8 +1224,9 @@ SymbolArray *prattParseOptionalSyntaxParameters(PrattParser *parser) {
     return parameters;
 }
 
-PrattMacroAlternative *prattParseSyntaxAlternative(PrattParser *parser,
-                                                   SymbolArray *parameters) {
+PrattMacroAlternative *
+prattParseSyntaxAlternative(PrattParser *parser, SymbolArray *parameters,
+                            PrattSyntaxResultKind expectedResultKind) {
     PrattMacroPatternItems *patternItems = macroPatternItems(parser);
     int save = PROTECT(patternItems);
     AstExpression *template = NULL;
@@ -1258,7 +1273,9 @@ PrattMacroAlternative *prattParseSyntaxAlternative(PrattParser *parser,
             PROTECT(template);
         }
     } else {
-        AstNest *body = prattNest(parser);
+        AstNest *body = expectedResultKind == PRATTSYNTAXRESULTKIND_TYPE_DEF
+                            ? prattDefTemplateNest(parser)
+                            : prattNest(parser);
         if (body != NULL) {
             PROTECT(body);
             template = newAstExpression_Nest(CPI(body), body);

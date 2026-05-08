@@ -619,6 +619,8 @@ static void synchronize(PrattParser *parser) {
     for (;;) {
         if (check(parser, TOK_EOF()))
             return;
+        if (check(parser, TOK_RCURLY()))
+            return;
         if (check(parser, TOK_SWITCH()))
             return;
         if (check(parser, TOK_FN()))
@@ -2587,9 +2589,10 @@ static HashSymbol *syntaxUnquoteSymbol(void) {
     return prattSyntaxUnquoteSymbol();
 }
 
-static PrattMacroAlternative *parseSyntaxAlternative(PrattParser *parser,
-                                                     SymbolArray *parameters) {
-    return prattParseSyntaxAlternative(parser, parameters);
+static PrattMacroAlternative *
+parseSyntaxAlternative(PrattParser *parser, SymbolArray *parameters,
+                       PrattSyntaxResultKind resultKind) {
+    return prattParseSyntaxAlternative(parser, parameters, resultKind);
 }
 
 static void validateSyntaxAlternatives(PrattParser *parser,
@@ -2994,11 +2997,13 @@ static AstDefinition *syntaxDefinition(PrattParser *parser) {
         return newAstDefinition_Blank(TOKPI(tok));
     }
     consume(parser, TOK_PRODUCTION());
+    PrattSyntaxResultKind parseResultKind =
+        inferHelperSyntaxResultKind(parser, ruleName, TOKPI(tok));
     PrattMacroAlternatives *alternatives = newPrattMacroAlternatives();
     PROTECT(alternatives);
     do {
         PrattMacroAlternative *alternative =
-            parseSyntaxAlternative(parser, parameters);
+            parseSyntaxAlternative(parser, parameters, parseResultKind);
         int save2 = PROTECT(alternative);
         pushPrattMacroAlternatives(alternatives, alternative);
         UNPROTECT(save2);
@@ -3755,6 +3760,21 @@ static AstNest *nest(PrattParser *parser) {
 }
 
 AstNest *prattNest(PrattParser *parser) { return nest(parser); }
+
+AstNest *prattDefTemplateNest(PrattParser *parser) {
+    ENTER(prattDefTemplateNest);
+    consume(parser, TOK_LCURLY());
+    PrattParser *child = makeChildParser(parser);
+    int save = PROTECT(child);
+    AstDefinitions *defs = definitions(child, TOK_RCURLY());
+    PROTECT(defs);
+    consume(parser, TOK_RCURLY());
+    ParserInfo PI = defs != NULL ? CPI(defs) : LEXPI(parser->lexer);
+    AstNest *body = newAstNest(PI, defs, NULL);
+    LEAVE(prattDefTemplateNest);
+    UNPROTECT(save);
+    return body;
+}
 
 /**
  * @brief Parse the body of a nested block, which can contain definitions or

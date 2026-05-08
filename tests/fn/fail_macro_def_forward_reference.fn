@@ -1,0 +1,14 @@
+let
+    macro annotate: Def annotateHelper;
+
+    syntax annotateBaseHelper ::= name: Name "=" value: Expr {
+        name = value
+    };
+
+    syntax annotateHelper ::= name: Name "=" value: Expr {
+        annotateBase name = value
+    };
+
+    macro annotateBase: Def annotateBaseHelper;
+in
+    annotate answer = 42
