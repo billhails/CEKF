@@ -1,0 +1,7 @@
+namespace
+
+export macro annotate: Def annotateHelper;
+
+syntax annotateHelper ::= name: Name "=" value: Expr {
+    name = value
+};

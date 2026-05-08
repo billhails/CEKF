@@ -89,6 +89,8 @@ static void ppAstSyntaxTemplateExprs(FILE *out, AstSyntaxTemplateExprs *);
 static void ppAstSyntaxTemplateNameRef(FILE *out, AstSyntaxTemplateNameRef *);
 static void ppAstSyntaxTemplateBinder(FILE *out, AstSyntaxTemplateBinder *);
 static void ppAstSyntaxTemplateBinders(FILE *out, AstSyntaxTemplateBinders *);
+static void ppAstSyntaxTemplateBinding(FILE *out, AstSyntaxTemplateBinding *);
+static void ppAstSyntaxTemplateBindings(FILE *out, AstSyntaxTemplateBindings *);
 static void ppAstSyntaxTemplateFarg(FILE *out, AstSyntaxTemplateFarg *);
 static void ppAstSyntaxTemplateFargList(FILE *out, AstSyntaxTemplateFargList *);
 static void ppAstSyntaxTemplateTaggedArgs(FILE *out,
@@ -999,6 +1001,28 @@ static void ppAstSyntaxTemplateExprs(FILE *out,
     }
 }
 
+static void ppAstSyntaxTemplateBinding(FILE *out,
+                                       AstSyntaxTemplateBinding *binding) {
+    fprintf(out, "%s=", binding->name->name);
+    ppAstSyntaxTemplateExpr(out, binding->value);
+}
+
+static void ppAstSyntaxTemplateBindings(FILE *out,
+                                        AstSyntaxTemplateBindings *bindings) {
+    if (bindings == NULL) {
+        return;
+    }
+    fprintf(out, "[");
+    for (Index i = 0; i < sizeAstSyntaxTemplateBindings(bindings); ++i) {
+        ppAstSyntaxTemplateBinding(out,
+                                   getAstSyntaxTemplateBindings(bindings, i));
+        if (i + 1 < sizeAstSyntaxTemplateBindings(bindings)) {
+            fprintf(out, ", ");
+        }
+    }
+    fprintf(out, "]");
+}
+
 static void ppAstSyntaxTemplateAltArgs(FILE *out,
                                        AstSyntaxTemplateAltArgs *altArgs) {
     while (altArgs != NULL) {
@@ -1085,6 +1109,18 @@ static void ppAstSyntaxTemplateExpr(FILE *out,
     case AST_SYNTAXTEMPLATEEXPR_TYPE_CHARACTER:
         ppAstCharacter(out, getAstSyntaxTemplateExpr_Character(expression));
         break;
+    case AST_SYNTAXTEMPLATEEXPR_TYPE_SYNTAXUSE: {
+        AstSyntaxTemplateSyntaxUse *syntaxUse =
+            getAstSyntaxTemplateExpr_SyntaxUse(expression);
+        fprintf(out, "syntax-use-expr[decl=%d alt=%d]",
+                syntaxUse->declarationId, syntaxUse->alternativeIndex);
+        if (syntaxUse->bindings != NULL &&
+            sizeAstSyntaxTemplateBindings(syntaxUse->bindings) > 0) {
+            fprintf(out, " ");
+            ppAstSyntaxTemplateBindings(out, syntaxUse->bindings);
+        }
+        break;
+    }
     case AST_SYNTAXTEMPLATEEXPR_TYPE_FUNCALL: {
         AstSyntaxTemplateFunCall *funCall =
             getAstSyntaxTemplateExpr_FunCall(expression);

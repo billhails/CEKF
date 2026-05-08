@@ -198,9 +198,24 @@ static PrattExportedOps *captureNameSpaceOperatorExports(PrattParser *parser);
 static bool captureExportedSyntaxSpec(PrattParser *parser,
                                       PrattExportedOps *ops,
                                       PrattMacroSpec *spec);
+static PrattMacroSpec *findPrattMacroSpecByDeclarationId(PrattMacroTable *table,
+                                                         int declarationId);
+static bool captureTemplateSyntaxDependencies(PrattParser *parser,
+                                              PrattExportedOps *ops,
+                                              AstExpression *template);
 static PrattMacroSpec *cloneImportedSyntaxSpec(PrattMacroSpec *source,
                                                int declarationId, int nsRef,
                                                HashSymbol *nsSymbol);
+static bool stageTemplateSyntaxDependencies(PrattParser *parser,
+                                            PrattExportedOps *ops,
+                                            PrattMacroSpec *source,
+                                            AstExpression *template, int nsRef,
+                                            HashSymbol *nsSymbol,
+                                            PrattMacroTable *stagedSpecs);
+static bool appendImportedSyntaxDeclRemapForTemplate(
+    PrattParser *parser, PrattExportedOps *ops, PrattMacroSpec *source,
+    AstExpression *template, PrattMacroTable *stagedSpecs, IntArray *fromIds,
+    IntArray *toIds);
 static bool stageImportedSyntaxSpec(PrattParser *parser, PrattExportedOps *ops,
                                     PrattMacroSpec *source, int nsRef,
                                     HashSymbol *nsSymbol,
@@ -921,6 +936,49 @@ static bool captureSyntaxPatternDependencies(PrattParser *parser,
     return true;
 }
 
+static PrattMacroSpec *findPrattMacroSpecByDeclarationId(PrattMacroTable *table,
+                                                         int declarationId) {
+    if (table == NULL) {
+        return NULL;
+    }
+
+    Index index = 0;
+    PrattMacroSpec *value = NULL;
+    while (iteratePrattMacroTable(table, &index, &value) != NULL) {
+        if (value != NULL && value->declarationId == declarationId) {
+            return value;
+        }
+    }
+
+    return NULL;
+}
+
+static bool captureTemplateSyntaxDependencies(PrattParser *parser,
+                                              PrattExportedOps *ops,
+                                              AstExpression *template) {
+    if (template == NULL) {
+        return true;
+    }
+
+    IntArray *declarationIds =
+        collectAstExpressionSyntaxUseDeclarationIds(template, nameSpaces);
+    int save = PROTECT(declarationIds);
+    for (Index i = 0; i < countIntArray(declarationIds); ++i) {
+        int declarationId = getIntArray(declarationIds, i);
+        PrattMacroSpec *dependency =
+            findPrattMacroSpecByDeclarationId(parser->macros, declarationId);
+        if (dependency == NULL) {
+            continue;
+        }
+        if (!captureExportedSyntaxSpec(parser, ops, dependency)) {
+            UNPROTECT(save);
+            return false;
+        }
+    }
+    UNPROTECT(save);
+    return true;
+}
+
 static bool captureExportedSyntaxSpec(PrattParser *parser,
                                       PrattExportedOps *ops,
                                       PrattMacroSpec *spec) {
@@ -961,6 +1019,23 @@ static bool captureExportedSyntaxSpec(PrattParser *parser,
         return false;
     }
 
+    if (spec->alternatives != NULL) {
+        for (Index i = 0; i < sizePrattMacroAlternatives(spec->alternatives);
+             ++i) {
+            PrattMacroAlternative *alternative =
+                getPrattMacroAlternatives(spec->alternatives, i);
+            if (alternative == NULL ||
+                captureTemplateSyntaxDependencies(parser, ops,
+                                                  alternative->template)) {
+                continue;
+            }
+            return false;
+        }
+    } else if (!captureTemplateSyntaxDependencies(parser, ops,
+                                                  spec->template)) {
+        return false;
+    }
+
     return true;
 }
 
@@ -976,26 +1051,6 @@ static PrattMacroSpec *cloneImportedSyntaxSpec(PrattMacroSpec *source,
     clone->export = false;
     clone->importNsRef = nsRef;
     clone->importNsSymbol = nsSymbol;
-    if (nsRef >= 0) {
-        clone->template =
-            nsAstExpressionForNameSpace(clone->template, nameSpaces, nsRef);
-        if (clone->alternatives != NULL) {
-            for (Index i = 0;
-                 i < sizePrattMacroAlternatives(clone->alternatives); ++i) {
-                PrattMacroAlternative *alternative =
-                    getPrattMacroAlternatives(clone->alternatives, i);
-                if (alternative != NULL) {
-                    alternative->template = nsAstExpressionForNameSpace(
-                        alternative->template, nameSpaces, nsRef);
-                }
-            }
-        }
-        clone->syntaxDecl =
-            nsAstSyntaxDeclForNameSpace(clone->syntaxDecl, nameSpaces, nsRef);
-        if (clone->syntaxDecl != NULL) {
-            clone->syntaxDecl->declarationId = declarationId;
-        }
-    }
     UNPROTECT(save);
     return clone;
 }
@@ -1028,6 +1083,93 @@ static bool stageSyntaxCallDependencies(PrattParser *parser,
         }
     }
 
+    return true;
+}
+
+static bool stageTemplateSyntaxDependencies(PrattParser *parser,
+                                            PrattExportedOps *ops,
+                                            PrattMacroSpec *source,
+                                            AstExpression *template, int nsRef,
+                                            HashSymbol *nsSymbol,
+                                            PrattMacroTable *stagedSpecs) {
+    if (template == NULL) {
+        return true;
+    }
+
+    IntArray *declarationIds =
+        collectAstExpressionSyntaxUseDeclarationIds(template, nameSpaces);
+    int save = PROTECT(declarationIds);
+    for (Index i = 0; i < countIntArray(declarationIds); ++i) {
+        int declarationId = getIntArray(declarationIds, i);
+        PrattMacroSpec *dependency = findPrattMacroSpecByDeclarationId(
+            ops->exportedMacros, declarationId);
+        if (dependency == NULL) {
+            parserError(parser,
+                        "imported macro %s references syntax declaration %d "
+                        "that was not exported",
+                        source->headSymbol->name, declarationId);
+            UNPROTECT(save);
+            return false;
+        }
+        if (!stageImportedSyntaxSpec(parser, ops, dependency, nsRef, nsSymbol,
+                                     stagedSpecs)) {
+            UNPROTECT(save);
+            return false;
+        }
+    }
+    UNPROTECT(save);
+    return true;
+}
+
+static bool appendImportedSyntaxDeclRemapForTemplate(
+    PrattParser *parser, PrattExportedOps *ops, PrattMacroSpec *source,
+    AstExpression *template, PrattMacroTable *stagedSpecs, IntArray *fromIds,
+    IntArray *toIds) {
+    if (template == NULL) {
+        return true;
+    }
+
+    IntArray *declarationIds =
+        collectAstExpressionSyntaxUseDeclarationIds(template, nameSpaces);
+    int save = PROTECT(declarationIds);
+    for (Index i = 0; i < countIntArray(declarationIds); ++i) {
+        int declarationId = getIntArray(declarationIds, i);
+        bool seen = false;
+        for (Index j = 0; j < countIntArray(fromIds); ++j) {
+            if (getIntArray(fromIds, j) == declarationId) {
+                seen = true;
+                break;
+            }
+        }
+        if (seen) {
+            continue;
+        }
+
+        PrattMacroSpec *dependency = findPrattMacroSpecByDeclarationId(
+            ops->exportedMacros, declarationId);
+        if (dependency == NULL) {
+            parserError(parser,
+                        "imported macro %s references syntax declaration %d "
+                        "that was not exported",
+                        source->headSymbol->name, declarationId);
+            UNPROTECT(save);
+            return false;
+        }
+
+        PrattMacroSpec *stagedDependency = NULL;
+        getPrattMacroTable(stagedSpecs, dependency->headSymbol,
+                           &stagedDependency);
+        if (stagedDependency == NULL) {
+            parserError(parser, "imported macro %s is missing staged syntax %s",
+                        source->headSymbol->name, dependency->headSymbol->name);
+            UNPROTECT(save);
+            return false;
+        }
+
+        pushIntArray(fromIds, declarationId);
+        pushIntArray(toIds, stagedDependency->declarationId);
+    }
+    UNPROTECT(save);
     return true;
 }
 
@@ -1083,6 +1225,73 @@ static bool stageImportedSyntaxSpec(PrattParser *parser, PrattExportedOps *ops,
                                             nsRef, nsSymbol, stagedSpecs)) {
         UNPROTECT(save);
         return false;
+    }
+
+    if (source->alternatives != NULL) {
+        for (Index i = 0; i < sizePrattMacroAlternatives(source->alternatives);
+             ++i) {
+            PrattMacroAlternative *alternative =
+                getPrattMacroAlternatives(source->alternatives, i);
+            if (alternative == NULL ||
+                stageTemplateSyntaxDependencies(parser, ops, source,
+                                                alternative->template, nsRef,
+                                                nsSymbol, stagedSpecs)) {
+                continue;
+            }
+            UNPROTECT(save);
+            return false;
+        }
+    } else if (!stageTemplateSyntaxDependencies(parser, ops, source,
+                                                source->template, nsRef,
+                                                nsSymbol, stagedSpecs)) {
+        UNPROTECT(save);
+        return false;
+    }
+
+    IntArray *fromIds = newIntArray();
+    PROTECT(fromIds);
+    IntArray *toIds = newIntArray();
+    PROTECT(toIds);
+    pushIntArray(fromIds, source->declarationId);
+    pushIntArray(toIds, clone->declarationId);
+    if (source->alternatives != NULL) {
+        for (Index i = 0; i < sizePrattMacroAlternatives(source->alternatives);
+             ++i) {
+            PrattMacroAlternative *alternative =
+                getPrattMacroAlternatives(source->alternatives, i);
+            if (alternative == NULL ||
+                appendImportedSyntaxDeclRemapForTemplate(
+                    parser, ops, source, alternative->template, stagedSpecs,
+                    fromIds, toIds)) {
+                continue;
+            }
+            UNPROTECT(save);
+            return false;
+        }
+    } else if (!appendImportedSyntaxDeclRemapForTemplate(
+                   parser, ops, source, source->template, stagedSpecs, fromIds,
+                   toIds)) {
+        UNPROTECT(save);
+        return false;
+    }
+
+    clone->template = nsAstExpressionForImport(clone->template, nameSpaces,
+                                               nsRef, fromIds, toIds);
+    if (clone->alternatives != NULL) {
+        for (Index i = 0; i < sizePrattMacroAlternatives(clone->alternatives);
+             ++i) {
+            PrattMacroAlternative *alternative =
+                getPrattMacroAlternatives(clone->alternatives, i);
+            if (alternative != NULL) {
+                alternative->template = nsAstExpressionForImport(
+                    alternative->template, nameSpaces, nsRef, fromIds, toIds);
+            }
+        }
+    }
+    clone->syntaxDecl = nsAstSyntaxDeclForImport(clone->syntaxDecl, nameSpaces,
+                                                 nsRef, fromIds, toIds);
+    if (clone->syntaxDecl != NULL) {
+        clone->syntaxDecl->declarationId = clone->declarationId;
     }
 
     UNPROTECT(save);

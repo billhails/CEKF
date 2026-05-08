@@ -1,0 +1,14 @@
+namespace
+
+export macro sum: Expr internalSum;
+
+syntax sumTail(total) ::= "," next: Expr rest: Syntax(sumTail(next)) {
+    total + rest
+}
+| {
+    total
+};
+
+syntax internalSum ::= "(" first: Expr tail: Syntax(sumTail(first)) ")" {
+    tail
+};

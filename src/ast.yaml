@@ -485,6 +485,18 @@ structs:
             value: AstExpression
             inherited: bool=false
 
+    AstSyntaxTemplateBinding:
+        meta:
+            brief: Template-aware syntax binding
+            description: >-
+                One syntax binding stored inside template IR so nested syntax
+                uses can still instantiate bound expressions through the outer
+                template.
+        data:
+            name: HashSymbol
+            value: AstSyntaxTemplateExpr
+            inherited: bool=false
+
     AstExprSyntaxUse:
         meta:
             brief: Expression-position syntax use
@@ -561,6 +573,18 @@ structs:
         data:
             function: AstSyntaxTemplateExpr
             arguments: AstSyntaxTemplateExprs
+
+    AstSyntaxTemplateSyntaxUse:
+        meta:
+            brief: Template syntax use node
+            description: >-
+                A nested syntax use stored in template IR. It preserves the
+                original declaration id and alternative index while carrying
+                template-aware binding values.
+        data:
+            declarationId: int
+            alternativeIndex: int
+            bindings: AstSyntaxTemplateBindings
 
     AstSyntaxTemplateLookUp:
         meta:
@@ -896,6 +920,7 @@ unions:
             nameRef: AstSyntaxTemplateNameRef
             number: MaybeBigInt
             character: character
+            syntaxUse: AstSyntaxTemplateSyntaxUse
             funCall: AstSyntaxTemplateFunCall
             lookUp: AstSyntaxTemplateLookUp
             fun: AstSyntaxTemplateFunction
@@ -974,6 +999,12 @@ arrays:
             brief: Array of template binders
         data:
             entries: AstSyntaxTemplateBinder
+
+    AstSyntaxTemplateBindings:
+        meta:
+            brief: Array of template syntax bindings
+        data:
+            entries: AstSyntaxTemplateBinding
 
     AstSyntaxTemplateExprs:
         meta:

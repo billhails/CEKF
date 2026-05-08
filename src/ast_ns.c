@@ -41,6 +41,9 @@
 typedef struct VisitorContext {
     AstNameSpaceArray *nameSpaces;
     SymbolMap *replacements;
+    IntArray *syntaxDeclRemapFrom;
+    IntArray *syntaxDeclRemapTo;
+    IntArray *collectedSyntaxDeclIds;
 } VisitorContext;
 
 static AstNest *nsAstNest(AstNest *, VisitorContext);
@@ -106,6 +109,10 @@ static AstSyntaxTemplateBinder *
 nsAstSyntaxTemplateBinder(AstSyntaxTemplateBinder *, VisitorContext);
 static AstSyntaxTemplateBinders *
 nsAstSyntaxTemplateBinders(AstSyntaxTemplateBinders *, VisitorContext);
+static AstSyntaxTemplateBinding *
+nsAstSyntaxTemplateBinding(AstSyntaxTemplateBinding *, VisitorContext);
+static AstSyntaxTemplateBindings *
+nsAstSyntaxTemplateBindings(AstSyntaxTemplateBindings *, VisitorContext);
 static AstSyntaxTemplateExpr *nsAstSyntaxTemplateExpr(AstSyntaxTemplateExpr *,
                                                       VisitorContext);
 static AstSyntaxTemplateExprs *
@@ -141,6 +148,9 @@ static AstNameSpaceArray *nsAstNameSpaceArray(AstNameSpaceArray *,
 static SymbolMap *ensureNameSpaceReplacements(AstNameSpaceArray *nameSpaces,
                                               int nsId);
 static HashSymbol *nsSymbol(HashSymbol *, VisitorContext);
+static bool lookupSyntaxDeclRemap(VisitorContext context, int declarationId,
+                                  int *remapped);
+static void collectSyntaxDeclId(VisitorContext context, int declarationId);
 
 /////////////////////////////////////
 // The main rewrite tool for lookups
@@ -382,6 +392,45 @@ static VisitorContext getNsReplacements(VisitorContext context, int nsId) {
     return context;
 }
 
+static bool lookupSyntaxDeclRemap(VisitorContext context, int declarationId,
+                                  int *remapped) {
+    if (context.syntaxDeclRemapFrom == NULL ||
+        context.syntaxDeclRemapTo == NULL) {
+        return false;
+    }
+
+    Index count = countIntArray(context.syntaxDeclRemapFrom);
+    if (count != countIntArray(context.syntaxDeclRemapTo)) {
+        cant_happen("syntax declaration remap arrays out of sync");
+    }
+
+    for (Index i = 0; i < count; ++i) {
+        if (getIntArray(context.syntaxDeclRemapFrom, i) != declarationId) {
+            continue;
+        }
+        if (remapped != NULL) {
+            *remapped = getIntArray(context.syntaxDeclRemapTo, i);
+        }
+        return true;
+    }
+
+    return false;
+}
+
+static void collectSyntaxDeclId(VisitorContext context, int declarationId) {
+    if (context.collectedSyntaxDeclIds == NULL) {
+        return;
+    }
+
+    for (Index i = 0; i < countIntArray(context.collectedSyntaxDeclIds); ++i) {
+        if (getIntArray(context.collectedSyntaxDeclIds, i) == declarationId) {
+            return;
+        }
+    }
+
+    pushIntArray(context.collectedSyntaxDeclIds, declarationId);
+}
+
 static SymbolMap *ensureNameSpaceReplacements(AstNameSpaceArray *nameSpaces,
                                               int nsId) {
 #ifdef SAFETY_CHECKS
@@ -501,25 +550,91 @@ AstProg *nsAstProg(AstProg *node) {
 AstExpression *nsAstExpressionForNameSpace(AstExpression *node,
                                            AstNameSpaceArray *nameSpaces,
                                            int nsId) {
-    if (node == NULL || nameSpaces == NULL || nsId < 0) {
-        return node;
-    }
-    VisitorContext context = {
-        .nameSpaces = nameSpaces,
-        .replacements = ensureNameSpaceReplacements(nameSpaces, nsId)};
-    return nsAstExpression(node, context);
+    return nsAstExpressionForImport(node, nameSpaces, nsId, NULL, NULL);
 }
 
 AstSyntaxDecl *nsAstSyntaxDeclForNameSpace(AstSyntaxDecl *node,
                                            AstNameSpaceArray *nameSpaces,
                                            int nsId) {
-    if (node == NULL || nameSpaces == NULL || nsId < 0) {
+    return nsAstSyntaxDeclForImport(node, nameSpaces, nsId, NULL, NULL);
+}
+
+AstExpression *nsAstExpressionForImport(AstExpression *node,
+                                        AstNameSpaceArray *nameSpaces, int nsId,
+                                        IntArray *sourceDeclarationIds,
+                                        IntArray *targetDeclarationIds) {
+    if (node == NULL) {
+        return NULL;
+    }
+    if ((nameSpaces == NULL || nsId < 0) && sourceDeclarationIds == NULL) {
         return node;
     }
-    VisitorContext context = {
-        .nameSpaces = nameSpaces,
-        .replacements = ensureNameSpaceReplacements(nameSpaces, nsId)};
-    return nsAstSyntaxDecl(node, context);
+
+    SymbolMap *replacements = NULL;
+    int save = STARTPROTECT();
+    if (nameSpaces != NULL && nsId >= 0) {
+        replacements = ensureNameSpaceReplacements(nameSpaces, nsId);
+    } else {
+        replacements = newSymbolMap();
+        PROTECT(replacements);
+    }
+
+    VisitorContext context = {.nameSpaces = nameSpaces,
+                              .replacements = replacements,
+                              .syntaxDeclRemapFrom = sourceDeclarationIds,
+                              .syntaxDeclRemapTo = targetDeclarationIds};
+    AstExpression *result = nsAstExpression(node, context);
+    UNPROTECT(save);
+    return result;
+}
+
+AstSyntaxDecl *nsAstSyntaxDeclForImport(AstSyntaxDecl *node,
+                                        AstNameSpaceArray *nameSpaces, int nsId,
+                                        IntArray *sourceDeclarationIds,
+                                        IntArray *targetDeclarationIds) {
+    if (node == NULL) {
+        return NULL;
+    }
+    if ((nameSpaces == NULL || nsId < 0) && sourceDeclarationIds == NULL) {
+        return node;
+    }
+
+    SymbolMap *replacements = NULL;
+    int save = STARTPROTECT();
+    if (nameSpaces != NULL && nsId >= 0) {
+        replacements = ensureNameSpaceReplacements(nameSpaces, nsId);
+    } else {
+        replacements = newSymbolMap();
+        PROTECT(replacements);
+    }
+
+    VisitorContext context = {.nameSpaces = nameSpaces,
+                              .replacements = replacements,
+                              .syntaxDeclRemapFrom = sourceDeclarationIds,
+                              .syntaxDeclRemapTo = targetDeclarationIds};
+    AstSyntaxDecl *result = nsAstSyntaxDecl(node, context);
+    UNPROTECT(save);
+    return result;
+}
+
+IntArray *
+collectAstExpressionSyntaxUseDeclarationIds(AstExpression *node,
+                                            AstNameSpaceArray *nameSpaces) {
+    if (node == NULL) {
+        return NULL;
+    }
+
+    IntArray *declarationIds = newIntArray();
+    int save = STARTPROTECT();
+    PROTECT(declarationIds);
+    SymbolMap *replacements = newSymbolMap();
+    PROTECT(replacements);
+    VisitorContext context = {.nameSpaces = nameSpaces,
+                              .replacements = replacements,
+                              .collectedSyntaxDeclIds = declarationIds};
+    (void)nsAstExpression(node, context);
+    UNPROTECT(save);
+    return declarationIds;
 }
 
 static AstNest *nsAstNest(AstNest *node, VisitorContext context) {
@@ -1688,6 +1803,51 @@ nsAstSyntaxTemplateBinders(AstSyntaxTemplateBinders *node,
     return changed ? result : node;
 }
 
+static AstSyntaxTemplateBinding *
+nsAstSyntaxTemplateBinding(AstSyntaxTemplateBinding *node,
+                           VisitorContext context) {
+    if (node == NULL) {
+        return NULL;
+    }
+    ENTER(nsAstSyntaxTemplateBinding);
+    AstSyntaxTemplateExpr *new_value =
+        nsAstSyntaxTemplateExpr(node->value, context);
+    int save = PROTECT(new_value);
+    AstSyntaxTemplateBinding *result = node;
+    if (new_value != node->value) {
+        result = newAstSyntaxTemplateBinding(CPI(node), node->name, new_value);
+        result->inherited = node->inherited;
+    }
+    UNPROTECT(save);
+    LEAVE(nsAstSyntaxTemplateBinding);
+    return result;
+}
+
+static AstSyntaxTemplateBindings *
+nsAstSyntaxTemplateBindings(AstSyntaxTemplateBindings *node,
+                            VisitorContext context) {
+    if (node == NULL) {
+        return NULL;
+    }
+    ENTER(nsAstSyntaxTemplateBindings);
+    bool changed = false;
+    AstSyntaxTemplateBindings *result = newAstSyntaxTemplateBindings();
+    int save = PROTECT(result);
+    for (Index i = 0; i < sizeAstSyntaxTemplateBindings(node); ++i) {
+        AstSyntaxTemplateBinding *binding =
+            getAstSyntaxTemplateBindings(node, i);
+        AstSyntaxTemplateBinding *new_binding =
+            nsAstSyntaxTemplateBinding(binding, context);
+        int save2 = PROTECT(new_binding);
+        changed = changed || (new_binding != binding);
+        pushAstSyntaxTemplateBindings(result, new_binding);
+        UNPROTECT(save2);
+    }
+    UNPROTECT(save);
+    LEAVE(nsAstSyntaxTemplateBindings);
+    return changed ? result : node;
+}
+
 static AstSyntaxTemplateExprs *
 nsAstSyntaxTemplateExprs(AstSyntaxTemplateExprs *node, VisitorContext context) {
     if (node == NULL) {
@@ -2041,6 +2201,28 @@ nsAstSyntaxTemplateExpr(AstSyntaxTemplateExpr *node, VisitorContext context) {
         }
         break;
     }
+    case AST_SYNTAXTEMPLATEEXPR_TYPE_SYNTAXUSE: {
+        AstSyntaxTemplateSyntaxUse *variant =
+            getAstSyntaxTemplateExpr_SyntaxUse(node);
+        bool changed = false;
+        int new_declaration_id = variant->declarationId;
+        changed =
+            changed || lookupSyntaxDeclRemap(context, variant->declarationId,
+                                             &new_declaration_id);
+        AstSyntaxTemplateBindings *new_bindings =
+            nsAstSyntaxTemplateBindings(variant->bindings, context);
+        PROTECT(new_bindings);
+        changed = changed || (new_bindings != variant->bindings);
+        if (changed) {
+            AstSyntaxTemplateSyntaxUse *new_variant =
+                newAstSyntaxTemplateSyntaxUse(CPI(variant), new_declaration_id,
+                                              variant->alternativeIndex,
+                                              new_bindings);
+            PROTECT(new_variant);
+            result = newAstSyntaxTemplateExpr_SyntaxUse(CPI(node), new_variant);
+        }
+        break;
+    }
     case AST_SYNTAXTEMPLATEEXPR_TYPE_FUNCALL: {
         AstSyntaxTemplateFunCall *variant =
             getAstSyntaxTemplateExpr_FunCall(node);
@@ -2256,13 +2438,17 @@ static AstExprSyntaxUse *nsAstExprSyntaxUse(AstExprSyntaxUse *node,
     }
     ENTER(nsAstExprSyntaxUse);
     bool changed = false;
+    collectSyntaxDeclId(context, node->declarationId);
     AstSyntaxBindings *new_bindings =
         nsAstSyntaxBindings(node->bindings, context);
     int save = PROTECT(new_bindings);
     changed = changed || (new_bindings != node->bindings);
+    int new_declaration_id = node->declarationId;
+    changed = changed || lookupSyntaxDeclRemap(context, node->declarationId,
+                                               &new_declaration_id);
     AstExprSyntaxUse *result = node;
     if (changed) {
-        result = newAstExprSyntaxUse(CPI(node), node->declarationId,
+        result = newAstExprSyntaxUse(CPI(node), new_declaration_id,
                                      node->alternativeIndex, new_bindings);
     }
     UNPROTECT(save);
@@ -2277,13 +2463,17 @@ static AstDefSyntaxUse *nsAstDefSyntaxUse(AstDefSyntaxUse *node,
     }
     ENTER(nsAstDefSyntaxUse);
     bool changed = false;
+    collectSyntaxDeclId(context, node->declarationId);
     AstSyntaxBindings *new_bindings =
         nsAstSyntaxBindings(node->bindings, context);
     int save = PROTECT(new_bindings);
     changed = changed || (new_bindings != node->bindings);
+    int new_declaration_id = node->declarationId;
+    changed = changed || lookupSyntaxDeclRemap(context, node->declarationId,
+                                               &new_declaration_id);
     AstDefSyntaxUse *result = node;
     if (changed) {
-        result = newAstDefSyntaxUse(CPI(node), node->declarationId,
+        result = newAstDefSyntaxUse(CPI(node), new_declaration_id,
                                     node->alternativeIndex, new_bindings);
     }
     UNPROTECT(save);

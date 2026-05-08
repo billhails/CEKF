@@ -1,0 +1,5 @@
+let
+    link "import_macro_private_fn_lib.fn" as syn;
+    import syn macro twice;
+in
+    assert(twice(21) == 42)

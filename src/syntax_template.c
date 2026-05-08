@@ -71,6 +71,10 @@ convertTemplateTaggedArgs(AstTaggedArgList *args, TemplateContext *context);
 static AstSyntaxTemplateTaggedExpressions *
 convertTemplateTaggedExpressions(AstTaggedExpressions *expressions,
                                  TemplateContext *context);
+static AstSyntaxTemplateBinding *
+convertTemplateBinding(AstSyntaxBinding *binding, TemplateContext *context);
+static AstSyntaxTemplateBindings *
+convertTemplateBindings(AstSyntaxBindings *bindings, TemplateContext *context);
 static AstSyntaxTemplateBinders *
 convertTemplateBinders(AstSymbolList *symbols, TemplateContext *context);
 
@@ -431,6 +435,40 @@ convertTemplateTaggedExpressions(AstTaggedExpressions *expressions,
                                                  expressions->tag, expr);
         PROTECT(tagged);
         pushAstSyntaxTemplateTaggedExpressions(result, tagged);
+    }
+
+    UNPROTECT(save);
+    return result;
+}
+
+static AstSyntaxTemplateBinding *
+convertTemplateBinding(AstSyntaxBinding *binding, TemplateContext *context) {
+    if (binding == NULL) {
+        return NULL;
+    }
+
+    AstSyntaxTemplateExpr *value = convertTemplateExpr(binding->value, context);
+    int save = PROTECT(value);
+    AstSyntaxTemplateBinding *result =
+        newAstSyntaxTemplateBinding(CPI(binding), binding->name, value);
+    result->inherited = binding->inherited;
+    UNPROTECT(save);
+    return result;
+}
+
+static AstSyntaxTemplateBindings *
+convertTemplateBindings(AstSyntaxBindings *bindings, TemplateContext *context) {
+    AstSyntaxTemplateBindings *result = newAstSyntaxTemplateBindings();
+    int save = PROTECT(result);
+
+    for (Index i = 0; bindings != NULL && i < sizeAstSyntaxBindings(bindings);
+         ++i) {
+        AstSyntaxBinding *binding = getAstSyntaxBindings(bindings, i);
+        AstSyntaxTemplateBinding *templateBinding =
+            convertTemplateBinding(binding, context);
+        int save2 = PROTECT(templateBinding);
+        pushAstSyntaxTemplateBindings(result, templateBinding);
+        UNPROTECT(save2);
     }
 
     UNPROTECT(save);
@@ -821,6 +859,20 @@ static AstSyntaxTemplateExpr *convertTemplateExpr(AstExpression *expr,
     case AST_EXPRESSION_TYPE_CHARACTER:
         return newAstSyntaxTemplateExpr_Character(
             CPI(expr), getAstExpression_Character(expr));
+    case AST_EXPRESSION_TYPE_SYNTAXUSE: {
+        AstExprSyntaxUse *syntaxUse = getAstExpression_SyntaxUse(expr);
+        AstSyntaxTemplateBindings *bindings =
+            convertTemplateBindings(syntaxUse->bindings, context);
+        int save = PROTECT(bindings);
+        AstSyntaxTemplateSyntaxUse *result = newAstSyntaxTemplateSyntaxUse(
+            CPI(syntaxUse), syntaxUse->declarationId,
+            syntaxUse->alternativeIndex, bindings);
+        PROTECT(result);
+        AstSyntaxTemplateExpr *wrapped =
+            newAstSyntaxTemplateExpr_SyntaxUse(CPI(expr), result);
+        UNPROTECT(save);
+        return wrapped;
+    }
     case AST_EXPRESSION_TYPE_FUNCALL: {
         AstFunCall *call = getAstExpression_FunCall(expr);
         AstSyntaxTemplateExpr *function =

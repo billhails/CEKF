@@ -381,6 +381,12 @@ static AstSyntaxUnquote *prepareAstSyntaxUnquote(AstSyntaxUnquote *node,
 static AstSyntaxTemplateFunCall *
 prepareAstSyntaxTemplateFunCall(AstSyntaxTemplateFunCall *node,
                                 VisitorContext *context);
+static AstSyntaxTemplateBinding *
+prepareAstSyntaxTemplateBinding(AstSyntaxTemplateBinding *node,
+                                VisitorContext *context);
+static AstSyntaxTemplateBindings *
+prepareAstSyntaxTemplateBindings(AstSyntaxTemplateBindings *node,
+                                 VisitorContext *context);
 static AstSyntaxTemplateLookUp *
 prepareAstSyntaxTemplateLookUp(AstSyntaxTemplateLookUp *node,
                                VisitorContext *context);
@@ -1700,6 +1706,49 @@ prepareAstSyntaxTemplateFunCall(AstSyntaxTemplateFunCall *node,
     return result;
 }
 
+static AstSyntaxTemplateBinding *
+prepareAstSyntaxTemplateBinding(AstSyntaxTemplateBinding *node,
+                                VisitorContext *context) {
+    if (node == NULL)
+        return NULL;
+    ENTER(prepareAstSyntaxTemplateBinding);
+    AstSyntaxTemplateExpr *new_value =
+        prepareAstSyntaxTemplateExpr(node->value, context);
+    int save = PROTECT(new_value);
+    AstSyntaxTemplateBinding *result = node;
+    if (new_value != node->value) {
+        result = newAstSyntaxTemplateBinding(CPI(node), node->name, new_value);
+        result->inherited = node->inherited;
+    }
+    UNPROTECT(save);
+    LEAVE(prepareAstSyntaxTemplateBinding);
+    return result;
+}
+
+static AstSyntaxTemplateBindings *
+prepareAstSyntaxTemplateBindings(AstSyntaxTemplateBindings *node,
+                                 VisitorContext *context) {
+    if (node == NULL)
+        return NULL;
+    ENTER(prepareAstSyntaxTemplateBindings);
+    bool changed = false;
+    AstSyntaxTemplateBindings *result = newAstSyntaxTemplateBindings();
+    int save = PROTECT(result);
+    for (Index i = 0; i < sizeAstSyntaxTemplateBindings(node); ++i) {
+        AstSyntaxTemplateBinding *binding =
+            getAstSyntaxTemplateBindings(node, i);
+        AstSyntaxTemplateBinding *new_binding =
+            prepareAstSyntaxTemplateBinding(binding, context);
+        int save2 = PROTECT(new_binding);
+        changed = changed || (new_binding != binding);
+        pushAstSyntaxTemplateBindings(result, new_binding);
+        UNPROTECT(save2);
+    }
+    UNPROTECT(save);
+    LEAVE(prepareAstSyntaxTemplateBindings);
+    return changed ? result : node;
+}
+
 static AstSyntaxTemplateLookUp *
 prepareAstSyntaxTemplateLookUp(AstSyntaxTemplateLookUp *node,
                                VisitorContext *context) {
@@ -2916,6 +2965,23 @@ prepareAstSyntaxTemplateExpr(AstSyntaxTemplateExpr *node,
         if (new_variant != variant) {
             PROTECT(new_variant);
             result = newAstSyntaxTemplateExpr_NameRef(CPI(node), new_variant);
+        }
+        break;
+    }
+    case AST_SYNTAXTEMPLATEEXPR_TYPE_SYNTAXUSE: {
+        // AstSyntaxTemplateSyntaxUse
+        AstSyntaxTemplateSyntaxUse *variant =
+            getAstSyntaxTemplateExpr_SyntaxUse(node);
+        AstSyntaxTemplateBindings *new_bindings =
+            prepareAstSyntaxTemplateBindings(variant->bindings, context);
+        if (new_bindings != variant->bindings) {
+            PROTECT(new_bindings);
+            AstSyntaxTemplateSyntaxUse *new_variant =
+                newAstSyntaxTemplateSyntaxUse(
+                    CPI(variant), variant->declarationId,
+                    variant->alternativeIndex, new_bindings);
+            PROTECT(new_variant);
+            result = newAstSyntaxTemplateExpr_SyntaxUse(CPI(node), new_variant);
         }
         break;
     }

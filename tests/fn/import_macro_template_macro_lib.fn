@@ -1,0 +1,13 @@
+namespace
+
+macro addOne: Expr addOneHelper;
+
+syntax addOneHelper ::= "(" value: Expr ")" {
+    value + 1
+};
+
+export macro bump: Expr bumpHelper;
+
+syntax bumpHelper ::= "(" value: Expr ")" {
+    addOne(value)
+};
