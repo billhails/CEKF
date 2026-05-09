@@ -49,7 +49,7 @@ $$
 $$
 
 1. The free variables in a lambda are the free variables in its body minus its argument.
-2. The free variables in a `letrec` are the free variables in its lambdas (1) plus the free variables in its body, minus the variables bound by the letrec itself.
+2. The free variables in a `letrec` are the free variables in its body plus the free variables in its lambdas (1), minus the variables bound by the letrec itself.
 
 ## Alpha Conversion $\alpha_{\rho}$
 
