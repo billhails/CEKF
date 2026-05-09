@@ -264,11 +264,14 @@ play nice with the CEKF memory management and garbage collection.
 
 ## Unicode
 
-There is basic support for Unicode, both in strings and in
+There is reasonable support for Unicode, both in strings and in
 identifiers. The base `Character` type is now a `wchar_t` which stores
-raw Unicode code points (UTF-32). The only supported input/output encoding is UTF8, which is
-used internally for C strings in the interpreter, to read source files
-and and to output characters to the terminal.
+raw Unicode code points (UTF-32). Input and output is UTF-8. The
+unicode system was recently reworked based on code from
+[detomon/unicode-table](https://github.com/detomon/unicode-table),
+(ported to Python) which has enabled upper/lower case conversion
+as well as full numeric recognition, including vulgar fractions (rationals)
+and roman numerals.
 
 ## SQLite
 
