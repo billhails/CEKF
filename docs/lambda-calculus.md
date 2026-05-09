@@ -24,10 +24,8 @@ b\ &\mathtt{::=\ } ( x:\ \lambda y.e ) & \texttt{[letrec binding]}
 \end{align*}
 $$
 
-The "real" `MinLam` core has other constructs but for all the following
-transforms the behaviour is identical: transforming a constant is a no-op,
-and transforming a container is the container with its components transformed,
-for example $\mathcal{T}\texttt{(if t c a)} = \texttt{(if }\mathcal{T}\texttt{t }\mathcal{T}\texttt{c }\mathcal{T}\texttt{a)}$.
+The real `MinLam` core has other constructs but their transforms are obvious,
+i.e. for an arbitrary transform $\mathcal{T}$, $\mathcal{T}\texttt{(if t c a)} = \texttt{(if }\mathcal{T}\texttt{t }\mathcal{T}\texttt{c }\mathcal{T}\texttt{a)}$.
 
 ## Free variables $\mathcal{F}$
 
