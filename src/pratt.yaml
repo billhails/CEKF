@@ -344,6 +344,23 @@ enums:
           - EXPR
           - DEF
 
+    DefunType:
+        meta:
+            brief: Helper enum for parser-side defun handling.
+        data:
+          - FUNCTION
+          - PRINTER
+          - COMPARATOR
+
+    ImportedFunctionKind:
+        meta:
+            brief: Parser-side classification of a namespace member import.
+        data:
+          - NOT_FOUND
+          - STRICT
+          - LAZY
+          - OTHER
+
 inline:
     structs:
         PrattFixityConfig:

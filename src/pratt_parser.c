@@ -50,7 +50,11 @@
 #include "debugging_off.h"
 #endif
 
-typedef enum { DEFUN_FUNCTION, DEFUN_PRINTER, DEFUN_COMPARATOR } DefunType;
+// TODO: move to pratt.yaml
+typedef struct {
+    ImportedFunctionKind kind;
+    int arity;
+} ImportedFunctionSpec;
 
 // minimal multiplier for converting declared precedence levels to
 // internal values, to guarantee that adding or subtracting 1 from
@@ -246,6 +250,12 @@ static void mergeFixityImport(PrattParser *parser, PrattRecord *target,
                               HashSymbol *nsSymbol, bool importPrefix,
                               bool importInfix, bool importPostfix,
                               HashSymbol *op);
+static ImportedFunctionSpec resolveImportedFunctionSpec(int nsRef,
+                                                        HashSymbol *member);
+static AstDefinition *
+makeImportedFunctionWrapper(ParserInfo PI, HashSymbol *localName, int nsRef,
+                            HashSymbol *nsSymbol, HashSymbol *member,
+                            int arity);
 
 static bool symbolArrayContains(SymbolArray *symbols, HashSymbol *symbol) {
     if (symbols == NULL) {
@@ -477,6 +487,174 @@ makeAstCompositeFunction(AstAltFunction *functions,
     }
     UNPROTECT(save);
     return rest;
+}
+
+static void makeImportedFunctionArgLists(ParserInfo PI, int arity,
+                                         AstFargList **formalOut,
+                                         AstExpressions **actualOut) {
+    AstFargList *formals = NULL;
+    AstExpressions *actuals = NULL;
+
+    for (int i = arity - 1; i >= 0; --i) {
+        int save = STARTPROTECT();
+        if (formals != NULL) {
+            PROTECT(formals);
+        }
+        if (actuals != NULL) {
+            PROTECT(actuals);
+        }
+
+        char buf[32];
+        sprintf(buf, "a$%d", i);
+        HashSymbol *arg = newSymbol(buf);
+        AstFarg *formal = newAstFarg_Symbol(PI, arg);
+        PROTECT(formal);
+        formals = newAstFargList(PI, formal, formals);
+        PROTECT(formals);
+
+        AstExpression *actual = newAstExpression_Symbol(PI, arg);
+        PROTECT(actual);
+        actuals = newAstExpressions(PI, actual, actuals);
+        PROTECT(actuals);
+        UNPROTECT(save);
+    }
+
+    *formalOut = formals;
+    *actualOut = actuals;
+}
+
+static bool definitionMentionsImportedMember(AstDefinition *definition,
+                                             HashSymbol *member) {
+    if (definition == NULL || member == NULL) {
+        return false;
+    }
+
+    switch (definition->type) {
+    case AST_DEFINITION_TYPE_DEFINE:
+        return getAstDefinition_Define(definition)->symbol == member;
+    case AST_DEFINITION_TYPE_MULTI: {
+        AstSymbolList *symbols = getAstDefinition_Multi(definition)->symbols;
+        while (symbols != NULL) {
+            if (symbols->symbol == member) {
+                return true;
+            }
+            symbols = symbols->next;
+        }
+        return false;
+    }
+    case AST_DEFINITION_TYPE_LAZY:
+        return getAstDefinition_Lazy(definition)->name == member;
+    case AST_DEFINITION_TYPE_ALIAS:
+        return getAstDefinition_Alias(definition)->name == member;
+    case AST_DEFINITION_TYPE_TYPEDEF:
+        return getAstDefinition_TypeDef(definition)->typeSig->symbol == member;
+    case AST_DEFINITION_TYPE_BLANK:
+    case AST_DEFINITION_TYPE_BUILTINSSLOT:
+    case AST_DEFINITION_TYPE_SYNTAXDECL:
+    case AST_DEFINITION_TYPE_SYNTAXUSE:
+        return false;
+    default:
+        cant_happen("unrecognized AstDefinition type %d", definition->type);
+    }
+}
+
+static ImportedFunctionSpec resolveImportedFunctionSpec(int nsRef,
+                                                        HashSymbol *member) {
+    ImportedFunctionSpec spec = {.kind = IMPORTEDFUNCTIONKIND_TYPE_NOT_FOUND,
+                                 .arity = 0};
+
+    if (nameSpaces == NULL || nsRef < 0 || ((Index)nsRef) >= nameSpaces->size ||
+        nameSpaces->entries[nsRef] == NULL) {
+        return spec;
+    }
+
+    AstDefinitions *definitions = nameSpaces->entries[nsRef]->definitions;
+    while (definitions != NULL) {
+        AstDefinition *definition = definitions->definition;
+        if (!definitionMentionsImportedMember(definition, member)) {
+            definitions = definitions->next;
+            continue;
+        }
+
+        switch (definition->type) {
+        case AST_DEFINITION_TYPE_DEFINE: {
+            AstDefine *define = getAstDefinition_Define(definition);
+            if (define->expression != NULL &&
+                define->expression->type == AST_EXPRESSION_TYPE_FUN) {
+                AstCompositeFunction *fun =
+                    getAstExpression_Fun(define->expression);
+                spec.kind = IMPORTEDFUNCTIONKIND_TYPE_STRICT;
+                spec.arity = (fun != NULL && fun->function != NULL)
+                                 ? (int)countAstFargList(fun->function->argList)
+                                 : 0;
+            } else {
+                spec.kind = IMPORTEDFUNCTIONKIND_TYPE_OTHER;
+            }
+            return spec;
+        }
+        case AST_DEFINITION_TYPE_LAZY: {
+            AstDefLazy *lazy = getAstDefinition_Lazy(definition);
+            spec.kind = IMPORTEDFUNCTIONKIND_TYPE_LAZY;
+            spec.arity =
+                (lazy->definition != NULL && lazy->definition->altArgs != NULL)
+                    ? (int)countAstFargList(lazy->definition->altArgs->argList)
+                    : 0;
+            return spec;
+        }
+        case AST_DEFINITION_TYPE_MULTI:
+        case AST_DEFINITION_TYPE_ALIAS:
+        case AST_DEFINITION_TYPE_TYPEDEF:
+            spec.kind = IMPORTEDFUNCTIONKIND_TYPE_OTHER;
+            return spec;
+        case AST_DEFINITION_TYPE_BLANK:
+        case AST_DEFINITION_TYPE_BUILTINSSLOT:
+        case AST_DEFINITION_TYPE_SYNTAXDECL:
+        case AST_DEFINITION_TYPE_SYNTAXUSE:
+            break;
+        default:
+            cant_happen("unrecognized AstDefinition type %d", definition->type);
+        }
+
+        definitions = definitions->next;
+    }
+
+    return spec;
+}
+
+static AstDefinition *
+makeImportedFunctionWrapper(ParserInfo PI, HashSymbol *localName, int nsRef,
+                            HashSymbol *nsSymbol, HashSymbol *member,
+                            int arity) {
+    AstFargList *formals = NULL;
+    AstExpressions *actuals = NULL;
+    makeImportedFunctionArgLists(PI, arity, &formals, &actuals);
+
+    int save = STARTPROTECT();
+    if (formals != NULL) {
+        PROTECT(formals);
+    }
+    if (actuals != NULL) {
+        PROTECT(actuals);
+    }
+
+    AstExpression *memberExpr = newAstExpression_Symbol(PI, member);
+    PROTECT(memberExpr);
+    AstExpression *callee =
+        makeAstExpression_LookUp(PI, nsRef, nsSymbol, memberExpr);
+    PROTECT(callee);
+    AstExpression *call = makeAstExpression_FunCall(PI, callee, actuals);
+    PROTECT(call);
+    AstExpressions *body = newAstExpressions(PI, call, NULL);
+    PROTECT(body);
+    AstNest *nest = newAstNest(PI, NULL, body);
+    PROTECT(nest);
+    AstFunction *function = newAstFunction(PI, formals, nest);
+    PROTECT(function);
+    AstExpression *wrapper = makeAstExpression_Fun(PI, function, NULL);
+    PROTECT(wrapper);
+    AstDefinition *result = makeAstDefinition_Define(PI, localName, wrapper);
+    UNPROTECT(save);
+    return result;
 }
 
 /**
@@ -3100,16 +3278,16 @@ static AstDefinition *definition(PrattParser *parser) {
         save = PROTECT(res);
     } else if (match(parser, TOK_UNSAFE())) {
         consume(parser, TOK_FN());
-        res = defun(parser, true, DEFUN_FUNCTION);
+        res = defun(parser, true, DEFUNTYPE_TYPE_FUNCTION);
         save = PROTECT(res);
     } else if (match(parser, TOK_FN())) {
-        res = defun(parser, false, DEFUN_FUNCTION);
+        res = defun(parser, false, DEFUNTYPE_TYPE_FUNCTION);
         save = PROTECT(res);
     } else if (match(parser, TOK_PRINT())) {
-        res = defun(parser, false, DEFUN_PRINTER);
+        res = defun(parser, false, DEFUNTYPE_TYPE_PRINTER);
         save = PROTECT(res);
     } else if (match(parser, TOK_EQ())) {
-        res = defun(parser, false, DEFUN_COMPARATOR);
+        res = defun(parser, false, DEFUNTYPE_TYPE_COMPARATOR);
         save = PROTECT(res);
     } else if (match(parser, TOK_LAZY())) {
         if (match(parser, TOK_OPERATOR())) {
@@ -3330,6 +3508,43 @@ static AstDefinition *importOp(PrattParser *parser) {
         parserErrorAt(TOKPI(tok), parser, "unknown nameSpace %s",
                       nsSymbol->name);
         res = newAstDefinition_Blank(TOKPI(tok));
+        LEAVE(importOp);
+        UNPROTECT(save);
+        return res;
+    }
+    if (match(parser, TOK_PERIOD())) {
+        HashSymbol *member = symbol(parser);
+        HashSymbol *localName = member;
+        if (match(parser, TOK_AS())) {
+            localName = symbol(parser);
+        }
+
+        ImportedFunctionSpec spec = resolveImportedFunctionSpec(nsRef, member);
+        switch (spec.kind) {
+        case IMPORTEDFUNCTIONKIND_TYPE_STRICT:
+            res = makeImportedFunctionWrapper(TOKPI(tok), localName, nsRef,
+                                              nsSymbol, member, spec.arity);
+            break;
+        case IMPORTEDFUNCTIONKIND_TYPE_LAZY:
+            parserErrorAt(TOKPI(tok), parser,
+                          "nameSpace %s member %s is a lazy fn and cannot be "
+                          "imported yet",
+                          nsSymbol->name, member->name);
+            res = newAstDefinition_Blank(TOKPI(tok));
+            break;
+        case IMPORTEDFUNCTIONKIND_TYPE_OTHER:
+            parserErrorAt(TOKPI(tok), parser,
+                          "nameSpace %s member %s is not an ordinary fn",
+                          nsSymbol->name, member->name);
+            res = newAstDefinition_Blank(TOKPI(tok));
+            break;
+        case IMPORTEDFUNCTIONKIND_TYPE_NOT_FOUND:
+            parserErrorAt(TOKPI(tok), parser, "nameSpace %s has no member %s",
+                          nsSymbol->name, member->name);
+            res = newAstDefinition_Blank(TOKPI(tok));
+            break;
+        }
+
         LEAVE(importOp);
         UNPROTECT(save);
         return res;
@@ -4279,9 +4494,9 @@ static AstDefinition *defun(PrattParser *parser, bool unsafe, DefunType type) {
     AstCompositeFunction *f = compositeFunction(parser);
     f->unsafe = unsafe;
     PROTECT(f);
-    if (type == DEFUN_PRINTER) {
+    if (type == DEFUNTYPE_TYPE_PRINTER) {
         s = makePrintName("print$", s->name);
-    } else if (type == DEFUN_COMPARATOR) {
+    } else if (type == DEFUNTYPE_TYPE_COMPARATOR) {
         s = makePrintName("eq$", s->name);
     }
     AstExpression *expr = newAstExpression_Fun(CPI(f), f);
