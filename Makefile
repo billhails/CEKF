@@ -72,7 +72,9 @@ EXTRA_TARGETS= \
     $(EXTRA_DEBUG_H_TARGETS) \
     $(EXTRA_DEBUG_C_TARGETS) \
 	$(GENDIR)/UnicodeData.inc \
+	$(GENDIR)/UnicodeCasing.inc \
 	$(GENDIR)/UnicodeDigits.inc \
+	$(GENDIR)/UnicodeNumbers.inc \
 	$(GENDIR)/anf_kont.h \
 	$(GENDIR)/anf_kont.c \
 	$(GENDIR)/anf_kont_objtypes.h \
@@ -330,11 +332,20 @@ $(UNIDIR)/UnicodeData.csv: $(UNIDIR)/UnicodeData.txt ./tools/convertCsv.py
 $(UNIDIR)/UnicodeData.txt: | $(UNIDIR)
 	wget -P $(UNIDIR) https://www.unicode.org/Public/UCD/latest/ucd/UnicodeData.txt
 
-$(GENDIR)/UnicodeData.inc: $(UNIDIR)/UnicodeData.txt tools/makeUnicodeData.py | $(GENDIR)
-	$(PYTHON) ./tools/makeUnicodeData.py > $@
+$(UNIDIR)/SpecialCasing.txt: | $(UNIDIR)
+	wget -P $(UNIDIR) https://www.unicode.org/Public/UCD/latest/ucd/SpecialCasing.txt
 
-$(GENDIR)/UnicodeDigits.inc: $(UNIDIR)/UnicodeData.txt tools/makeUnicodeDigits.py | $(GENDIR)
-	$(PYTHON) ./tools/makeUnicodeDigits.py > $@
+$(GENDIR)/UnicodeData.inc: $(UNIDIR)/UnicodeData.txt $(UNIDIR)/SpecialCasing.txt tools/makeUnicodeData.py tools/unicode_table.py | $(GENDIR)
+	$(PYTHON) ./tools/makeUnicodeData.py $(UNIDIR)/UnicodeData.txt $(UNIDIR)/SpecialCasing.txt > $@
+
+$(GENDIR)/UnicodeDigits.inc: $(UNIDIR)/UnicodeData.txt $(UNIDIR)/SpecialCasing.txt tools/makeUnicodeDigits.py tools/unicode_table.py | $(GENDIR)
+	$(PYTHON) ./tools/makeUnicodeDigits.py $(UNIDIR)/UnicodeData.txt $(UNIDIR)/SpecialCasing.txt > $@
+
+$(GENDIR)/UnicodeCasing.inc: $(UNIDIR)/UnicodeData.txt $(UNIDIR)/SpecialCasing.txt tools/makeUnicodeCasing.py tools/unicode_table.py | $(GENDIR)
+	$(PYTHON) ./tools/makeUnicodeCasing.py $(UNIDIR)/UnicodeData.txt $(UNIDIR)/SpecialCasing.txt > $@
+
+$(GENDIR)/UnicodeNumbers.inc: $(UNIDIR)/UnicodeData.txt $(UNIDIR)/SpecialCasing.txt tools/makeUnicodeNumbers.py tools/unicode_table.py | $(GENDIR)
+	$(PYTHON) ./tools/makeUnicodeNumbers.py $(UNIDIR)/UnicodeData.txt $(UNIDIR)/SpecialCasing.txt > $@
 
 realclean: clean
 	rm -rf tags xref $(UNIDIR)

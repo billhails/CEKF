@@ -1,3 +1,6 @@
+let
+	link "ioutils.fn" as io;
+in
 assert(unicode_category('A') == GC_Lu);
 assert(unicode_category('z') == GC_Ll);
 assert(unicode_category('ǅ') == GC_Lt);
@@ -46,5 +49,28 @@ assert(unicode_category('\u200E;') == GC_Cf); // Left-To-Right Mark
 // so we use a code point from the Private Use Area
 assert(unicode_category('\uE000;') == GC_Co); // Private Use Area
 assert(unicode_category('\uD800;') == GC_Cs); // High Surrogate
-// GC_Cn (Unassigned) test - using a code point that is currently unassigned
-assert(unicode_category('\u0378;') == GC_Ll); // Lowecase letter
+assert(getdec('\u0667;') == 7); // Arabic-Indic digit seven
+assert(toupper('a') == "A");
+assert(tolower('A') == "a");
+assert(totitle('ǆ') == "ǅ");
+assert(toupper('ß') == "SS");
+assert(tolower('İ') == "i\u0307;");
+switch(getnum('Ⅶ')) {
+	(just(n)) { assert(io.to_string(n) == "7") }
+	(nothing) { assert(false) }
+}
+switch(getnum('½')) {
+	(just(n)) { assert(io.to_string(n) == "1/2") }
+	(nothing) { assert(false) }
+}
+switch(getnum('५')) {
+	(just(n)) { assert(io.to_string(n) == "5") }
+	(nothing) { assert(false) }
+}
+// GC_Cn (Unassigned) test - U+0378 is an unassigned code point
+assert(unicode_category('\u0378;') == GC_Cn);
+assert(getdec('\u0378;') == -1);
+switch(getnum('\u0378;')) {
+	(nothing) { assert(true) }
+	(just(_)) { assert(false) }
+}

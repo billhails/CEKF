@@ -54,6 +54,10 @@ Value builtin_isupper(Vec *args);
 Value builtin_isvalid(Vec *args);
 Value builtin_isxdigit(Vec *args);
 Value builtin_getdec(Vec *args);
+Value builtin_toupper(Vec *args);
+Value builtin_tolower(Vec *args);
+Value builtin_totitle(Vec *args);
+Value builtin_getnum(Vec *args);
 void builtin_exit(Vec *args);
 
 extern int builtin_args_argc;
