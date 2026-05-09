@@ -25,10 +25,9 @@ b\ &\mathtt{::=\ } ( x:\ \lambda y.e ) & \texttt{[letrec binding]}
 $$
 
 The real `MinLam` core has other constructs but their transforms are obvious,
-i.e. for an arbitrary transform $\mathcal{T}$,
-$\mathcal{T}\texttt{(if t c a)} = \texttt{(if }\mathcal{T}\texttt{t }\mathcal{T}\texttt{c }\mathcal{T}\texttt{a)}$,
-or $\mathcal{T}\mathtt{t} \oplus \mathcal{T}\mathtt{c} \oplus \mathcal{T}\mathtt{a}$ as
-appropriate.
+e.g. for an arbitrary transform $\mathcal{T}$ and container $\circ$,
+$\mathcal{T}(\circ\ a\ b\ c) =$ either $(\circ\ \mathcal{T}a\ \mathcal{T}b\ \mathcal{T}c)$,
+or $\mathcal{T}a \oplus \mathcal{T}b \oplus \mathcal{T}c$ as appropriate.
 
 ## Free variables $\mathcal{F}$
 
