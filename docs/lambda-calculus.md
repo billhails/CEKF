@@ -54,6 +54,8 @@ $$
 ## Alpha Conversion $\alpha_{\rho}$
 
 Alpha conversion renames binders to fresh names and rewrites bound occurrences to match.
+It essentially guarantees that every semantically distinct variable has a different
+name.
 
 The implementation in `minlam_alphoconvert.c` is environment-based, so we specify it that way here. Let:
 
