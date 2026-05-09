@@ -41,7 +41,7 @@ $$
 \\
 \mathcal{F}(e_0\ e_1) &= \mathcal{F}e_0\cup \mathcal{F}e_1
 \\
-\mathcal{F}(\lambda x.e) &= \mathcal{F}e - \set{ x } && \text{(1)}
+\mathcal{F}\lambda x.e &= \mathcal{F}e - \set{ x } && \text{(1)}
 \\
 \mathcal{F}(\mathtt{letrec}\ (( x_0:\lambda_0)\dots( x_n:\lambda_n))\ e) &=
 \Big( \mathcal{F}e\cup\bigcup_{i=0}^n\mathcal{F}\lambda_i\Big) - \set{x_0\dots x_n} && \text{(2)}
@@ -72,7 +72,7 @@ $$
 \\
 \alpha_{\rho}(e_0\ e_1) &= (\alpha_{\rho}e_0\ \alpha_{\rho}e_1)
 \\
-\alpha_{\rho}(\lambda x.e) &= (\lambda x'.\alpha_{\rho[x \mapsto x']}e)
+\alpha_{\rho}\lambda x.e &= \lambda x'.\alpha_{\rho[x \mapsto x']}e
 && \text{where } x' = \mathrm{fresh}(x) && \text{(2)}
 \\
 l &= (\mathtt{letrec}\ (b_0\dots b_n)\ e)
@@ -117,10 +117,10 @@ y &\text{otherwise}
 \\
 \mathcal{S}_{[x/r]}(e_0\ e_1) &= (\mathcal{S}_{[x/r]}e_0\ \mathcal{S}_{[x/r]}e_1)
 \\
-\mathcal{S}_{[x/r]}(\lambda y.e_0) &= \begin{cases}
-(\lambda y.e_0) &\text{if } x = y\ \mathrm{(1)}
+\mathcal{S}_{[x/r]}\lambda y.e_0 &= \begin{cases}
+\lambda y.e_0 &\text{if } x = y\ \mathrm{(1)}
 \\
-(\lambda y.\mathcal{S}_{[x/r]}e_0) &\text{otherwise}
+\lambda y.\mathcal{S}_{[x/r]}e_0 &\text{otherwise}
 \end{cases}
 \\
 l &= (\mathtt{letrec}\ ((y_0:\lambda z_0.e_0)\dots(y_n:\lambda z_n.e_n))\ e)
@@ -168,7 +168,7 @@ $$
 \\
 \beta (e_0\ e_1) &= (\beta e_0\ \beta e_1)
 \\
-\beta (\lambda x.e) &= (\lambda x . \beta e)
+\beta \lambda x.e &= \lambda x . \beta e
 \\
 \beta (\mathtt{letrec}\ (b_0\dots b_n)\  e) &= (\mathtt{letrec}\ (\beta b_0 \dots \beta b_n)\ \beta e)
 \\
@@ -191,13 +191,13 @@ $$
 \\
 \eta (e_0\ e_1) &= (\eta e_0\  \eta e_1)
 \\
-\eta(\lambda x.(e\ x)) &= \begin{cases}
+\eta\lambda x.(e\ x) &= \begin{cases}
 \eta e &\text{iff } x \not \in \mathcal{F}e\ \mathrm{(1)}
 \\
-(\lambda x .\eta(e\ x)) &\text{otherwise}
+\lambda x .\eta(e\ x) &\text{otherwise}
 \end{cases}
 \\
-\eta(\lambda x.e) &= (\lambda x.\eta e)
+\eta\lambda x.e &= \lambda x.\eta e
 \\
 \eta (\mathtt{letrec}\ (b_0\dots b_n)\  e) &= (\mathtt{letrec}\ (\eta b_0 \dots \eta b_n)\ \eta e)
 \\
@@ -219,7 +219,7 @@ $$
 \\
 \mathcal{T}(e_0\ e_1) &= (\mathcal{T}e_0\ \mathcal{T}e_1)
 \\
-\mathcal{T}(\lambda x . e) &= (\lambda x.\mathcal{T}e)
+\mathcal{T}\lambda x . e &= \lambda x.\mathcal{T}e
 \\
 l &= (\mathtt{letrec}\ (( x_0:\lambda_0)\dots ( x_n:\lambda_n))\ e) && \text{(1)}
 \\
@@ -275,7 +275,7 @@ $$
 \\
 \mathcal{I}(e_0\ e_1) &= (\mathcal{I}e_0\ \mathcal{I}e_1)
 \\
-\mathcal{I}(\lambda x.e) &= (\lambda x.\mathcal{I}e)
+\mathcal{I}\lambda x.e &= \lambda x.\mathcal{I}e
 \\
 l &= (\mathtt{letrec}\ ((x_0:\lambda_0)\dots(x_n:\lambda_n))\ e)
 \\
@@ -305,7 +305,7 @@ $$
 \\
 \mathcal{Z}(e_0\ e_1) &= 1 + \mathcal{Z}e_0 + \mathcal{Z}e_1
 \\
-\mathcal{Z}(\lambda x.e) &= 1 + \mathcal{Z}e
+\mathcal{Z}\lambda x.e &= 1 + \mathcal{Z}e
 \\
 \mathcal{Z}(\mathtt{letrec}\ (b_0\dots b_n)\ e) &= 1 + \sum_{i=0}^n\mathcal{Z}b_i + \mathcal{Z}e
 \\
@@ -364,7 +364,7 @@ $$
 \\
 \mathcal{C}_x(e_0\ e_1) &= \mathcal{C}_xe_0 + \mathcal{C}_xe_1
 \\
-\mathcal{C}_x(\lambda y.e) &= \begin{cases}
+\mathcal{C}_x\lambda y.e &= \begin{cases}
 0 & \text{if } x = y\text{ (shadowing)}
 \\
 \mathcal{C}_x e &\text{otherwise}
