@@ -107,6 +107,9 @@ AstSyntaxHole --callArguments--> SymbolArray
 AstSyntaxBinding --name--> HashSymbol
 AstSyntaxBinding --value--> AstExpression
 AstSyntaxBinding --inherited--> bool
+AstSyntaxTemplateBinding --name--> HashSymbol
+AstSyntaxTemplateBinding --value--> AstSyntaxTemplateExpr
+AstSyntaxTemplateBinding --inherited--> bool
 AstExprSyntaxUse --declarationId--> int
 AstExprSyntaxUse --alternativeIndex--> int
 AstExprSyntaxUse --bindings--> AstSyntaxBindings
@@ -125,6 +128,9 @@ AstSyntaxUnquote --bindingName--> HashSymbol
 AstSyntaxUnquote --syntaxClass--> AstSyntaxClass
 AstSyntaxTemplateFunCall --function--> AstSyntaxTemplateExpr
 AstSyntaxTemplateFunCall --arguments--> AstSyntaxTemplateExprs
+AstSyntaxTemplateSyntaxUse --declarationId--> int
+AstSyntaxTemplateSyntaxUse --alternativeIndex--> int
+AstSyntaxTemplateSyntaxUse --bindings--> AstSyntaxTemplateBindings
 AstSyntaxTemplateLookUp --nsId--> int
 AstSyntaxTemplateLookUp --nsSymbol--> HashSymbol
 AstSyntaxTemplateLookUp --expression--> AstSyntaxTemplateExpr
@@ -225,11 +231,13 @@ AstSyntaxTemplateDefinition --multi--> AstSyntaxTemplateMultiDefine
 AstSyntaxTemplateDefinition --lazy--> AstSyntaxTemplateDefLazy
 AstSyntaxTemplateDefinition --alias--> AstSyntaxTemplateAlias
 AstSyntaxTemplateDefinition --typeDef--> AstSyntaxTemplateTypeDef
+AstSyntaxTemplateDefinition --syntaxUse--> AstSyntaxTemplateSyntaxUse
 AstSyntaxTemplateExpr --back--> void_ptr
 AstSyntaxTemplateExpr --wildCard--> void_ptr
 AstSyntaxTemplateExpr --nameRef--> AstSyntaxTemplateNameRef
 AstSyntaxTemplateExpr --number--> MaybeBigInt
 AstSyntaxTemplateExpr --character--> character
+AstSyntaxTemplateExpr --syntaxUse--> AstSyntaxTemplateSyntaxUse
 AstSyntaxTemplateExpr --funCall--> AstSyntaxTemplateFunCall
 AstSyntaxTemplateExpr --lookUp--> AstSyntaxTemplateLookUp
 AstSyntaxTemplateExpr --fun--> AstSyntaxTemplateFunction
@@ -261,6 +269,7 @@ AstSyntaxAlternatives["AstSyntaxAlternatives[]"] --entries--> AstSyntaxAlternati
 AstSyntaxBindings["AstSyntaxBindings[]"] --entries--> AstSyntaxBinding
 AstSyntaxPatternItems["AstSyntaxPatternItems[]"] --entries--> AstSyntaxPatternItem
 AstSyntaxTemplateBinders["AstSyntaxTemplateBinders[]"] --entries--> AstSyntaxTemplateBinder
+AstSyntaxTemplateBindings["AstSyntaxTemplateBindings[]"] --entries--> AstSyntaxTemplateBinding
 AstSyntaxTemplateExprs["AstSyntaxTemplateExprs[]"] --entries--> AstSyntaxTemplateExpr
 AstSyntaxTemplateFargList["AstSyntaxTemplateFargList[]"] --entries--> AstSyntaxTemplateFarg
 AstSyntaxTemplateTaggedArgs["AstSyntaxTemplateTaggedArgs[]"] --entries--> AstSyntaxTemplateTaggedArg

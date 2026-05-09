@@ -6,7 +6,7 @@ let
     import list operator "_zip_";
     import list operator "_<>_";
     import list operator "_|>_";
-
+    fn cmpBy(x) { list.cmpBy(x) }
     fn liars() {
         search [
             from 1::5 pick betty, ethel, joan, kitty, mary;
@@ -17,7 +17,7 @@ let
             where (mary  == 4) xor (betty == 1);
             yield ["Betty", "Ethel", "Joan", "Kitty", "Mary"] zip
                   [ betty,   ethel,   joan,   kitty,   mary ] <>
-                  fn (a, b) { snd(a) <=> snd(b) } |> fst;
+                  cmpBy(snd) |> fst;
         ]
     }
 in

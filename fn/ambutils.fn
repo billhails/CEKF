@@ -16,7 +16,7 @@ syntax searchClauses ::= "yield" result: Expr ";" {
     result
 }
 | "where" cond: Expr ";" rest: Syntax(searchClauses) quote {
-    fn (ignored) { unquote(rest) }(require(unquote(cond)))
+    fn (_) { unquote(rest) }(require(unquote(cond)))
 }
 | "from" domain: Expr "some" values: Name ";" rest: Syntax(searchClauses) quote {
     fn (unquote(values)) { unquote(rest) }(some_of(unquote(domain)))
