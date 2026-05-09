@@ -296,7 +296,7 @@ Except the decision of whether to substitute based on number and position of occ
 
 ### Size $\mathcal{Z}$
 
-This is totally arbitrary, though more refined approaches may exist.
+This is totally arbitrary, much more refined approaches probably exist.
 
 $$
 \begin{align*}
