@@ -21,6 +21,61 @@
 #include "builtins_helper.h"
 #include "unicode.h"
 #include <stdlib.h>
+#include <string.h>
+
+static Value characterSequenceToList(const Character *chars, Index length) {
+    Value list = makeEmptyList();
+    int save = protectValue(list);
+
+    for (Index i = length; i > 0; i--) {
+        list = makePair(value_Character(chars[i - 1]), list);
+        protectValue(list);
+    }
+
+    UNPROTECT(save);
+    return list;
+}
+
+static Value unicodeCaseToList(Character c,
+                               Index (*mapping)(Character, Character *,
+                                                Index)) {
+    CharacterArray *chars = newCharacterArray();
+    int save = PROTECT(chars);
+    Index length = mapping(c, NULL, 0);
+
+    extendCharacterArray(chars, length + 1);
+    chars->size = length + 1;
+    if (length > 0) {
+        mapping(c, chars->entries, length);
+    }
+    chars->entries[length] = (Character)0;
+
+    Value result = characterSequenceToList(chars->entries, length);
+    protectValue(result);
+    UNPROTECT(save);
+    return result;
+}
+
+static Value parseUnicodeFraction(const char *fraction) {
+    const char *slash = strchr(fraction, '/');
+    Value numerator;
+    Value denominator;
+    Value result;
+    int save;
+
+    if (slash == NULL) {
+        cant_happen("malformed Unicode fraction %s", fraction);
+    }
+
+    numerator = value_Stdint((int)strtol(fraction, NULL, 10));
+    denominator = value_Stdint((int)strtol(slash + 1, NULL, 10));
+    save = protectValue(numerator);
+    protectValue(denominator);
+    result = ndiv(numerator, denominator);
+    protectValue(result);
+    UNPROTECT(save);
+    return result;
+}
 
 bool assertions_failed;
 int assertions_accumulate = 0;
@@ -156,6 +211,45 @@ Value builtin_unicode_category(Vec *args) {
 
 Value builtin_getdec(Vec *args) {
     return value_Stdint(unicode_getdec(args->entries[0].val.character));
+}
+
+Value builtin_toupper(Vec *args) {
+    return unicodeCaseToList(args->entries[0].val.character, unicode_toupper);
+}
+
+Value builtin_tolower(Vec *args) {
+    return unicodeCaseToList(args->entries[0].val.character, unicode_tolower);
+}
+
+Value builtin_totitle(Vec *args) {
+    return unicodeCaseToList(args->entries[0].val.character, unicode_totitle);
+}
+
+Value builtin_getnum(Vec *args) {
+    UnicodeNumericValue numeric;
+    Value number;
+    Value result;
+    int save;
+
+    if (!unicode_getnum(args->entries[0].val.character, &numeric)) {
+        return makeNothing();
+    }
+
+    if (numeric.hasIntegerValue) {
+        number = value_Stdint((int)numeric.integerValue);
+    } else if (numeric.fractionValue != NULL) {
+        number = parseUnicodeFraction(numeric.fractionValue);
+    } else if (numeric.hasDecimalValue) {
+        number = value_Stdint(numeric.decimalValue);
+    } else {
+        return makeNothing();
+    }
+
+    save = protectValue(number);
+    result = makeSome(number);
+    protectValue(result);
+    UNPROTECT(save);
+    return result;
 }
 
 Value builtin_isalnum(Vec *args) {

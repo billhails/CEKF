@@ -1,5 +1,6 @@
 let
     link "listutils.fn" as list;
+    link "ioutils.fn" as io;
 
     fn test_unicode_basic() {
         let
@@ -135,6 +136,17 @@ let
         // Superscripts and subscripts
         assert(isnumber('²')); // superscript two
         assert(isnumber('₃')); // subscript three
+        switch(getnum('Ⅶ')) {
+            (just(n)) { assert(io.to_string(n) == "7") }
+            (nothing) { assert(false) }
+        }
+        switch(getnum('½')) {
+            (just(n)) { assert(io.to_string(n) == "1/2") }
+            (nothing) { assert(false) }
+        }
+        assert(toupper('ß') == "SS"); // multi-code-point uppercase expansion
+        assert(tolower('İ') == "i\u0307;"); // lowercase expansion with combining mark
+        assert(totitle('ǆ') == "ǅ"); // titlecase mapping
         // Spaces of various widths
         assert(isspace('\u00a0;')); // non-breaking space
         assert(isspace('\u3000;')); // ideographic space

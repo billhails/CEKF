@@ -1,5 +1,6 @@
 let
     link "listutils.fn" as list;
+    link "ioutils.fn" as io;
     Σ = "abc\u03b1;\u03b2;\u03b3;";
     Ψ = "abcαβγ";
     α = '\u03b1;';
@@ -129,6 +130,17 @@ in
     assert(getdec('５') == 5); // Fullwidth digit five
     assert(getdec('९') == 9); // Devanagari digit nine
     assert(getdec('٧') == 7); // Arabic-Indic digit seven
+    switch(getnum('Ⅶ')) {
+        (just(n)) { assert(io.to_string(n) == "7") }
+        (nothing) { assert(false) }
+    }
+    switch(getnum('½')) {
+        (just(n)) { assert(io.to_string(n) == "1/2") }
+        (nothing) { assert(false) }
+    }
+    assert(toupper('ß') == "SS"); // multi-code-point uppercase expansion
+    assert(tolower('İ') == "i\u0307;"); // lowercase expansion with combining mark
+    assert(totitle('ǆ') == "ǅ"); // titlecase mapping
     // Spaces of various widths
     assert(isspace('\u00a0;')); // non-breaking space
     assert(isspace('\u3000;')); // ideographic space

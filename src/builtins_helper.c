@@ -50,6 +50,10 @@ static void registerIsUpper(BuiltIns *registry);
 static void registerIsValid(BuiltIns *registry);
 static void registerIsXdigit(BuiltIns *registry);
 static void registerGetDec(BuiltIns *registry);
+static void registerToUpper(BuiltIns *registry);
+static void registerToLower(BuiltIns *registry);
+static void registerToTitle(BuiltIns *registry);
+static void registerGetNum(BuiltIns *registry);
 static void registerChr(BuiltIns *registry);
 static void registerArgv(BuiltIns *registry, int argc, int cargc, char *argv[]);
 static void registerGetEnv(BuiltIns *registry);
@@ -182,6 +186,10 @@ BuiltIns *registerBuiltIns(int argc, int cargc, char *argv[]) {
     registerIsValid(res);
     registerIsXdigit(res);
     registerGetDec(res);
+    registerToUpper(res);
+    registerToLower(res);
+    registerToTitle(res);
+    registerGetNum(res);
     registerChr(res);
     registerIO(res);
     registerSQLite(res);
@@ -538,5 +546,51 @@ static void registerGetDec(BuiltIns *registry) {
     pushCharacterArg(args);
     pushNewBuiltIn(registry, "getdec", integer, args, (void *)builtin_getdec,
                    "builtin_getdec");
+    UNPROTECT(save);
+}
+
+static void registerToUpper(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    TcType *string = makeStringType();
+    PROTECT(string);
+    pushCharacterArg(args);
+    pushNewBuiltIn(registry, "toupper", string, args, (void *)builtin_toupper,
+                   "builtin_toupper");
+    UNPROTECT(save);
+}
+
+static void registerToLower(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    TcType *string = makeStringType();
+    PROTECT(string);
+    pushCharacterArg(args);
+    pushNewBuiltIn(registry, "tolower", string, args, (void *)builtin_tolower,
+                   "builtin_tolower");
+    UNPROTECT(save);
+}
+
+static void registerToTitle(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    TcType *string = makeStringType();
+    PROTECT(string);
+    pushCharacterArg(args);
+    pushNewBuiltIn(registry, "totitle", string, args, (void *)builtin_totitle,
+                   "builtin_totitle");
+    UNPROTECT(save);
+}
+
+static void registerGetNum(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    TcType *numberType = makeTypeSig(newSymbol("number"), NULL);
+    PROTECT(numberType);
+    TcType *maybeNumberType = makeMaybeType(numberType);
+    PROTECT(maybeNumberType);
+    pushCharacterArg(args);
+    pushNewBuiltIn(registry, "getnum", maybeNumberType, args,
+                   (void *)builtin_getnum, "builtin_getnum");
     UNPROTECT(save);
 }
