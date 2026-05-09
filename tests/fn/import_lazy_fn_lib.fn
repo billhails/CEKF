@@ -1,0 +1,2 @@
+namespace
+    lazy fn delayed_or(a, b) { a or b }

@@ -1,0 +1,10 @@
+let
+    operator "x_" 10 fn (v) { v };
+
+    macro mk: Expr mkHelper;
+
+    syntax mkHelper ::= n: Name quote { fn (unquote(n)) { unquote(n) } };
+
+    id = mk x;
+in
+    assert(9 == id(9))

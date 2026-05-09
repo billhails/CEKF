@@ -1,70 +1,1290 @@
 # Syntax Extension
 
-## Language Level
-
-Thinking to model this on the scheme `define-syntax`/`syntax-rules` system, a scheme
-example is
-
-```scheme
-(define-syntax or
-  (syntax-rules ()
-    ((_) #f)
-    ((_ e) e)
-    ((_ e1 e2 e3 ...)
-     (let ((t e1)) (if t #t (or e2 e3 ...))))))
-```
-
-I'd like to at least be able to transform
+## List Comprehensions Example
 
 ```fn
-switch (x) {
-    (1) { "one" }
-    ...
+// list comprehensions
+macro lco: Expr internalLco;
+
+syntax internalLco ::= "["
+                      exp: Expr
+                      "for" x: Name
+                      "in" xs: Expr
+                      filters: Syntax(where(x, xs))
+                      "]"
+                      quote {
+                        list.map(fn (unquote x) { unquote exp }, unquote filters)
+                      };
+
+syntax where(x, xs) ::= "where" cond: Expr
+                        rest: Syntax(conds(x, xs))
+                        quote {
+                          list.filter(fn (unquote x) { unquote cond }, unquote rest)
+                        }
+                      | empty { xs };
+
+syntax conds(x, xs) ::= "," cond: Expr
+                        rest: Syntax(conds(x, xs))
+                        quote {
+                          list.filter(fn (unquote x) { unquote cond }, unquote rest)
+                        }
+                      | empty { xs };
+
+// use
+lco [ x + 1 for x in [1, 2, 3] where x > 1 ]; // [3, 4]
+```
+
+`empty` is not required syntax, in fact it is completely ignored but aids
+readablity.
+
+In phase 1, the explicit `: Expr` or `: Def` annotation is a good surface
+marker for initiating rules.
+
+- `macro lco: Expr helper;` means an expression-initiating rule.
+- `macro annotate: Def helper;` means a definition-initiating rule.
+- `syntax where(...) ::= ...` means a helper-only rule.
+
+This keeps public entry rules visibly distinct from helper rules while still
+preserving the `: Expr` versus `: Def` distinction. Internally the
+implementation still needs both a result kind and an entry kind, and the
+surface syntax continues to expose both for initiating rules.
+
+Current phase-1 implementation note:
+
+- Helper-only rules own their full patterns and may use ordered alternatives.
+- Initiating rules still register a dedicated head token and are currently
+  limited to one alternative each.
+
+## Implementation Sketch
+
+The existing Pratt parser is still a good fit for expression parsing, precedence,
+and operator dispatch, but richer syntax extensions should not be modelled as
+ordinary user operators.
+
+The clean split is:
+
+1. Pratt remains responsible for parsing expressions and for deciding when an
+  expression-oriented syntax rule may begin.
+2. The existing definition parser remains responsible for deciding when a
+  definition-oriented syntax rule may begin.
+3. A separate syntax-rule engine handles ordered components, alternatives,
+   recursive helper rules, inherited arguments, and template expansion.
+
+In other words, a `macro` declaration would be entered from either
+Pratt or the definition parser, but most of its body would not be parsed by the
+ordinary prefix or definition routines directly.
+
+## Parser Boundary
+
+Each syntax declaration should compile to a SyntaxSpec rather than directly to a
+PrattRecord.
+
+- Expression-initiating syntax rules register their head token in the scanner
+  trie and add a prefix parselet that delegates to the syntax-rule engine.
+- Definition-initiating syntax rules register their head token in the scanner
+  trie and add a definition-dispatch entry that delegates to the same syntax
+  engine from the existing definition parser.
+- Non-initiating syntax rules are stored in a syntax table only. They are not
+  reachable from the top-level Pratt expression loop and can only be called from
+  another syntax rule through Syntax(...).
+- Helper-only alternatives own their full patterns. They do not share an
+  implicit entry head token with each other.
+- Adding a token to the trie and allowing it to start an expression are distinct
+  decisions. Secondary keywords still need to be recognized lexically even when
+  they are not valid entry points by themselves.
+
+That split matters for backtracking. A helper rule such as `chooseValue ::= "with"
+"skip" ... | "with" replacement: Expr ...` must be able to roll back before the
+first `"with"`, whereas an initiating rule such as `macro time: Expr timeBody;`
+has already committed to its registered head token before helper-rule matching
+starts.
+
+This keeps Pratt in charge of expression entry and the existing definition
+parser in charge of definition entry, while allowing a syntax rule to run its
+own ordered matching logic once selected.
+
+## SyntaxSpec Shape
+
+The syntax-rule engine needs something closer to a small grammar than to a Pratt
+operator record.
+
+Each rule should contain:
+
+- A rule name.
+- Zero or more inherited parameters.
+- One or more alternatives for helper-only rules.
+- A resolved result kind such as `Expr` or `Def`.
+- An entry kind: expression, definition, or helper-only.
+- A template to build when an alternative matches.
+
+The result kind remains required internal metadata. In phase 1, the source
+surface uses `macro` plus the explicit `: Expr` or `: Def` annotation to mark
+initiating rules rather than attaching a general-purpose result annotation to
+every rule.
+
+- `macro name: Expr helper;` means an expression-initiating rule.
+- `macro name: Def helper;` means a definition-initiating rule.
+- `syntax name ::= ...` means a helper-only rule, defaulting to an `Expr`
+  result unless a later extension adds explicit helper result annotations.
+- Result kind and entry kind remain separate properties internally even if the
+  initial surface syntax couples them in the common cases.
+- The current phase-1 implementation keeps initiating rules single-alternative
+  until the entry path is generalized.
+
+Each alternative should be an ordered list of components rather than a DAG.
+That is enough for the examples here and makes backtracking rules simpler.
+
+For helper-only rules, alternatives that consume input are tried before empty
+alternatives. Within those two groups, declaration order is preserved. That
+makes an empty recursive base case readable in either first or last position
+without changing the match result.
+
+The current implementation also rejects helper alternatives that are obviously
+unreachable at declaration time. Exact duplicates are rejected, and a later
+consuming alternative is rejected if an earlier consuming alternative is a
+strict pattern prefix of it modulo binder renaming.
+
+Useful component kinds are:
+
+- Terminal: a fixed quoted token such as "for" or ",".
+- Expr: parse one expression through the existing Pratt expression parser.
+- Name: parse one identifier or binder.
+- Nest: parse one nest through the existing nest parser.
+- String: parse a string literal.
+- Type: parse a type.
+- SyntaxCall: invoke another syntax rule, optionally with inherited arguments.
+- Empty: match nothing, useful for explicit base cases.
+
+Phase 1 also allows a bare unquoted `empty` token anywhere a positional
+component could appear in a pattern. It is ignored completely and exists only
+as a readability marker for branches whose pattern is otherwise empty.
+
+This is enough to express the lco, where, and filter example without forcing
+the problem back into prefix or infix operator machinery.
+
+## Parse Environment
+
+Each syntax invocation needs an environment separate from the ordinary Pratt
+parser state.
+
+That environment should hold:
+
+- Inherited arguments passed in by the caller.
+- Captured bindings produced by components in the current alternative.
+- The current parser and lexer position.
+- The active syntax table for the current scope.
+
+Bindings should use let-star semantics, but with explicit alternative-local
+rollback semantics:
+
+- Each alternative starts with a fresh local environment seeded by the rule's
+  inherited arguments.
+- Components match left to right.
+- A captured name becomes visible only after the component that binds it has
+  matched successfully.
+- Attempting to bind the same name twice within one alternative is an error.
+- If a later component fails, the engine discards every binding created while
+  attempting that alternative and restores the parser position to the
+  alternative's checkpoint.
+- A SyntaxCall should run in a child environment seeded from its explicit
+  arguments. Its local captures should not mutate the caller's environment.
+
+This is close to let-star on the successful path, but more precise for an
+implementation that needs backtracking and alternative selection.
+
+For the running example:
+
+- lco binds exp, x, xs, and filters.
+- where receives x and xs as inherited arguments.
+- filter receives x and xs as inherited arguments.
+- filter additionally binds cond and rest during recursive matching.
+
+That makes Syntax(where(x, xs)) a recursive rule invocation with explicit
+environment passing, not a plain Pratt parselet call.
+
+## Declaration-Level Binding
+
+The let-star-with-rollback rules above apply only to bindings captured within a
+single syntax rule invocation. They are not the binding rule for syntax
+declarations themselves.
+
+Syntax declarations need letrec-like binding semantics.
+
+- A syntax rule should be able to refer to itself.
+- A syntax rule should be able to refer to peer syntax rules in the same
+  binding group.
+- In phase 1, a syntax rule should only become available for actual expansion
+  after its declaration has been fully parsed and installed.
+- Nested scopes should still shadow outer syntax rules lexically.
+
+This is the declaration-level analogue of ordinary recursive binding, and it is
+separate from the left-to-right capture rules that apply inside one matched
+alternative.
+
+For the running example, this means lco, where, and filter should be treated as
+part of one recursive syntax binding group within the surrounding let scope,
+even though the components captured inside each rule still follow let-star
+semantics.
+
+This gives a simple phase-1 rule:
+
+- Syntax declarations share the lexical scope of the surrounding let or nest.
+- Syntax declarations in that scope may be mutually recursive as declarations.
+- Earlier ordinary definitions in the same scope do not get to expand later
+  syntax declarations yet.
+
+That keeps the initial implementation textual in terms of expansion
+availability, while still allowing recursive relationships among syntax
+declarations themselves.
+
+### Does This Require A Parser Pre-Pass?
+
+Hopefully not a whole-file or whole-parser pre-pass.
+
+The semantic requirement is only that recursive syntax names be available as a
+binding group. That can likely be achieved with a local two-stage strategy:
+
+1. Reserve syntax rule names or placeholders in the current scope.
+2. Parse and attach their alternatives, templates, and metadata.
+3. Resolve SyntaxCall targets against that local syntax table.
+
+That is closer to letrec elaboration than to a separate parser pre-pass.
+
+One caveat does matter: the current parser is still definition-by-definition.
+For phase 1, that is acceptable because syntax expansion availability remains
+textual even though syntax declaration binding is recursive.
+
+A later enhancement could hoist syntax declarations to the start of the
+surrounding let block for parser purposes, so that earlier ordinary definitions
+could use later syntax declarations. That should be treated as a compatible
+nice-to-have rather than a requirement for the initial design.
+
+## Interaction With Existing Pratt Routines
+
+Most component kinds should reuse existing parser routines.
+
+- Expr delegates to the ordinary expression parser.
+- Name delegates to identifier parsing.
+- Nest delegates to the nest parser.
+- String and Type delegate to their existing parsers.
+- Definition-oriented entry rules should reuse the existing definition parser's
+  dispatch points rather than trying to pass definitions through the expression
+  parser.
+
+What is new is the control layer around them:
+
+- Syntax matching needs non-committing probes so one alternative can fail
+  without poisoning the whole parse.
+- The engine needs a way to distinguish "this component did not match" from
+  "this component matched but the nested parser raised a real syntax error".
+- Entering a syntax rule should therefore use checkpoint and rollback support
+  around token consumption.
+
+That is the main reason this should be a syntax engine sitting beside Pratt and
+the existing definition parser, not a direct extension of the current
+PrattRecord model.
+
+## Template Expansion
+
+The terminal body should be treated as a template, not as an ordinary AST nest
+with ad hoc substitution.
+
+A practical model is:
+
+1. Parse quote { ... } into a template AST.
+2. Represent unquote name as a typed splice node.
+3. During expansion, resolve each splice from either the captured bindings or
+   the inherited arguments.
+4. Lower the expanded template to the ordinary AST used by later compiler
+  stages, according to the rule's declared result kind.
+
+The splice nodes need syntax-category awareness.
+
+- unquote x in binder position should splice a Name.
+- unquote exp should splice an Expr.
+- unquote filters should splice whatever expression fragment the recursive rule
+  returned.
+
+The template itself also needs a declared result kind.
+
+- An `Expr` rule should lower to an AstExpression.
+- A `Def` rule should lower to an AstDefinition.
+
+That keeps the first cut simple while still allowing syntax extensions to
+participate in let bodies, namespace bodies, and other definition contexts.
+
+This is also where hygiene will eventually need to live. For now it is enough
+to say that template expansion must preserve parser info and distinguish between
+introduced names and spliced names.
+
+## Parse Flow For The Example
+
+The lco example would run roughly as follows:
+
+1. Pratt sees the initiating token lco and dispatches to the syntax-rule entry
+   parselet.
+2. The syntax engine selects the lco rule and begins matching its single
+   alternative.
+3. Expr parses the body expression.
+4. The fixed terminals for, in, and ] are matched directly.
+5. Name and Expr capture x and xs.
+6. Syntax(where(x, xs)) invokes the where rule with those inherited arguments.
+7. where either matches Empty and returns xs, or matches where cond ... and
+   delegates to filter.
+8. filter either matches Empty and returns xs, or consumes a comma, captures a
+   condition, and recurses.
+9. Once the recursive calls return, the parser emits syntax-use carriers with
+  captured bindings and selected alternatives. Those carriers are then
+  prepared and lowered by `prepareAst` and `lowerAst` before lambda
+  conversion.
+
+This gives the desired grammar-like structure while still reusing the existing
+expression parser where it matters.
+
+Current implementation note:
+
+- parser-time direct substitution is gone
+- syntax declarations and syntax uses survive parsing as AST carriers
+- hygienic lowering now happens after `nsAstProg()` via `prepareAst()` and
+  `lowerAst()`
+- definition-position initiating rules are supported for the current
+  single-definition phase-1 surface
+
+## Scope And Storage
+
+Syntax rules should follow the same broad scoping model as operators.
+
+- A parser scope owns a syntax table alongside its operator table.
+- Child scopes inherit visibility from parent scopes.
+- New local syntax rules shadow outer rules of the same name.
+- Export and import can be added later once the rule representation is stable.
+
+This suggests adding syntax storage to the Pratt parser state, but not forcing
+syntax rules into PrattRecord.
+
+## Deferred Issues
+
+The core phase-1 hygiene design is now implemented, including explicit template
+IR, AST carriers, and post-namespace lowering.
+
+The remaining open issues are narrower.
+
+- Broader fragment kinds beyond `Expr` and `Def` remain deferred.
+- General `splice`, repetition-oriented templates, and clause-sequence
+  fragments remain deferred.
+- Imported or exported syntax rules remain deferred.
+- Initiating rules are still narrower than helper-only rules: helper rules own
+  full ordered alternatives, while initiating rules currently use one entry
+  alternative each.
+
+Those are follow-on surface and entry-path questions. They no longer change the
+core parser-plus-lowering architecture.
+
+## Minimum Concrete First Cut
+
+Without changing code yet, the smallest concrete design that seems worth
+implementing is:
+
+- Support two initiating entry kinds: `Expr` and `Def`.
+- Support two result kinds: Expr and Def.
+- Keep helper-only rules non-initiating.
+- Reuse existing parser routines wherever a component can be expressed in terms
+  of Expr, Name, Nest, String, or Type.
+
+That gives enough surface area to support expression sugar such as list
+comprehensions and also definition sugar inside let and namespace bodies,
+without committing yet to broader fragment kinds such as statement lists or
+type-level rewrites.
+
+### Draft Schema
+
+At the documentation level, the minimum useful structures look like this:
+
+- SyntaxTable
+  A scope-local table keyed by rule name.
+- SyntaxRule
+  Holds the rule name, entry kind, result kind, inherited parameter list,
+  alternatives, and template metadata.
+- SyntaxAlternative
+  Holds one ordered sequence of components plus the template to expand when the
+  alternative succeeds.
+- SyntaxComponent
+  A tagged union with variants such as Terminal, Expr, Name, Nest, String,
+  Type, SyntaxCall, and Empty.
+- SyntaxCall
+  Names a target rule and carries the explicit arguments passed into that child
+  invocation.
+- SyntaxTemplate
+  A quoted template plus typed splice nodes for unquote sites.
+- SyntaxEnv
+  Holds inherited arguments, locally captured bindings, and the checkpoints
+  needed for rollback.
+
+The first cut does not need every possible abstraction up front. In particular,
+it does not need generic fragment polymorphism if the rule itself already
+declares whether it produces an Expr or a Def.
+
+### Parser Storage
+
+The parser state likely needs one new scope-aware table beside the existing
+operator and macro tables:
+
+- PrattParser gains a SyntaxTable.
+- Child parser scopes inherit syntax visibility the same way they inherit other
+  scoped parser state.
+- Initiating rules additionally arrange for their head token to be recognized by
+  the scanner trie.
+
+That keeps syntax lookup a parser concern without forcing syntax rules into the
+existing PrattRecord shape.
+
+### Minimum Dispatch Hooks
+
+The first cut seems to need only two direct entry hooks.
+
+1. Expression hook.
+   The ordinary Pratt expression path sees a registered initiating token and
+   dispatches to a syntax-rule entry parselet. That parselet invokes the syntax
+   engine and expects an Expr result.
+2. Definition hook.
+   The ordinary definition parser sees a registered initiating token and
+   dispatches to a syntax-rule definition entry. That entry invokes the same
+   syntax engine and expects a Definition result.
+
+Helper-only rules have no direct dispatch hook. They are reachable only through
+SyntaxCall from another rule.
+
+This is important because it avoids a false unification. Expression syntax and
+definition syntax can share the same rule engine without pretending they are
+entered through the same parser routine.
+
+### Matching Contract
+
+For a first implementation, each entry hook can obey a simple contract:
+
+- Resolve the named initiating rule.
+- Create a fresh SyntaxEnv seeded with inherited arguments, if any.
+- Try alternatives in declaration order.
+- On success, expand the template and verify that its result kind matches the
+  entry hook's expected kind.
+- On alternative failure, roll back both token position and local bindings.
+- On total failure, raise a normal parser error at the initiating token.
+
+This is conservative, but it gives a well-defined behavior model before any
+later optimization or ambiguity handling.
+
+### What This Deliberately Excludes
+
+The first cut should avoid taking on too much.
+
+- No generic fragment result kinds beyond Expr and Def.
+- No export or import design yet.
+- No fully general hygiene system or hygiene escape-hatch design yet.
+- No attempt to merge syntax rules into the existing operator representation.
+- No attempt to make every parser surface syntax-extensible at once.
+
+That should keep the implementation small enough to validate the overall model
+before broadening the feature.
+
+## Hygiene Position
+
+The existing alpha-conversion pass is too late in the pipeline to serve as the
+primary hygiene mechanism for syntax expansion.
+
+By the time a generic later alpha-conversion pass runs, expansion has already
+flattened syntax templates into ordinary AST. At that point the compiler can no
+longer reliably reconstruct the distinction between:
+
+- names introduced by the syntax template itself
+- names coming from unquote or splice
+- literal free names written in the template that should resolve at the
+  definition site
+
+A later alpha-conversion pass is still useful as a normalization and safety
+step, because it can freshen binders in the lowered representation and prevent
+accidental capture there. But it cannot decide the core hygiene policy after
+the fact.
+
+For a first implementation, hygiene should therefore be handled by the syntax
+expander itself.
+
+The minimum useful policy is:
+
+- Template-introduced binders are freshened during expansion.
+- References introduced by the same template are rewritten to those freshened
+  binders.
+- Literal identifiers written directly in the template resolve at the
+  definition site.
+- Unquoted or spliced syntax preserves use-site identity.
+- A later generic alpha-conversion pass may still run, but only as cleanup,
+  not as the mechanism that decides hygiene.
+
+This does not require a fully general syntax-rules-style mark system on day
+one, but it does require the template representation to preserve identifier
+provenance long enough for the expander to make these distinctions.
+
+That makes a few early design constraints important:
+
+- The template AST must distinguish literal identifiers from unquoted
+  identifiers.
+- Binding positions must be explicit so the expander knows which names to
+  freshen.
+- Expansion should not erase provenance too early by lowering immediately to an
+  unannotated ordinary AST.
+
+If those constraints are preserved, later work can refine hygiene without
+needing to redesign the whole expansion model.
+
+## Stress Test Against Motivating Examples
+
+This section compares the current plan against the examples in
+[HYGIENIC_MACRO_DESIGN_KICKOFF.md](HYGIENIC_MACRO_DESIGN_KICKOFF.md).
+The verdicts here are about the phase-1 design described in this document, not
+the eventual long-term goal.
+
+### Fits The Phase-1 Plan
+
+#### Time
+
+The `time` example fits the current plan cleanly.
+
+- It only needs an Expr parameter.
+- It expands to an Expr result.
+- It needs hygienic generated binders.
+- It needs definition-site resolution for helpers such as `now` and `print`.
+
+That is already aligned with the current SyntaxSpec shape and hygiene position.
+
+```fn
+macro time: Expr timeBody;
+
+syntax timeBody ::= "(" expr: Expr ")" {
+    quote {
+        let start = now()
+        in
+            let result = unquote expr
+            in {
+                print(now() - start);
+                result
+            }
+    }
 }
 ```
 
-into
+#### Trace
+
+`trace` is only partly covered.
+
+If `trace` just wraps an expression with extra evaluation-time behavior, then it
+fits the same way as `time`. If it also wants to recover a user-facing string
+representation of the captured syntax object, then the current plan does not yet
+say how syntax objects become strings. That reflection surface should therefore
+be treated as later than the core phase-1 design.
+
+#### Unless
+
+`unless` fits the current plan cleanly.
+
+- Fixed terminals are enough to represent the header and trailing `else` form.
+- Expr and Nest parameters are already part of the phase-1 component set.
+- The expansion is a straightforward quoted Expr template.
+
+This is still a strong MVP candidate.
 
 ```fn
-fn { (1) { "one" } ...} (x)
-```
+macro unless: Expr unlessBody;
 
-and
-
-```fn
-if (x) { false } else { true }
-```
-
-into
-
-```fn
-case (x) {
-    (true) { false }
-    (false) { true }
+syntax unlessBody ::= "(" cond: Expr ")"
+            consequent: Nest "else"
+            alternative: Nest {
+    quote {
+        if (unquote cond) {
+            unquote alternative
+        } else {
+            unquote consequent
+        }
+    }
 }
 ```
 
-and thence to
+#### For Loop As Expression Sugar
+
+The `for` example also fits the phase-1 plan.
+
+- It needs Name, Expr, and Nest parameters.
+- It needs a hygienically introduced binder such as `loop`.
+- It needs unquote to work correctly in binder position.
+
+Those requirements are already visible in the current template and hygiene
+sections, so this remains a good stress test rather than a blocker.
 
 ```fn
-fn { (true) { false } (false) { true }} (x);
-```
+macro for: Expr forBody;
 
-We don't need to maintain the separation of `define-syntax` and `syntax-rules`
-that scheme has. so a single `syntax` keyword may suffice:
-
-```fn
-syntax (switch) {
-    switch (a1, ...)
+syntax forBody ::= "(" name: Name "=" init: Expr ","
+                   test: Expr "," step: Expr ")" body: Nest quote {
+  let fn loop(unquote(name)) {
+    if (unquote(test)) {
+      unquote(body);
+      loop(unquote(step))
+    } else {
+      unquote(name)
+    }
+  }
+  in loop(unquote(init))
 }
 ```
 
-That's not really working, maybe explicit BNF approach
+The current tested surface uses `quote` directly after the pattern rather than
+wrapping the template in an additional rule body block.
+
+#### List Comprehensions
+
+List comprehensions are the main example this document is already designed
+around, and they remain in scope.
+
+- Recursive helper rules cover the `where` and comma-separated predicate tail.
+- One grouped syntax declaration can cover both the empty and non-empty `where`
+  cases.
+- The expansion relies on definition-site resolution for helper operators while
+  still using captured names in generated lambdas.
+
+This is a demanding first-wave example, but it still fits the current model.
+
+### Early Next-Wave Targets
+
+#### Switch
+
+`switch` is close, but not quite phase 1.
+
+The current plan does not yet have a first-class notion of clause-list
+parameters or clause splicing. That means it cannot yet represent the body of a
+`switch` as a structured macro parameter the way the hard-coded parser support
+does today.
+
+Even so, `switch` remains the clearest early migration target after the MVP,
+because its expansion shape is already known.
+
+#### Definition-Position Boilerplate Generators
+
+`define_ast` partially fits the plan and partially exceeds it.
+
+The current design already allows syntax rules in definition position, which is
+an important step. But the example as written wants to expand to multiple
+definitions rather than one AstDefinition. That exceeds the current phase-1
+result kinds.
+
+So the blocker here is not definition position itself, but the lack of a
+Definitions result kind or definition-list splicing.
+
+### Beyond The Phase-1 Plan
+
+#### Rewrite-Rule Helper
+
+`rewrite` is beyond the current phase-1 design.
+
+It needs syntax-pattern matching over structured syntax objects, repetition, and
+structured expansion into a matcher or decision tree. The current plan is about
+parser-side recognition and template expansion, not pattern matching on already
+captured syntax trees.
+
+#### Grammar Or DSL Macros
+
+Grammar-oriented macros are also beyond the current phase-1 design.
+
+They want parser-facing grammar handling, richer repetition and binding, and
+possibly a different expansion model entirely. That is a reasonable long-term
+goal, but it is not a small extension of the current first cut.
+
+#### Do Notation
+
+`do` notation is also beyond the current phase-1 design.
+
+The hard part is not the final desugaring shape. The hard part is that the body
+is a semicolon-separated sequence of structured clauses, not just a single Expr
+or Nest parameter with no internal macro-specific structure.
+
+To support `do` well, the syntax system will likely need at least one of:
+
+- clause-list parameters
+- structured inspection of captured Nest syntax objects
+- richer fragment kinds than the current Expr and Def result model
+
+That keeps `do` as a compatible future target, but not a first-wave one.
+
+### Overall Verdict
+
+The current plan comfortably covers the strongest phase-1 examples:
+
+- `time`
+- `unless`
+- `for`
+- list comprehensions
+
+It starts to break down at the first examples that need one of three things the
+current design does not yet include:
+
+- clause-oriented fragments such as `switch` and `do`
+- syntax-pattern matching over structured syntax objects such as `rewrite`
+- multi-definition results such as `define_ast`
+
+That suggests the current plan is strong enough for an MVP, and also makes the
+most natural second-wave extensions fairly clear.
+
+## Follow-Up Candidate Syntaxes
+
+Beyond `time`, `unless`, and the basic `for` shape, the current phase-1 system
+already looks strong enough to justify a few more substantial follow-up
+candidates. The best near-term targets are not the ones that require new
+fragment kinds. They are the ones that stay expression- or definition-shaped
+while taking advantage of recursive helpers, inherited parameters, and hygienic
+template expansion.
+
+### Query Comprehensions
+
+The list-comprehension example can likely be broadened into a more serious
+query-style surface with optional recursive tails.
 
 ```fn
-syntax (switch) {
-    SWITCH ::= switch exprs body ::== fn body exprs ;;
-    exprs ::= (expr, ...)
-    body ::= 
+macro query: Expr queryHead;
+
+syntax queryHead ::= "["
+                     projection: Expr
+                     "from" x: Name
+                     "in" xs: Expr
+                     clauses: Syntax(queryClauses(x, xs))
+                     "]" quote {
+  unquote clauses
 }
 ```
+
+The interesting part here is not the head form itself but the helper family
+that could parse `where`, `order`, `join`, `group`, or similar clause tails.
+That would exercise the same machinery as list comprehensions, but in a domain
+that feels more like a real embedded query language than a single expression
+sugar.
+
+### Nondeterministic Search DSL
+
+Given the language's `amb` orientation, a search-oriented syntax family looks
+like a natural fit.
+
+```fn
+search [
+  from xs pick x;
+  from ys pick y;
+  where ok(x, y);
+  yield score(x, y)
+]
+```
+
+This is structurally close to a comprehension, but semantically richer. The
+helper rules would not just collect filters. They could lower into nested
+choice, guard, and scoring or pruning combinators. That would make syntax a
+front end for a real search DSL rather than just collection mapping.
+
+The existing `amb` examples in `fn/` suggest a few more concrete follow-up
+surfaces.
+
+#### Multiple Dwellings
+
+`fn/multiple_dwellings.fn` is mostly a permutation search plus a list of
+constraints. A DSL can compress the repeated `one_of(exclude(...))` pattern
+into a single domain-first `pick` form.
+
+```fn
+search [
+  from [1,2,3,4,5] pick baker, cooper, fletcher, miller, smith;
+
+  require baker != 5;
+  require cooper != 1;
+  require fletcher != 5;
+  require fletcher != 1;
+  require miller > cooper;
+  require abs(smith - fletcher) != 1;
+  require abs(fletcher - cooper) != 1;
+
+  yield [
+    result("baker", baker),
+    result("cooper", cooper),
+    result("fletcher", fletcher),
+    result("miller", miller),
+    result("smith", smith)
+  ]
+]
+```
+
+This is a good example because the problem statement itself is already “assign
+distinct values, then apply guards”. The DSL surface can therefore reflect the
+logic directly instead of exposing the operational details of repeated list
+exclusion.
+
+#### Liars
+
+`fn/liars.fn` has the same permutation shape, but the interesting part is the
+constraint block rather than the assignment mechanics.
+
+```fn
+search [
+  from [1,2,3,4,5] pick betty, ethel, joan, kitty, mary;
+
+  require (kitty == 2) xor (betty == 3);
+  require (ethel == 1) xor (joan == 2);
+  require (joan == 3) xor (ethel == 5);
+  require (kitty == 2) xor (mary == 4);
+  require (mary == 4) xor (betty == 1);
+
+  yield sortBy(
+    fn (#(_, a), #(_, b)) { a <=> b },
+    [
+      #("Betty", betty),
+      #("Ethel", ethel),
+      #("Joan", joan),
+      #("Kitty", kitty),
+      #("Mary", mary)
+    ]
+  )
+]
+```
+
+The main value here is that a search DSL can make the code read like a compact
+logic puzzle rather than like a hand-written backtracking program.
+
+#### Barrels
+
+`fn/barrels.fn` suggests a second useful abstraction beyond `from xs pick ...`:
+subset choice from a remaining domain.
+
+```fn
+search [
+  from barrels pick beer;
+  from barrels except [beer] pick barrel_1;
+  from barrels except [beer, barrel_1] pick barrel_2;
+  from barrels except [beer, barrel_1, barrel_2] some purchase;
+
+  require (barrel_1 + barrel_2) * 2 == sum(purchase);
+
+  yield beer
+]
+```
+
+That is still the same underlying `amb` search, but it names the search moves
+more directly: choose one, choose two more from the remainder, choose some
+subset from what is left, then impose an arithmetic guard. The domain
+refinement itself does not need to be a syntax feature here because
+`listutils.fn` already provides `except` as an ordinary expression operator.
+
+#### Pythagorean Triples
+
+`fn/pythagoreanTriples.fn` is already close to a DSL because the library
+operators for ranges and guards are compact. Even so, it could likely be made
+more uniform with the same `search` surface.
+
+```fn
+search [
+  from 1 ... pick z;
+  from 1 .. z pick x;
+  from x .. z pick y;
+
+  require x**2 + y**2 == z**2;
+
+  yield [z, y, x]
+]
+```
+
+This is useful because it shows that the same DSL family can cover both finite
+puzzle search and open-ended numeric generation.
+
+#### Small Core Worth Prototyping
+
+Taken together, the current examples suggest that a very small search DSL could
+already go a long way if it provided just a few core moves.
+
+- `from xs pick x`
+- `from xs pick x, y, z`
+- `from xs some ys`
+- `require ...` or `where ...`
+- `yield ...`
+
+That would be enough to clean up the current `amb` examples substantially
+without needing a much more ambitious logic-programming system.
+
+I'm thinking to make this work we need to lower to a much more regular
+structure than would typically be written by hand. For example the
+multiple dwellings puzzle might lower to something like this (truncated for
+brevity)
+
+```fn
+{
+  let baker = one_of(dwellings)
+  in
+  {
+    let cooper = one_of(dwellings except [baker])
+    in
+    {
+      let fletcher = one_of(dwellings except [baker, cooper])
+      in
+      {
+        let tmp$1 = require(baker != 5)
+        in
+        {
+          let tmp$2 = require(cooper != 1)
+          in
+          {
+            let tmp$3 = require(fletcher != 1)
+            in
+            {
+              [baker, cooper, fletcher];
+            }
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+That's because we can't do
+
+```fn
+quote {
+  unquote constraint;
+  unquote yield;
+}
+```
+
+because the result isn't a syntactic unit. The result `[baker, cooper, fletcher]`
+must be unquoted first and the constraints and declarations around it must
+unquote in reverse order (if we follow the list comprehensions working example.)
+
+One useful way to make that more explicit is to treat the search body as a
+normalized clause list and lower it by a right fold.
+
+#### One Possible Normal Form
+
+The core clause forms could be normalized to something like:
+
+```text
+yield e
+require c ; rest
+from xs pick x ; rest
+from xs some ys ; rest
+```
+
+On that view, surface sugar such as
+
+```text
+from xs pick x, y, z
+```
+
+would not lower directly. It would first normalize to ordinary generator
+clauses:
+
+```text
+from xs pick x;
+from xs except [x] pick y;
+from xs except [x, y] pick z;
+```
+
+Only after that normalization step would the clause list lower to the ordinary
+core language.
+
+#### Right-Fold Lowering
+
+The lowering itself can then be stated as a right fold over the remaining
+clauses.
+
+```text
+lower(yield e) =
+  e
+
+lower(require c ; rest) =
+  let tmp$k = require(c)
+  in lower(rest)
+
+lower(from xs pick x ; rest) =
+  let x = one_of(xs)
+  in lower(rest)
+
+lower(from xs some ys ; rest) =
+  let ys = some_of(xs)
+  in lower(rest)
+```
+
+On that reading, `lower(rest)` is not “the next statement”. It is the entire
+open expression produced by lowering every remaining clause to the right.
+
+For example:
+
+```text
+lower(
+  require baker != 5;
+  require cooper != 1;
+  yield [baker, cooper]
+)
+```
+
+becomes:
+
+```fn
+let tmp$1 = require(baker != 5)
+in
+  let tmp$2 = require(cooper != 1)
+  in
+    [baker, cooper]
+```
+
+That expression is still open with respect to `baker` and `cooper`. Generator
+clauses then wrap around it:
+
+```text
+lower(
+  from dwellings pick baker;
+  from dwellings except [baker] pick cooper;
+  require baker != 5;
+  require cooper != 1;
+  yield [baker, cooper]
+)
+```
+
+becomes:
+
+```fn
+let baker = one_of(dwellings)
+in
+  let cooper = one_of(dwellings except [baker])
+  in
+    let tmp$1 = require(baker != 5)
+    in
+      let tmp$2 = require(cooper != 1)
+      in
+        [baker, cooper]
+```
+
+This suggests that the search DSL wants to thread context backward around the
+final yielded expression, rather than thread a forward value through helper
+rules the way the list-comprehension example does.
+
+#### Helper Sketch For `pick`
+
+One plausible current-syntax sketch is to keep the search DSL in the yield-last
+style, but make `pick` recurse over the comma-separated names while threading a
+`used` accumulator as an inherited helper parameter.
+
+```fn
+macro search: Expr searchHead;
+
+syntax searchHead ::= "[" body: Syntax(searchClauses) "]" {
+  body
+};
+
+syntax searchClauses ::= "yield" result: Expr {
+  result
+}
+| "where" cond: Expr ";" rest: Syntax(searchClauses) quote {
+  fn (ignored) { unquote(rest) }(require(unquote(cond)))
+}
+| "from" domain: Expr "some" values: Name ";" rest: Syntax(searchClauses) quote {
+  fn (unquote(values)) { unquote(rest) }(some_of(unquote(domain)))
+}
+| "from" domain: Expr "pick" first: Name
+  used0: Syntax(pickStart)
+  rest: Syntax(pickTail(domain, used0, first)) {
+  rest
+};
+
+syntax pickStart ::= quote {
+  []
+};
+
+syntax pickNext(used, current) ::= quote {
+  unquote(used) @@ [unquote(current)]
+};
+
+syntax pickTail(domain, used, current) ::= ","
+  next: Name
+  used2: Syntax(pickNext(used, current))
+  tail: Syntax(pickTail(domain, used2, next)) quote {
+  fn (unquote(current)) { unquote(tail) }
+    (one_of(unquote(domain) except unquote(used)))
+}
+| ";" rest: Syntax(searchClauses) quote {
+  fn (unquote(current)) { unquote(rest) }
+    (one_of(unquote(domain) except unquote(used)))
+};
+```
+
+This is interesting because it uses helper rules not just to match tokens but
+also to carry a computed expression accumulator. The empty helper `pickStart`
+manufactures the initial `[]`, and `pickNext` grows the accumulator as the name
+list recurses.
+
+This sketch is also now close to the working prototype in
+`tests/fn/test_amb_dsl.fn`, which is useful because it shows what the current
+implementation can really support rather than just what looks plausible on
+paper.
+
+The lambda-based administrative form is significant. In the current
+implementation, binder splicing is working reliably in function-argument
+position, so a step such as
+
+```text
+fn (unquote(current)) { ... }(one_of(...))
+```
+
+is a more robust first lowering target than trying to splice directly into an
+ordinary `let name = ...` binding.
+
+It also shows one real limit of the current implementation. The domain-first
+surface
+
+```text
+from xs pick x, y, z
+```
+
+fits naturally because the helper that walks the names already has `xs`
+available as an inherited parameter. The reversed surface
+
+```text
+pick x, y, z from xs
+```
+
+is much less natural with the current helper mechanism, because the recursive
+name parser would need the domain before it has been seen. That starts to push
+the design toward either a clause IR or a post-parse normalization step.
+
+### Recursion And Iteration Families
+
+The current machinery should also be able to support a family of expression
+forms that lower into explicit recursion with hygienically introduced binders.
+
+Possible examples include:
+
+- `repeat body until cond`
+- `fold name = init over xs with step`
+- `scan name = init over xs with step`
+- bounded search or accumulator loops with optional `where`-like guards
+
+These would all reuse the same strengths already demonstrated by `for`: fixed
+header tokens, captured binders, and templates that introduce internal helper
+functions without variable capture.
+
+### Structured Pipeline Syntax
+
+A pipeline DSL is another realistic candidate if plain operator chaining is too
+weak or too ambiguous for some domains.
+
+```fn
+pipe value
+|> map(fn (x) { x + 1 })
+|> filter(fn (x) { x > 2 })
+|> take(10)
+```
+
+The advantage over ordinary operators is that the syntax layer can give a small
+local grammar to the staged clauses, normalize them uniformly, and lower them
+into explicit composition or nested library calls. If some stages later need
+binders or optional guard clauses, recursive helper rules already provide a
+path for that.
+
+### Definition Wrappers
+
+Definition-position initiation makes it possible to express more than toy
+declaration sugar.
+
+Possible examples include:
+
+- `lazy name = expr`
+- `cached name = expr`
+- `benchmark name = expr`
+- `test name = expr`
+
+These are still single-definition results, so they remain inside the current
+phase-1 boundary. The expansion can introduce support bindings hygienically,
+resolve helper names at declaration site, and give a lightweight declaration
+DSL without needing multi-definition output.
+
+### Guarded Binding Forms
+
+Another promising area is local binding syntax that remains expression-shaped
+but wants a more structured header than ordinary `let` forms provide.
+
+Possible examples include:
+
+- `iflet x = expr then yes else no`
+- `whenlet x = expr body else fallback`
+- small guarded destructuring forms if the existing surface is awkward
+
+These are often useful in practice, and they sit squarely in the current sweet
+spot: expression result, a compact grammar, and hygiene requirements around the
+captured binder.
+
+### Best Near-Term Demonstrators
+
+If the goal is to show that the system is genuinely powerful before extending
+it further, the strongest concrete next examples are probably:
+
+1. a query-comprehension family
+2. a nondeterministic search DSL
+3. a richer recursion or iteration family beyond `for`
+4. one or two definition wrappers such as `lazy` or `test`
+
+Those would demonstrate different aspects of the existing design without
+requiring clause-list fragments, multi-definition expansion, or syntax-object
+pattern matching.
+
+## Ordered Backlog After MVP
+
+The stress test suggests a fairly clear order for what should come next once the
+phase-1 design is working.
+
+### 1. Clause-Oriented Fragments
+
+The first extension should likely be some way to represent structured clause
+lists or other parser-owned sequence fragments.
+
+This is the smallest step that would unlock examples such as:
+
+- `switch`
+- a conservative first version of `do`
+
+It is also a natural extension of the current design, because the main missing
+piece is not hygiene or recursive binding. It is the inability to capture and
+re-expand bodies whose internal structure matters to the syntax rule.
+
+### 2. Multi-Definition Results
+
+After clause-oriented fragments, the next likely extension is allowing a syntax
+rule to expand to more than one definition.
+
+This is what examples such as `define_ast` really want. Definition-position
+entry by itself is not enough if the expansion target is a whole generated block
+of typedefs, constructors, visitors, or printers.
+
+The likely shape is a new result kind such as Definitions or some equivalent
+definition-list container.
+
+### 3. Syntax-Object Pattern Matching
+
+After that, the next major step is pattern matching over captured syntax
+objects.
+
+That is what examples such as `rewrite` need, and it is qualitatively a bigger
+step than the first two backlog items. It goes beyond parser-side recognition
+and template expansion into structured deconstruction of captured syntax.
+
+This likely wants its own design pass rather than being smuggled into the first
+implementation as a small extension.
+
+### Implication For Scope
+
+This ordering suggests that the current MVP boundary is in a good place.
+
+- Phase 1 should focus on expression and definition syntax with hygienic
+  template expansion.
+- The first second-wave target should be clause-oriented bodies.
+- Multi-definition generation and syntax-pattern matching can remain clearly
+  later.
+
+That keeps the initial implementation small enough to finish while still making
+the next pressure points explicit.

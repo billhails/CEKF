@@ -1,0 +1,7 @@
+let
+    link "import_macro_helper_lib.fn" as syn;
+    import syn macro sum;
+in
+    assert(1 == sum(1));
+    assert(6 == sum(1,2,3));
+    assert(15 == sum(4,5,6))

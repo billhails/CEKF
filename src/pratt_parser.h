@@ -35,4 +35,14 @@ AstNest *prattParseStandaloneString(char *, char *);
 AstProg *prattParseFile(char *);
 AstProg *prattParseString(char *, char *);
 
+HashSymbol *prattTokenTypeOrAtom(PrattToken *token);
+bool prattIsTokenTypeOrAtom(PrattToken *token, HashSymbol *type);
+WCharArray *prattRawString(PrattParser *parser);
+WCharArray *prattString(PrattParser *parser);
+AstNest *prattNest(PrattParser *parser);
+AstNest *prattDefTemplateNest(PrattParser *parser);
+AstExpression *prattExpressionPrecedence(PrattParser *parser, int precedence);
+AstFunCall *prattMakeStringList(ParserInfo PI, WCharArray *str);
+AstExpression *prattErrorExpression(ParserInfo PI);
+
 #endif

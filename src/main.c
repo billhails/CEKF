@@ -29,8 +29,10 @@
 #include "arithmetic_next.h"
 #include "ast.h"
 #include "ast_debug.h"
+#include "ast_lower.h"
 #include "ast_ns.h"
 #include "ast_pp.h"
+#include "ast_prepare.h"
 #include "bigint.h"
 #include "builtins_helper.h"
 #include "bytecode.h"
@@ -528,6 +530,21 @@ int main(int argc, char *argv[]) {
         ////////////////////////
         prog = nsAstProg(prog);
         REPLACE_PROTECT(save2, prog);
+
+        //////////////////////
+        // Syntax Preparation
+        //////////////////////
+        prog = prepareAst(prog);
+        REPLACE_PROTECT(save2, prog);
+
+        ///////////////////
+        // Syntax Lowering
+        ///////////////////
+        prog = lowerAst(prog);
+        REPLACE_PROTECT(save2, prog);
+        if (hadErrors()) {
+            exit(1);
+        }
 
         if (ast_flag) {
             ppAstProg(stdout, prog);

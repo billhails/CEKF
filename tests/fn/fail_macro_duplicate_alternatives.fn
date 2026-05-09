@@ -1,0 +1,9 @@
+let
+    syntax sumTail(total) ::= "," next: Expr rest: Syntax(sumTail(next)) {
+        total + rest
+    }
+    | "," value: Expr tail: Syntax(sumTail(value)) {
+        value + tail
+    };
+in
+    assert(true)

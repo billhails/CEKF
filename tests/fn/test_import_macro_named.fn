@@ -1,0 +1,9 @@
+let
+    link "import_macro_named_lib.fn" as syn;
+    import syn macro annotate;
+
+    annotate answer = 42;
+    annotate ok = true;
+in
+    assert(answer == 42);
+    assert(ok)

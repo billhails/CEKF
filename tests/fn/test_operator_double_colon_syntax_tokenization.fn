@@ -1,0 +1,10 @@
+let
+    operator "_::_" left 90 fn (a, b) { #(a, b) };
+
+    macro id: Expr idHelper;
+
+    syntax idHelper ::= x: Expr {
+        x
+    };
+in
+    assert(id(42) == 42)

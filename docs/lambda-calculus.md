@@ -6,7 +6,7 @@ can be reduced to pure math on a lambda calculus.
 
 ## Our grammar
 
-This is basically the lambda calculus, with added `constant`, `conditional`, `primapp` and `letrec`.
+This is basically the lambda calculus, with added `constant` and `letrec`.
 
 $$
 \begin{align*}
@@ -14,19 +14,20 @@ e\ &\mathtt{::=\ } \mathtt{C} & \texttt{[constant]}
 \\
 &\mathtt{|\ \ \ \ \ } x & \texttt{[variable]}
 \\
-&\mathtt{|\ \ \ \ \ } (\mathtt{if}\ e\ e\ e) & \texttt{[conditional]}
-\\
-&\mathtt{|\ \ \ \ \ } (\circ\ e\ e) & \texttt{[primapp]}
-\\
 &\mathtt{|\ \ \ \ \ } (e\ e) & \texttt{[application]}
 \\
 &\mathtt{|\ \ \ \ \ } \lambda x.e & \texttt{[lambda]}
 \\
 &\mathtt{|\ \ \ \ \ } (\mathtt{letrec}\ (b_0\dots b_n)\ e) & \texttt{[letrec]}
 \\
-b\ &\mathtt{::=\ } ( x:\ \lambda y.e ) & \texttt{[letrec binding]}
+b\ &\mathtt{::=\ } ( x:\lambda y.e ) & \texttt{[letrec binding]}
 \end{align*}
 $$
+
+The real `MinLam` core has other constructs but their transforms are obvious,
+e.g. for an arbitrary transform $\mathcal{T}$ and container $\circ$,
+$\mathcal{T}(\circ\ e_0\dots e_n) =$ either $(\circ\ \mathcal{T}e_0\dots\mathcal{T}e_n)$,
+or $\bigoplus_{i = 0}^n\mathcal{T}e_i$ as appropriate.
 
 ## Free variables $\mathcal{F}$
 
@@ -38,25 +39,23 @@ $$
 \\
 \mathcal{F}x &= \set{x}
 \\
-\mathcal{F}(\mathtt{if}\ e_0\ e_1\ e_2) &= \mathcal{F}e_0\cup \mathcal{F}e_1\cup \mathcal{F}e_2
-\\
-\mathcal{F}(\circ\ e_0\ e_1) &= \mathcal{F}e_0\cup \mathcal{F}e_1
-\\
 \mathcal{F}(e_0\ e_1) &= \mathcal{F}e_0\cup \mathcal{F}e_1
 \\
-\mathcal{F}(\lambda x.e) &= \mathcal{F}e - \set{ x } && \text{(1)}
+\mathcal{F}\lambda x.e &= \mathcal{F}e - \set{ x } && \text{(1)}
 \\
-\mathcal{F}(\mathtt{letrec}\ (( x_0:\ \lambda_0)\dots( x_n:\ \lambda_n))\ e) &=
-\Big( \mathcal{F}e\cup\bigcup_{i=0}^{i=n}\mathcal{F}\lambda_i\Big) - \set{x_0\dots x_n} && \text{(2)}
+\mathcal{F}(\mathtt{letrec}\ (( x_0:\lambda_0)\dots( x_n:\lambda_n))\ e) &=
+\Big( \mathcal{F}e\cup\bigcup_{i=0}^n\mathcal{F}\lambda_i\Big) - \set{x_0\dots x_n} && \text{(2)}
 \end{align*}
 $$
 
 1. The free variables in a lambda are the free variables in its body minus its argument.
-2. The free variables in a `letrec` are the free variables in its lambdas (1) plus the free variables in its body, minus the variables bound by the letrec itself.
+2. The free variables in a `letrec` are the free variables in its body plus the free variables in its lambdas (1), minus the variables bound by the letrec itself.
 
-## Alpha Conversion $\mathcal{A}_{\rho}$
+## Alpha Conversion $\alpha_{\rho}$
 
 Alpha conversion renames binders to fresh names and rewrites bound occurrences to match.
+It essentially guarantees that every semantically distinct variable has a different
+name.
 
 The implementation in `minlam_alphoconvert.c` is environment-based, so we specify it that way here. Let:
 
@@ -69,30 +68,26 @@ The initial environment $\rho_0$ maps every built-in name to itself. Variable lo
 
 $$
 \begin{align*}
-\mathcal{A}_{\rho}\mathtt{C} &= \mathtt{C}
+\alpha_{\rho}\mathtt{C} &= \mathtt{C}
 \\
-\mathcal{A}_{\rho}x &= \rho(x) && \text{(1)}
+\alpha_{\rho}x &= \rho(x) && && \text{(1)}
 \\
-\mathcal{A}_{\rho}(\mathtt{if}\ e_0\ e_1\ e_2) &= (\mathtt{if}\ \mathcal{A}_{\rho}e_0\ \mathcal{A}_{\rho}e_1\ \mathcal{A}_{\rho}e_2)
+\alpha_{\rho}(e_0\ e_1) &= (\alpha_{\rho}e_0\ \alpha_{\rho}e_1)
 \\
-\mathcal{A}_{\rho}(\circ\ e_0\ e_1) &= (\circ\ \mathcal{A}_{\rho}e_0\ \mathcal{A}_{\rho}e_1)
-\\
-\mathcal{A}_{\rho}(e_0\ e_1) &= (\mathcal{A}_{\rho}e_0\ \mathcal{A}_{\rho}e_1)
-\\
-\mathcal{A}_{\rho}(\lambda x.e) &= (\lambda x'.\mathcal{A}_{\rho[x \mapsto x']}e)
+\alpha_{\rho}\lambda x.e &= \lambda x'.\alpha_{\rho[x \mapsto x']}e
 && \text{where } x' = \mathrm{fresh}(x) && \text{(2)}
 \\
 l &= (\mathtt{letrec}\ (b_0\dots b_n)\ e)
 && && \text{(3)}
 \\
 \rho' &= \rho[x_0 \mapsto x'_0,\dots,x_n \mapsto x'_n]
-&& \text{where } b_i = (x_i:\ \lambda y_i.e_i),\ x'_i = \mathrm{fresh}(x_i) && \text{(4)}
+&& \text{where } b_i = (x_i:\lambda y_i.e_i),\ x'_i = \mathrm{fresh}(x_i) && \text{(4)}
 \\
-\mathcal{A}_{\rho}l &=
-(\mathtt{letrec}\ (\mathcal{A}_{\rho'}b_0\dots\mathcal{A}_{\rho'}b_n)\ \mathcal{A}_{\rho'}e)
+\alpha_{\rho}l &=
+(\mathtt{letrec}\ (\alpha_{\rho'}b_0\dots\alpha_{\rho'}b_n)\ \alpha_{\rho'}e)
 && && \text{(5)}
 \\
-\mathcal{A}_{\rho}(x:\ \lambda y.e) &= (\rho(x):\ \lambda y'.\mathcal{A}_{\rho[y \mapsto y']}e)
+\alpha_{\rho}(x:\lambda y.e) &= (\rho(x):\lambda y'.\alpha_{\rho[y \mapsto y']}e)
 && \text{where } y' = \mathrm{fresh}(y) && \text{(6)}
 \end{align*}
 $$
@@ -122,24 +117,20 @@ r &\text{if } x = y
 y &\text{otherwise}
 \end{cases}
 \\
-\mathcal{S}_{[x/r]}(\mathtt{if}\ e_0\ e_1\ e_2) &= (\mathtt{if}\ \mathcal{S}_{[x/r]}e_0\ \mathcal{S}_{[x/r]}e_1\ \mathcal{S}_{[x/r]}e_2)
-\\
-\mathcal{S}_{[x/r]}(\circ\ e_0\ e_1) &= (\circ\ \mathcal{S}_{[x/r]}e_0\ \mathcal{S}_{[x/r]}e_1)
-\\
 \mathcal{S}_{[x/r]}(e_0\ e_1) &= (\mathcal{S}_{[x/r]}e_0\ \mathcal{S}_{[x/r]}e_1)
 \\
-\mathcal{S}_{[x/r]}(\lambda y.e_0) &= \begin{cases}
-(\lambda y.e_0) &\text{if } x = y\ \mathrm{(1)}
+\mathcal{S}_{[x/r]}\lambda y.e_0 &= \begin{cases}
+\lambda y.e_0 &\text{if } x = y\ \mathrm{(1)}
 \\
-(\lambda y.\mathcal{S}_{[x/r]}e_0) &\text{otherwise}
+\lambda y.\mathcal{S}_{[x/r]}e_0 &\text{otherwise}
 \end{cases}
 \\
-l &= (\mathtt{letrec}\ ((y_0:\ \lambda z_0.e_0)\dots(y_n:\ \lambda z_n.e_n))\ e)
+l &= (\mathtt{letrec}\ ((y_0:\lambda z_0.e_0)\dots(y_n:\lambda z_n.e_n))\ e)
 \\
 \mathcal{S}_{[x/r]}l &= \begin{cases}
 l &\text{if } x \in \set{y_0\dots y_n}\ \mathrm{(2)}
 \\
-(\mathtt{letrec}\ ((y_0:\ \lambda z_0.\mathcal{S}_{[x/r]}e_0)\dots(y_n:\ \lambda z_n.\mathcal{S}_{[x/r]}e_n))\ \mathcal{S}_{[x/r]}e) &\text{otherwise}
+(\mathtt{letrec}\ ((y_0:\lambda z_0.\mathcal{S}_{[x/r]}e_0)\dots(y_n:\lambda z_n.\mathcal{S}_{[x/r]}e_n))\ \mathcal{S}_{[x/r]}e) &\text{otherwise}
 \end{cases}
 \end{align*}
 $$
@@ -175,19 +166,15 @@ $$
 \\
 \beta x &= x
 \\
-\beta (\mathtt{if}\ e_0\ e_1\ e_2) &= (\mathtt{if}\ \beta e_0\ \beta e_1\ \beta e_2)
-\\
-\beta (\circ\ e_0\ e_1) &= (\circ\ \beta e_0\ \beta e_1)
-\\
 \beta((\lambda x.e_0)\ e_1) &= \mathcal{S}_{[x/\beta e_1]}\beta e_0 && \text{(1)}
 \\
 \beta (e_0\ e_1) &= (\beta e_0\ \beta e_1)
 \\
-\beta (\lambda x.e) &= (\lambda x . \beta e)
+\beta \lambda x.e &= \lambda x . \beta e
 \\
 \beta (\mathtt{letrec}\ (b_0\dots b_n)\  e) &= (\mathtt{letrec}\ (\beta b_0 \dots \beta b_n)\ \beta e)
 \\
-\beta ( x:\ \lambda y.e ) &= ( x:\  \lambda y . \beta e )
+\beta ( x:\lambda y.e ) &= ( x: \lambda y . \beta e )
 \end{align*}
 $$
 
@@ -204,23 +191,19 @@ $$
 \\
 \eta x &= x
 \\
-\eta (\mathtt{if}\ e_0\ e_1\ e_2) &= (\mathtt{if}\ \eta e_0\ \eta e_1\ \eta e_2)
-\\
-\eta (\circ\ e_0\ e_1) &= (\circ\ \eta e_0\  \eta e_1)
-\\
 \eta (e_0\ e_1) &= (\eta e_0\  \eta e_1)
 \\
-\eta(\lambda x.(e\ x)) &= \begin{cases}
+\eta\lambda x.(e\ x) &= \begin{cases}
 \eta e &\text{iff } x \not \in \mathcal{F}e\ \mathrm{(1)}
 \\
-(\lambda x .\eta(e\ x)) &\text{otherwise}
+\lambda x .\eta(e\ x) &\text{otherwise}
 \end{cases}
 \\
-\eta(\lambda x.e) &= (\lambda x.\eta e)
+\eta\lambda x.e &= \lambda x.\eta e
 \\
 \eta (\mathtt{letrec}\ (b_0\dots b_n)\  e) &= (\mathtt{letrec}\ (\eta b_0 \dots \eta b_n)\ \eta e)
 \\
-\eta ( x:\ \lambda y.e ) &= ( x:\  \lambda y . \eta e )
+\eta ( x:\lambda y.e ) &= ( x: \lambda y . \eta e )
 \end{align*}
 $$
 
@@ -236,42 +219,43 @@ $$
 \\
 \mathcal{T}x &= x
 \\
-\mathcal{T}(\mathtt{if}\ e_0\ e_1\ e_2) &= (\mathtt{if}\ \mathcal{T}e_0\ \mathcal{T}e_1\ \mathcal{T}e_2)
-\\
-\mathcal{T}(\circ\ e_0\ e_1) &= (\circ\ \mathcal{T}e_0\ \mathcal{T}e_1)
-\\
 \mathcal{T}(e_0\ e_1) &= (\mathcal{T}e_0\ \mathcal{T}e_1)
 \\
-\mathcal{T}(\lambda x . e) &= (\lambda x.\mathcal{T}e)
+\mathcal{T}\lambda x . e &= \lambda x.\mathcal{T}e
 \\
-l &= (\mathtt{letrec}\ (( x_0:\ \lambda_0)\dots ( x_n:\ \lambda_n))\ e) && \text{(1)}
+l &= (\mathtt{letrec}\ (( x_0:\lambda_0)\dots ( x_n:\lambda_n))\ e) && \text{(1)}
 \\
-K &= \set{x_0\dots x_n} && \text{(2)}
+l' &= (\mathtt{letrec}\ (( x_0:\lambda'_0)\dots ( x_n:\lambda'_n))\ e') && \text{(2)}
 \\
-\vec{D} &= \set{x_i \mapsto \  \set{x_j\dots x_k} | x_i \in K,\ x_j\dots x_k \in K \cap \mathcal{F}\mathcal{T}\lambda_i} && \text{(3)}
+&\text{where }\lambda'_i = \mathcal{T}\lambda_i \text{ and }e' = \mathcal{T}e
 \\
-B &= \mathcal{F}\mathcal{T}e \cap K && \text{(4)}
+K &= \set{x_0\dots x_n} && \text{(3)}
 \\
-L &= \bigcup_{x\in B} \vec{D}^{\ast}(x) && \text{(5)}
+\vec{D} &= \set{ x_i \rightarrow x_j | x_i \in K,\ x_j \in K \cap \mathcal{F}\lambda'_i} && \text{(4)}
+\\
+B &= \mathcal{F}e' \cap K && \text{(5)}
+\\
+L &= \bigcup_{x\in B} \vec{D}^{\ast}x && \text{(6)}
 \\
 \mathcal{T}l &=
-(\mathtt{letrec}\ (\set{(x_i:\ \mathcal{T}\lambda_i) | x_i \in L})\ \mathcal{T}e)
+(\mathtt{letrec}\ (\set{(x_i:\lambda'_i) | x_i \in L})\ e')
+&& \text{(7)}
 \\
 \mathcal{T}(\mathtt{letrec}\ (\ )\ e) &= \mathcal{T}e
+&& \text{(8)}
 \end{align*}
 $$
 
 The preliminaries are just navigating to the `letrec`. Having got there:
 
 1. Let $l$ be a `letrec` with keys $x_0\dots x_n$, lambdas $\lambda_0\dots\lambda_n$ and body $e$.
-2. Let $K$ be the set of just the keys of $l$.
-3. Let $\vec{D}$ be the relation of each $x_i$ in $K$ to a set of other $\set{x_j\dots x_k}$ in $K$ where $x_j\dots x_k$ are free in $x_i$'s associated tree-shook lambda $\mathcal{T}\lambda_i$. Essentially a map from the lambda name to any letrec bound variables in its body.
-4. Let $B$ be the set of elements of $K$ that are free in the tree-shook body $\mathcal{T}e$.
-5. Let $L$ be the set of live variables: those $x_i$ in $K$ that are reachable from $e$ via zero or more applications of $\vec{D}$.
-
-Then $\mathcal{T}l$ is the tree-shook letrec $l$, With bindings restricted to those whose keys are members of $L$.
-
-Finally, though not properly part of tree shaking,
+2. Let $l'$ be the same `letrec` with $\mathcal{T}$ applied to $\lambda_0\dots\lambda_n$ and $e$, yielding equivalent $\lambda'_0\dots\lambda'_n$ and $e'$.
+3. Let $K$ be the set of just the keys of $l$.
+4. Let $\vec{D}$ be the set of mappings from each $x_i$ in $K$ to each $x_j$ in the free variables of $\lambda'_i$. Essentially a map from the lambda name to any letrec bound variables in its body.
+5. Let $B$ be the set of elements of $K$ that are free in $e'$.
+6. Let $L$ be the set of live variables: those $x_i$ in $K$ that are reachable from $B$ via zero or more applications of $\vec{D}$.
+7. Then $\mathcal{T}l$ is $l'$, With bindings restricted to those whose keys are in $L$.
+8. Finally, though not properly part of tree shaking,
 if the result is a `letrec` with no bindings it reduces
 to just the tree-shook body.
 
@@ -291,24 +275,19 @@ $$
 \\
 \mathcal{I}x &= x
 \\
-\mathcal{I}(\mathtt{if}\ e_0\ e_1\ e_2) &=
-    (\mathtt{if}\ \mathcal{I}e_0\ \mathcal{I}e_1\ \mathcal{I}e_2)
-\\
-\mathcal{I}(\circ\ e_0\ e_1) &= (\circ\ \mathcal{I}e_0\ \mathcal{I}e_1)
-\\
 \mathcal{I}(e_0\ e_1) &= (\mathcal{I}e_0\ \mathcal{I}e_1)
 \\
-\mathcal{I}(\lambda x.e) &= (\lambda x.\mathcal{I}e)
+\mathcal{I}\lambda x.e &= \lambda x.\mathcal{I}e
 \\
-l &= (\mathtt{letrec}\ ((x_0:\ \lambda_0)\dots(x_n:\ \lambda_n))\ e)
+l &= (\mathtt{letrec}\ ((x_0:\lambda_0)\dots(x_n:\lambda_n))\ e)
 \\
-\mathcal{I}l &= (\mathtt{letrec}\ ((x_0:\ \mathcal{S}_{cs}^{\ast}\mathcal{I}\lambda_0)\dots(x_n:\ \mathcal{S}_{cs}^{\ast}\mathcal{I}\lambda_n))\ \mathcal{S}_{cs}^{\ast}\mathcal{I}e)
+\mathcal{I}l &= (\mathtt{letrec}\ ((x_0:\mathcal{S}_{cs}^{\ast}\mathcal{I}\lambda_0)\dots(x_n:\mathcal{S}_{cs}^{\ast}\mathcal{I}\lambda_n))\ \mathcal{S}_{cs}^{\ast}\mathcal{I}e)
 \\
 \text{where}
 \\
 \mathcal{S}_{cs}^{\ast}y &= \mathcal{S}^{cs}_{[x_0/\lambda_0]}\dots\mathcal{S}^{cs}_{[x_m/\lambda_m]}y
 \\
-R &= \set{(x_i:\ \lambda_i) \in \set{(x_0:\ \lambda_0)\dots(x_n:\ \lambda_n)} | \mathrm{safe}(x_i, \lambda_i, l)} = \set{(x_0:\ \lambda_0)\dots(x_m:\ \lambda_m)}
+R &= \set{(x_i:\lambda_i) \in \set{(x_0:\lambda_0)\dots(x_n:\lambda_n)} | \mathrm{safe}(x_i, \lambda_i, l)} = \set{(x_0:\lambda_0)\dots(x_m:\lambda_m)}
 \\
 \mathrm{safe}(x_i, \lambda_i, l) &= \mathcal{Z}\lambda_i < \mathtt{MAX} \land \lnot\mathcal{R}x_i \land \mathcal{C}_{x_i}l = 1 \land \mathcal{C}^{cs}_{x_i}l = 1
 \end{align*}
@@ -318,7 +297,7 @@ Except the decision of whether to substitute based on number and position of occ
 
 ### Size $\mathcal{Z}$
 
-This is totally arbitrary, though more refined approaches may exist.
+This is totally arbitrary, much more refined approaches probably exist.
 
 $$
 \begin{align*}
@@ -326,17 +305,13 @@ $$
 \\
 \mathcal{Z}x &= 1
 \\
-\mathcal{Z}(\mathtt{if}\ e_0\ e_1\ e_2) &= 1 + \mathcal{Z}e_0 + \mathcal{Z}e_1 + \mathcal{Z}e_2
-\\
-\mathcal{Z}(\circ\ e_0\ e_1) &= 1 + \mathcal{Z}e_0 + \mathcal{Z}e_1
-\\
 \mathcal{Z}(e_0\ e_1) &= 1 + \mathcal{Z}e_0 + \mathcal{Z}e_1
 \\
-\mathcal{Z}(\lambda x.e) &= 1 + \mathcal{Z}e
+\mathcal{Z}\lambda x.e &= 1 + \mathcal{Z}e
 \\
-\mathcal{Z}(\mathtt{letrec}\ (b_0\dots b_n)\ e) &= 1 + \sum_{i=0}^{i=n}\mathcal{Z}b_i + \mathcal{Z}e
+\mathcal{Z}(\mathtt{letrec}\ (b_0\dots b_n)\ e) &= 1 + \sum_{i=0}^n\mathcal{Z}b_i + \mathcal{Z}e
 \\
-\mathcal{Z}(x:\ \lambda y.e) &= 1+ \mathcal{Z}e
+\mathcal{Z}(x:\lambda y.e) &= 1+ \mathcal{Z}e
 \end{align*}
 $$
 
@@ -345,29 +320,35 @@ $$
 Only `letrec` can bind recursive functions, and mutual recursion is limited
 to the bindings within a single `letrec`.
 
-So given:
+So:
 
 $$
 \begin{align*}
-l &= (\mathtt{letrec}\ (b_0\dots b_n)\ e)
+\text{given}
 \\
-B &= \set{b_0\dots b_n} = \set{(x_0:\ \lambda y_0.e_0)\dots(x_n:\ \lambda y_n.e_n)}
+l &= (\mathtt{letrec}\ ((x_0:\lambda_0)\dots(x_n:\lambda_n))\ e) & \text{(1)}
 \\
-K &= \set{x_0\dots x_n}
+K &= \set{x_0\dots x_n} & \text{(2)}
 \\
-M &= \set{x_i \mapsto x_j | x_j \in \mathcal{F}\lambda_i \cap K}\ \forall (x_i:\ \lambda_i)\in B
+\vec{D} &= \set{x_i \mapsto x_j | x_i \in K,\ x_j \in K \cap \mathcal{F}\lambda_i} & \text{(3)}
 \\
-x &\in K
+x &\in K & \text{(4)}
+\\
+\text{then}
+\\
+\mathcal{R}x &= (x \mapsto x) \in \vec{D}^+ & \text{(5)}
 \end{align*}
 $$
 
-Then
+1. let $l$ be a `letrec` with keys $x_0\dots x_n$, lambdas $\lambda_0\dots\lambda_n$ and body $e$.
+2. let $K$ be the set of just the keys of $l$.
+3. let $\vec{D}$ be the set of mappings from $x_i$ in $K$ to $x_j$ in $K$ where $x_j$ is also free in $x_i$'s associated $\lambda_i$.
+4. let $x$ be in $K$.
+5. then $x$ is recursive if it can reach itself by one or more applications of $\vec{D}$.
 
-$$
-\mathcal{R}x = (x \mapsto x) \in M^+
-$$
-
-($M^+$ is the transitive closure of $M$).
+$\vec{D}^+$ is the transitive closure of $\vec{D}$. Note we've met $\vec{D}$
+before in the Tree Shaking algorithm, but in that case we employed the reflexive
+transitive closure $\vec{D}^\ast$ meaning zero or more applications.
 
 ### Count $\mathcal{C}_x$
 
@@ -383,19 +364,15 @@ $$
 0 &\text{otherwise}
 \end{cases}
 \\
-\mathcal{C}_x(\mathtt{if}\ e_0\ e_1\ e_2) &= \mathcal{C}_xe_0 +\mathcal{C}_xe_1 +  \mathcal{C}_xe_2
-\\
-\mathcal{C}_x(\circ\ e_0\ e_1) &= \mathcal{C}_xe_0 + \mathcal{C}_xe_1
-\\
 \mathcal{C}_x(e_0\ e_1) &= \mathcal{C}_xe_0 + \mathcal{C}_xe_1
 \\
-\mathcal{C}_x(\lambda y.e) &= \begin{cases}
+\mathcal{C}_x\lambda y.e &= \begin{cases}
 0 & \text{if } x = y\text{ (shadowing)}
 \\
 \mathcal{C}_x e &\text{otherwise}
 \end{cases}
 \\
-\mathcal{C}_x(\mathtt{letrec}\ ((y_0:\ \lambda z_0.e_0)\dots(y_n:\ \lambda z_n.e_n))\ e) &= \begin{cases}
+\mathcal{C}_x(\mathtt{letrec}\ ((y_0:\lambda z_0.e_0)\dots(y_n:\lambda z_n.e_n))\ e) &= \begin{cases}
 0 & \text{if } x \in \set{y_0\dots y_n}
 \\
 \mathcal{C}_x e + \sum_{i=0}^{i=n}\mathcal{C}_x(\lambda z_i.e_i) &\text{otherwise}

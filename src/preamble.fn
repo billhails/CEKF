@@ -280,3 +280,6 @@ print tuple_4(pa, pb, pc, pd, t=#(a, b, c, d)) {
    puts(")");
    t
 }
+
+fn fst(#(a, _)) { a }
+fn snd(#(_, b)) { b }

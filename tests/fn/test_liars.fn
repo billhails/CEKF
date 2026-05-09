@@ -1,0 +1,24 @@
+let
+    link "ambutils.fn" as amb;
+    link "listutils.fn" as list;
+    import amb macro search;
+    import list operator "_::_";
+    import list operator "_zip_";
+    import list operator "_<>_";
+    import list operator "_|>_";
+    fn cmpBy(x) { list.cmpBy(x) }
+    fn liars() {
+        search [
+            from 1::5 pick betty, ethel, joan, kitty, mary;
+            where (kitty == 2) xor (betty == 3);
+            where (ethel == 1) xor (joan  == 2);
+            where (joan  == 3) xor (ethel == 5);
+            where (kitty == 2) xor (mary  == 4);
+            where (mary  == 4) xor (betty == 1);
+            yield ["Betty", "Ethel", "Joan", "Kitty", "Mary"] zip
+                  [ betty,   ethel,   joan,   kitty,   mary ] <>
+                  cmpBy(snd) |> fst;
+        ]
+    }
+in
+    assert(liars() == ["Kitty", "Joan", "Betty", "Mary", "Ethel"])

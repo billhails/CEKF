@@ -21,12 +21,12 @@ config:
     description: Pratt Parser support
     parserInfo: false
     includes:
-    - utils.h
+      - utils.h
     limited_includes:
-    - ast_helper.h
-    - ast_debug.h
-    - pratt_functions.h
-    - utils_debug.h
+      - ast_helper.h
+      - ast_debug.h
+      - pratt_functions.h
+      - utils_debug.h
 
 structs:
     # Scanner token parsing
@@ -35,10 +35,11 @@ structs:
             brief: A tree of tokens indexed by character.
             description: >-
                 A Trie is a tree of tokens indexed by character. It is used to
-                parse the input stream and build a parse tree. The root node
-                has the first character, siblings are alternatives at the current level,
-                and the children are indexed by subsequent characters of the token.
-                Ordering of siblings ensures efficient search and insertion.
+                parse the input stream and build a parse tree. The root node has
+                the first character, siblings are alternatives at the current
+                level, and the children are indexed by subsequent characters of
+                the token. Ordering of siblings ensures efficient search and
+                insertion.
         data:
             character: character
             terminal: HashSymbol
@@ -49,8 +50,8 @@ structs:
         meta:
             brief: A buffer of wide characters.
             description: >-
-                A buffer of wide characters that is both used during parsing
-                and returned by the token parser (like yytext).
+                A buffer of wide characters that is both used during parsing and
+                returned by the token parser (like yytext).
         data:
             data: WCharVec
             start: wstring=NULL
@@ -60,8 +61,8 @@ structs:
         meta:
             brief: A list of buffers.
             description: >-
-                A list of buffers that are parsed in order. The first buffer
-                is the most recent, and the last buffer is the oldest.
+                A list of buffers that are parsed in order. The first buffer is
+                the most recent, and the last buffer is the oldest.
         data:
             lineNo: int
             fileName: HashSymbol
@@ -86,8 +87,8 @@ structs:
             brief: The current state of the scanner.
             description: >-
                 The current state of the token scanner. It contains the current
-                buffer, the current token, and the current position in the
-                input stream.
+                buffer, the current token, and the current position in the input
+                stream.
         data:
             bufList: PrattBufList
             tokenHead: PrattToken=NULL
@@ -103,11 +104,16 @@ structs:
                 other nameSpaces.
         data:
             rules: PrattRecordTable
+            macros: PrattMacroTable
+            pendingMacroFixups: PrattPendingMacroFixup=NULL
+            pendingInjectedDefinitions: AstDefinitions=NULL
             nameSpaces: PrattNsIdTable
             lexer: PrattLexer=NULL
             trie: PrattTrie=NULL
             panicMode: bool=false
+            suppressErrors: bool=false
             isPreamble: bool=false
+            quotedAtomSymbols: SymbolArray=NULL
             next: PrattParser
 
     PrattRecord:
@@ -127,11 +133,13 @@ structs:
         meta:
             brief: Exported operators for a nameSpace.
             description: >-
-                Snapshot of exported operator records captured after a nameSpace is
-                parsed for the first time. Intended to be cached and indexed by the
-                nameSpace reference (nsRef) to support later imports without reparsing.
+                Snapshot of exported operator records captured after a nameSpace
+                is parsed for the first time. Intended to be cached and indexed
+                by the nameSpace reference (nsRef) to support later imports
+                without reparsing.
         data:
             exportedRules: PrattRecordTable
+            exportedMacros: PrattMacroTable
 
     PrattMixfixPattern:
         meta:
@@ -147,60 +155,218 @@ structs:
             startsWithHole: bool
             endsWithHole: bool
 
+    PrattMacroHole:
+        meta:
+            brief: A single typed hole in a macro pattern.
+            description: >-
+                Describes one macro parameter, including its parser-owned syntax
+                class and the symbol it binds in the macro template.
+        data:
+            syntaxClass: PrattSyntaxClass
+            name: HashSymbol
+            callTarget: HashSymbol=NULL
+            callArguments: SymbolArray=NULL
+
+    PrattMacroSpec:
+        meta:
+            brief: Parser metadata for a phase-1 macro definition.
+            description: >-
+                Stores the head symbol, ordered pattern items, and template
+                expression needed for parser-time macro expansion in the current
+                scope. The declarationId links this to the durable AstSyntaxDecl
+                in the AST.
+        data:
+            declarationId: int=0
+            entryKind: PrattSyntaxEntryKind=PRATTSYNTAXENTRYKIND_TYPE_HELPER
+            resultKind: PrattSyntaxResultKind=PRATTSYNTAXRESULTKIND_TYPE_EXPR
+            headSymbol: HashSymbol
+            helperTarget: HashSymbol=NULL
+            macroTarget: HashSymbol=NULL
+            syntaxDecl: AstSyntaxDecl=NULL
+            parameters: SymbolArray=NULL
+            patternItems: PrattMacroPatternItems
+            template: AstExpression
+            alternatives: PrattMacroAlternatives=NULL
+            isExprEntry: bool=false
+            export: bool=false
+            importNsRef: int=-1
+            importNsSymbol: HashSymbol=NULL
+
+    PrattPendingMacroFixup:
+        meta:
+            brief: Pending local macro-to-helper fixup.
+            description: >-
+                Tracks a `macro` declaration whose helper target has not yet
+                been resolved in the current binding group.
+        data:
+            helperName: HashSymbol
+            spec: PrattMacroSpec
+            syntaxDecl: AstSyntaxDecl
+            next: PrattPendingMacroFixup=NULL
+
+    PrattMacroAlternative:
+        meta:
+            brief: One ordered syntax alternative.
+            description: >-
+                Stores the ordered pattern items and template for one syntax
+                alternative in declaration order.
+        data:
+            patternItems: PrattMacroPatternItems
+            template: AstExpression
+            quotedTemplate: bool=false
+
+    SyntaxExprBindings:
+        meta:
+            brief: Captured and inherited bindings for syntax expansion.
+            description: >-
+                Tracks names and their bound expressions while matching syntax
+                alternatives and performing template substitution.
+        data:
+            names: SymbolArray
+            values: AstExpressionArray
+
+    SyntaxLexerSnapshot:
+        meta:
+            brief: One lexer buffer snapshot entry.
+            description: >-
+                Stores buffer pointer and lexer cursor state for one linked
+                buffer in a rollback checkpoint.
+        data:
+            bufList: PrattBufList
+            start: wstring=NULL
+            offset: int=0
+            lineNo: int=0
+            next: SyntaxLexerSnapshot=NULL
+
+    SyntaxLexerCheckpoint:
+        meta:
+            brief: Rollback checkpoint for syntax alternative parsing.
+            description: >-
+                Captures lexer queue, buffer state, and parser panic mode so a
+                failed syntax alternative can restore parser state.
+        data:
+            bufList: PrattBufList
+            queuedTokens: PrattTokens=NULL
+            snapshots: SyntaxLexerSnapshot=NULL
+            panicMode: bool=false
+
+    PrattSyntaxBinding:
+        meta:
+            brief: Parser-side binding collected during syntax matching.
+            description: >-
+                Temporary parser-owned binding used to build an AstExprSyntaxUse
+                or AstDefSyntaxUse carrier after a successful syntax alternative
+                match.
+        data:
+            name: HashSymbol
+            value: AstExpression
+            inherited: bool=false
+
 enums:
     PrattAssoc:
         meta:
             brief: The set of associativity types for operators.
             description: >-
-                The associativity of an operator determines how it is parsed
-                in relation to other operators of the same precedence. It can
-                be left associative, right associative, or non-associative.
-                This is used to determine the order of operations during parsing.
+                The associativity of an operator determines how it is parsed in
+                relation to other operators of the same precedence. It can be
+                left associative, right associative, or non-associative. This is
+                used to determine the order of operations during parsing.
         data:
-            - LEFT
-            - RIGHT
-            - NONE
+          - LEFT
+          - RIGHT
+          - NONE
 
     PrattNumberState:
         meta:
             brief: The set of states for the number parser.
             description: >-
-                The state of the number parser. It is used to parse numbers
-                with a given radix. The parser can handle decimal, hexadecimal,
-                and floating point numbers.
+                The state of the number parser. It is used to parse numbers with
+                a given radix. The parser can handle decimal, hexadecimal, and
+                floating point numbers.
         data:
-            - START
-            - ZERO
-            - HEX
-            - DEC
-            - FLOAT
-            - END
+          - START
+          - ZERO
+          - HEX
+          - DEC
+          - FLOAT
+          - END
 
     PrattStringState:
         meta:
             brief: The set of states for the string parser.
         data:
-            - START
-            - STR
-            - ESC
-            - ESCS
-            - UNI
-            - CHR
-            - END
+          - START
+          - STR
+          - ESC
+          - ESCS
+          - UNI
+          - CHR
+          - END
 
     PrattFixity:
         meta:
             brief: The set of fixity types for operators.
         data:
-            - PREFIX
-            - INFIX
-            - POSTFIX
+          - PREFIX
+          - INFIX
+          - POSTFIX
+
+    PrattSyntaxClass:
+        meta:
+            brief: The fixed parser-side syntax classes for phase-1 macros.
+        data:
+          - EXPR
+          - NAME
+          - NEST
+          - STRING
+          - TYPE
+          - SYNTAX
+
+    PrattSyntaxEntryKind:
+        meta:
+            brief: Parser-side syntax entry kind.
+            description: >-
+                Whether a syntax rule is entered from expression position,
+                definition position, or is a helper rule callable from other
+                rules.
+        data:
+          - EXPR
+          - DEF
+          - HELPER
+
+    PrattSyntaxResultKind:
+        meta:
+            brief: Parser-side syntax result kind.
+            description: >-
+                Whether the output of expanding a syntax rule is an expression
+                or a definition.
+        data:
+          - EXPR
+          - DEF
+
+    DefunType:
+        meta:
+            brief: Helper enum for parser-side defun handling.
+        data:
+          - FUNCTION
+          - PRINTER
+          - COMPARATOR
+
+    ImportedFunctionKind:
+        meta:
+            brief: Parser-side classification of a namespace member import.
+        data:
+          - NOT_FOUND
+          - STRICT
+          - LAZY
+          - OTHER
 
 inline:
     structs:
         PrattFixityConfig:
             meta:
-                brief: Configuration for an individual fixity (prefix/infix/postfix) of an operator.
+                brief: Configuration for an individual fixity (prefix/infix/postfix) of an
+                    operator.
             data:
                 op: PrattParselet
                 prec: int
@@ -214,13 +380,23 @@ inline:
                 importNsSymbol: HashSymbol=NULL
 
 unions:
+    PrattMacroPatternItem:
+        meta:
+            brief: A single ordered item in a macro pattern.
+            description: >-
+                Represents one item in a phase-1 macro pattern, preserving the
+                declared interleaving of quoted terminals and typed holes.
+        data:
+            quotedTerminal: HashSymbol
+            typedHole: PrattMacroHole
+
     PrattValue:
         meta:
             brief: The value of a token after parsing.
             description: >-
                 The value of a token after parsing. It can be a string, number,
-                character, or atom. This is used to represent the value of
-                the token in the parse tree.
+                character, or atom. This is used to represent the value of the
+                token in the parse tree.
         data:
             string: WCharArray
             number: MaybeBigInt
@@ -232,11 +408,11 @@ hashes:
         meta:
             brief: The Pratt parser table.
             description: >-
-                The Pratt parser table is a hash table that maps tokens
-                to their parsing rules. It is used to look up the
-                parsing rules for operators during parsing. Each entry in the
-                table contains the operator symbol, its precedence, and the
-                implementations of the token parser for each fixity.
+                The Pratt parser table is a hash table that maps tokens to their
+                parsing rules. It is used to look up the parsing rules for
+                operators during parsing. Each entry in the table contains the
+                operator symbol, its precedence, and the implementations of the
+                token parser for each fixity.
         data:
             entries: PrattRecord
 
@@ -249,13 +425,22 @@ hashes:
         data:
             entries: int
 
+    PrattMacroTable:
+        meta:
+            brief: A hash table of macro specifications indexed by HashSymbol.
+            description: >-
+                A hash table that maps a macro head symbol to its parser-side
+                phase-1 macro metadata in the current scope.
+        data:
+            entries: PrattMacroSpec
+
 arrays:
     PrattStrings:
         meta:
             brief: An array of Unicode strings.
             description: >-
-                An array of Unicode strings that is used to hold
-                multiple keywords for the PrattMixfixPattern structure.
+                An array of Unicode strings that is used to hold multiple
+                keywords for the PrattMixfixPattern structure.
         data:
             entries: WCharArray
 
@@ -263,25 +448,63 @@ arrays:
         meta:
             brief: A stack of Pratt parsers.
             description: >-
-                A stack of Pratt parsers that are used to parse the input stream.
-                Each parser is associated with a specific scope and contains
-                the rules for parsing tokens in that scope, which can change due
-                to user-defined operators or imported nameSpaces.
+                A stack of Pratt parsers that are used to parse the input
+                stream. Each parser is associated with a specific scope and
+                contains the rules for parsing tokens in that scope, which can
+                change due to user-defined operators or imported nameSpaces.
         data:
             entries: PrattParser
+
+    PrattTokens:
+        meta:
+            brief: A queue snapshot of Pratt tokens.
+            description: >-
+                Holds token pointers in queue order so syntax alternative probes
+                can restore lexer lookahead without losing GC reachability.
+        data:
+            entries: PrattToken
 
     PrattNsOpsArray:
         meta:
             brief: Array of exported operator sets indexed by nameSpace reference.
             description: >-
-                Cache of exported operators per nameSpace. Each entry corresponds
-                to a nameSpace reference (nsRef) and contains the set of operators
-                that were explicitly exported by that nameSpace.
+                Cache of exported operators per nameSpace. Each entry
+                corresponds to a nameSpace reference (nsRef) and contains the
+                set of operators that were explicitly exported by that
+                nameSpace.
         data:
             entries: PrattExportedOps
+
+    PrattMacroPatternItems:
+        meta:
+            brief: An ordered list of macro pattern items.
+            description: >-
+                Holds the full ordered phase-1 macro pattern so the parser can
+                preserve the declared interleaving of quoted terminals and typed
+                holes.
+        data:
+            entries: PrattMacroPatternItem
+
+    PrattMacroAlternatives:
+        meta:
+            brief: An ordered list of syntax alternatives.
+            description: >-
+                Holds syntax alternatives in declaration order for parser-time
+                matching and rollback.
+        data:
+            entries: PrattMacroAlternative
+
+    PrattSyntaxBindings:
+        meta:
+            brief: An ordered list of parser-side syntax bindings.
+            description: >-
+                Holds bindings collected during a successful syntax alternative
+                match, to be placed into an AST syntax-use carrier.
+        data:
+            entries: PrattSyntaxBinding
 
 primitives: !include primitives.yaml
 
 external:
-- !include ast.yaml
-- !include utils.yaml
+  - !include ast.yaml
+  - !include utils.yaml

@@ -1,0 +1,9 @@
+let
+    syntax choose ::= "a" {
+        1
+    }
+    | "a" "," value: Expr {
+        value
+    };
+in
+    assert(true)

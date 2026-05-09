@@ -1,0 +1,13 @@
+let
+    name = 100;
+
+    macro defineSame: Def defineSameHelper;
+
+    syntax defineSameHelper ::= name: Name "=" value: Expr {
+        name = value
+    };
+
+    defineSame local = name + 1;
+in
+    assert(name == 100);
+    assert(local == 101)

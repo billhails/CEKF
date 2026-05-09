@@ -1,0 +1,39 @@
+let
+    link "listutils.fn" as list;
+
+    macro qidentity: Expr quotedIdentity;
+    macro qlco: Expr qlcoHelper;
+
+    syntax quotedIdentity ::= x: Name quote {
+        fn (unquote(x)) { unquote(x) }
+    };
+
+    syntax quotedWhereClauses(x, xs) ::= quote { unquote(xs) }
+                                      | "where" cond: Expr
+                                        rest: Syntax(quotedMoreFilters(x, xs))
+                                        quote {
+        list.filter(fn (unquote(x)) { unquote(cond) }, unquote(rest))
+    };
+
+    syntax quotedMoreFilters(x, xs) ::= quote { unquote(xs) }
+                                      | "," cond: Expr
+                                        rest: Syntax(quotedMoreFilters(x, xs))
+                                        quote {
+        list.filter(fn (unquote(x)) { unquote(cond) }, unquote(rest))
+    };
+
+    syntax qlcoHelper ::= "["
+        exp: Expr
+        "for" x: Name
+        "in" xs: Expr
+        filters: Syntax(quotedWhereClauses(x, xs))
+    "]" quote {
+        list.map(fn (unquote(x)) { unquote(exp) }, unquote(filters))
+    };
+
+    id = qidentity value;
+in
+    assert(42 == id(42));
+    assert([2,4,6] == qlco[ n * 2 for n in [1,2,3] ]);
+    assert([4,8] == qlco[ value * 2 for value in [1,2,3,4] where value % 2 == 0 ]);
+    assert([8] == qlco[ item * 2 for item in [1,2,3,4] where item > 2, item % 2 == 0 ])

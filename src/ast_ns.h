@@ -19,5 +19,22 @@
  */
 
 AstProg *nsAstProg(AstProg *node);
+AstExpression *nsAstExpressionForNameSpace(AstExpression *node,
+                                           AstNameSpaceArray *nameSpaces,
+                                           int nsId);
+AstSyntaxDecl *nsAstSyntaxDeclForNameSpace(AstSyntaxDecl *node,
+                                           AstNameSpaceArray *nameSpaces,
+                                           int nsId);
+AstExpression *nsAstExpressionForImport(AstExpression *node,
+                                        AstNameSpaceArray *nameSpaces, int nsId,
+                                        struct IntArray *sourceDeclarationIds,
+                                        struct IntArray *targetDeclarationIds);
+AstSyntaxDecl *nsAstSyntaxDeclForImport(AstSyntaxDecl *node,
+                                        AstNameSpaceArray *nameSpaces, int nsId,
+                                        struct IntArray *sourceDeclarationIds,
+                                        struct IntArray *targetDeclarationIds);
+struct IntArray *
+collectAstExpressionSyntaxUseDeclarationIds(AstExpression *node,
+                                            AstNameSpaceArray *nameSpaces);
 
 #endif

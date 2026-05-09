@@ -1,0 +1,12 @@
+let
+    macro annotate: Def annotateHelper;
+
+    syntax annotateHelper ::= name: Name "=" value: Expr {
+        name = value
+    };
+
+    annotate answer = 42;
+    annotate ok = true;
+in
+    assert(answer == 42);
+    assert(ok)

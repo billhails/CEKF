@@ -1,0 +1,9 @@
+let
+    // Post-change rule: a macro may only target zero-arity helper syntax.
+    syntax badHelper(value) ::= {
+        value
+    };
+
+    macro bad: Expr badHelper;
+in
+    bad 1

@@ -67,27 +67,99 @@ static void ppAstLookUp(FILE *out, AstLookUp *);
 static void ppAstPrint(FILE *out, AstPrint *);
 static void ppAstStruct(FILE *out, AstStruct *);
 static void ppAstTaggedExpressions(FILE *out, AstTaggedExpressions *);
+static void ppSymbolArray(FILE *out, SymbolArray *);
+static void ppAstSyntaxDecl(FILE *out, AstSyntaxDecl *);
+static void ppAstExprSyntaxUse(FILE *out, AstExprSyntaxUse *);
+static void ppAstDefSyntaxUse(FILE *out, AstDefSyntaxUse *);
+static void ppAstSyntaxAlternatives(FILE *out, AstSyntaxAlternatives *);
+static void ppAstSyntaxAlternative(FILE *out, AstSyntaxAlternative *);
+static void ppAstSyntaxPatternItems(FILE *out, AstSyntaxPatternItems *);
+static void ppAstSyntaxPatternItem(FILE *out, AstSyntaxPatternItem *);
+static void ppAstSyntaxHole(FILE *out, AstSyntaxHole *);
+static void ppAstSyntaxBindings(FILE *out, AstSyntaxBindings *);
+static void ppAstSyntaxBinding(FILE *out, AstSyntaxBinding *);
+static void ppAstSyntaxTemplate(FILE *out, AstSyntaxTemplate *);
+static void ppAstSyntaxTemplateDefinitions(FILE *out,
+                                           AstSyntaxTemplateDefinitions *);
+static void ppAstSyntaxTemplateDefinition(FILE *out,
+                                          AstSyntaxTemplateDefinition *);
+static void ppAstSyntaxTemplateNest(FILE *out, AstSyntaxTemplateNest *);
+static void ppAstSyntaxTemplateExpr(FILE *out, AstSyntaxTemplateExpr *);
+static void ppAstSyntaxTemplateExprs(FILE *out, AstSyntaxTemplateExprs *);
+static void ppAstSyntaxTemplateNameRef(FILE *out, AstSyntaxTemplateNameRef *);
+static void ppAstSyntaxTemplateBinder(FILE *out, AstSyntaxTemplateBinder *);
+static void ppAstSyntaxTemplateBinders(FILE *out, AstSyntaxTemplateBinders *);
+static void ppAstSyntaxTemplateBinding(FILE *out, AstSyntaxTemplateBinding *);
+static void ppAstSyntaxTemplateBindings(FILE *out, AstSyntaxTemplateBindings *);
+static void ppAstSyntaxTemplateFarg(FILE *out, AstSyntaxTemplateFarg *);
+static void ppAstSyntaxTemplateFargList(FILE *out, AstSyntaxTemplateFargList *);
+static void ppAstSyntaxTemplateTaggedArgs(FILE *out,
+                                          AstSyntaxTemplateTaggedArgs *);
+static void
+ppAstSyntaxTemplateTaggedExpressions(FILE *out,
+                                     AstSyntaxTemplateTaggedExpressions *);
+static void ppAstSyntaxTemplateAltArgs(FILE *out, AstSyntaxTemplateAltArgs *);
+static void ppAstSyntaxTemplateAltFunction(FILE *out,
+                                           AstSyntaxTemplateAltFunction *);
+static void ppAstSyntaxTemplateFunction(FILE *out, AstSyntaxTemplateFunction *);
 
 static void ppMaybeBigInt(FILE *out, MaybeBigInt *);
 static void ppUnicodeChar(FILE *out, Character);
 static void ppAstHashSymbol(FILE *out, HashSymbol *);
 
+static int sPpDepth = 0;
+
+static void indent(FILE *out) {
+    for (int i = 0; i < sPpDepth; ++i) {
+        fprintf(out, "  ");
+    }
+}
+
+static void newlineIndent(FILE *out) {
+    fprintf(out, "\n");
+    indent(out);
+}
+
+static void pushIndent(void) { sPpDepth++; }
+
+static void popIndent(void) {
+    if (sPpDepth > 0) {
+        sPpDepth--;
+    }
+}
+
 void ppAstNest(FILE *out, AstNest *nest) {
-    fprintf(out, "{ ");
-    if (nest) {
-        if (nest->definitions) {
-            if (nest->expressions) {
-                fprintf(out, "let ");
+    fprintf(out, "{");
+    if (nest != NULL &&
+        (nest->definitions != NULL || nest->expressions != NULL)) {
+        pushIndent();
+        if (nest->definitions != NULL) {
+            newlineIndent(out);
+            if (nest->expressions != NULL) {
+                fprintf(out, "let");
+                pushIndent();
+                newlineIndent(out);
                 ppAstDefinitions(out, nest->definitions);
-                fprintf(out, "in ");
+                popIndent();
+                newlineIndent(out);
+                fprintf(out, "in");
+                pushIndent();
+                newlineIndent(out);
                 ppAstExpressions(out, nest->expressions);
+                popIndent();
             } else {
-                fprintf(out, "nameSpace ");
+                fprintf(out, "nameSpace");
+                pushIndent();
+                newlineIndent(out);
                 ppAstDefinitions(out, nest->definitions);
+                popIndent();
             }
         } else {
+            newlineIndent(out);
             ppAstExpressions(out, nest->expressions);
         }
+        popIndent();
+        newlineIndent(out);
     }
     fprintf(out, "}");
 }
@@ -95,26 +167,61 @@ void ppAstNest(FILE *out, AstNest *nest) {
 void ppAstNameSpaceImpl(FILE *out, AstNameSpaceImpl *impl) {
     fprintf(out, "\"%u:%u:%lu\": {", major(impl->id->stDev),
             minor(impl->id->stDev), impl->id->stIno);
-    ppAstDefinitions(out, impl->definitions);
+    if (impl->definitions != NULL) {
+        pushIndent();
+        newlineIndent(out);
+        ppAstDefinitions(out, impl->definitions);
+        popIndent();
+        newlineIndent(out);
+    }
     fprintf(out, "}");
 }
 
 void ppAstProg(FILE *out, AstProg *prog) {
     fprintf(out, "preamble: {");
-    ppAstDefinitions(out, prog->preamble);
-    fprintf(out, "} nameSpaces: [");
+    if (prog->preamble != NULL) {
+        pushIndent();
+        newlineIndent(out);
+        ppAstDefinitions(out, prog->preamble);
+        popIndent();
+        newlineIndent(out);
+    }
+    fprintf(out, "}");
+    newlineIndent(out);
+    fprintf(out, "nameSpaces: [");
+    if (prog->nameSpaces->size > 0) {
+        pushIndent();
+    }
     for (Index i = 0; i < prog->nameSpaces->size; ++i) {
+        newlineIndent(out);
         ppAstNameSpaceImpl(out, prog->nameSpaces->entries[i]);
     }
-    fprintf(out, "] body: {");
-    ppAstExpressions(out, prog->body);
+    if (prog->nameSpaces->size > 0) {
+        popIndent();
+        newlineIndent(out);
+    }
+    fprintf(out, "]");
+    newlineIndent(out);
+    fprintf(out, "body: {");
+    if (prog->body != NULL) {
+        pushIndent();
+        newlineIndent(out);
+        ppAstExpressions(out, prog->body);
+        popIndent();
+        newlineIndent(out);
+    }
     fprintf(out, "}");
 }
 
 void ppAstDefinitions(FILE *out, AstDefinitions *definitions) {
+    bool first = true;
     while (definitions) {
+        if (!first) {
+            newlineIndent(out);
+        }
         ppAstDefinition(out, definitions->definition);
-        fprintf(out, "; ");
+        fprintf(out, ";");
+        first = false;
         definitions = definitions->next;
     }
 }
@@ -137,6 +244,12 @@ static void ppAstDefinition(FILE *out, AstDefinition *definition) {
         break;
     case AST_DEFINITION_TYPE_MULTI:
         ppAstDefMulti(out, definition->val.multi);
+        break;
+    case AST_DEFINITION_TYPE_SYNTAXDECL:
+        ppAstSyntaxDecl(out, definition->val.syntaxDecl);
+        break;
+    case AST_DEFINITION_TYPE_SYNTAXUSE:
+        ppAstDefSyntaxUse(out, definition->val.syntaxUse);
         break;
     default:
         cant_happen("unrecognised %s", astDefinitionTypeName(definition->type));
@@ -167,7 +280,6 @@ static void ppAstDefMulti(FILE *out, AstMultiDefine *define) {
     ppAstSymbolList(out, define->symbols);
     fprintf(out, ") = ");
     ppAstExpression(out, define->expression);
-    fprintf(out, "; ");
 }
 
 static void ppAstDefine(FILE *out, AstDefine *define) {
@@ -271,11 +383,16 @@ static void ppAstTypeMap(FILE *out, AstTypeMap *typeMap) {
 }
 
 static void ppAstExpressions(FILE *out, AstExpressions *expressions) {
+    bool first = true;
     if (expressions) {
-        ppAstExpression(out, expressions->expression);
-        fprintf(out, "; ");
-        if (expressions->next) {
-            ppAstExpressions(out, expressions->next);
+        while (expressions != NULL) {
+            if (!first) {
+                newlineIndent(out);
+            }
+            ppAstExpression(out, expressions->expression);
+            fprintf(out, ";");
+            first = false;
+            expressions = expressions->next;
         }
     }
 }
@@ -351,10 +468,14 @@ static void ppAstLookUp(FILE *out, AstLookUp *lookUp) {
 
 static void ppFunctionComponents(FILE *out,
                                  AstCompositeFunction *compositeFunction) {
-    if (compositeFunction) {
+    bool first = true;
+    while (compositeFunction != NULL) {
+        if (!first) {
+            newlineIndent(out);
+        }
         ppAstFunction(out, compositeFunction->function);
-        fprintf(out, " ");
-        ppFunctionComponents(out, compositeFunction->next);
+        first = false;
+        compositeFunction = compositeFunction->next;
     }
 }
 
@@ -365,8 +486,12 @@ static void ppAstCompositeFunction(FILE *out,
     if (compositeFunction->unsafe) {
         fprintf(out, "unsafe ");
     }
-    fprintf(out, "fn { ");
+    fprintf(out, "fn {");
+    pushIndent();
+    newlineIndent(out);
     ppFunctionComponents(out, compositeFunction);
+    popIndent();
+    newlineIndent(out);
     fprintf(out, "}");
 }
 
@@ -541,6 +666,654 @@ static void ppAstTaggedExpressions(FILE *out,
     }
 }
 
+static void ppSymbolArray(FILE *out, SymbolArray *symbols) {
+    if (symbols == NULL) {
+        return;
+    }
+    for (Index i = 0; i < sizeSymbolArray(symbols); ++i) {
+        ppAstHashSymbol(out, getSymbolArray(symbols, i));
+        if (i + 1 < sizeSymbolArray(symbols)) {
+            fprintf(out, ", ");
+        }
+    }
+}
+
+static void ppAstSyntaxDecl(FILE *out, AstSyntaxDecl *syntaxDecl) {
+    fprintf(out, "syntax-decl[%d ", syntaxDecl->declarationId);
+    ppAstHashSymbol(out, syntaxDecl->ruleName);
+    fprintf(out, " entry=%s result=%s",
+            astSyntaxEntryKindName(syntaxDecl->entryKind),
+            astSyntaxResultKindName(syntaxDecl->resultKind));
+    if (syntaxDecl->surfaceHead != NULL) {
+        fprintf(out, " head=");
+        ppAstHashSymbol(out, syntaxDecl->surfaceHead);
+    }
+    if (syntaxDecl->parameters != NULL &&
+        sizeSymbolArray(syntaxDecl->parameters) > 0) {
+        fprintf(out, " params=(");
+        ppSymbolArray(out, syntaxDecl->parameters);
+        fprintf(out, ")");
+    }
+    fprintf(out, "] {");
+    if (syntaxDecl->alternatives != NULL &&
+        sizeAstSyntaxAlternatives(syntaxDecl->alternatives) > 0) {
+        pushIndent();
+        newlineIndent(out);
+        ppAstSyntaxAlternatives(out, syntaxDecl->alternatives);
+        popIndent();
+        newlineIndent(out);
+    }
+    fprintf(out, "}");
+}
+
+static void ppAstExprSyntaxUse(FILE *out, AstExprSyntaxUse *syntaxUse) {
+    fprintf(out, "syntax-use-expr[decl=%d alt=%d]", syntaxUse->declarationId,
+            syntaxUse->alternativeIndex);
+    if (syntaxUse->bindings != NULL &&
+        sizeAstSyntaxBindings(syntaxUse->bindings) > 0) {
+        fprintf(out, " (");
+        pushIndent();
+        newlineIndent(out);
+        ppAstSyntaxBindings(out, syntaxUse->bindings);
+        popIndent();
+        newlineIndent(out);
+        fprintf(out, ")");
+    }
+}
+
+static void ppAstDefSyntaxUse(FILE *out, AstDefSyntaxUse *syntaxUse) {
+    fprintf(out, "syntax-use-def[decl=%d alt=%d]", syntaxUse->declarationId,
+            syntaxUse->alternativeIndex);
+    if (syntaxUse->bindings != NULL &&
+        sizeAstSyntaxBindings(syntaxUse->bindings) > 0) {
+        fprintf(out, " (");
+        pushIndent();
+        newlineIndent(out);
+        ppAstSyntaxBindings(out, syntaxUse->bindings);
+        popIndent();
+        newlineIndent(out);
+        fprintf(out, ")");
+    }
+}
+
+static void ppAstSyntaxAlternatives(FILE *out,
+                                    AstSyntaxAlternatives *alternatives) {
+    if (alternatives == NULL) {
+        return;
+    }
+    for (Index i = 0; i < sizeAstSyntaxAlternatives(alternatives); ++i) {
+        if (i > 0) {
+            newlineIndent(out);
+            fprintf(out, "| ");
+        }
+        ppAstSyntaxAlternative(out, getAstSyntaxAlternatives(alternatives, i));
+    }
+}
+
+static void ppAstSyntaxAlternative(FILE *out,
+                                   AstSyntaxAlternative *alternative) {
+    ppAstSyntaxPatternItems(out, alternative->patternItems);
+    fprintf(out, " => ");
+    ppAstSyntaxTemplate(out, alternative->template);
+}
+
+static void ppAstSyntaxPatternItems(FILE *out,
+                                    AstSyntaxPatternItems *patternItems) {
+    if (patternItems == NULL) {
+        fprintf(out, "<empty-pattern>");
+        return;
+    }
+    for (Index i = 0; i < sizeAstSyntaxPatternItems(patternItems); ++i) {
+        ppAstSyntaxPatternItem(out, getAstSyntaxPatternItems(patternItems, i));
+        if (i + 1 < sizeAstSyntaxPatternItems(patternItems)) {
+            fprintf(out, " ");
+        }
+    }
+}
+
+static void ppAstSyntaxPatternItem(FILE *out,
+                                   AstSyntaxPatternItem *patternItem) {
+    switch (patternItem->type) {
+    case AST_SYNTAXPATTERNITEM_TYPE_QUOTEDTERMINAL:
+        fprintf(out, "terminal(");
+        ppAstHashSymbol(out,
+                        getAstSyntaxPatternItem_QuotedTerminal(patternItem));
+        fprintf(out, ")");
+        break;
+    case AST_SYNTAXPATTERNITEM_TYPE_TYPEDHOLE:
+        ppAstSyntaxHole(out, getAstSyntaxPatternItem_TypedHole(patternItem));
+        break;
+    default:
+        cant_happen("unrecognised %s",
+                    astSyntaxPatternItemTypeName(patternItem->type));
+    }
+}
+
+static void ppAstSyntaxHole(FILE *out, AstSyntaxHole *hole) {
+    fprintf(out, "hole(");
+    ppAstHashSymbol(out, hole->name);
+    fprintf(out, ": %s", astSyntaxClassName(hole->syntaxClass));
+    if (hole->callTarget != NULL) {
+        fprintf(out, " -> ");
+        ppAstHashSymbol(out, hole->callTarget);
+        if (hole->callArguments != NULL &&
+            sizeSymbolArray(hole->callArguments) > 0) {
+            fprintf(out, "(");
+            ppSymbolArray(out, hole->callArguments);
+            fprintf(out, ")");
+        }
+    }
+    fprintf(out, ")");
+}
+
+static void ppAstSyntaxBindings(FILE *out, AstSyntaxBindings *bindings) {
+    if (bindings == NULL) {
+        return;
+    }
+    for (Index i = 0; i < sizeAstSyntaxBindings(bindings); ++i) {
+        if (i > 0) {
+            newlineIndent(out);
+        }
+        ppAstSyntaxBinding(out, getAstSyntaxBindings(bindings, i));
+        if (i + 1 < sizeAstSyntaxBindings(bindings)) {
+            fprintf(out, ",");
+        }
+    }
+}
+
+static void ppAstSyntaxBinding(FILE *out, AstSyntaxBinding *binding) {
+    ppAstHashSymbol(out, binding->name);
+    fprintf(out, binding->inherited ? " :=[inherited] " : " := ");
+    ppAstExpression(out, binding->value);
+}
+
+static void ppAstSyntaxTemplate(FILE *out, AstSyntaxTemplate *syntaxTemplate) {
+    if (syntaxTemplate == NULL) {
+        fprintf(out, "<null-template>");
+        return;
+    }
+    fprintf(out, "template[%s] ",
+            astSyntaxResultKindName(syntaxTemplate->resultKind));
+    if (syntaxTemplate->expr != NULL) {
+        ppAstSyntaxTemplateExpr(out, syntaxTemplate->expr);
+        return;
+    }
+    if (syntaxTemplate->definition != NULL) {
+        ppAstSyntaxTemplateDefinition(out, syntaxTemplate->definition);
+        return;
+    }
+    fprintf(out, "<empty>");
+}
+
+static void
+ppAstSyntaxTemplateDefinitions(FILE *out,
+                               AstSyntaxTemplateDefinitions *definitions) {
+    bool first = true;
+    while (definitions != NULL) {
+        if (!first) {
+            newlineIndent(out);
+        }
+        ppAstSyntaxTemplateDefinition(out, definitions->definition);
+        if (definitions->next != NULL) {
+            fprintf(out, ";");
+        }
+        first = false;
+        definitions = definitions->next;
+    }
+}
+
+static void
+ppAstSyntaxTemplateDefinition(FILE *out,
+                              AstSyntaxTemplateDefinition *definition) {
+    switch (definition->type) {
+    case AST_SYNTAXTEMPLATEDEFINITION_TYPE_DEFINE: {
+        AstSyntaxTemplateDefine *define =
+            getAstSyntaxTemplateDefinition_Define(definition);
+        ppAstSyntaxTemplateBinder(out, define->symbol);
+        fprintf(out, " = ");
+        ppAstSyntaxTemplateExpr(out, define->expression);
+        break;
+    }
+    case AST_SYNTAXTEMPLATEDEFINITION_TYPE_MULTI: {
+        AstSyntaxTemplateMultiDefine *multi =
+            getAstSyntaxTemplateDefinition_Multi(definition);
+        fprintf(out, "#(");
+        ppAstSyntaxTemplateBinders(out, multi->symbols);
+        fprintf(out, ") = ");
+        ppAstSyntaxTemplateExpr(out, multi->expression);
+        break;
+    }
+    case AST_SYNTAXTEMPLATEDEFINITION_TYPE_LAZY: {
+        AstSyntaxTemplateDefLazy *lazy =
+            getAstSyntaxTemplateDefinition_Lazy(definition);
+        fprintf(out, "lazy fn ");
+        ppAstSyntaxTemplateBinder(out, lazy->name);
+        fprintf(out, " ");
+        ppAstSyntaxTemplateAltFunction(out, lazy->definition);
+        break;
+    }
+    case AST_SYNTAXTEMPLATEDEFINITION_TYPE_ALIAS: {
+        AstSyntaxTemplateAlias *alias =
+            getAstSyntaxTemplateDefinition_Alias(definition);
+        fprintf(out, "alias ");
+        ppAstSyntaxTemplateBinder(out, alias->name);
+        fprintf(out, " = ");
+        ppAstType(out, alias->type);
+        break;
+    }
+    case AST_SYNTAXTEMPLATEDEFINITION_TYPE_TYPEDEF: {
+        AstSyntaxTemplateTypeDef *typeDef =
+            getAstSyntaxTemplateDefinition_TypeDef(definition);
+        fprintf(out, "typedef ");
+        ppAstTypeSig(out, typeDef->typeSig);
+        fprintf(out, " {");
+        ppAstTypeBody(out, typeDef->typeBody);
+        fprintf(out, "}");
+        break;
+    }
+    case AST_SYNTAXTEMPLATEDEFINITION_TYPE_SYNTAXUSE: {
+        AstSyntaxTemplateSyntaxUse *syntaxUse =
+            getAstSyntaxTemplateDefinition_SyntaxUse(definition);
+        fprintf(out, "syntax-use-def[decl=%d alt=%d]", syntaxUse->declarationId,
+                syntaxUse->alternativeIndex);
+        if (syntaxUse->bindings != NULL &&
+            sizeAstSyntaxTemplateBindings(syntaxUse->bindings) > 0) {
+            fprintf(out, " ");
+            ppAstSyntaxTemplateBindings(out, syntaxUse->bindings);
+        }
+        break;
+    }
+    default:
+        cant_happen("unrecognised %s",
+                    astSyntaxTemplateDefinitionTypeName(definition->type));
+    }
+}
+
+static void ppAstSyntaxTemplateNameRef(FILE *out,
+                                       AstSyntaxTemplateNameRef *nameRef) {
+    switch (nameRef->type) {
+    case AST_SYNTAXTEMPLATENAMEREF_TYPE_LITERAL: {
+        AstSyntaxLiteralRef *literal =
+            getAstSyntaxTemplateNameRef_Literal(nameRef);
+        ppAstHashSymbol(out, literal->writtenName);
+        if (literal->resolvedName != NULL &&
+            literal->resolvedName != literal->writtenName) {
+            fprintf(out, "->");
+            ppAstHashSymbol(out, literal->resolvedName);
+        }
+        break;
+    }
+    case AST_SYNTAXTEMPLATENAMEREF_TYPE_INTRODUCED: {
+        AstSyntaxIntroducedRef *introduced =
+            getAstSyntaxTemplateNameRef_Introduced(nameRef);
+        fprintf(out, "<introduced-ref:%d>", introduced->binderId);
+        break;
+    }
+    case AST_SYNTAXTEMPLATENAMEREF_TYPE_UNQUOTE: {
+        AstSyntaxUnquote *unquote =
+            getAstSyntaxTemplateNameRef_Unquote(nameRef);
+        fprintf(out, "unquote(");
+        ppAstHashSymbol(out, unquote->bindingName);
+        fprintf(out, ": %s)", astSyntaxClassName(unquote->syntaxClass));
+        break;
+    }
+    default:
+        cant_happen("unrecognised %s",
+                    astSyntaxTemplateNameRefTypeName(nameRef->type));
+    }
+}
+
+static void ppAstSyntaxTemplateBinder(FILE *out,
+                                      AstSyntaxTemplateBinder *binder) {
+    switch (binder->type) {
+    case AST_SYNTAXTEMPLATEBINDER_TYPE_INTRODUCED: {
+        AstSyntaxIntroducedBinder *introduced =
+            getAstSyntaxTemplateBinder_Introduced(binder);
+        fprintf(out, "<introduced-binder:%d:", introduced->binderId);
+        ppAstHashSymbol(out, introduced->writtenName);
+        fprintf(out, ">");
+        break;
+    }
+    case AST_SYNTAXTEMPLATEBINDER_TYPE_UNQUOTE: {
+        AstSyntaxUnquote *unquote = getAstSyntaxTemplateBinder_Unquote(binder);
+        fprintf(out, "unquote(");
+        ppAstHashSymbol(out, unquote->bindingName);
+        fprintf(out, ": %s)", astSyntaxClassName(unquote->syntaxClass));
+        break;
+    }
+    default:
+        cant_happen("unrecognised %s",
+                    astSyntaxTemplateBinderTypeName(binder->type));
+    }
+}
+
+static void ppAstSyntaxTemplateBinders(FILE *out,
+                                       AstSyntaxTemplateBinders *binders) {
+    if (binders == NULL) {
+        return;
+    }
+    for (Index i = 0; i < sizeAstSyntaxTemplateBinders(binders); ++i) {
+        ppAstSyntaxTemplateBinder(out, getAstSyntaxTemplateBinders(binders, i));
+        if (i + 1 < sizeAstSyntaxTemplateBinders(binders)) {
+            fprintf(out, ", ");
+        }
+    }
+}
+
+static void ppAstSyntaxTemplateExprs(FILE *out,
+                                     AstSyntaxTemplateExprs *expressions) {
+    if (expressions == NULL) {
+        return;
+    }
+    for (Index i = 0; i < sizeAstSyntaxTemplateExprs(expressions); ++i) {
+        ppAstSyntaxTemplateExpr(out, getAstSyntaxTemplateExprs(expressions, i));
+        if (i + 1 < sizeAstSyntaxTemplateExprs(expressions)) {
+            fprintf(out, ", ");
+        }
+    }
+}
+
+static void ppAstSyntaxTemplateBinding(FILE *out,
+                                       AstSyntaxTemplateBinding *binding) {
+    fprintf(out, "%s=", binding->name->name);
+    ppAstSyntaxTemplateExpr(out, binding->value);
+}
+
+static void ppAstSyntaxTemplateBindings(FILE *out,
+                                        AstSyntaxTemplateBindings *bindings) {
+    if (bindings == NULL) {
+        return;
+    }
+    fprintf(out, "[");
+    for (Index i = 0; i < sizeAstSyntaxTemplateBindings(bindings); ++i) {
+        ppAstSyntaxTemplateBinding(out,
+                                   getAstSyntaxTemplateBindings(bindings, i));
+        if (i + 1 < sizeAstSyntaxTemplateBindings(bindings)) {
+            fprintf(out, ", ");
+        }
+    }
+    fprintf(out, "]");
+}
+
+static void ppAstSyntaxTemplateAltArgs(FILE *out,
+                                       AstSyntaxTemplateAltArgs *altArgs) {
+    while (altArgs != NULL) {
+        fprintf(out, "(");
+        ppAstSyntaxTemplateFargList(out, altArgs->argList);
+        fprintf(out, ")");
+        altArgs = altArgs->next;
+    }
+}
+
+static void
+ppAstSyntaxTemplateAltFunction(FILE *out,
+                               AstSyntaxTemplateAltFunction *altFunction) {
+    ppAstSyntaxTemplateAltArgs(out, altFunction->altArgs);
+    fprintf(out, " ");
+    ppAstSyntaxTemplateNest(out, altFunction->nest);
+}
+
+static void ppAstSyntaxTemplateFunction(FILE *out,
+                                        AstSyntaxTemplateFunction *function) {
+    if (function == NULL) {
+        return;
+    }
+    if (function->unsafe) {
+        fprintf(out, "unsafe ");
+    }
+    fprintf(out, "fn {");
+    pushIndent();
+    for (AstSyntaxTemplateFunction *cursor = function; cursor != NULL;
+         cursor = cursor->next) {
+        newlineIndent(out);
+        ppAstSyntaxTemplateAltFunction(out, cursor->function);
+    }
+    popIndent();
+    newlineIndent(out);
+    fprintf(out, "}");
+}
+
+static void ppAstSyntaxTemplateNest(FILE *out, AstSyntaxTemplateNest *nest) {
+    fprintf(out, "{");
+    if (nest != NULL &&
+        (nest->definitions != NULL || nest->expressions != NULL)) {
+        pushIndent();
+        if (nest->definitions != NULL) {
+            newlineIndent(out);
+            fprintf(out, "let");
+            pushIndent();
+            newlineIndent(out);
+            ppAstSyntaxTemplateDefinitions(out, nest->definitions);
+            popIndent();
+            if (nest->expressions != NULL) {
+                newlineIndent(out);
+                fprintf(out, "in");
+            }
+        }
+        if (nest->expressions != NULL) {
+            pushIndent();
+            newlineIndent(out);
+            ppAstSyntaxTemplateExprs(out, nest->expressions);
+            popIndent();
+        }
+        popIndent();
+        newlineIndent(out);
+    }
+    fprintf(out, "}");
+}
+
+static void ppAstSyntaxTemplateExpr(FILE *out,
+                                    AstSyntaxTemplateExpr *expression) {
+    switch (expression->type) {
+    case AST_SYNTAXTEMPLATEEXPR_TYPE_BACK:
+        fprintf(out, "back");
+        break;
+    case AST_SYNTAXTEMPLATEEXPR_TYPE_WILDCARD:
+        fprintf(out, "_");
+        break;
+    case AST_SYNTAXTEMPLATEEXPR_TYPE_NAMEREF:
+        ppAstSyntaxTemplateNameRef(
+            out, getAstSyntaxTemplateExpr_NameRef(expression));
+        break;
+    case AST_SYNTAXTEMPLATEEXPR_TYPE_NUMBER:
+        ppMaybeBigInt(out, getAstSyntaxTemplateExpr_Number(expression));
+        break;
+    case AST_SYNTAXTEMPLATEEXPR_TYPE_CHARACTER:
+        ppAstCharacter(out, getAstSyntaxTemplateExpr_Character(expression));
+        break;
+    case AST_SYNTAXTEMPLATEEXPR_TYPE_SYNTAXUSE: {
+        AstSyntaxTemplateSyntaxUse *syntaxUse =
+            getAstSyntaxTemplateExpr_SyntaxUse(expression);
+        fprintf(out, "syntax-use-expr[decl=%d alt=%d]",
+                syntaxUse->declarationId, syntaxUse->alternativeIndex);
+        if (syntaxUse->bindings != NULL &&
+            sizeAstSyntaxTemplateBindings(syntaxUse->bindings) > 0) {
+            fprintf(out, " ");
+            ppAstSyntaxTemplateBindings(out, syntaxUse->bindings);
+        }
+        break;
+    }
+    case AST_SYNTAXTEMPLATEEXPR_TYPE_FUNCALL: {
+        AstSyntaxTemplateFunCall *funCall =
+            getAstSyntaxTemplateExpr_FunCall(expression);
+        ppAstSyntaxTemplateExpr(out, funCall->function);
+        fprintf(out, "(");
+        ppAstSyntaxTemplateExprs(out, funCall->arguments);
+        fprintf(out, ")");
+        break;
+    }
+    case AST_SYNTAXTEMPLATEEXPR_TYPE_LOOKUP: {
+        AstSyntaxTemplateLookUp *lookUp =
+            getAstSyntaxTemplateExpr_LookUp(expression);
+        fprintf(out, "<%d>.", lookUp->nsId);
+        ppAstSyntaxTemplateExpr(out, lookUp->expression);
+        break;
+    }
+    case AST_SYNTAXTEMPLATEEXPR_TYPE_FUN:
+        ppAstSyntaxTemplateFunction(out,
+                                    getAstSyntaxTemplateExpr_Fun(expression));
+        break;
+    case AST_SYNTAXTEMPLATEEXPR_TYPE_NEST: {
+        AstSyntaxTemplateNest *nest = getAstSyntaxTemplateExpr_Nest(expression);
+        ppAstSyntaxTemplateNest(out, nest);
+        break;
+    }
+    case AST_SYNTAXTEMPLATEEXPR_TYPE_IFF: {
+        AstSyntaxTemplateIff *iff = getAstSyntaxTemplateExpr_Iff(expression);
+        fprintf(out, "if (");
+        ppAstSyntaxTemplateExpr(out, iff->test);
+        fprintf(out, ") ");
+        ppAstSyntaxTemplateNest(out, iff->consequent);
+        fprintf(out, " else ");
+        ppAstSyntaxTemplateNest(out, iff->alternative);
+        break;
+    }
+    case AST_SYNTAXTEMPLATEEXPR_TYPE_PRINT:
+        fprintf(out, "print(");
+        ppAstSyntaxTemplateExpr(
+            out, getAstSyntaxTemplateExpr_Print(expression)->expression);
+        fprintf(out, ")");
+        break;
+    case AST_SYNTAXTEMPLATEEXPR_TYPE_TYPEOF:
+        fprintf(out, "(typeof ");
+        ppAstSyntaxTemplateExpr(
+            out, getAstSyntaxTemplateExpr_TypeOf(expression)->expression);
+        fprintf(out, ")");
+        break;
+    case AST_SYNTAXTEMPLATEEXPR_TYPE_TUPLE:
+        fprintf(out, "<tuple>(");
+        ppAstSyntaxTemplateExprs(out,
+                                 getAstSyntaxTemplateExpr_Tuple(expression));
+        fprintf(out, ")");
+        break;
+    case AST_SYNTAXTEMPLATEEXPR_TYPE_STRUCTURE: {
+        AstSyntaxTemplateStruct *structure =
+            getAstSyntaxTemplateExpr_Structure(expression);
+        ppAstLookUpOrSymbol(out, structure->symbol);
+        fprintf(out, "{ ");
+        ppAstSyntaxTemplateTaggedExpressions(out, structure->expressions);
+        fprintf(out, " }");
+        break;
+    }
+    case AST_SYNTAXTEMPLATEEXPR_TYPE_ASSERTION:
+        fprintf(out, "assert(");
+        ppAstSyntaxTemplateExpr(out,
+                                getAstSyntaxTemplateExpr_Assertion(expression));
+        fprintf(out, ")");
+        break;
+    case AST_SYNTAXTEMPLATEEXPR_TYPE_ERROR:
+        fprintf(out, "error(");
+        ppAstSyntaxTemplateExpr(out,
+                                getAstSyntaxTemplateExpr_Error(expression));
+        fprintf(out, ")");
+        break;
+    default:
+        cant_happen("unrecognised %s",
+                    astSyntaxTemplateExprTypeName(expression->type));
+    }
+}
+
+static void ppAstSyntaxTemplateFarg(FILE *out, AstSyntaxTemplateFarg *arg) {
+    switch (arg->type) {
+    case AST_SYNTAXTEMPLATEFARG_TYPE_WILDCARD:
+        fprintf(out, "_");
+        break;
+    case AST_SYNTAXTEMPLATEFARG_TYPE_BINDER:
+        ppAstSyntaxTemplateBinder(out, getAstSyntaxTemplateFarg_Binder(arg));
+        break;
+    case AST_SYNTAXTEMPLATEFARG_TYPE_LOOKUP:
+        ppAstLookUpSymbol(out, getAstSyntaxTemplateFarg_LookUp(arg));
+        break;
+    case AST_SYNTAXTEMPLATEFARG_TYPE_NAMED: {
+        AstSyntaxTemplateNamedArg *named = getAstSyntaxTemplateFarg_Named(arg);
+        ppAstHashSymbol(out, named->name);
+        fprintf(out, " = ");
+        ppAstSyntaxTemplateFarg(out, named->arg);
+        break;
+    }
+    case AST_SYNTAXTEMPLATEFARG_TYPE_UNPACK: {
+        AstSyntaxTemplateUnpack *unpack = getAstSyntaxTemplateFarg_Unpack(arg);
+        ppAstLookUpOrSymbol(out, unpack->symbol);
+        fprintf(out, "(");
+        ppAstSyntaxTemplateFargList(out, unpack->argList);
+        fprintf(out, ")");
+        break;
+    }
+    case AST_SYNTAXTEMPLATEFARG_TYPE_UNPACKSTRUCT: {
+        AstSyntaxTemplateUnpackStruct *unpackStruct =
+            getAstSyntaxTemplateFarg_UnpackStruct(arg);
+        ppAstLookUpOrSymbol(out, unpackStruct->symbol);
+        fprintf(out, "{ ");
+        ppAstSyntaxTemplateTaggedArgs(out, unpackStruct->argList);
+        fprintf(out, " }");
+        break;
+    }
+    case AST_SYNTAXTEMPLATEFARG_TYPE_NUMBER:
+        ppMaybeBigInt(out, getAstSyntaxTemplateFarg_Number(arg));
+        break;
+    case AST_SYNTAXTEMPLATEFARG_TYPE_CHARACTER:
+        ppAstCharacter(out, getAstSyntaxTemplateFarg_Character(arg));
+        break;
+    case AST_SYNTAXTEMPLATEFARG_TYPE_TUPLE:
+        fprintf(out, "<tuple>(");
+        ppAstSyntaxTemplateFargList(out, getAstSyntaxTemplateFarg_Tuple(arg));
+        fprintf(out, ")");
+        break;
+    default:
+        cant_happen("unrecognised %s",
+                    astSyntaxTemplateFargTypeName(arg->type));
+    }
+}
+
+static void ppAstSyntaxTemplateFargList(FILE *out,
+                                        AstSyntaxTemplateFargList *args) {
+    if (args == NULL) {
+        return;
+    }
+    for (Index i = 0; i < sizeAstSyntaxTemplateFargList(args); ++i) {
+        ppAstSyntaxTemplateFarg(out, getAstSyntaxTemplateFargList(args, i));
+        if (i + 1 < sizeAstSyntaxTemplateFargList(args)) {
+            fprintf(out, ", ");
+        }
+    }
+}
+
+static void ppAstSyntaxTemplateTaggedArgs(FILE *out,
+                                          AstSyntaxTemplateTaggedArgs *args) {
+    if (args == NULL) {
+        return;
+    }
+    for (Index i = 0; i < sizeAstSyntaxTemplateTaggedArgs(args); ++i) {
+        AstSyntaxTemplateTaggedArg *arg =
+            getAstSyntaxTemplateTaggedArgs(args, i);
+        ppAstHashSymbol(out, arg->tag);
+        fprintf(out, ": ");
+        ppAstSyntaxTemplateFarg(out, arg->arg);
+        if (i + 1 < sizeAstSyntaxTemplateTaggedArgs(args)) {
+            fprintf(out, ", ");
+        }
+    }
+}
+
+static void ppAstSyntaxTemplateTaggedExpressions(
+    FILE *out, AstSyntaxTemplateTaggedExpressions *expressions) {
+    if (expressions == NULL) {
+        return;
+    }
+    for (Index i = 0; i < sizeAstSyntaxTemplateTaggedExpressions(expressions);
+         ++i) {
+        AstSyntaxTemplateTaggedExpression *expression =
+            getAstSyntaxTemplateTaggedExpressions(expressions, i);
+        ppAstHashSymbol(out, expression->tag);
+        fprintf(out, ": (");
+        ppAstSyntaxTemplateExpr(out, expression->expression);
+        fprintf(out, ")");
+        if (i + 1 < sizeAstSyntaxTemplateTaggedExpressions(expressions)) {
+            fprintf(out, ", ");
+        }
+    }
+}
+
 void ppAstExpression(FILE *out, AstExpression *expr) {
     switch (expr->type) {
     case AST_EXPRESSION_TYPE_NUMBER:
@@ -602,6 +1375,9 @@ void ppAstExpression(FILE *out, AstExpression *expr) {
         fprintf(out, "(typeof ");
         ppAstExpression(out, expr->val.typeOf->exp);
         fprintf(out, ")");
+        break;
+    case AST_EXPRESSION_TYPE_SYNTAXUSE:
+        ppAstExprSyntaxUse(out, expr->val.syntaxUse);
         break;
     default:
         cant_happen("unexpected %s", astExpressionTypeName(expr->type));

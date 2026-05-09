@@ -1,5 +1,19 @@
 # Macros
 
+## Status
+
+This note is superseded by [SYNTAX.md](SYNTAX.md), which should be treated as
+the clearer statement of the intended end state.
+
+Within this older note, the term `macro` should now be read as meaning
+`syntax`. The two terms may be used interchangeably when discussing this
+feature, but the preferred current term is `syntax`.
+
+The parser work done so far under the name `macro` is still relevant. The
+current plan is to reuse that support while replacing the `macro` token in the
+parser, so `macro` should not be treated as a required long-term surface
+keyword.
+
 Just thinking out loud. Basic intent is just something like lisp
 `defmacro`, no attempt to do `syntax-rules` or anything fancy, but we
 can provide some support for hygene.

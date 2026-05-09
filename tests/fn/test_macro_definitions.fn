@@ -1,0 +1,38 @@
+let
+    macro time: Expr internalTime;
+    macro echo: Expr internalEcho;
+    macro grab: Expr internalGrab;
+    macro unless: Expr internalUnless;
+    macro annotate: Def internalAnnotate;
+
+    syntax internalTime ::= "(" expr: Expr ")" {
+        expr
+    };
+
+    syntax internalEcho ::= message: String {
+        message
+    };
+
+    syntax chooseValue(value) ::= "with" "skip" ignored: Expr {
+        value
+    }
+    | "with" replacement: Expr {
+        replacement
+    };
+
+    syntax internalGrab ::= "(" value: Expr ")" result: Syntax(chooseValue(value)) {
+        result
+    };
+
+    syntax internalUnless ::= "(" cond: Expr ")" consequent: Nest "else" alternative: Nest {
+        cond
+    };
+
+    syntax internalAnnotate ::= name: Name ":" annotation: Type "=" value: Expr {
+        name = value
+    };
+in
+    assert(42 == time(42));
+    assert("hello" == echo "hello");
+    assert(42 == grab(42) with skip 0);
+    assert(7 == grab(42) with 7)

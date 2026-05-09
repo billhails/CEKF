@@ -1,0 +1,9 @@
+// Import ordinary functions from a linked namespace into the local scope
+
+let
+    link "listutils.fn" as list;
+    import list.map;
+    import list.filter as keep;
+in
+    assert(map(fn (x) { x * 2 }, [1, 2, 3]) == [2, 4, 6]);
+    assert(keep(fn (x) { x % 2 == 0 }, [1, 2, 3, 4, 5, 6]) == [2, 4, 6])

@@ -1,5 +1,53 @@
 namespace
 
+link "listutils.fn" as list;
+import list operator "_except_";
+
+export macro search: Expr searchHead;
+
+syntax searchHead ::= "[" body: Syntax(searchClauses) "]" {
+    body
+};
+
+syntax searchClauses ::= "yield" result: Expr ";" {
+    result
+}
+| "yield" result: Expr {
+    result
+}
+| "where" cond: Expr ";" rest: Syntax(searchClauses) quote {
+    fn (_) { unquote(rest) }(require(unquote(cond)))
+}
+| "from" domain: Expr "some" values: Name ";" rest: Syntax(searchClauses) quote {
+    fn (unquote(values)) { unquote(rest) }(some_of(unquote(domain)))
+}
+| "from" domain: Expr "pick" first: Name
+    used0: Syntax(pickStart)
+    rest: Syntax(pickTail(domain, used0, first)) {
+    rest
+};
+
+syntax pickStart ::= quote {
+    []
+};
+
+syntax pickNext(used, current) ::= quote {
+    unquote(used) @@ [unquote(current)]
+};
+
+syntax pickTail(domain, used, current) ::= ","
+    next: Name
+    used2: Syntax(pickNext(used, current))
+    tail: Syntax(pickTail(domain, used2, next)) quote {
+    fn (unquote(current)) { unquote(tail) }
+        (one_of(unquote(domain) except unquote(used)))
+}
+| ";" rest: Syntax(searchClauses) quote {
+    fn (unquote(current)) { unquote(rest) }
+        (one_of(unquote(domain) except unquote(used)))
+};
+
+
 fn require(condition) {
     condition or back
 }
@@ -35,3 +83,4 @@ fn integers_between(lower, upper) {
 }
 
 export operator "_.._" 8 integers_between;
+

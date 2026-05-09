@@ -7,7 +7,7 @@ that back to existing F♮ syntax which implements type classes.
 CAVEAT - probably won't work.
 
 ```fn
-class EQ(#t) {
+typeclass EQ(#t) {
     eq: #t -> #t -> bool;
     ne: #t -> #t -> bool;
 }
@@ -50,7 +50,7 @@ EqExp = #(
 What about `map`?
 
 ```fn
-class FUNCTOR(t) { // N.B. not #t
+typeclass FUNCTOR(t) { // N.B. not #t
     fmap: (#u -> #v) -> t(#u) -> t(#v)
 }
 

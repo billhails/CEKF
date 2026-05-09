@@ -1,0 +1,9 @@
+namespace
+
+fn hiddenDouble(x) { x + x };
+
+export macro twice: Expr twiceHelper;
+
+syntax twiceHelper ::= "(" value: Expr ")" {
+    hiddenDouble(value)
+};

@@ -1,0 +1,11 @@
+// regression test: helper parameter names that are also registered as operator
+// tokens must still parse correctly inside quote { ... } template bodies.
+let
+    operator "x_" 10 fn (a) { a };
+
+    macro wrap: Expr wrapHelper;
+
+    syntax helper(x) ::= quote { unquote(x) };
+    syntax wrapHelper ::= v: Expr y: Syntax(helper(v)) quote { unquote(y) };
+in
+    assert(42 == wrap 42)

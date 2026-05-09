@@ -1,0 +1,5 @@
+let
+    link "import_macro_template_macro_lib.fn" as syn;
+    import syn macro bump;
+in
+    assert(bump(41) == 42)

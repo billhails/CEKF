@@ -62,10 +62,12 @@ TOKFN(CLOSE, ")")
 TOKFN(COLON, ":")
 TOKFN(COMMA, ",")
 TOKFN(ELSE, "else")
+TOKFN(DEFTYPE, "Def")
 TOKFN(EOF, " EOF")
 TOKFN(EQ, "EQ")
 TOKFN(ERROR, " ERROR")
 TOKFN(EXPORT, "export")
+TOKFN(EXPRTYPE, "Expr")
 TOKFN(FN, "fn")
 TOKFN(HASH, "#")
 TOKFN(IF, "if")
@@ -80,7 +82,11 @@ TOKFN(LET, "let")
 TOKFN(LINK, "link")
 TOKFN(LAZY, "lazy")
 TOKFN(LSQUARE, "[")
+TOKFN(MACRO, "macro")
+TOKFN(SYNTAX, "syntax")
+TOKFN(NAMETYPE, "Name")
 TOKFN(NAMESPACE, "namespace")
+TOKFN(NESTTYPE, "Nest")
 TOKFN(NONE, "none")
 TOKFN(NUMBER, " NUMBER")
 TOKFN(OPEN, "(")
@@ -89,15 +95,18 @@ TOKFN(OPERATORS, "operators")
 TOKFN(PERIOD, ".")
 TOKFN(PIPE, "|")
 TOKFN(PRINT, "print")
+TOKFN(PRODUCTION, "::=")
 TOKFN(RCURLY, "}")
 TOKFN(RIGHT, "right")
 TOKFN(RSQUARE, "]")
 TOKFN(SEMI, ";")
 TOKFN(STRING, " STRING")
+TOKFN(STRINGTYPE, " String")
 TOKFN(SWITCH, "switch")
 TOKFN(TUPLE, "#(")
 TOKFN(TYPEDEF, "typedef")
 TOKFN(TYPEOF, "typeof")
+TOKFN(TYPETYPE, "Type")
 TOKFN(UNSAFE, "unsafe")
 TOKFN(WILDCARD, "_")
 
@@ -138,6 +147,8 @@ void parserError(PrattParser *parser, const char *message, ...) {
     if (parser->panicMode)
         return;
     parser->panicMode = true;
+    if (parser->suppressErrors)
+        return;
     va_start(args, message);
     PrattBufList *bufList = parser->lexer->bufList;
     if (bufList) {
@@ -161,6 +172,8 @@ void parserErrorAt(ParserInfo PI, PrattParser *parser, const char *message,
     if (parser->panicMode)
         return;
     parser->panicMode = true;
+    if (parser->suppressErrors)
+        return;
     va_start(args, message);
     vcan_happen(PI, message, args);
     va_end(args);
@@ -313,17 +326,30 @@ static void advance(PrattBuffer *buffer) {
  */
 static inline PrattToken *_lookUpTrieSymbol(PrattParser *parser,
                                             PrattLexer *lexer) {
+    PrattBuffer *buffer = lexer->bufList->buffer;
     PrattParser *p = parser;
+    HashSymbol *bestSymbol = NULL;
+    int bestOffset = 0;
+
     while (p) {
-        HashSymbol *symbol =
-            lookUpTrieRecursive(p->trie, lexer->bufList->buffer, 0, NULL);
-        if (symbol != NULL) {
-            PrattToken *res = tokenFromSymbol(lexer->bufList, symbol, symbol);
-            advance(lexer->bufList->buffer);
-            return res;
+        buffer->offset = 0;
+        HashSymbol *symbol = lookUpTrieRecursive(p->trie, buffer, 0, NULL);
+        if (symbol != NULL && buffer->offset > bestOffset) {
+            bestSymbol = symbol;
+            bestOffset = buffer->offset;
         }
         p = p->next;
     }
+
+    if (bestSymbol != NULL) {
+        buffer->offset = bestOffset;
+        PrattToken *res =
+            tokenFromSymbol(lexer->bufList, bestSymbol, bestSymbol);
+        advance(buffer);
+        return res;
+    }
+
+    buffer->offset = 0;
     return NULL;
 }
 
@@ -1203,6 +1229,12 @@ bool match(PrattParser *parser, HashSymbol *type) {
     return false;
 }
 
+static const char *friendlyExpectedName(HashSymbol *type) {
+    if (type == TOK_ATOM())
+        return "identifier";
+    return type->name;
+}
+
 /**
  * @brief Consumes the next token if it matches the specified type.
  *
@@ -1210,12 +1242,6 @@ bool match(PrattParser *parser, HashSymbol *type) {
  * If the match fails, it consumes the token, raises an error, and returns
  * false.
  */
-static const char *friendlyExpectedName(HashSymbol *type) {
-    if (type == TOK_ATOM())
-        return "identifier";
-    return type->name;
-}
-
 bool consume(PrattParser *parser, HashSymbol *type) {
     PrattToken *token = next(parser);
     validateLastAlloc();

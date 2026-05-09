@@ -1,0 +1,600 @@
+# Pratt Parser Macro Phase 1 Architecture
+
+## Goal
+
+Record a concrete parser and scanner analysis for phase-1 hygienic macros,
+and sketch a minimal implementation shape that fits the current Pratt parser
+architecture.
+
+This note is intentionally narrower than a full macro RFC. It focuses on the
+actual seams in `pratt_parser` and `pratt_scanner`, and on how a first macro
+implementation could fit into those seams without trying to solve later work
+such as `do` notation, grammar-level macros, or user-defined parser
+callbacks.
+
+## Summary
+
+The current parser already has three properties that make phase-1 macros
+plausible.
+
+1. Token recognition is parser-owned, not scanner-owned. The scanner consults
+   a trie that lives on the current parser chain.
+2. Parsing behavior is already driven by runtime tables of parselets and
+   associated metadata.
+3. There is already a real parser-to-scanner feedback loop for user-defined
+   operators and mixfix syntax.
+
+The main conclusion is that phase-1 syntax-object parameter classes should be
+modeled as a small fixed set of parser entry points, not as arbitrary new
+parselets supplied by users.
+
+The other main conclusion is that macro heads should be registered in the
+parser trie and dispatched through a generic macro parselet, rather than being
+left to generic identifier or symbol parsing.
+
+That means classes such as `Expr`, `Name`, `Nest`, `String`, and
+`Type` are realistic for phase 1, while things like `SwitchClauseList` or
+`TypeBody` should wait until the simpler entry points are proven out.
+
+## Findings
+
+### 1. The Scanner Is Driven By Parser State
+
+The scanner does not own a fixed grammar table. It looks up symbols in a trie
+attached to the current parser and its parents.
+
+Relevant structures:
+
+- [src/pratt.yaml](../src/pratt.yaml#L201) defines `PrattFixityConfig`.
+- [src/pratt.yaml](../src/pratt.yaml#L71) defines `PrattToken`.
+- [src/pratt.yaml](../src/pratt.yaml#L96) defines `PrattParser`.
+
+Relevant control points:
+
+- [src/pratt_scanner.c](../src/pratt_scanner.c#L314) `_lookUpTrieSymbol()`
+  walks the current parser and its parent chain.
+- [src/pratt_scanner.c](../src/pratt_scanner.c#L940) `next()` calls trie
+  lookup before falling back to normal identifier parsing.
+- [src/pratt_scanner.c](../src/pratt_scanner.c#L1096) `insertPrattTrie()`
+  inserts user-visible symbols into the trie.
+
+Consequence:
+
+- Macro heads and quoted literal terminals can reuse the same scanner
+  recognition path that operators use today.
+- A separate scanner architecture is probably unnecessary for phase 1.
+
+### 2. The Core Extension Seam Is The Pratt Parselet Table
+
+The parser already dispatches through runtime parselet function pointers.
+
+- [src/pratt_functions.h](../src/pratt_functions.h#L27) defines
+  `PrattParselet`.
+- [src/pratt_parser.c](../src/pratt_parser.c#L4344)
+  `expressionPrecedence()` is the central Pratt loop.
+
+Consequence:
+
+- Phase-1 macros should plug into the same dispatch model rather than trying
+  to create a separate parser path.
+- A generic macro parselet is plausible.
+
+### 3. Operator Registration Is The Closest Existing Model
+
+Operators already flow through a declaration-time registration path that:
+
+1. parses user syntax
+2. stores metadata in parser-owned structures
+3. updates the trie so the scanner recognizes the new tokens
+4. reuses that metadata at expression parse time
+
+Relevant functions:
+
+- [src/pratt_parser.c](../src/pratt_parser.c#L1358) `addOperator()`
+- [src/pratt_parser.c](../src/pratt_parser.c#L1594) `addMixfixOperator()`
+- [src/pratt_parser.c](../src/pratt_parser.c#L2039) `definition()`
+
+Consequence:
+
+- Real macros should probably reuse this broad architecture.
+- Phase 1 should try to look like “new declaration kind with parser metadata”
+  rather than “special token rewriting trick”.
+
+### 4. Parser Entry Points Are More Important Than Raw Parselets
+
+Your idea that syntax-object parameter classes should correspond to existing
+parser entry points is the right one. The refinement is that not all of those
+entry points are plain Pratt parselets.
+
+Examples:
+
+- [src/pratt_parser.c](../src/pratt_parser.c#L1055) `childNest()`
+- [src/pratt_parser.c](../src/pratt_parser.c#L1074) `nestBody()`
+- [src/pratt_parser.c](../src/pratt_parser.c#L2579) `altFunction()`
+- [src/pratt_parser.c](../src/pratt_parser.c#L2646) `altArgs()`
+- [src/pratt_parser.c](../src/pratt_parser.c#L3321) `typeBody()`
+- [src/pratt_parser.c](../src/pratt_parser.c#L2435) `typeType()`
+- [src/pratt_parser.c](../src/pratt_parser.c#L3782) `switchFC()`
+
+Consequence:
+
+- Phase-1 syntax classes should map to existing parser helper functions.
+- They should not be modeled as “user-supplied parselet callbacks”.
+
+### 5. There Is Already A Scanner Feedback Loop Analogous To What Macros Need
+
+User-defined operators are effectively passed back to the scanner from the
+parser by trie insertion.
+
+That is the existing analogue to “macro declarations influence later token
+recognition”.
+
+Consequence:
+
+- If a macro introduces a head symbol or fixed literal terminals, those can
+  be registered in the trie just like operators and mixfix keywords.
+- This is a recognition mechanism, not an expansion mechanism.
+
+### 6. Namespace Export Or Import Is The Closest Existing Cross-File Transport
+
+There is already infrastructure for exporting parser-visible operator metadata
+from one scope and importing it into another.
+
+Relevant functions:
+
+- [src/pratt_parser.c](../src/pratt_parser.c#L756)
+  `captureNameSpaceOperatorExports()`
+- [src/pratt_parser.c](../src/pratt_parser.c#L785) `ensureTargetRecord()`
+- [src/pratt_parser.c](../src/pratt_parser.c#L828) `mergeFixityImport()`
+- [src/pratt_parser.c](../src/pratt_parser.c#L2150) `exportOp()`
+- [src/pratt_parser.c](../src/pratt_parser.c#L2303) `importOp()`
+
+Consequence:
+
+- If phase-1 macros need import or export later, the operator transport path
+  is the first place to look.
+- This argues for storing macro parser metadata in something parallel to the
+  existing fixity metadata, not in an ad hoc side structure hidden elsewhere.
+
+## Risks And Constraints
+
+### Parselet-Aligned Classes Are Not Free Today
+
+The current mixfix machinery stores keyword patterns and precedence, but not a
+per-hole syntax class. Every hole is parsed as an expression today.
+
+That means phase 1 needs an explicit new dispatch layer for hole parsing.
+
+### `Nest` Is A Real Parser Entry Point, But Not A Generic Statement Language
+
+`childNest()` and `nestBody()` are good anchors for a `Nest`
+syntax class. But they bring along the existing semantics of brace nests,
+including `let`, `namespace`, and statement parsing.
+
+That is probably good for phase 1, but it means `Nest` is not a tiny
+sub-expression class. It is a fairly opinionated grammar entry point.
+
+### Clause-Oriented Forms Are Specialized
+
+`switchFC()`, `altFunction()`, `altArgs()`, and `typeBody()` are all useful,
+but each carries specific delimiter and AST assumptions.
+
+That makes them poor candidates for the initial fixed syntax-class set.
+
+### Scanner Trie Growth Changes Expression Termination Behavior
+
+The Pratt loop allows tokens with no local record to terminate expressions.
+That behavior is convenient for mixfix secondary keywords, but it also means
+that adding more literal terminals through the trie may affect how expressions
+stop.
+
+That is manageable, but it is a real design pressure toward a conservative
+phase-1 keyword set.
+
+### Full Hygiene Still Does Not Belong In The Scanner
+
+The scanner knows about token recognition and line numbers. It does not know
+about syntax-object scope, marks, or hygienic rewriting.
+
+So even if macro heads are scanner-recognized, actual macro expansion should
+remain parser-side or post-parser-side.
+
+## Practical Extraction Seams
+
+If the goal is to keep new code out of `pratt_parser.c` where possible, some
+parts are much easier to separate than others.
+
+### Low-Risk Candidates For Separate Files
+
+The operator or mixfix subsystem is the best template.
+
+Candidate cluster:
+
+- operator or mixfix pattern parsing
+- macro declaration registration
+- macro metadata creation
+- generic syntax-class hole parsing
+- generic macro parselet implementation
+
+Practical file split:
+
+- `src/pratt_macro_defs.c`
+- `src/pratt_macro_parse.c`
+- possibly `src/pratt_macro.h`
+
+Those files can be called from the existing parser dispatcher without moving
+the dispatcher itself.
+
+### Risky Candidates To Extract
+
+These are too central and shared to be good first extraction targets.
+
+- [src/pratt_parser.c](../src/pratt_parser.c#L2039) `definition()`
+- [src/pratt_parser.c](../src/pratt_parser.c#L4344)
+  `expressionPrecedence()`
+- [src/pratt_parser.c](../src/pratt_parser.c#L1022) `makeChildParser()`
+- [src/pratt_parser.c](../src/pratt_parser.c#L1074) `nestBody()`
+
+These should remain as thin callers into macro-specific helpers.
+
+## Recommended Phase-1 Architecture
+
+### Design Goal
+
+Keep phase 1 expression-oriented, hygienic, and parser-integrated.
+
+Do not attempt arbitrary grammar extension. Do not attempt token-stream
+rewriting. Do not attempt user-defined parser callbacks.
+
+### Proposed Fixed Syntax Classes
+
+For phase 1, use a small fixed enum of parser-side syntax classes.
+
+Recommended starting set:
+
+- `Expr`
+- `Name`
+- `Nest`
+- `String`
+- `Type`
+
+Possible mapping onto current parser helpers:
+
+- `Expr` -> `expressionPrecedence(parser, precedence)`
+- `Name` -> a symbol or identifier parser path
+- `Nest` -> `childNest(parser, terminal)` after consuming braces
+- `String` -> existing string token or string helper path
+- `Type` -> `typeType(parser)`
+
+### Candidate Phase-1 BNF
+
+Before implementing anything, it is worth making the intended declaration
+syntax explicit.
+
+This grammar is deliberately only for phase-1 macro definitions. It is not an
+attempt at a full grammar-extension system.
+
+```bnf
+macro_definition ::= 'macro' macro_pattern macro_template
+
+macro_pattern ::= macro_head macro_pattern_item*
+
+macro_head ::= quoted_symbol
+
+macro_pattern_item ::= typed_hole
+                     | quoted_terminal
+
+typed_hole ::= symbol ':' syntax_class
+
+quoted_symbol ::= any double-quoted symbol token
+
+quoted_terminal ::= any double-quoted literal token
+
+syntax_class ::= 'Expr'
+               | 'Name'
+               | 'Nest'
+               | 'String'
+               | 'Type'
+
+macro_template ::= nest
+```
+
+This is intended to cover the initial motivating shapes without introducing a
+fully general pattern language.
+
+Examples that fit this grammar:
+
+```fn
+macro "time" "(" expr: Expr ")" {
+    ...
+}
+
+macro "unless" "(" cond: Expr ")" consequent: Nest "else" alternative: Nest {
+    ...
+}
+
+macro "for" "(" name: Name "=" init: Expr "," test: Expr "," step: Expr ")" body: Nest {
+    ...
+}
+```
+
+This fixed-item grammar is a good first anchor, but the list-comprehension
+example in the kickoff note exposes an immediate follow-up requirement:
+single macro definitions may need optional and repeated subpatterns.
+
+For example, these should still be one `lco` macro shape, not separate macro
+definitions:
+
+```fn
+lco [x + 1 for x in xs]
+lco [x + 1 for x in xs where x > 4]
+lco [x + 1 for x in xs where x > 4, isOdd(x)]
+```
+
+Architecturally, that argues for one of two parser-owned strategies:
+
+- keep the user-facing declaration syntax simple and let the macro-definition
+  helper normalize optional or repeated segments into a canonical internal
+  form before generic macro matching
+- or add one level above flat pattern items, so the internal pattern metadata
+  can represent optional and repeated groups directly
+
+The important point is the single-macro property. Phase 1 should not require
+authors to duplicate near-identical macro definitions just to cover an
+omitted `where` clause or a comma-separated predicate chain.
+
+Given the longer-term direction sketched in [SYNTAX.md](SYNTAX.md), the second
+option is the better architectural target. An embedded-BNF or named-subsyntax
+surface wants parser-owned structure for grouping, alternation, and
+parameterized subrules. A one-shot normalization pass may still be a useful
+staging aid, but it should be treated as an implementation convenience over a
+grouped internal representation, not as the long-term model.
+
+### Suggested Template Quotation Surface
+
+The macro body should remain an ordinary `nest` in the declaration grammar,
+but phase 1 needs explicit quotation forms inside that body so templates can
+be parsed once and expanded later.
+
+```bnf
+template_quote ::= 'quote' nest
+template_unquote ::= 'unquote' symbol
+template_splice ::= 'splice' symbol
+```
+
+Notes:
+
+- `quote` is the phase-1 container form for building syntax.
+- `unquote` inserts a single syntax object captured by a typed hole.
+- `splice` inserts sequence-valued syntax in sequence positions such as nest
+  bodies, argument lists, tuple items, list items, or other list-bearing
+  syntax nodes.
+- `unquote` and `splice` are only valid inside a surrounding `quote`.
+- Phase 1 can ship with `quote` and `unquote` first, while treating `splice`
+  as the first sequence-oriented follow-up if implementation staging demands
+  it.
+
+Notes:
+
+- `macro_head` is intentionally a quoted leading symbol in phase 1.
+- `quoted_symbol` should not be restricted to identifier spelling. Any quoted
+  symbol that can be registered in the trie is a valid phase-1 macro head.
+- Any fixed token in the macro pattern is written as a quoted terminal. That
+  includes words such as `"unless"` and `"else"`, and punctuation such as
+  `"("`, `")"`, `"="`, and `","`.
+- This makes a separate keyword-versus-punctuation distinction unnecessary in
+  the spec.
+- The head symbol should be registered in the parser trie and associated with
+  a generic macro parselet so macro use sites are scanner-recognized rather
+  than routed through generic identifier parsing.
+- `macro_template` is a `nest`, which keeps expansion bodies aligned with the
+  existing brace-delimited parser entry point.
+- If later work needs clause-like bodies or richer head grammars, that should
+  be added as a second step rather than folded into the first implementation.
+
+### Suggested New Metadata Shape
+
+The current operator metadata is centered on `PrattFixityConfig`. A phase-1
+macro system should probably use a parallel struct rather than trying to force
+everything into fixity metadata.
+
+The current implementation direction of storing ordered pattern items is the
+right shape. It preserves the declared interleaving of quoted terminals and
+typed holes directly, instead of splitting them into separate lists and then
+having to reconstruct their order later.
+
+For strictly fixed patterns, a flat ordered item list is enough. If phase 1
+also wants single-macro variant forms such as list comprehensions with an
+optional `where` tail and repeated comma-separated predicates, then the
+implementation should add either:
+
+- a normalization pass from surface syntax into canonical fixed metadata
+- or a grouped internal pattern representation above `PrattMacroPatternItem`
+
+It should not model those variants as multiple separate macro specs that just
+happen to share the same head.
+
+With the longer-term syntax-extension goal in mind, grouped internal pattern
+nodes are the preferable destination. They can later grow toward named
+subsyntaxes, alternation, empty productions, and parameterized helper rules of
+the kind sketched in [SYNTAX.md](SYNTAX.md), while still allowing a flatter
+phase-1 surface to compile into them.
+
+In `pratt.yaml` terms, one plausible sketch is:
+
+```yaml
+structs:
+  PrattMacroHole:
+    meta:
+      brief: A single typed hole in a macro pattern.
+      description: >-
+        Describes one macro parameter, including its parser-owned
+        syntax class and the symbol it binds in the macro template.
+    data:
+      syntaxClass: PrattSyntaxClass
+      name: HashSymbol
+
+  PrattMacroSpec:
+    meta:
+      brief: Parser metadata for a phase-1 macro definition.
+      description: >-
+        Stores the head symbol, ordered pattern items, and template
+        expression needed for parser-time macro
+        expansion in the current scope.
+    data:
+      headSymbol: HashSymbol
+      patternItems: PrattMacroPatternItems
+      template: AstExpression=NULL
+      export: bool=false
+      importNsRef: int=-1
+      importNsSymbol: HashSymbol=NULL
+
+enums:
+  PrattSyntaxClass:
+    meta:
+      brief: The fixed parser-side syntax classes for phase-1 macros.
+    data:
+      - EXPR
+      - NAME
+      - NEST
+      - STRING
+      - TYPE
+
+unions:
+  PrattMacroPatternItem:
+    meta:
+      brief: A single ordered item in a macro pattern.
+      description: >-
+        Represents one item in a phase-1 macro pattern,
+        preserving the declared interleaving of quoted
+        terminals and typed holes.
+    data:
+      quotedTerminal: WCharArray
+      typedHole: PrattMacroHole
+
+arrays:
+  PrattMacroPatternItems:
+    meta:
+      brief: An ordered list of macro pattern items.
+      description: >-
+        Holds the declared macro pattern in source order so
+        parse-time expansion can match terminals and holes
+        without rebuilding that ordering.
+    data:
+      entries: PrattMacroPatternItem
+```
+
+This is intentionally small.
+
+Important point:
+
+- The syntax class is parser-owned metadata.
+- It is not a function pointer supplied by user code.
+
+### Suggested Registration Flow
+
+The registration path should mirror operators as closely as possible.
+
+1. `definition()` recognizes a new `macro` declaration form.
+2. A macro-definition helper parses the head pattern and parameter classes.
+3. If the chosen surface admits optional or repeated segments, the helper
+  builds grouped internal pattern nodes, optionally using a normalization step
+  as a staging layer.
+4. The helper builds a `PrattMacroSpec`.
+5. The helper installs or reuses a generic prefix parselet binding for the
+  macro head.
+6. The head symbol and literal terminals are inserted into the parser trie.
+7. The current parser scope stores the macro metadata in a local table.
+8. The generic macro parselet later consults that metadata when the head token
+  is encountered.
+
+This is the cleanest analogue to the operator pipeline.
+
+### Suggested Parse-Time Flow
+
+At parse time, a generic macro parselet should:
+
+1. be invoked by the trie-recognized macro head token
+2. consult the stored macro spec
+3. match any grouped pattern structure, including optional or repeated
+  segments if phase 1 supports them
+4. parse each hole according to its fixed syntax class
+5. build a syntax-object environment
+6. expand to normal AST using the stored template or expansion form
+
+The key phase-1 choice is that hole parsing is dispatched by a fixed parser
+helper table, not by user-supplied parser logic.
+
+### Where The New Code Should Live
+
+This seems practical:
+
+- keep `definition()` and `expressionPrecedence()` in `pratt_parser.c`
+- move macro-specific registration and parsing helpers into separate files
+- keep scanner changes minimal, ideally limited to trie insertion reuse and
+  recognition through the existing trie lookup path
+
+Plausible split:
+
+- `src/pratt_macro_defs.c`
+  - parse macro declaration header
+  - build `PrattMacroSpec`
+  - register trie keywords
+  - store local parser metadata
+- `src/pratt_macro_parse.c`
+  - generic macro parselet
+  - syntax-class dispatch helpers
+  - syntax-object construction glue
+
+This would keep the existing parser entry points stable while giving macro
+logic its own implementation area.
+
+## What Phase 1 Should Not Try To Do
+
+Phase 1 should not attempt:
+
+- arbitrary parser callbacks in macro definitions
+- grammar-definition macros
+- scanner-level token rewriting as the expansion mechanism
+- pattern-clause macro classes such as `SwitchClauseList`
+- full typeclass-aware macro overload resolution
+
+Those are all later requirements. The phase-1 design should remain compatible
+with them, but should not be blocked by them.
+
+## Recommended First Implementation Slice
+
+If this were implemented incrementally, the smallest defensible slice would
+be:
+
+1. add a fixed `PrattSyntaxClass` enum
+2. add a small parser-owned macro metadata struct with ordered pattern items
+3. add a `macro` declaration path in `definition()`
+4. register each macro head with a generic macro parselet and add the head and
+  literal terminals to the trie
+5. add a generic macro parselet that supports only `Expr`, `Name`, and `Nest`
+6. add `quote` and `unquote` handling in macro templates, with `splice`
+  either included immediately or treated as the first follow-up
+7. expand only into ordinary AST, not token streams
+
+If list comprehensions or similarly variant forms are part of the early goal,
+the narrowest extension after that slice is not a second macro system. It is
+one small grouped-pattern mechanism for optional and repeated segments,
+possibly fed by a normalization step, so one macro definition can cover both
+the plain and filtered forms while still moving toward later embedded-BNF
+syntax extension.
+
+That would be enough to test whether the architecture works without taking on
+the specialized clause grammars too early.
+
+## Relationship To Other Notes
+
+This note is intended to complement, not replace:
+
+- [HYGIENIC_MACRO_DESIGN_KICKOFF.md](HYGIENIC_MACRO_DESIGN_KICKOFF.md)
+- [agent/pratt-parser.md](agent/pratt-parser.md)
+- [OPERATORS.md](OPERATORS.md)
+- [SYNTAX.md](SYNTAX.md)
+
+The kickoff note says what the macro system is for.
+This note says where it fits in the current parser.

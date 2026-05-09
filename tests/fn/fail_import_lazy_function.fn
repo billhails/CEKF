@@ -1,0 +1,7 @@
+// Negative test: lazy namespace members are not yet supported by function import
+
+let
+    link "import_lazy_fn_lib.fn" as lazylib;
+    import lazylib.delayed_or;
+in
+    puts("This line should not be reached due to lazy import failure\n")

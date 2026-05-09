@@ -1,0 +1,12 @@
+let
+    operator "quote_" 10 fn (x) { x };
+
+    macro qidentity: Expr quotedIdentity;
+
+    syntax quotedIdentity ::= x: Name quote {
+        fn (unquote(x)) { unquote(x) }
+    };
+
+    id = qidentity value;
+in
+    assert(42 == id(42))

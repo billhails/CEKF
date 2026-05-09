@@ -1,0 +1,7 @@
+let
+    link "import_macro_template_def_macro_lib.fn" as syn;
+    import syn macro annotate;
+
+    annotate answer = 42;
+in
+    assert(answer == 42)

@@ -1,0 +1,14 @@
+let
+    macro time: Expr internalTime;
+
+    syntax internalTime ::= expr: Expr {
+        expr
+    };
+
+    macro time: Expr internalTime2;
+
+    syntax internalTime2 ::= value: Expr {
+        value
+    };
+in
+    assert(false)

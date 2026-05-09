@@ -283,7 +283,7 @@ static MinExp *shakeMinLetRec(MinExp *exp) {
     // live = rootSet intersect deps+
     SymbolSet *live = computeLiveBindings(deps, rootSet);
     PROTECT(live);
-    // new_bindings = { x_i: \_i | x_i in live }
+    // new_bindings = { x_i: λ_i | x_i ∈ live }
     new_bindings = retainOnlyLive(new_bindings, live);
     PROTECT(new_bindings);
 
@@ -340,6 +340,41 @@ static MinAmb *shakeMinAmb(MinAmb *node) {
     }
     UNPROTECT(save);
     LEAVE(shakeMinAmb);
+    return result;
+}
+
+static MinCondCases *shakeMinCondCases(MinCondCases *node) {
+    if (node == NULL)
+        return NULL;
+    ENTER(shakeMinCondCases);
+    int save = STARTPROTECT();
+    MinCondCases *result = node;
+    switch (node->type) {
+    case MINCONDCASES_TYPE_INTEGERS: {
+        // MinIntCondCases
+        MinIntCondCases *variant = getMinCondCases_Integers(node);
+        MinIntCondCases *new_variant = shakeMinIntCondCases(variant);
+        if (new_variant != variant) {
+            PROTECT(new_variant);
+            result = newMinCondCases_Integers(CPI(node), new_variant);
+        }
+        break;
+    }
+    case MINCONDCASES_TYPE_CHARACTERS: {
+        // MinCharCondCases
+        MinCharCondCases *variant = getMinCondCases_Characters(node);
+        MinCharCondCases *new_variant = shakeMinCharCondCases(variant);
+        if (new_variant != variant) {
+            PROTECT(new_variant);
+            result = newMinCondCases_Characters(CPI(node), new_variant);
+        }
+        break;
+    }
+    default:
+        cant_happen("unrecognized MinCondCases type %d", node->type);
+    }
+    UNPROTECT(save);
+    LEAVE(shakeMinCondCases);
     return result;
 }
 
@@ -513,40 +548,5 @@ MinExp *shakeMinExp(MinExp *node) {
     }
     UNPROTECT(save);
     LEAVE(shakeMinExp);
-    return result;
-}
-
-static MinCondCases *shakeMinCondCases(MinCondCases *node) {
-    if (node == NULL)
-        return NULL;
-    ENTER(shakeMinCondCases);
-    int save = STARTPROTECT();
-    MinCondCases *result = node;
-    switch (node->type) {
-    case MINCONDCASES_TYPE_INTEGERS: {
-        // MinIntCondCases
-        MinIntCondCases *variant = getMinCondCases_Integers(node);
-        MinIntCondCases *new_variant = shakeMinIntCondCases(variant);
-        if (new_variant != variant) {
-            PROTECT(new_variant);
-            result = newMinCondCases_Integers(CPI(node), new_variant);
-        }
-        break;
-    }
-    case MINCONDCASES_TYPE_CHARACTERS: {
-        // MinCharCondCases
-        MinCharCondCases *variant = getMinCondCases_Characters(node);
-        MinCharCondCases *new_variant = shakeMinCharCondCases(variant);
-        if (new_variant != variant) {
-            PROTECT(new_variant);
-            result = newMinCondCases_Characters(CPI(node), new_variant);
-        }
-        break;
-    }
-    default:
-        cant_happen("unrecognized MinCondCases type %d", node->type);
-    }
-    UNPROTECT(save);
-    LEAVE(shakeMinCondCases);
     return result;
 }

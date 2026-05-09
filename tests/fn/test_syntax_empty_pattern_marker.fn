@@ -1,0 +1,16 @@
+let
+    macro choose: Expr chooseHelper;
+
+    syntax chooseZero(flag) ::= "," next: Expr {
+        flag + next
+    }
+    | empty {
+        flag
+    };
+
+    syntax chooseHelper ::= "(" first: Expr tail: Syntax(chooseZero(first)) ")" {
+        tail
+    };
+in
+    assert(5 == choose(5));
+    assert(12 == choose(5, 7))

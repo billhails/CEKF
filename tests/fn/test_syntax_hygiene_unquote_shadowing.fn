@@ -1,0 +1,16 @@
+let
+    x = 10;
+
+    macro captureUseSite: Expr captureUseSiteHelper;
+
+    syntax captureUseSiteHelper ::= y: Expr quote {
+        fn (x) { unquote(y) }
+    };
+in
+    {
+        let
+            x = 20;
+            f = captureUseSite x;
+        in
+            f;
+    }

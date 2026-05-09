@@ -388,3 +388,32 @@ export operator "_<>_" left 8 fn (l, f) { sortBy(f, l) };
 
 // sort: list(#a) -> list(#a)
 fn sort(l) { sortBy(fn (a, b) { a <=> b }, l) }
+
+// cmpBy: (#a -> #b) -> #a -> #a -> cmp
+fn cmpBy(x) {
+    fn (a, b) { x(a) <=> x(b) }
+}
+
+// list comprehensions
+export macro lco: Expr internalLco;
+
+syntax internalLco ::= "["
+    exp: Expr
+    "for" x: Name
+    "in" xs: Expr
+    filters: Syntax(whereClauses(x, xs))
+"]" {
+    map(fn (x) { exp }, filters)
+};
+
+syntax whereClauses(x, xs) ::= empty { xs }
+                            | "where" cond: Expr
+                                rest: Syntax(moreFilters(x, xs)) {
+    filter(fn (x) { cond }, rest)
+};
+
+syntax moreFilters(x, xs) ::= { xs }
+| "," cond: Expr rest: Syntax(moreFilters(x, xs)) {
+    filter(fn (x) { cond }, rest)
+};
+

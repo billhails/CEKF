@@ -808,6 +808,13 @@ static void collectAliases(AstDefinitions *definitions, LamContext *env) {
     case AST_DEFINITION_TYPE_ALIAS:
         collectAlias(getAstDefinition_Alias(definitions->definition), env);
         break;
+    case AST_DEFINITION_TYPE_SYNTAXDECL:
+    case AST_DEFINITION_TYPE_SYNTAXUSE:
+        can_happen(CPI(definitions->definition),
+                   "syntax carrier %s reached lambda conversion before syntax "
+                   "lowering",
+                   astDefinitionTypeName(definitions->definition->type));
+        break;
     default:
         cant_happen("unrecognised %s",
                     astDefinitionTypeName(definitions->definition->type));
@@ -941,6 +948,13 @@ static LamTypeDefList *collectTypeDefs(AstDefinitions *definitions,
         UNPROTECT(save);
         return res;
     }
+    case AST_DEFINITION_TYPE_SYNTAXDECL:
+    case AST_DEFINITION_TYPE_SYNTAXUSE:
+        can_happen(CPI(definitions->definition),
+                   "syntax carrier %s reached lambda conversion before syntax "
+                   "lowering",
+                   astDefinitionTypeName(definitions->definition->type));
+        return collectTypeDefs(definitions->next, env);
     default:
         cant_happen("unrecognised %s",
                     astDefinitionTypeName(definitions->definition->type));
@@ -1034,6 +1048,14 @@ static LamBindings *prependDefinition(AstDefinition *definition,
     case AST_DEFINITION_TYPE_ALIAS:
     case AST_DEFINITION_TYPE_TYPEDEF:
     case AST_DEFINITION_TYPE_BLANK:
+        result = next;
+        break;
+    case AST_DEFINITION_TYPE_SYNTAXDECL:
+    case AST_DEFINITION_TYPE_SYNTAXUSE:
+        can_happen(CPI(definition),
+                   "syntax carrier %s reached lambda conversion before syntax "
+                   "lowering",
+                   astDefinitionTypeName(definition->type));
         result = next;
         break;
     default:
@@ -2141,6 +2163,13 @@ static LamExp *convertExpression(AstExpression *expression, LamContext *env) {
         can_happen(CPI(expression),
                    "cannot use wildCard '_' as a variable name");
         result = convertSymbol(CPI(expression), errorSymbol(), env);
+        break;
+    case AST_EXPRESSION_TYPE_SYNTAXUSE:
+        can_happen(CPI(expression),
+                   "syntax carrier %s reached lambda conversion before syntax "
+                   "lowering",
+                   astExpressionTypeName(expression->type));
+        result = lamExpError(CPI(expression));
         break;
     default:
         cant_happen("unrecognised expression type %s",

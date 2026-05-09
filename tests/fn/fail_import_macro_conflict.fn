@@ -1,0 +1,12 @@
+let
+    link "import_macro_named_lib.fn" as syn;
+
+    macro annotate: Def localAnnotate;
+
+    syntax localAnnotate ::= name: Name "=" value: Expr {
+        name = value
+    };
+
+    import syn macro annotate;
+in
+    0

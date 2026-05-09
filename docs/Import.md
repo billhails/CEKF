@@ -18,6 +18,20 @@ or all exported operators:
 import list operators;
 ```
 
+Ordinary strict functions can also be imported directly into the local scope:
+
+```fn
+import list.map;
+import list.filter as keep;
+```
+
+These forms behave like parser-synthesized wrappers around the qualified call,
+so `import list.map;` is equivalent to writing a local `fn map(...) {
+list.map(...) }` with the correct arity.
+
+At present this direct member import supports ordinary `fn` definitions only.
+`lazy fn` imports are intentionally rejected for now.
+
 Since namespaces are desugared to normal declarations with prefixes, it should be
 relatively easy now to allow the export and import of normal (and lazy) functions
 as well as typedefs.

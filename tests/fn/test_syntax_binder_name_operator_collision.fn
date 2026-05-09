@@ -1,0 +1,8 @@
+let
+    operator "x_" 10 fn (v) { v };
+
+    macro sid: Expr pass;
+
+    syntax pass ::= x: Expr quote { unquote(x) };
+in
+    assert(7 == sid 7)
