@@ -1,0 +1,119 @@
+config:
+  name: regex
+  description: Regex AST and helper data structures
+  parserInfo: false
+
+enums:
+  RegexStatus:
+    data:
+    - OK
+    - OUT_OF_MEMORY
+    - TRAILING_ESCAPE
+    - UNTERMINATED_CLASS
+    - UNTERMINATED_NAMED_CLASS
+    - UNTERMINATED_GROUP
+    - UNEXPECTED_CLOSE_PAREN
+    - EMPTY_CLASS
+    - UNKNOWN_CATEGORY
+    - INVALID_RANGE
+    - QUANTIFIER_WITHOUT_TARGET
+    - CONSECUTIVE_QUANTIFIERS
+
+  RegexMetaType:
+    data:
+    - DIGIT
+    - NOT_DIGIT
+    - WORD
+    - NOT_WORD
+    - WHITESPACE
+    - NOT_WHITESPACE
+
+structs:
+  RegexCategory:
+    meta:
+      brief: Unicode category selector for named character classes.
+    data:
+      code: uchar
+      exact: bool
+
+  RegexRange:
+    meta:
+      brief: Inclusive character range inside a character class.
+    data:
+      lower: character
+      upper: character
+
+  RegexMeta:
+    meta:
+      brief: Wrapper for predefined regex meta character classes.
+    data:
+      kind: RegexMetaType
+
+  RegexCharClass:
+    meta:
+      brief: Character class with optional inversion.
+    data:
+      inverted: bool
+      items: RegexClassItemArray
+
+  RegexRepeat:
+    meta:
+      brief: Repetition node for quantified regex expressions.
+    data:
+      child: RegexNode
+      min: index
+      max: index
+      unlimited: bool
+
+  Regex:
+    meta:
+      brief: Compiled regular expression.
+    data:
+      root: RegexNode
+
+unions:
+  RegexClassItem:
+    meta:
+      brief: One item inside a character class.
+    data:
+      literal: character
+      range: RegexRange
+      meta: RegexMeta
+      category: RegexCategory
+
+  RegexAtom:
+    meta:
+      brief: Smallest matching unit of the regex AST.
+    data:
+      literal: character
+      dot: void_ptr
+      charClass: RegexCharClass
+      meta: RegexMeta
+      category: RegexCategory
+
+  RegexNode:
+    meta:
+      brief: Regex AST node.
+    data:
+      empty: void_ptr
+      atom: RegexAtom
+      begin: void_ptr
+      end: void_ptr
+      concat: RegexNodeArray
+      alternation: RegexNodeArray
+      repeat: RegexRepeat
+
+arrays:
+  RegexClassItemArray:
+    data:
+      entries: RegexClassItem
+
+  RegexNodeArray:
+    data:
+      entries: RegexNode
+
+  RegexPositionArray:
+    data:
+      entries: ptr
+
+primitives: !include primitives.yaml

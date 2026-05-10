@@ -1,6 +1,6 @@
 #include "test.h"
 
-#include "regex.h"
+#include "regex_helper.h"
 
 static void testAsciiAndAnchors(void) {
     RegexStatus status;

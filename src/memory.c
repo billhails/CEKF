@@ -64,6 +64,8 @@ typedef struct ProtectionStack {
 
 static ProtectionStack *protected = NULL;
 
+bool protectionInitialized(void) { return protected != NULL; }
+
 void reportMemory() {
     printf("gc runs: %d\ncurrent memory: %d\nmax memory: %d\n", numGc,
            bytesAllocated, maxMem);
@@ -115,6 +117,8 @@ __attribute__((unused)) static const char *typeName(ObjType type) {
         return typenameBuiltinsObj(type);
         PRATT_OBJTYPE_CASES()
         return typenamePrattObj(type);
+        REGEX_OBJTYPE_CASES()
+        return typenameRegexObj(type);
         CEKFS_OBJTYPE_CASES()
         return typenameCekfsObj(type);
         ANF_KONT_OBJTYPE_CASES()
@@ -411,6 +415,9 @@ void markObj(Header *h, Index i) {
         BUILTINS_OBJTYPE_CASES()
         markBuiltinsObj(h);
         break;
+        REGEX_OBJTYPE_CASES()
+        markRegexObj(h);
+        break;
         ANF_KONT_OBJTYPE_CASES()
         markAnf_kontObj(h);
         break;
@@ -491,6 +498,9 @@ void freeObj(Header *h) {
         break;
         BUILTINS_OBJTYPE_CASES()
         freeBuiltinsObj(h);
+        break;
+        REGEX_OBJTYPE_CASES()
+        freeRegexObj(h);
         break;
         ANF_KONT_OBJTYPE_CASES()
         freeAnf_kontObj(h);
