@@ -275,10 +275,9 @@ and roman numerals.
 
 ## SQLite
 
-The implementation bundles SQLite3 and provides an interface to it, see
-[here](docs/SQLITE.md). The primary reason being to allow convenient
-and fast lookup of Unicode data for individual characters, should the
-need arise.
+The implementation links SQLite3 and provides an interface to it, see
+[here](docs/SQLITE.md). We also build a database of the same unicode
+dataset used above, for testing purposes.
 
 ## Code Generation
 
