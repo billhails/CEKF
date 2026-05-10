@@ -25,9 +25,9 @@
 
 #include "unicode.h"
 #include "UnicodeCasing.inc"
-#include "UnicodeNumbers.inc"
 #include "UnicodeData.inc"
 #include "UnicodeDigits.inc"
+#include "UnicodeNumbers.inc"
 #include "common.h"
 #include <ctype.h>
 #include <stdint.h>
@@ -280,9 +280,9 @@ bool unicode_getnum(Character c, UnicodeNumericValue *out) {
     return true;
 }
 
-bool unicode_isvalid(Character c) { return c >= 0 && c <= UNICODE_MAX; }
-
 static inline bool isValid(Character c) { return c >= 0 && c <= UNICODE_MAX; }
+
+bool unicode_isvalid(Character c) { return isValid(c); }
 
 bool unicode_isascii(Character c) { return c >= 0 && c < 0x80; }
 
