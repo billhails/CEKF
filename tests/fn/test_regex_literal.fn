@@ -1,0 +1,3 @@
+assert(#/abc/ == regex("abc"));
+assert(typeof #/abc/ == "regex");
+assert(typeof regex("abc") == "regex");

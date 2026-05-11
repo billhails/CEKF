@@ -137,6 +137,8 @@ static AstExpression *makeAtom(PrattRecord *, PrattParser *, AstExpression *,
                                PrattToken *);
 static AstExpression *makeChar(PrattRecord *, PrattParser *, AstExpression *,
                                PrattToken *);
+static AstExpression *makeRegex(PrattRecord *, PrattParser *, AstExpression *,
+                                PrattToken *);
 static AstFunCall *makeStringList(ParserInfo, WCharArray *);
 static AstExpression *makeNumber(PrattRecord *, PrattParser *, AstExpression *,
                                  PrattToken *);
@@ -451,6 +453,7 @@ static PrattParser *makePrattParser(void) {
     addRecord(table, TOK_PRINT(), print, 0, NULL, 0, NULL, 0);
     addRecord(table, TOK_PRODUCTION(), NULL, 0, NULL, 0, NULL, 0);
     addRecord(table, TOK_RCURLY(), NULL, 0, NULL, 0, NULL, 0);
+    addRecord(table, TOK_REGEX(), makeRegex, 0, NULL, 0, NULL, 0);
     addRecord(table, TOK_RSQUARE(), NULL, 0, NULL, 0, NULL, 0);
     addRecord(table, TOK_SEMI(), NULL, 0, NULL, 0, NULL, 0);
     addRecord(table, TOK_STRING(), makeString, 0, NULL, 0, NULL, 0);
@@ -5647,6 +5650,39 @@ static AstFunCall *makeStringList(ParserInfo PI, WCharArray *str) {
 
 AstFunCall *prattMakeStringList(ParserInfo PI, WCharArray *str) {
     return makeStringList(PI, str);
+}
+
+static AstExpression *makeRegex(PrattRecord *record __attribute__((unused)),
+                                PrattParser *parser __attribute__((unused)),
+                                AstExpression *lhs __attribute__((unused)),
+                                PrattToken *tok) {
+    static HashSymbol *regexCtor = NULL;
+
+#ifdef SAFETY_CHECKS
+    if (tok->value->type != PRATTVALUE_TYPE_STRING) {
+        cant_happen("unexpected %s", prattValueTypeName(tok->value->type));
+    }
+#endif
+
+    if (regexCtor == NULL) {
+        regexCtor = newSymbol("regex");
+    }
+
+    WCharArray *uni = tok->value->val.string;
+    int save = PROTECT(uni);
+    AstFunCall *stringList = makeStringList(TOKPI(tok), uni);
+    PROTECT(stringList);
+    AstExpression *stringExpr =
+        newAstExpression_FunCall(TOKPI(tok), stringList);
+    PROTECT(stringExpr);
+    AstExpression *constructor = newAstExpression_Symbol(TOKPI(tok), regexCtor);
+    PROTECT(constructor);
+    AstExpressions *args = newAstExpressions(TOKPI(tok), stringExpr, NULL);
+    PROTECT(args);
+    AstExpression *res =
+        makeAstExpression_FunCall(TOKPI(tok), constructor, args);
+    UNPROTECT(save);
+    return res;
 }
 
 /**

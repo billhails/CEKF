@@ -97,6 +97,7 @@ TOKFN(PIPE, "|")
 TOKFN(PRINT, "print")
 TOKFN(PRODUCTION, "::=")
 TOKFN(RCURLY, "}")
+TOKFN(REGEX, " REGEX")
 TOKFN(RIGHT, "right")
 TOKFN(RSQUARE, "]")
 TOKFN(SEMI, ";")
@@ -943,6 +944,76 @@ static PrattToken *parseString(PrattParser *parser, bool parsingSingleChar,
     return token;
 }
 
+static PrattToken *parseRegex(PrattParser *parser) {
+    PrattLexer *lexer = parser->lexer;
+    PrattBuffer *buffer = lexer->bufList->buffer;
+    WCharArray *string = newWCharArray();
+    int save = PROTECT(string);
+
+#ifdef SAFETY_CHECKS
+    if (buffer->start[buffer->offset] != L'#' ||
+        buffer->start[buffer->offset + 1] != L'/') {
+        cant_happen("expected '#/' got '%lc%lc'", buffer->start[buffer->offset],
+                    buffer->start[buffer->offset + 1]);
+    }
+#endif
+
+    buffer->offset += 2;
+    while (true) {
+        Character current = buffer->start[buffer->offset];
+
+        if (current == L'\0') {
+            parserError(parser, "unexpected EOF while parsing regex literal");
+            break;
+        }
+
+        if (current == L'\n') {
+            parserError(parser, "unexpected EOL while parsing regex literal");
+            ++buffer->offset;
+            ++lexer->bufList->lineNo;
+            break;
+        }
+
+        if (current == L'/') {
+            ++buffer->offset;
+            break;
+        }
+
+        if (current == L'\\') {
+            pushWCharArray(string, current);
+            ++buffer->offset;
+            current = buffer->start[buffer->offset];
+
+            if (current == L'\0') {
+                parserError(parser,
+                            "unexpected EOF while parsing regex literal");
+                break;
+            }
+
+            if (current == L'\n') {
+                parserError(parser,
+                            "unexpected EOL while parsing regex literal");
+                ++buffer->offset;
+                ++lexer->bufList->lineNo;
+                break;
+            }
+
+            pushWCharArray(string, current);
+            ++buffer->offset;
+            continue;
+        }
+
+        pushWCharArray(string, current);
+        ++buffer->offset;
+    }
+
+    pushWCharArray(string, '\0');
+    PrattToken *token = tokenFromString(lexer->bufList, string, TOK_REGEX());
+    advance(buffer);
+    UNPROTECT(save);
+    return token;
+}
+
 /**
  * @brief Advances the buffer past the next UTF8 character and returns the
  * character.
@@ -1002,6 +1073,9 @@ PrattToken *next(PrattParser *parser) {
                 // number
             } else if (unicode_isdigit(buffer->start[0])) {
                 return parseNumeric(lexer);
+                // regex literal
+            } else if (buffer->start[0] == L'#' && buffer->start[1] == L'/') {
+                return parseRegex(parser);
                 // string
             } else if (buffer->start[0] == L'"') {
                 return parseString(parser, false, L'"');

@@ -28,7 +28,8 @@ And simple mechanisms for translation between representations:
 * They should play nice with Parser Combinators.
 * The ability to handle both internal strings (lists of `wchar_t`) and external files (streams of UTF-8) via a common translation to arrays (or streams?) of `wchar_t`.
 * Being able to deal with infinite streams is a definite plus.
-* Regexes should be their own expression type in the language, distinct from strings, and using the perl/javascript `/.../` delimiters.
+* Regexes should be their own language-level type, distinct from strings,
+  with literal syntax using the perl/javascript `/.../` body form.
 
 ## Scanner and Literal Syntax
 
@@ -54,8 +55,31 @@ The intended implementation shape is therefore:
   reuse string escape decoding.
 * the parser attaches a dedicated prefix parselet for that token, parallel to
   existing string, char, and number literal handling.
-* the parselet produces a regex expression node rather than lowering to a
-  string.
+* the parselet expands the literal to an ordinary constructor application,
+  e.g. `regex("...")`, rather than introducing a dedicated AST node.
+
+## Language-level Representation
+
+The simplest representation is to make regex a normal typedef in the preamble,
+in the same spirit as `list` and `maybe`:
+
+```fn
+typedef regex { regex(string) }
+```
+
+That has a few advantages:
+
+* the type-checker sees a distinct regex type without any special-case type
+  rules.
+* the parser can translate `#/.../` directly to a normal constructor
+  application using existing AST forms.
+* regex values can also be constructed explicitly in code with `regex(...)`,
+  not only through literal syntax.
+* there is no need for a dedicated runtime regex value type in the first
+  implementation.
+
+Under this scheme, `#/.../` is syntax sugar for constructing a `regex` value
+from a `string` payload.
 
 ## Parser Integration
 
@@ -100,3 +124,102 @@ That is enough for the first language integration. Infinite streams remain a
 useful goal, but they should be treated as a later extension with an explicit
 cursor or resumable input abstraction rather than folded into the initial
 literal and parser work.
+
+## Near-term Implementation Checklist
+
+### 1. Scanner token for `#/.../`
+
+* Add a dedicated regex literal token in the Pratt token surface rather than
+  trying to parse bare `/` contextually on the first pass.
+* Update the scanner in [pratt_scanner.c](../src/pratt_scanner.c) to recognize
+  `#/.../` directly, preserving the raw regex body.
+* Do not reuse string escape semantics for the regex body. The regex compiler
+  should continue to own regex escapes and character-class syntax.
+* Report unterminated regex literals at scan time with parser context.
+* If the token payload needs a new kind, update [pratt.yaml](../src/pratt.yaml)
+  and regenerate rather than editing anything under `generated/` manually.
+
+### 2. Parser and AST literal support
+
+* Add a dedicated prefix parselet in [pratt_parser.c](../src/pratt_parser.c),
+  parallel to `makeString`, `makeChar`, and `makeNumber`.
+* Register the new token in the default Pratt table in
+  [pratt_parser.c](../src/pratt_parser.c).
+* Have the parselet synthesize an ordinary constructor call equivalent to
+  `regex("...")` using existing AST nodes.
+* Add `typedef regex { regex(string) }` to [preamble.fn](../src/preamble.fn)
+  so the constructor is present during type checking.
+* No dedicated regex AST expression arm should be necessary under this design.
+
+### 3. Parser-facing runtime API
+
+* Keep the existing helper API for general regex matching, but add a parser
+  facing entry point whose contract is prefix-only consumption.
+* That entry point should succeed only when the regex matches at the current
+  parser position, returning consumed length or an updated input state.
+* Do not make unanchored search the default parser interface.
+* Reuse the existing lexer rollback pattern from
+  [syntax_parse.c](../src/syntax_parse.c) rather than inventing a second,
+  unrelated restoration mechanism.
+* The existing `SyntaxLexerCheckpoint` shape in [pratt.yaml](../src/pratt.yaml)
+  is a good model: queued tokens, buffer cursor state, and panic mode all need
+  to be restored together.
+
+### 4. `amb` and backtracking integration
+
+* Any regex-backed parser that can participate in choice must install back
+  continuations that restore parser state before control resumes elsewhere.
+* Restoration must include both consumed input position and any queued Pratt
+  lexer lookahead.
+* A failed regex branch must not leave partially consumed parser state behind.
+* A successful regex branch that later backtracks through `amb` must restore
+  the parser state captured before that branch consumed input.
+* If the regex engine later exposes internal choice points, those should plug
+  into the same restoration story rather than bypassing parser rollback.
+
+### 5. Runtime representation and operations
+
+The special lowering step is no longer necessary.
+
+* Regex literals and explicit `regex(...)` constructor calls can flow through
+  the normal pipeline as ordinary typed values.
+* The runtime representation can just be the existing typedef/constructor
+  encoding used for other algebraic data types.
+* Operations that consume regexes can destructure that value, recover the
+  underlying string payload, and compile it on demand.
+* Compiled regex objects remain an implementation detail of the consuming
+  operations, with caching added later only if needed.
+
+This also removes the earlier type-bridge problem:
+
+* builtin-facing operations can simply declare regex arguments at the language
+  level.
+* implementation code can unpack the constructor payload instead of accepting a
+  separately lowered representation.
+
+### 6. Validation
+
+* Keep [tests/src/test_regex.c](../tests/src/test_regex.c) as the focused C
+  validation surface for the standalone engine.
+* Add parser-level tests for literal tokenization and AST construction.
+* Add parser-combinator tests that prove prefix-only semantics.
+* Add `amb` regression tests that show parser state is restored correctly after
+  regex-driven backtracking.
+* A useful first focused check remains:
+
+```bash
+make tests/test_regex && tests/test_regex
+```
+
+* Once literal integration begins, follow that with the narrower affected test
+  slice before falling back to full `make test`.
+
+* Add at least one language test that proves `#/.../` and `regex("...")`
+  produce interchangeable typed values.
+
+### 7. Later work
+
+* Bare `/.../` can be revisited later if expression-start aware lexing becomes
+  worth the extra scanner complexity.
+* Stream-backed input and infinite streams should wait until the finite-input
+  parser contract and rollback story are stable.
