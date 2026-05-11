@@ -112,6 +112,8 @@ PrattFixity["enum PrattFixity"]
 PrattSyntaxClass["enum PrattSyntaxClass"]
 PrattSyntaxEntryKind["enum PrattSyntaxEntryKind"]
 PrattSyntaxResultKind["enum PrattSyntaxResultKind"]
+DefunType["enum DefunType"]
+ImportedFunctionKind["enum ImportedFunctionKind"]
 PrattStrings["PrattStrings[]"] --entries--> WCharArray
 PrattParsers["PrattParsers[]"] --entries--> PrattParser
 PrattTokens["PrattTokens[]"] --entries--> PrattToken
