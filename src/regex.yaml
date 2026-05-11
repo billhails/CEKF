@@ -43,12 +43,6 @@ structs:
       lower: character
       upper: character
 
-  RegexMeta:
-    meta:
-      brief: Wrapper for predefined regex meta character classes.
-    data:
-      kind: RegexMetaType
-
   RegexCharClass:
     meta:
       brief: Character class with optional inversion.
@@ -78,7 +72,7 @@ unions:
     data:
       literal: character
       range: RegexRange
-      meta: RegexMeta
+      meta: RegexMetaType
       category: RegexCategory
 
   RegexAtom:
@@ -88,7 +82,7 @@ unions:
       literal: character
       dot: void_ptr
       charClass: RegexCharClass
-      meta: RegexMeta
+      meta: RegexMetaType
       category: RegexCategory
 
   RegexNode:

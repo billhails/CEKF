@@ -118,7 +118,6 @@ static void freeRegexClassItemDeep(RegexClassItem *item) {
         freeRegexRange(getRegexClassItem_Range(item));
         break;
     case REGEXCLASSITEM_TYPE_META:
-        freeRegexMeta(getRegexClassItem_Meta(item));
         break;
     case REGEXCLASSITEM_TYPE_CATEGORY:
         freeRegexCategory(getRegexClassItem_Category(item));
@@ -154,7 +153,6 @@ static void freeRegexAtomDeep(RegexAtom *atom) {
         freeRegexCharClassDeep(getRegexAtom_CharClass(atom));
         break;
     case REGEXATOM_TYPE_META:
-        freeRegexMeta(getRegexAtom_Meta(atom));
         break;
     case REGEXATOM_TYPE_CATEGORY:
         freeRegexCategory(getRegexAtom_Category(atom));
@@ -259,23 +257,22 @@ static bool parseEscapedAtom(const Character *pattern, Index *cursor,
 
     switch (escaped) {
     case L'd':
-        *atom = newRegexAtom_Meta(newRegexMeta(REGEXMETATYPE_TYPE_DIGIT));
+        *atom = newRegexAtom_Meta(REGEXMETATYPE_TYPE_DIGIT);
         return true;
     case L'D':
-        *atom = newRegexAtom_Meta(newRegexMeta(REGEXMETATYPE_TYPE_NOT_DIGIT));
+        *atom = newRegexAtom_Meta(REGEXMETATYPE_TYPE_NOT_DIGIT);
         return true;
     case L's':
-        *atom = newRegexAtom_Meta(newRegexMeta(REGEXMETATYPE_TYPE_WHITESPACE));
+        *atom = newRegexAtom_Meta(REGEXMETATYPE_TYPE_WHITESPACE);
         return true;
     case L'S':
-        *atom =
-            newRegexAtom_Meta(newRegexMeta(REGEXMETATYPE_TYPE_NOT_WHITESPACE));
+        *atom = newRegexAtom_Meta(REGEXMETATYPE_TYPE_NOT_WHITESPACE);
         return true;
     case L'w':
-        *atom = newRegexAtom_Meta(newRegexMeta(REGEXMETATYPE_TYPE_WORD));
+        *atom = newRegexAtom_Meta(REGEXMETATYPE_TYPE_WORD);
         return true;
     case L'W':
-        *atom = newRegexAtom_Meta(newRegexMeta(REGEXMETATYPE_TYPE_NOT_WORD));
+        *atom = newRegexAtom_Meta(REGEXMETATYPE_TYPE_NOT_WORD);
         return true;
     default:
         *atom = newRegexAtom_Literal(escaped);
@@ -295,8 +292,7 @@ static bool parseEscapedClassItem(const Character *pattern, Index *cursor,
     if (atom->type == REGEXATOM_TYPE_LITERAL) {
         *item = newRegexClassItem_Literal(getRegexAtom_Literal(atom));
     } else {
-        *item =
-            newRegexClassItem_Meta(newRegexMeta(getRegexAtom_Meta(atom)->kind));
+        *item = newRegexClassItem_Meta(getRegexAtom_Meta(atom));
     }
 
     freeRegexAtom(atom);
@@ -818,8 +814,7 @@ static bool matchClassItem(const RegexClassItem *item, Character c) {
         return c >= range->lower && c <= range->upper;
     }
     case REGEXCLASSITEM_TYPE_META:
-        return matchMeta(getRegexClassItem_Meta((RegexClassItem *)item)->kind,
-                         c);
+        return matchMeta(getRegexClassItem_Meta((RegexClassItem *)item), c);
     case REGEXCLASSITEM_TYPE_CATEGORY:
         return matchCategory(getRegexClassItem_Category((RegexClassItem *)item),
                              c);
@@ -851,7 +846,7 @@ static bool matchAtom(const RegexAtom *atom, Character c) {
     case REGEXATOM_TYPE_CHARCLASS:
         return matchCharClass(getRegexAtom_CharClass((RegexAtom *)atom), c);
     case REGEXATOM_TYPE_META:
-        return matchMeta(getRegexAtom_Meta((RegexAtom *)atom)->kind, c);
+        return matchMeta(getRegexAtom_Meta((RegexAtom *)atom), c);
     case REGEXATOM_TYPE_CATEGORY:
         return matchCategory(getRegexAtom_Category((RegexAtom *)atom), c);
     default:

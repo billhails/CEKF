@@ -111,7 +111,7 @@ class SimpleEnum(Base):
         c = self.comment('printCopyField')
         pad(depth)
         a = '.' if isInline else '->'
-        print(f'_x{a}{field} = o{a}{field}; {c}')
+        print(f'_x{a}{prefix}{field} = o{a}{prefix}{field}; {c}')
 
     def getNameFunctionDeclaration(self):
         name = self.getName()
