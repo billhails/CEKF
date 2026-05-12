@@ -83,19 +83,59 @@ from a `string` payload.
 
 ## Parser Integration
 
+This section is about regex use by parsers written in F♮, not about more
+integration into CEKF's own Pratt scanner/parser.
+
+The Pratt-side literal work is already conceptually separate:
+
+* the scanner recognizes a regex literal token.
+* the Pratt parser lowers that literal to the ordinary constructor form
+  `regex("...")`.
+* after that point the regex is just a normal typed value flowing through the
+  existing pipeline.
+
+So phase 3 is really about the first runtime consumer API for regex values.
+That probably does mean adding some basic operation at the language level,
+whether as a builtin or as a small primitive exposed for parser combinators to
+build on.
+
 The main use case is parser construction, so prefix consumption should be the
 primary semantic model.
 
-A parser-facing regex operation should attempt to match at the current parser
-position only. It should either fail immediately or succeed with a consumed
-prefix length. Unanchored search can still exist as a separate helper, but it
-should not be the default parser interface.
+A phase-3 operation over plain strings does not need any rollback machinery.
+The language is pure, and matching against an immutable `string` does not
+mutate parser state. It can simply return either failure or a decomposition of
+the input into matched prefix and remaining suffix.
 
-Regex-based parsers must also cooperate correctly with `amb`.
+That suggests a first interface along the lines of:
 
-In practice that means the regex parser cannot just consume input and return a
-boolean. It needs to install back continuations that restore parser state when
-control backtracks. This serves two purposes:
+```fn
+regex_match: regex -> string -> maybe(#(string, string))
+```
+
+with the result interpreted as:
+
+* `nothing` if the regex does not match the left prefix of the input string.
+* `just(#(prefix, rest))` if it does, where `prefix ++ rest == input`.
+
+That is already enough to support a parser-combinator style interface in pure
+code. Unanchored search can still exist later as a separate helper, but it
+should not be the default parser-facing operation.
+
+The exact surface name should be chosen carefully. Bare `match` is probably not
+ideal because the language already uses `match` as syntax, so something more
+specific such as `regex_match` or `regex_prefix` is less confusing.
+
+Regex-based parsers only need rollback once they are coupled to some external
+or stateful input cursor.
+
+That breakdown happens in the next phase, for example when parsing files,
+streams, or other cursor-backed inputs where progress is represented by mutable
+position rather than by returning an explicit suffix value.
+
+In that later setting, a regex-backed parser cannot just consume input and
+return a boolean. It needs to install back continuations that restore parser
+state when control backtracks. This serves two purposes:
 
 * it prevents failed alternatives from leaving the parser in a corrupted input
   state.
@@ -105,7 +145,14 @@ control backtracks. This serves two purposes:
 This makes regexes a reasonable substrate for parser combinators rather than a
 side channel around them.
 
-The runtime contract should therefore be closer to:
+So for phase 3 the runtime contract can stay simple:
+
+* regex value in.
+* immutable input string in.
+* either `nothing`, or `just(#(matched_prefix, remaining_suffix))` out.
+
+Only after that, when regexes are attached to stateful parser inputs, does the
+contract need to widen toward:
 
 * current input state in.
 * either failure, or a new input state plus matched value out.
@@ -153,19 +200,48 @@ literal and parser work.
 
 ### 3. Parser-facing runtime API
 
+This is the first phase that is no longer about literal syntax.
+
+By the end of phase 2, the compiler can already read `#/.../` and lower it to
+`regex("...")`. What is still missing is an operation that does something with
+that regex value at runtime.
+
+So the real question for phase 3 is not "how does the Pratt parser recognise a
+regex literal?" but rather "what is the first useful language-level operation
+over values of type `regex`?"
+
+The narrowest plausible answer is therefore a basic prefix-match builtin over
+immutable strings, for example something in the spirit of `regex_match` or
+`regex_prefix`. Parser combinators could then layer on top of that.
+
+That is different from baking regex matching into the existing Pratt parser.
+The existing Pratt machinery is only relevant here as a model for rollback and
+state restoration if regex-backed parsers later participate in alternative
+parsing and backtracking.
+
 * Keep the existing helper API for general regex matching, but add a parser
-  facing entry point whose contract is prefix-only consumption.
-* That entry point should succeed only when the regex matches at the current
-  parser position, returning consumed length or an updated input state.
+  facing builtin whose first contract is prefix-only consumption over plain
+  strings.
+* A good first surface is `regex -> string -> maybe(#(string, string))`.
+* That entry point should succeed only when the regex matches the current left
+  prefix of the input string, returning matched prefix and remainder.
 * Do not make unanchored search the default parser interface.
-* Reuse the existing lexer rollback pattern from
-  [syntax_parse.c](../src/syntax_parse.c) rather than inventing a second,
-  unrelated restoration mechanism.
+* Do not pull rollback machinery into this first string-only interface.
+* When regexes are later applied to stateful parser inputs, reuse the existing
+  lexer rollback pattern from [syntax_parse.c](../src/syntax_parse.c) rather
+  than inventing a second, unrelated restoration mechanism.
 * The existing `SyntaxLexerCheckpoint` shape in [pratt.yaml](../src/pratt.yaml)
-  is a good model: queued tokens, buffer cursor state, and panic mode all need
-  to be restored together.
+  is a good model for that later phase: queued tokens, buffer cursor state,
+  and panic mode all need to be restored together.
 
 ### 4. `amb` and backtracking integration
+
+This phase is also about user-level parsing machinery rather than about the
+existing Pratt expression parser itself.
+
+It is separate from the simpler phase-3 string interface. If regex matching is
+just `regex -> string -> maybe(#(string, string))`, there is no hidden state to
+restore and therefore no special backtracking problem yet.
 
 * Any regex-backed parser that can participate in choice must install back
   continuations that restore parser state before control resumes elsewhere.

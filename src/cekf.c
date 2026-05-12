@@ -31,8 +31,8 @@ static int cont_pops = 0;
 static int cont_restores = 0;
 #endif
 
-static CharacterArray *listToCharArray(Value list);
-static Value charArrayToList(CharacterArray *c);
+CharacterArray *listToCharArray(Value list);
+Value charArrayToList(CharacterArray *c);
 
 /*
  * constants and memory allocation functions for the CEKF machine
@@ -215,7 +215,7 @@ void reportKonts() {
 
 void restoreFail(Stack *s, Fail *source) { copyAllStackEntries(s, source->S); }
 
-static CharacterArray *listToCharArray(Value list) {
+CharacterArray *listToCharArray(Value list) {
     CharacterArray *chars = newCharacterArray();
     int save = PROTECT(chars);
     while (list.val.vec) {
@@ -248,7 +248,7 @@ static CharacterArray *listToCharArray(Value list) {
     return chars;
 }
 
-static Value charArrayToList(CharacterArray *c) {
+Value charArrayToList(CharacterArray *c) {
     Vec *nullByte = newVec(1);
     int save = PROTECT(nullByte);
     nullByte->entries[0] = value_Stdint(0); // tag=null

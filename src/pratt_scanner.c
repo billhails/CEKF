@@ -980,7 +980,6 @@ static PrattToken *parseRegex(PrattParser *parser) {
         }
 
         if (current == L'\\') {
-            pushWCharArray(string, current);
             ++buffer->offset;
             current = buffer->start[buffer->offset];
 
@@ -998,6 +997,9 @@ static PrattToken *parseRegex(PrattParser *parser) {
                 break;
             }
 
+            if (current != L'/') {
+                pushWCharArray(string, L'\\');
+            }
             pushWCharArray(string, current);
             ++buffer->offset;
             continue;

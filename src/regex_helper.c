@@ -687,15 +687,11 @@ static RegexNode *parseSequence(const Character *pattern, Index *cursor,
     }
 
     if (items->size == 0) {
-        freeRegexNodeArray(items);
-        freeRegexNode(sequence);
         return newEmptyNode();
     }
 
     if (items->size == 1) {
         child = items->entries[0];
-        freeRegexNodeArray(items);
-        freeRegexNode(sequence);
         return child;
     }
 
@@ -854,6 +850,12 @@ static bool matchAtom(const RegexAtom *atom, Character c) {
     }
 }
 
+// Regex helper temporaries are GC-managed objects. Manual frees corrupt the
+// CEKF allocation list when the engine is used inside the runtime.
+static void discardRegexPositionArray(RegexPositionArray *positions) {
+    (void)positions;
+}
+
 static bool matchSequence(const RegexNodeArray *list, RegexPosition text,
                           RegexPosition inputStart, RegexPositionArray *out) {
     RegexPositionArray *current = newRegexPositionArray();
@@ -871,21 +873,21 @@ static bool matchSequence(const RegexNodeArray *list, RegexPosition text,
             ok = matchNode(list->entries[i], positionAt(current, j), inputStart,
                            childMatches);
             if (!ok) {
-                freeRegexPositionArray(current);
-                freeRegexPositionArray(next);
-                freeRegexPositionArray(childMatches);
+                discardRegexPositionArray(current);
+                discardRegexPositionArray(next);
+                discardRegexPositionArray(childMatches);
                 return false;
             }
             ok = appendPositions(next, childMatches);
-            freeRegexPositionArray(childMatches);
+            discardRegexPositionArray(childMatches);
             if (!ok) {
-                freeRegexPositionArray(current);
-                freeRegexPositionArray(next);
+                discardRegexPositionArray(current);
+                discardRegexPositionArray(next);
                 return false;
             }
         }
 
-        freeRegexPositionArray(current);
+        discardRegexPositionArray(current);
         current = next;
         next = newRegexPositionArray();
 
@@ -895,8 +897,8 @@ static bool matchSequence(const RegexNodeArray *list, RegexPosition text,
     }
 
     ok = appendPositions(out, current);
-    freeRegexPositionArray(current);
-    freeRegexPositionArray(next);
+    discardRegexPositionArray(current);
+    discardRegexPositionArray(next);
     return ok;
 }
 
@@ -911,11 +913,11 @@ static bool matchAlternation(const RegexNodeArray *list, RegexPosition text,
 
         ok = matchNode(list->entries[i], text, inputStart, branchMatches);
         if (!ok) {
-            freeRegexPositionArray(branchMatches);
+            discardRegexPositionArray(branchMatches);
             return false;
         }
         ok = appendPositions(out, branchMatches);
-        freeRegexPositionArray(branchMatches);
+        discardRegexPositionArray(branchMatches);
         if (!ok) {
             return false;
         }
@@ -935,7 +937,7 @@ static bool matchRepeatGreedy(const RegexRepeat *repeat, RegexPosition text,
 
         ok = matchNode(repeat->child, text, inputStart, childMatches);
         if (!ok) {
-            freeRegexPositionArray(childMatches);
+            discardRegexPositionArray(childMatches);
             return false;
         }
         for (i = 0; i < childMatches->size; i++) {
@@ -945,11 +947,11 @@ static bool matchRepeatGreedy(const RegexRepeat *repeat, RegexPosition text,
                 continue;
             }
             if (!matchRepeatGreedy(repeat, next, inputStart, count + 1, out)) {
-                freeRegexPositionArray(childMatches);
+                discardRegexPositionArray(childMatches);
                 return false;
             }
         }
-        freeRegexPositionArray(childMatches);
+        discardRegexPositionArray(childMatches);
     }
 
     if (count >= repeat->min) {
@@ -1019,7 +1021,7 @@ int regexMatchp(const Regex *pattern, const Character *text,
         RegexPositionArray *matches = newRegexPositionArray();
 
         if (!matchNode(pattern->root, text + index, text, matches)) {
-            freeRegexPositionArray(matches);
+            discardRegexPositionArray(matches);
             restoreGC(previousGc);
             return -1;
         }
@@ -1028,12 +1030,12 @@ int regexMatchp(const Regex *pattern, const Character *text,
             if (matchLength != NULL) {
                 *matchLength = (Index)(positionAt(matches, 0) - (text + index));
             }
-            freeRegexPositionArray(matches);
+            discardRegexPositionArray(matches);
             restoreGC(previousGc);
             return index;
         }
 
-        freeRegexPositionArray(matches);
+        discardRegexPositionArray(matches);
         if (text[index] == L'\0') {
             restoreGC(previousGc);
             return -1;

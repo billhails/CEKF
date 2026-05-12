@@ -67,6 +67,8 @@ void dumpFrame(FILE *, Frame *frame);
 #endif
 
 SCharVec *listToUtf8(Value v);
+CharacterArray *listToCharArray(Value v);
+Value charArrayToList(CharacterArray *chars);
 Value utf8ToList(const char *utf8);
 Value makeNull(void);
 Value makePair(Value car, Value cdr);

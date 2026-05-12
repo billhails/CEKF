@@ -1,0 +1,6 @@
+assert(typeof regex_match == "regex -> list(char) -> maybe(#(list(char), list(char)))");
+
+assert(regex_match(#/ab/, "abcd") == just(#("ab", "cd")));
+assert(regex_match(regex("a+b"), "aaab") == just(#("aaab", "")));
+assert(regex_match(#/[a-z]+/, "abcDEF") == just(#("abc", "DEF")));
+assert(regex_match(#/ab/, "zabcd") == nothing);
