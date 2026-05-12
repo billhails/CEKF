@@ -1,0 +1,120 @@
+let
+    link "listutils.fn" as list;
+    import list operator "_startsWith_";
+    import list.drop;
+    import list.length;
+    import list.reverse;
+
+    typedef expr {
+        num(number) | application(expr, expr, expr) | op(string) | end
+    };
+
+    fn toNum (str) {
+        let fn helper {
+            ([], acc) { acc }
+            (h @ t, acc) { helper(t, (ord(h) - ord('0')) + 10 * acc) }
+        }
+        in helper(str, 0)
+    }
+
+    fn pmap(func, parser, input) {
+        switch (parser(input)) {
+            (success(#(result, rest))) {
+                success(#(func(result), rest))
+            }
+            (failure(fail)) { failure(fail) }
+        }
+    }
+
+    fn text(match, input) {
+        if (input startsWith match) {
+            success(#(match, drop(length(match), input)))
+        } else {
+            failure(#(match, input))
+        }
+    }
+
+    fn rex(rex, input) {
+        switch (regex_match(rex, input)) {
+            (just(result)) {
+                success(result)
+            }
+            (nothing) {
+                fn (regex(body)) { failure(#(body, input)) }(rex)
+            }
+        }
+    }
+
+    fn apply(func, parsers, input) {
+        let
+            fn helper (throw, parsers, input, acc) {
+                switch (parsers) {
+                    ([]) {
+                        success(#(acc, input))
+                    }
+                    (parser @ parsers) {
+                        switch(parser(input)) {
+                            (success(#(data, rest))) {
+                                helper(throw, parsers, rest, data @ acc)
+                            }
+                            (failure(fail)) {
+                                throw(failure(fail))
+                            }
+                        }
+                    }
+                }
+            }
+        in
+            switch (here fn (throw) { helper(throw, parsers, input, [])}) {
+                (success(#(accData, input))) {
+                    success(#(func(reverse(accData)), input))
+                }
+                (failure(fail)) { failure(fail) }
+            }
+    }
+
+    fn eof(input) {
+        if (input == []) {
+            success(#(end, []))
+        } else {
+            failure(#("End of Input", input))
+        }
+    }
+
+    fn sequence (parsers) {
+        apply(fn (results) { <reverse(results) }, parsers)
+    }
+
+    fn collect (parsers) {
+        apply(identity, parsers)
+    }
+
+    fn parse (parser, input) {
+        switch (parser(input)) {
+            (failure(#(expected, actual))) {
+                error("Parse error, expected " @@ expected @@
+                    " got \"" @@ actual @@ "\"")
+            }
+            (success(result)) { result }
+        }
+    }
+
+in 
+{
+    let
+        decimal = pmap(fn (str) { num(toNum(str)) }, rex(#/\d+/)); 
+        opp = pmap(fn (txt) { op(txt) }, text("+"));
+        plusExpr = apply(unsafe fn ([num1, opp, num2, _]) { application(opp, num1, num2) }, [
+            decimal,
+            opp,
+            decimal,
+            eof
+        ])
+    in
+        print parse(decimal, "123");
+        print parse(pmap(fn (txt) { op(txt) }, text("+")), "+123");
+        print parse(plusExpr, "12+34");
+        print parse(sequence([text("hello"), text(", "), text("world")]), "hello, world!");
+        print parse(collect([text("hello"), text(", "), text("world")]), "hello, world!");
+        print parse(plusExpr, "12+34+");
+}
