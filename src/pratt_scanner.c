@@ -842,6 +842,12 @@ static PrattToken *parseString(PrattParser *parser, bool parsingSingleChar,
                 state = parsingSingleChar ? PRATTSTRINGSTATE_TYPE_CHR
                                           : PRATTSTRINGSTATE_TYPE_STR;
                 break;
+            case L'r':
+                pushWCharArray(string, L'\r');
+                ++buffer->offset;
+                state = parsingSingleChar ? PRATTSTRINGSTATE_TYPE_CHR
+                                          : PRATTSTRINGSTATE_TYPE_STR;
+                break;
             case L'\n':
                 parserError(parser, "unexpected EOL");
                 ++buffer->offset;

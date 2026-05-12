@@ -23,6 +23,9 @@ static RegexPosition positionAt(const RegexPositionArray *set, Index index);
 static bool parseEscapedAtom(const Character *pattern, Index *cursor,
                              RegexAtom **atom, RegexStatus *status,
                              Index *errorOffset);
+static bool parseUnicodeEscape(const Character *pattern, Index *cursor,
+                               Character *value, RegexStatus *status,
+                               Index *errorOffset);
 static bool parseEscapedClassItem(const Character *pattern, Index *cursor,
                                   RegexClassItem **item, RegexStatus *status,
                                   Index *errorOffset);
@@ -140,10 +143,80 @@ static RegexPosition positionAt(const RegexPositionArray *set, Index index) {
     return (RegexPosition)set->entries[index];
 }
 
+static bool parseUnicodeEscape(const Character *pattern, Index *cursor,
+                               Character *value, RegexStatus *status,
+                               Index *errorOffset) {
+    Character code = 0;
+    bool hasDigits = false;
+
+    (*cursor)++;
+
+    while (true) {
+        Character current = pattern[*cursor];
+
+        switch (current) {
+        case L'0':
+        case L'1':
+        case L'2':
+        case L'3':
+        case L'4':
+        case L'5':
+        case L'6':
+        case L'7':
+        case L'8':
+        case L'9':
+            code <<= 4;
+            code |= current - L'0';
+            hasDigits = true;
+            (*cursor)++;
+            break;
+        case L'a':
+        case L'b':
+        case L'c':
+        case L'd':
+        case L'e':
+        case L'f':
+            code <<= 4;
+            code |= 10 + current - L'a';
+            hasDigits = true;
+            (*cursor)++;
+            break;
+        case L'A':
+        case L'B':
+        case L'C':
+        case L'D':
+        case L'E':
+        case L'F':
+            code <<= 4;
+            code |= 10 + current - L'A';
+            hasDigits = true;
+            (*cursor)++;
+            break;
+        case L';':
+            if (!hasDigits) {
+                compileError(status, errorOffset,
+                             REGEX_STATUS_INVALID_UNICODE_ESCAPE, *cursor);
+                return false;
+            }
+            *value = code;
+            return true;
+        case L'\0':
+            compileError(status, errorOffset,
+                         REGEX_STATUS_INVALID_UNICODE_ESCAPE, *cursor);
+            return false;
+        default:
+            compileError(status, errorOffset,
+                         REGEX_STATUS_INVALID_UNICODE_ESCAPE, *cursor);
+            return false;
+        }
+    }
+}
+
 static bool parseEscapedAtom(const Character *pattern, Index *cursor,
                              RegexAtom **atom, RegexStatus *status,
                              Index *errorOffset) {
     Character escaped;
+    Character value;
 
     (*cursor)++;
     escaped = pattern[*cursor];
@@ -171,6 +244,22 @@ static bool parseEscapedAtom(const Character *pattern, Index *cursor,
         return true;
     case L'W':
         *atom = newRegexAtom_Meta(REGEXMETATYPE_TYPE_NOT_WORD);
+        return true;
+    case L'n':
+        *atom = newRegexAtom_Literal(L'\n');
+        return true;
+    case L'r':
+        *atom = newRegexAtom_Literal(L'\r');
+        return true;
+    case L't':
+        *atom = newRegexAtom_Literal(L'\t');
+        return true;
+    case L'u':
+    case L'U':
+        if (!parseUnicodeEscape(pattern, cursor, &value, status, errorOffset)) {
+            return false;
+        }
+        *atom = newRegexAtom_Literal(value);
         return true;
     default:
         *atom = newRegexAtom_Literal(escaped);
@@ -757,9 +846,9 @@ static bool matchMeta(RegexMetaType metaType, Character c) {
     case REGEXMETATYPE_TYPE_NOT_DIGIT:
         return !unicode_isdigit(c);
     case REGEXMETATYPE_TYPE_WORD:
-        return unicode_isalnum(c);
+        return unicode_isalnum(c) || c == L'_';
     case REGEXMETATYPE_TYPE_NOT_WORD:
-        return !unicode_isalnum(c);
+        return !unicode_isalnum(c) && c != L'_';
     case REGEXMETATYPE_TYPE_WHITESPACE:
         return unicode_isspace(c);
     case REGEXMETATYPE_TYPE_NOT_WHITESPACE:

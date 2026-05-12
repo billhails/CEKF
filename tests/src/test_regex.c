@@ -96,6 +96,42 @@ static void testEscapedMetacharactersMatchLiterally(void) {
     assert(matchLength == 5);
 }
 
+static void testControlEscapesAndWordUnderscore(void) {
+    Index matchLength;
+
+    assert(regexMatch(L"^a\\tb\\nc\\r$", L"a\tb\nc\r", &matchLength, NULL,
+                      NULL) == 0);
+    assert(matchLength == 6);
+
+    assert(regexMatch(L"^\\w+$", L"_var123", &matchLength, NULL, NULL) == 0);
+    assert(matchLength == 7);
+
+    assert(regexMatch(L"^\\W+$", L"?!", &matchLength, NULL, NULL) == 0);
+    assert(matchLength == 2);
+
+    assert(regexMatch(L"^\\W+$", L"_", &matchLength, NULL, NULL) == -1);
+}
+
+static void testUnicodeEscapes(void) {
+    RegexStatus status;
+    Index errorOffset;
+    Index matchLength;
+    Regex *regex = regexCompile(L"^\\u0041;\\u03b2;$", &status, &errorOffset);
+
+    assert(regex != NULL);
+    assert(status == REGEX_STATUS_OK);
+    assert(regexMatchp(regex, L"A\u03b2", &matchLength) == 0);
+    assert(matchLength == 2);
+    regexFree(regex);
+
+    regex = regexCompile(L"^[\\u0041;\\u03b2;]+$", &status, &errorOffset);
+    assert(regex != NULL);
+    assert(status == REGEX_STATUS_OK);
+    assert(regexMatchp(regex, L"A\u03b2A", &matchLength) == 0);
+    assert(matchLength == 3);
+    regexFree(regex);
+}
+
 static void testInvalidCategoryReportsOffset(void) {
     RegexStatus status;
     Index errorOffset;
@@ -126,6 +162,16 @@ static void testTrailingEscapeReportsError(void) {
     assert(errorOffset == 3);
 }
 
+static void testInvalidUnicodeEscapeReportsError(void) {
+    RegexStatus status;
+    Index errorOffset;
+    Regex *regex = regexCompile(L"\\u12x;", &status, &errorOffset);
+
+    assert(regex == NULL);
+    assert(status == REGEX_STATUS_INVALID_UNICODE_ESCAPE);
+    assert(errorOffset == 4);
+}
+
 int main(int argc __attribute__((unused)),
          char *argv[] __attribute__((unused))) {
     testAsciiAndAnchors();
@@ -135,8 +181,11 @@ int main(int argc __attribute__((unused)),
     testGroupingAlternationAndClosure();
     testGroupedQuestionAndWildcard();
     testEscapedMetacharactersMatchLiterally();
+    testControlEscapesAndWordUnderscore();
+    testUnicodeEscapes();
     testInvalidCategoryReportsOffset();
     testUnterminatedGroupReportsError();
     testTrailingEscapeReportsError();
+    testInvalidUnicodeEscapeReportsError();
     return 0;
 }

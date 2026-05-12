@@ -81,6 +81,78 @@ That has a few advantages:
 Under this scheme, `#/.../` is syntax sugar for constructing a `regex` value
 from a `string` payload.
 
+## Current Grammar
+
+The currently implemented grammar is intentionally small and parser-oriented.
+It is aimed at left-prefix recognition rather than at PCRE-style feature
+parity.
+
+In rough EBNF form:
+
+```text
+expression   := alternation
+alternation  := sequence ("|" sequence)*
+sequence     := quantified*
+quantified   := primary ["*" | "+" | "?"]
+primary      := literal
+              | "."
+              | "^"
+              | "$"
+              | "(" expression ")"
+              | char_class
+              | named_category
+              | escaped_atom
+
+char_class   := "[" "^"? class_item+ "]"
+class_item   := literal
+              | literal "-" literal
+              | named_category
+              | escaped_class_item
+
+named_category := "[[" category_name "]]"
+category_name  := "L" | "M" | "N" | "P" | "S" | "Z" | "C"
+                | "Ll" | "Lm" | "Lo" | "Lt" | "Lu"
+                | "Mc" | "Me" | "Mn"
+                | "Nd" | "Nl" | "No"
+                | "Pc" | "Pd" | "Pe" | "Pf" | "Pi" | "Po" | "Ps"
+                | "Sc" | "Sk" | "Sm" | "So"
+                | "Zl" | "Zp" | "Zs"
+                | "Cc" | "Cf" | "Cn" | "Co" | "Cs"
+```
+
+The supported escapes are currently:
+
+* `\uHEX...;` and `\UHEX...;` for Unicode code points, matching the string and
+  char escape syntax
+* `\n`, `\r`, `\t`
+* `\d`, `\D`
+* `\s`, `\S`
+* `\w`, `\W`
+* `\x` for any other character `x`, meaning "treat `x` literally"
+
+Some important current semantics are worth stating explicitly:
+
+* `.` matches any code point except newline and carriage return.
+* `^` and `$` are start/end anchors for the whole input slice being matched.
+* `[[Lu]]`, `[[Nd]]`, `[[L]]`, etc. can appear both as standalone atoms and
+  inside bracket character classes.
+* Character-class ranges are only literal-to-literal ranges such as `[a-z]`.
+  Endpoints are not currently parsed from escapes or named categories.
+* Inside regex literals, escapes are regex escapes, not string escapes. For
+  example `#/\n/` means newline, not a backslash followed by `n`.
+* `\w` is Unicode alphanumeric plus underscore.
+
+The following are not part of the current grammar:
+
+* counted repetition such as `{m}` or `{m,n}`
+* non-greedy quantifiers such as `*?`
+* capturing groups or backreferences
+* inline flags and mode modifiers
+* lookaround assertions
+
+Those may still be reasonable extensions later, but they are not needed for
+the initial parser-facing use case.
+
 ## Parser Integration
 
 This section is about regex use by parsers written in F♮, not about more
@@ -234,7 +306,13 @@ parsing and backtracking.
   is a good model for that later phase: queued tokens, buffer cursor state,
   and panic mode all need to be restored together.
 
-### 4. `amb` and backtracking integration
+### 4. Deferred: `amb` and backtracking integration
+
+This phase can be deferred for now.
+
+It is still needed later if regex matching is applied to streams, files, or
+other stateful cursor-backed parser inputs. It is just not part of the current
+string-only phase-3 surface.
 
 This phase is also about user-level parsing machinery rather than about the
 existing Pratt expression parser itself.
@@ -279,8 +357,7 @@ This also removes the earlier type-bridge problem:
   validation surface for the standalone engine.
 * Add parser-level tests for literal tokenization and AST construction.
 * Add parser-combinator tests that prove prefix-only semantics.
-* Add `amb` regression tests that show parser state is restored correctly after
-  regex-driven backtracking.
+* Defer `amb`/rollback regression tests until the stateful-input phase begins.
 * A useful first focused check remains:
 
 ```bash
@@ -299,3 +376,5 @@ make tests/test_regex && tests/test_regex
   worth the extra scanner complexity.
 * Stream-backed input and infinite streams should wait until the finite-input
   parser contract and rollback story are stable.
+* The deferred phase-4 rollback work will still be needed before regex is used
+  directly against stateful parser cursors or external streams.

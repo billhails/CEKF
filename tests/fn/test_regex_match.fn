@@ -4,3 +4,6 @@ assert(regex_match(#/ab/, "abcd") == just(#("ab", "cd")));
 assert(regex_match(regex("a+b"), "aaab") == just(#("aaab", "")));
 assert(regex_match(#/[a-z]+/, "abcDEF") == just(#("abc", "DEF")));
 assert(regex_match(#/ab/, "zabcd") == nothing);
+assert(regex_match(#/\w+/, "_abc123!") == just(#("_abc123", "!")));
+assert(regex_match(#/a\tb\nc\r/, "a\tb\nc\r!") == just(#("a\tb\nc\r", "!")));
+assert(regex_match(#/\u0041;\u03b2;/, "\u0041;\u03b2;!") == just(#("\u0041;\u03b2;", "!")));
