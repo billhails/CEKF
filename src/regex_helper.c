@@ -8,18 +8,12 @@ typedef const Character *RegexPosition;
 static void compileError(RegexStatus *status, Index *errorOffset,
                          RegexStatus code, Index offset);
 static void ensureRegexMemoryReady(void);
-static void restoreGC(bool previous);
 static RegexNode *newEmptyNode(void);
 static RegexNode *newAtomNode(RegexAtom *atom);
 static RegexNode *newConcatNode(void);
 static RegexNode *newAlternationNode(void);
 static RegexNode *newRepeatNode(RegexNode *child, Index min, Index max,
                                 bool unlimited);
-static void freeRegexClassItemDeep(RegexClassItem *item);
-static void freeRegexCharClassDeep(RegexCharClass *charClass);
-static void freeRegexAtomDeep(RegexAtom *atom);
-static void freeRegexRepeatDeep(RegexRepeat *repeat);
-static void freeRegexNodeDeep(RegexNode *node);
 static bool appendNode(RegexNodeArray *nodes, RegexNode *child);
 static bool appendClassItem(RegexCharClass *charClass, RegexClassItem *item);
 static bool appendPosition(RegexPositionArray *set, RegexPosition position);
@@ -81,135 +75,39 @@ static void ensureRegexMemoryReady(void) {
     }
 }
 
-static void restoreGC(bool previous) {
-    if (previous) {
-        enableGC();
-    } else {
-        disableGC();
-    }
-}
-
 static RegexNode *newEmptyNode(void) { return newRegexNode_Empty(); }
 
 static RegexNode *newAtomNode(RegexAtom *atom) {
-    return newRegexNode_Atom(atom);
+    int save = PROTECT(atom);
+    RegexNode *node = newRegexNode_Atom(atom);
+    UNPROTECT(save);
+    return node;
 }
 
 static RegexNode *newConcatNode(void) {
-    return newRegexNode_Concat(newRegexNodeArray());
+    RegexNodeArray *items = newRegexNodeArray();
+    int save = PROTECT(items);
+    RegexNode *node = newRegexNode_Concat(items);
+    UNPROTECT(save);
+    return node;
 }
 
 static RegexNode *newAlternationNode(void) {
-    return newRegexNode_Alternation(newRegexNodeArray());
+    RegexNodeArray *items = newRegexNodeArray();
+    int save = PROTECT(items);
+    RegexNode *node = newRegexNode_Alternation(items);
+    UNPROTECT(save);
+    return node;
 }
 
 static RegexNode *newRepeatNode(RegexNode *child, Index min, Index max,
                                 bool unlimited) {
-    return newRegexNode_Repeat(newRegexRepeat(child, min, max, unlimited));
-}
-
-static void freeRegexClassItemDeep(RegexClassItem *item) {
-    if (item == NULL) {
-        return;
-    }
-
-    switch (item->type) {
-    case REGEXCLASSITEM_TYPE_RANGE:
-        freeRegexRange(getRegexClassItem_Range(item));
-        break;
-    case REGEXCLASSITEM_TYPE_META:
-        break;
-    case REGEXCLASSITEM_TYPE_CATEGORY:
-        freeRegexCategory(getRegexClassItem_Category(item));
-        break;
-    default:
-        break;
-    }
-
-    freeRegexClassItem(item);
-}
-
-static void freeRegexCharClassDeep(RegexCharClass *charClass) {
-    Index i;
-
-    if (charClass == NULL) {
-        return;
-    }
-
-    for (i = 0; i < charClass->items->size; i++) {
-        freeRegexClassItemDeep(charClass->items->entries[i]);
-    }
-    freeRegexClassItemArray(charClass->items);
-    freeRegexCharClass(charClass);
-}
-
-static void freeRegexAtomDeep(RegexAtom *atom) {
-    if (atom == NULL) {
-        return;
-    }
-
-    switch (atom->type) {
-    case REGEXATOM_TYPE_CHARCLASS:
-        freeRegexCharClassDeep(getRegexAtom_CharClass(atom));
-        break;
-    case REGEXATOM_TYPE_META:
-        break;
-    case REGEXATOM_TYPE_CATEGORY:
-        freeRegexCategory(getRegexAtom_Category(atom));
-        break;
-    default:
-        break;
-    }
-
-    freeRegexAtom(atom);
-}
-
-static void freeRegexRepeatDeep(RegexRepeat *repeat) {
-    if (repeat == NULL) {
-        return;
-    }
-
-    freeRegexNodeDeep(repeat->child);
-    freeRegexRepeat(repeat);
-}
-
-static void freeRegexNodeDeep(RegexNode *node) {
-    if (node == NULL) {
-        return;
-    }
-
-    switch (node->type) {
-    case REGEXNODE_TYPE_ATOM:
-        freeRegexAtomDeep(getRegexNode_Atom(node));
-        break;
-    case REGEXNODE_TYPE_CONCAT: {
-        RegexNodeArray *children = getRegexNode_Concat(node);
-        Index i;
-
-        for (i = 0; i < children->size; i++) {
-            freeRegexNodeDeep(children->entries[i]);
-        }
-        freeRegexNodeArray(children);
-        break;
-    }
-    case REGEXNODE_TYPE_ALTERNATION: {
-        RegexNodeArray *children = getRegexNode_Alternation(node);
-        Index i;
-
-        for (i = 0; i < children->size; i++) {
-            freeRegexNodeDeep(children->entries[i]);
-        }
-        freeRegexNodeArray(children);
-        break;
-    }
-    case REGEXNODE_TYPE_REPEAT:
-        freeRegexRepeatDeep(getRegexNode_Repeat(node));
-        break;
-    default:
-        break;
-    }
-
-    freeRegexNode(node);
+    int save = PROTECT(child);
+    RegexRepeat *repeat = newRegexRepeat(child, min, max, unlimited);
+    REPLACE_PROTECT(save, repeat);
+    RegexNode *node = newRegexNode_Repeat(repeat);
+    UNPROTECT(save);
+    return node;
 }
 
 static bool appendNode(RegexNodeArray *nodes, RegexNode *child) {
@@ -284,10 +182,13 @@ static bool parseEscapedClassItem(const Character *pattern, Index *cursor,
                                   RegexClassItem **item, RegexStatus *status,
                                   Index *errorOffset) {
     RegexAtom *atom;
+    int save;
 
     if (!parseEscapedAtom(pattern, cursor, &atom, status, errorOffset)) {
         return false;
     }
+
+    save = PROTECT(atom);
 
     if (atom->type == REGEXATOM_TYPE_LITERAL) {
         *item = newRegexClassItem_Literal(getRegexAtom_Literal(atom));
@@ -295,7 +196,7 @@ static bool parseEscapedClassItem(const Character *pattern, Index *cursor,
         *item = newRegexClassItem_Meta(getRegexAtom_Meta(atom));
     }
 
-    freeRegexAtom(atom);
+    UNPROTECT(save);
     return true;
 }
 
@@ -507,9 +408,13 @@ static bool parseNamedCategory(const Character *pattern, Index *cursor,
 
 static RegexCharClass *parseCharClass(const Character *pattern, Index *cursor,
                                       RegexStatus *status, Index *errorOffset) {
-    RegexCharClass *charClass =
-        newRegexCharClass(false, newRegexClassItemArray());
+    int save = STARTPROTECT();
+    RegexClassItemArray *items = newRegexClassItemArray();
+    int charClassSave = PROTECT(items);
+    RegexCharClass *charClass = newRegexCharClass(false, items);
     Index i = *cursor + 1;
+
+    REPLACE_PROTECT(charClassSave, charClass);
 
     if (pattern[i] == L'^') {
         charClass->inverted = true;
@@ -524,57 +429,78 @@ static RegexCharClass *parseCharClass(const Character *pattern, Index *cursor,
         if (pattern[i] == L'\0') {
             compileError(status, errorOffset, REGEX_STATUS_UNTERMINATED_CLASS,
                          *cursor);
-            freeRegexCharClassDeep(charClass);
+            UNPROTECT(save);
             return NULL;
         }
 
         if (pattern[i] == L'[' && pattern[i + 1] == L'[') {
+            int itemSave;
+
             if (!parseNamedCategory(pattern, &i, &category, status,
                                     errorOffset)) {
-                freeRegexCharClassDeep(charClass);
+                UNPROTECT(save);
                 return NULL;
             }
+            itemSave = PROTECT(category);
             item = newRegexClassItem_Category(category);
+            REPLACE_PROTECT(itemSave, item);
+            appendClassItem(charClass, item);
+            UNPROTECT(itemSave);
         } else if (pattern[i] == L'\\') {
+            int itemSave;
+
             if (!parseEscapedClassItem(pattern, &i, &item, status,
                                        errorOffset)) {
-                freeRegexCharClassDeep(charClass);
+                UNPROTECT(save);
                 return NULL;
             }
+            itemSave = PROTECT(item);
+            appendClassItem(charClass, item);
+            UNPROTECT(itemSave);
             i++;
         } else if (pattern[i + 1] == L'-' && pattern[i + 2] != L'\0' &&
                    pattern[i + 2] != L']' && pattern[i + 2] != L'\\' &&
                    !(pattern[i + 2] == L'[' && pattern[i + 3] == L'[')) {
+            int itemSave;
+
             if (pattern[i] > pattern[i + 2]) {
                 compileError(status, errorOffset, REGEX_STATUS_INVALID_RANGE,
                              i);
-                freeRegexCharClassDeep(charClass);
+                UNPROTECT(save);
                 return NULL;
             }
             range = newRegexRange(pattern[i], pattern[i + 2]);
+            itemSave = PROTECT(range);
             item = newRegexClassItem_Range(range);
+            REPLACE_PROTECT(itemSave, item);
+            appendClassItem(charClass, item);
+            UNPROTECT(itemSave);
             i += 3;
         } else {
             item = newRegexClassItem_Literal(pattern[i]);
+            int itemSave = PROTECT(item);
+
+            appendClassItem(charClass, item);
+            UNPROTECT(itemSave);
             i++;
         }
-
-        appendClassItem(charClass, item);
     }
 
     if (charClass->items->size == 0) {
         compileError(status, errorOffset, REGEX_STATUS_EMPTY_CLASS, *cursor);
-        freeRegexCharClassDeep(charClass);
+        UNPROTECT(save);
         return NULL;
     }
 
     *cursor = i + 1;
+    UNPROTECT(save);
     return charClass;
 }
 
 static RegexNode *parsePrimary(const Character *pattern, Index *cursor,
                                RegexStatus *status, Index *errorOffset) {
     Character current = pattern[*cursor];
+    int save = STARTPROTECT();
     RegexAtom *atom;
     RegexNode *node;
     RegexCharClass *charClass;
@@ -596,42 +522,71 @@ static RegexNode *parsePrimary(const Character *pattern, Index *cursor,
         if (pattern[*cursor] != L')') {
             compileError(status, errorOffset, REGEX_STATUS_UNTERMINATED_GROUP,
                          *cursor);
-            freeRegexNodeDeep(node);
+            UNPROTECT(save);
             return NULL;
         }
         (*cursor)++;
+        UNPROTECT(save);
         return node;
     case L'.':
         (*cursor)++;
-        return newAtomNode(newRegexAtom_Dot());
+        atom = newRegexAtom_Dot();
+        node = newAtomNode(atom);
+        UNPROTECT(save);
+        return node;
     case L'^':
         (*cursor)++;
+        UNPROTECT(save);
         return newRegexNode_Begin();
     case L'$':
         (*cursor)++;
+        UNPROTECT(save);
         return newRegexNode_End();
     case L'[':
         if (pattern[*cursor + 1] == L'[') {
+            int atomSave;
+
             if (!parseNamedCategory(pattern, cursor, &category, status,
                                     errorOffset)) {
+                UNPROTECT(save);
                 return NULL;
             }
-            return newAtomNode(newRegexAtom_Category(category));
+            atomSave = PROTECT(category);
+            atom = newRegexAtom_Category(category);
+            REPLACE_PROTECT(atomSave, atom);
+            node = newAtomNode(atom);
+            UNPROTECT(save);
+            return node;
         }
         charClass = parseCharClass(pattern, cursor, status, errorOffset);
         if (charClass == NULL) {
+            UNPROTECT(save);
             return NULL;
         }
-        return newAtomNode(newRegexAtom_CharClass(charClass));
+        {
+            int atomSave = PROTECT(charClass);
+
+            atom = newRegexAtom_CharClass(charClass);
+            REPLACE_PROTECT(atomSave, atom);
+            node = newAtomNode(atom);
+            UNPROTECT(save);
+            return node;
+        }
     case L'\\':
         if (!parseEscapedAtom(pattern, cursor, &atom, status, errorOffset)) {
+            UNPROTECT(save);
             return NULL;
         }
         (*cursor)++;
-        return newAtomNode(atom);
+        node = newAtomNode(atom);
+        UNPROTECT(save);
+        return node;
     default:
         (*cursor)++;
-        return newAtomNode(newRegexAtom_Literal(current));
+        atom = newRegexAtom_Literal(current);
+        node = newAtomNode(atom);
+        UNPROTECT(save);
+        return node;
     }
 }
 
@@ -663,7 +618,6 @@ static RegexNode *parseQuantified(const Character *pattern, Index *cursor,
         pattern[*cursor] == L'?') {
         compileError(status, errorOffset, REGEX_STATUS_CONSECUTIVE_QUANTIFIERS,
                      *cursor);
-        freeRegexNodeDeep(repeat);
         return NULL;
     }
 
@@ -672,7 +626,9 @@ static RegexNode *parseQuantified(const Character *pattern, Index *cursor,
 
 static RegexNode *parseSequence(const Character *pattern, Index *cursor,
                                 RegexStatus *status, Index *errorOffset) {
+    int save = STARTPROTECT();
     RegexNode *sequence = newConcatNode();
+    PROTECT(sequence);
     RegexNodeArray *items = getRegexNode_Concat(sequence);
     RegexNode *child;
 
@@ -680,27 +636,38 @@ static RegexNode *parseSequence(const Character *pattern, Index *cursor,
            pattern[*cursor] != L')') {
         child = parseQuantified(pattern, cursor, status, errorOffset);
         if (child == NULL) {
-            freeRegexNodeDeep(sequence);
+            UNPROTECT(save);
             return NULL;
         }
-        appendNode(items, child);
+        {
+            int childSave = PROTECT(child);
+
+            appendNode(items, child);
+            UNPROTECT(childSave);
+        }
     }
 
     if (items->size == 0) {
-        return newEmptyNode();
+        RegexNode *empty = newEmptyNode();
+
+        UNPROTECT(save);
+        return empty;
     }
 
     if (items->size == 1) {
         child = items->entries[0];
+        UNPROTECT(save);
         return child;
     }
 
+    UNPROTECT(save);
     return sequence;
 }
 
 static RegexNode *parseExpression(const Character *pattern, Index *cursor,
                                   RegexStatus *status, Index *errorOffset) {
     RegexNode *left = parseSequence(pattern, cursor, status, errorOffset);
+    int save = STARTPROTECT();
     RegexNode *alternation;
     RegexNodeArray *items;
     RegexNode *right;
@@ -710,10 +677,13 @@ static RegexNode *parseExpression(const Character *pattern, Index *cursor,
     }
 
     if (pattern[*cursor] != L'|') {
+        UNPROTECT(save);
         return left;
     }
 
+    PROTECT(left);
     alternation = newAlternationNode();
+    PROTECT(alternation);
     items = getRegexNode_Alternation(alternation);
     appendNode(items, left);
 
@@ -721,12 +691,18 @@ static RegexNode *parseExpression(const Character *pattern, Index *cursor,
         (*cursor)++;
         right = parseSequence(pattern, cursor, status, errorOffset);
         if (right == NULL) {
-            freeRegexNodeDeep(alternation);
+            UNPROTECT(save);
             return NULL;
         }
-        appendNode(items, right);
+        {
+            int rightSave = PROTECT(right);
+
+            appendNode(items, right);
+            UNPROTECT(rightSave);
+        }
     }
 
+    UNPROTECT(save);
     return alternation;
 }
 
@@ -735,7 +711,7 @@ Regex *regexCompile(const Character *pattern, RegexStatus *status,
     Regex *regex;
     RegexNode *root;
     Index cursor = 0;
-    bool previousGc;
+    int save;
 
     compileError(status, errorOffset, REGEX_STATUS_OK, 0);
     if (pattern == NULL) {
@@ -743,34 +719,26 @@ Regex *regexCompile(const Character *pattern, RegexStatus *status,
     }
 
     ensureRegexMemoryReady();
-    previousGc = disableGC();
     root = parseExpression(pattern, &cursor, status, errorOffset);
     if (root == NULL) {
-        restoreGC(previousGc);
         return NULL;
     }
+
+    save = PROTECT(root);
 
     if (pattern[cursor] == L')') {
         compileError(status, errorOffset, REGEX_STATUS_UNEXPECTED_CLOSE_PAREN,
                      cursor);
-        freeRegexNodeDeep(root);
-        restoreGC(previousGc);
+        UNPROTECT(save);
         return NULL;
     }
 
     regex = newRegex(root);
-    restoreGC(previousGc);
+    UNPROTECT(save);
     return regex;
 }
 
-void regexFree(Regex *regex) {
-    if (regex == NULL) {
-        return;
-    }
-
-    freeRegexNodeDeep(regex->root);
-    freeRegex(regex);
-}
+void regexFree(Regex *regex) { (void)regex; }
 
 static bool matchCategory(const RegexCategory *category, Character c) {
     int actual = unicode_category(c);
@@ -850,16 +818,13 @@ static bool matchAtom(const RegexAtom *atom, Character c) {
     }
 }
 
-// Regex helper temporaries are GC-managed objects. Manual frees corrupt the
-// CEKF allocation list when the engine is used inside the runtime.
-static void discardRegexPositionArray(RegexPositionArray *positions) {
-    (void)positions;
-}
-
 static bool matchSequence(const RegexNodeArray *list, RegexPosition text,
                           RegexPosition inputStart, RegexPositionArray *out) {
+    int save = STARTPROTECT();
     RegexPositionArray *current = newRegexPositionArray();
+    int currentSave = PROTECT(current);
     RegexPositionArray *next = newRegexPositionArray();
+    int nextSave = PROTECT(next);
     Index i;
     Index j;
     bool ok;
@@ -869,27 +834,26 @@ static bool matchSequence(const RegexNodeArray *list, RegexPosition text,
     for (i = 0; i < list->size; i++) {
         for (j = 0; j < current->size; j++) {
             RegexPositionArray *childMatches = newRegexPositionArray();
+            int childSave = PROTECT(childMatches);
 
             ok = matchNode(list->entries[i], positionAt(current, j), inputStart,
                            childMatches);
             if (!ok) {
-                discardRegexPositionArray(current);
-                discardRegexPositionArray(next);
-                discardRegexPositionArray(childMatches);
+                UNPROTECT(save);
                 return false;
             }
             ok = appendPositions(next, childMatches);
-            discardRegexPositionArray(childMatches);
+            UNPROTECT(childSave);
             if (!ok) {
-                discardRegexPositionArray(current);
-                discardRegexPositionArray(next);
+                UNPROTECT(save);
                 return false;
             }
         }
 
-        discardRegexPositionArray(current);
         current = next;
+        REPLACE_PROTECT(currentSave, current);
         next = newRegexPositionArray();
+        REPLACE_PROTECT(nextSave, next);
 
         if (current->size == 0) {
             break;
@@ -897,8 +861,7 @@ static bool matchSequence(const RegexNodeArray *list, RegexPosition text,
     }
 
     ok = appendPositions(out, current);
-    discardRegexPositionArray(current);
-    discardRegexPositionArray(next);
+    UNPROTECT(save);
     return ok;
 }
 
@@ -910,14 +873,15 @@ static bool matchAlternation(const RegexNodeArray *list, RegexPosition text,
 
     for (i = 0; i < list->size; i++) {
         RegexPositionArray *branchMatches = newRegexPositionArray();
+        int branchSave = PROTECT(branchMatches);
 
         ok = matchNode(list->entries[i], text, inputStart, branchMatches);
         if (!ok) {
-            discardRegexPositionArray(branchMatches);
+            UNPROTECT(branchSave);
             return false;
         }
         ok = appendPositions(out, branchMatches);
-        discardRegexPositionArray(branchMatches);
+        UNPROTECT(branchSave);
         if (!ok) {
             return false;
         }
@@ -934,10 +898,11 @@ static bool matchRepeatGreedy(const RegexRepeat *repeat, RegexPosition text,
 
     if (repeat->unlimited || count < repeat->max) {
         RegexPositionArray *childMatches = newRegexPositionArray();
+        int childSave = PROTECT(childMatches);
 
         ok = matchNode(repeat->child, text, inputStart, childMatches);
         if (!ok) {
-            discardRegexPositionArray(childMatches);
+            UNPROTECT(childSave);
             return false;
         }
         for (i = 0; i < childMatches->size; i++) {
@@ -947,11 +912,11 @@ static bool matchRepeatGreedy(const RegexRepeat *repeat, RegexPosition text,
                 continue;
             }
             if (!matchRepeatGreedy(repeat, next, inputStart, count + 1, out)) {
-                discardRegexPositionArray(childMatches);
+                UNPROTECT(childSave);
                 return false;
             }
         }
-        discardRegexPositionArray(childMatches);
+        UNPROTECT(childSave);
     }
 
     if (count >= repeat->min) {
@@ -1004,7 +969,7 @@ static bool matchNode(const RegexNode *node, RegexPosition text,
 int regexMatchp(const Regex *pattern, const Character *text,
                 Index *matchLength) {
     int index = 0;
-    bool previousGc;
+    int save;
 
     if (matchLength != NULL) {
         *matchLength = 0;
@@ -1015,14 +980,15 @@ int regexMatchp(const Regex *pattern, const Character *text,
     }
 
     ensureRegexMemoryReady();
-    previousGc = disableGC();
+    save = STARTPROTECT();
+    PROTECT((Regex *)pattern);
 
     while (true) {
         RegexPositionArray *matches = newRegexPositionArray();
+        int matchesSave = PROTECT(matches);
 
         if (!matchNode(pattern->root, text + index, text, matches)) {
-            discardRegexPositionArray(matches);
-            restoreGC(previousGc);
+            UNPROTECT(save);
             return -1;
         }
 
@@ -1030,14 +996,13 @@ int regexMatchp(const Regex *pattern, const Character *text,
             if (matchLength != NULL) {
                 *matchLength = (Index)(positionAt(matches, 0) - (text + index));
             }
-            discardRegexPositionArray(matches);
-            restoreGC(previousGc);
+            UNPROTECT(save);
             return index;
         }
 
-        discardRegexPositionArray(matches);
+        UNPROTECT(matchesSave);
         if (text[index] == L'\0') {
-            restoreGC(previousGc);
+            UNPROTECT(save);
             return -1;
         }
         index++;

@@ -219,6 +219,7 @@ static void registerIncr(BuiltIns *registry) {
     BuiltInArgs *args = newBuiltInArgs();
     int save = PROTECT(args);
     TcType *integer = newTcType_BigInteger();
+    PROTECT(integer);
     pushNewBuiltIn(registry, "incr", integer, args, (void *)builtin_incr,
                    "builtin_incr");
     UNPROTECT(save);
