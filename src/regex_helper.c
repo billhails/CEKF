@@ -5,9 +5,22 @@
 
 typedef const Character *RegexPosition;
 
+#define REGEX_INLINE_FLAG_CASE_INSENSITIVE ((unsigned char)0x01)
+#define REGEX_INLINE_FLAG_DOTALL ((unsigned char)0x02)
+
 static void compileError(RegexStatus *status, Index *errorOffset,
                          RegexStatus code, Index offset);
 static void ensureRegexMemoryReady(void);
+static bool regexFlagEnabled(unsigned char flags, unsigned char mask);
+static bool parseInlineFlag(Character flag, unsigned char *flags);
+static bool parseLeadingInlineFlags(const Character *pattern, Index *cursor,
+                                    unsigned char *flags, RegexStatus *status,
+                                    Index *errorOffset);
+static bool simpleFoldCharacter(Character c, Character *folded);
+static bool matchCharacters(Character left, Character right,
+                            unsigned char flags);
+static bool matchRange(Character lower, Character upper, Character c,
+                       unsigned char flags);
 static RegexNode *newEmptyNode(void);
 static RegexNode *newAtomNode(RegexAtom *atom);
 static RegexNode *newConcatNode(void);
@@ -46,20 +59,26 @@ static RegexNode *parsePrimary(const Character *pattern, Index *cursor,
                                RegexStatus *status, Index *errorOffset);
 static bool matchCategory(const RegexCategory *category, Character c);
 static bool matchMeta(RegexMetaType metaType, Character c);
-static bool matchClassItem(const RegexClassItem *item, Character c);
-static bool matchCharClass(const RegexCharClass *charClass, Character c);
-static bool matchAtom(const RegexAtom *atom, Character c);
+static bool matchClassItem(const RegexClassItem *item, Character c,
+                           unsigned char flags);
+static bool matchCharClass(const RegexCharClass *charClass, Character c,
+                           unsigned char flags);
+static bool matchAtom(const RegexAtom *atom, Character c, unsigned char flags);
 static bool matchNode(const RegexNode *node, RegexPosition text,
-                      RegexPosition inputStart, RegexPositionArray *out);
+                      RegexPosition inputStart, unsigned char flags,
+                      RegexPositionArray *out);
 static bool matchSequence(const RegexNodeArray *list, RegexPosition text,
-                          RegexPosition inputStart, RegexPositionArray *out);
+                          RegexPosition inputStart, unsigned char flags,
+                          RegexPositionArray *out);
 static bool matchAlternation(const RegexNodeArray *list, RegexPosition text,
-                             RegexPosition inputStart, RegexPositionArray *out);
+                             RegexPosition inputStart, unsigned char flags,
+                             RegexPositionArray *out);
 static bool matchRepeat(const RegexRepeat *repeat, RegexPosition text,
-                        RegexPosition inputStart, RegexPositionArray *out);
+                        RegexPosition inputStart, unsigned char flags,
+                        RegexPositionArray *out);
 static bool matchRepeatGreedy(const RegexRepeat *repeat, RegexPosition text,
-                              RegexPosition inputStart, Index count,
-                              RegexPositionArray *out);
+                              RegexPosition inputStart, unsigned char flags,
+                              Index count, RegexPositionArray *out);
 
 static void compileError(RegexStatus *status, Index *errorOffset,
                          RegexStatus code, Index offset) {
@@ -76,6 +95,133 @@ static void ensureRegexMemoryReady(void) {
     if (!protectionInitialized()) {
         initProtection();
     }
+}
+
+static bool regexFlagEnabled(unsigned char flags, unsigned char mask) {
+    return (flags & mask) != 0;
+}
+
+static bool parseInlineFlag(Character flag, unsigned char *flags) {
+    switch (flag) {
+    case L'i':
+        *flags |= REGEX_INLINE_FLAG_CASE_INSENSITIVE;
+        return true;
+    default:
+        return false;
+    }
+}
+
+static bool parseLeadingInlineFlags(const Character *pattern, Index *cursor,
+                                    unsigned char *flags, RegexStatus *status,
+                                    Index *errorOffset) {
+    Index scan;
+    bool sawFlag = false;
+
+    *flags = 0;
+
+    if (pattern[*cursor] != L'(' || pattern[*cursor + 1] != L'?') {
+        return true;
+    }
+
+    scan = *cursor + 2;
+
+    while (true) {
+        Character current = pattern[scan];
+
+        if (current == L')') {
+            if (!sawFlag) {
+                compileError(status, errorOffset,
+                             REGEX_STATUS_INVALID_INLINE_FLAG, scan);
+                return false;
+            }
+
+            *cursor = scan + 1;
+            return true;
+        }
+
+        if (current == L'\0') {
+            compileError(status, errorOffset, REGEX_STATUS_INVALID_INLINE_FLAG,
+                         scan);
+            return false;
+        }
+
+        if ((current >= L'a' && current <= L'z') ||
+            (current >= L'A' && current <= L'Z')) {
+            if (!parseInlineFlag(current, flags)) {
+                compileError(status, errorOffset,
+                             REGEX_STATUS_INVALID_INLINE_FLAG, scan);
+                return false;
+            }
+
+            sawFlag = true;
+            scan++;
+            continue;
+        }
+
+        compileError(status, errorOffset, REGEX_STATUS_INVALID_INLINE_FLAG,
+                     scan);
+        return false;
+    }
+}
+
+static bool simpleFoldCharacter(Character c, Character *folded) {
+    Character buffer[2];
+    Index length = unicode_tolower(c, buffer, 2);
+
+    if (length != 1) {
+        return false;
+    }
+
+    *folded = buffer[0];
+    return true;
+}
+
+static bool matchCharacters(Character left, Character right,
+                            unsigned char flags) {
+    Character leftFold;
+    Character rightFold;
+
+    if (left == right) {
+        return true;
+    }
+
+    if (!regexFlagEnabled(flags, REGEX_INLINE_FLAG_CASE_INSENSITIVE)) {
+        return false;
+    }
+
+    if (!simpleFoldCharacter(left, &leftFold) ||
+        !simpleFoldCharacter(right, &rightFold)) {
+        return false;
+    }
+
+    return leftFold == rightFold;
+}
+
+static bool matchRange(Character lower, Character upper, Character c,
+                       unsigned char flags) {
+    Character lowerFold;
+    Character upperFold;
+    Character cFold;
+
+    if (c >= lower && c <= upper) {
+        return true;
+    }
+
+    if (!regexFlagEnabled(flags, REGEX_INLINE_FLAG_CASE_INSENSITIVE)) {
+        return false;
+    }
+
+    if (!simpleFoldCharacter(lower, &lowerFold) ||
+        !simpleFoldCharacter(upper, &upperFold) ||
+        !simpleFoldCharacter(c, &cFold)) {
+        return false;
+    }
+
+    if (lowerFold <= upperFold) {
+        return cFold >= lowerFold && cFold <= upperFold;
+    }
+
+    return cFold >= upperFold && cFold <= lowerFold;
 }
 
 static RegexNode *newEmptyNode(void) { return newRegexNode_Empty(); }
@@ -800,6 +946,7 @@ Regex *regexCompile(const Character *pattern, RegexStatus *status,
     Regex *regex;
     RegexNode *root;
     Index cursor = 0;
+    unsigned char flags = 0;
     int save;
 
     compileError(status, errorOffset, REGEX_STATUS_OK, 0);
@@ -808,6 +955,11 @@ Regex *regexCompile(const Character *pattern, RegexStatus *status,
     }
 
     ensureRegexMemoryReady();
+    if (!parseLeadingInlineFlags(pattern, &cursor, &flags, status,
+                                 errorOffset)) {
+        return NULL;
+    }
+
     root = parseExpression(pattern, &cursor, status, errorOffset);
     if (root == NULL) {
         return NULL;
@@ -822,7 +974,7 @@ Regex *regexCompile(const Character *pattern, RegexStatus *status,
         return NULL;
     }
 
-    regex = newRegex(root);
+    regex = newRegex(root, flags);
     UNPROTECT(save);
     return regex;
 }
@@ -858,13 +1010,15 @@ static bool matchMeta(RegexMetaType metaType, Character c) {
     }
 }
 
-static bool matchClassItem(const RegexClassItem *item, Character c) {
+static bool matchClassItem(const RegexClassItem *item, Character c,
+                           unsigned char flags) {
     switch (item->type) {
     case REGEXCLASSITEM_TYPE_LITERAL:
-        return c == getRegexClassItem_Literal((RegexClassItem *)item);
+        return matchCharacters(
+            getRegexClassItem_Literal((RegexClassItem *)item), c, flags);
     case REGEXCLASSITEM_TYPE_RANGE: {
         RegexRange *range = getRegexClassItem_Range((RegexClassItem *)item);
-        return c >= range->lower && c <= range->upper;
+        return matchRange(range->lower, range->upper, c, flags);
     }
     case REGEXCLASSITEM_TYPE_META:
         return matchMeta(getRegexClassItem_Meta((RegexClassItem *)item), c);
@@ -876,12 +1030,13 @@ static bool matchClassItem(const RegexClassItem *item, Character c) {
     }
 }
 
-static bool matchCharClass(const RegexCharClass *charClass, Character c) {
+static bool matchCharClass(const RegexCharClass *charClass, Character c,
+                           unsigned char flags) {
     bool matched = false;
     Index i;
 
     for (i = 0; i < charClass->items->size; i++) {
-        if (matchClassItem(charClass->items->entries[i], c)) {
+        if (matchClassItem(charClass->items->entries[i], c, flags)) {
             matched = true;
             break;
         }
@@ -890,14 +1045,16 @@ static bool matchCharClass(const RegexCharClass *charClass, Character c) {
     return charClass->inverted ? !matched : matched;
 }
 
-static bool matchAtom(const RegexAtom *atom, Character c) {
+static bool matchAtom(const RegexAtom *atom, Character c, unsigned char flags) {
     switch (atom->type) {
     case REGEXATOM_TYPE_LITERAL:
-        return getRegexAtom_Literal((RegexAtom *)atom) == c;
+        return matchCharacters(getRegexAtom_Literal((RegexAtom *)atom), c,
+                               flags);
     case REGEXATOM_TYPE_DOT:
         return c != L'\n' && c != L'\r';
     case REGEXATOM_TYPE_CHARCLASS:
-        return matchCharClass(getRegexAtom_CharClass((RegexAtom *)atom), c);
+        return matchCharClass(getRegexAtom_CharClass((RegexAtom *)atom), c,
+                              flags);
     case REGEXATOM_TYPE_META:
         return matchMeta(getRegexAtom_Meta((RegexAtom *)atom), c);
     case REGEXATOM_TYPE_CATEGORY:
@@ -908,7 +1065,8 @@ static bool matchAtom(const RegexAtom *atom, Character c) {
 }
 
 static bool matchSequence(const RegexNodeArray *list, RegexPosition text,
-                          RegexPosition inputStart, RegexPositionArray *out) {
+                          RegexPosition inputStart, unsigned char flags,
+                          RegexPositionArray *out) {
     int save = STARTPROTECT();
     RegexPositionArray *current = newRegexPositionArray();
     int currentSave = PROTECT(current);
@@ -926,7 +1084,7 @@ static bool matchSequence(const RegexNodeArray *list, RegexPosition text,
             int childSave = PROTECT(childMatches);
 
             ok = matchNode(list->entries[i], positionAt(current, j), inputStart,
-                           childMatches);
+                           flags, childMatches);
             if (!ok) {
                 UNPROTECT(save);
                 return false;
@@ -955,7 +1113,7 @@ static bool matchSequence(const RegexNodeArray *list, RegexPosition text,
 }
 
 static bool matchAlternation(const RegexNodeArray *list, RegexPosition text,
-                             RegexPosition inputStart,
+                             RegexPosition inputStart, unsigned char flags,
                              RegexPositionArray *out) {
     Index i;
     bool ok;
@@ -964,7 +1122,8 @@ static bool matchAlternation(const RegexNodeArray *list, RegexPosition text,
         RegexPositionArray *branchMatches = newRegexPositionArray();
         int branchSave = PROTECT(branchMatches);
 
-        ok = matchNode(list->entries[i], text, inputStart, branchMatches);
+        ok =
+            matchNode(list->entries[i], text, inputStart, flags, branchMatches);
         if (!ok) {
             UNPROTECT(branchSave);
             return false;
@@ -980,8 +1139,8 @@ static bool matchAlternation(const RegexNodeArray *list, RegexPosition text,
 }
 
 static bool matchRepeatGreedy(const RegexRepeat *repeat, RegexPosition text,
-                              RegexPosition inputStart, Index count,
-                              RegexPositionArray *out) {
+                              RegexPosition inputStart, unsigned char flags,
+                              Index count, RegexPositionArray *out) {
     Index i;
     bool ok;
 
@@ -989,7 +1148,7 @@ static bool matchRepeatGreedy(const RegexRepeat *repeat, RegexPosition text,
         RegexPositionArray *childMatches = newRegexPositionArray();
         int childSave = PROTECT(childMatches);
 
-        ok = matchNode(repeat->child, text, inputStart, childMatches);
+        ok = matchNode(repeat->child, text, inputStart, flags, childMatches);
         if (!ok) {
             UNPROTECT(childSave);
             return false;
@@ -1000,7 +1159,8 @@ static bool matchRepeatGreedy(const RegexRepeat *repeat, RegexPosition text,
             if (next == text) {
                 continue;
             }
-            if (!matchRepeatGreedy(repeat, next, inputStart, count + 1, out)) {
+            if (!matchRepeatGreedy(repeat, next, inputStart, flags, count + 1,
+                                   out)) {
                 UNPROTECT(childSave);
                 return false;
             }
@@ -1016,18 +1176,20 @@ static bool matchRepeatGreedy(const RegexRepeat *repeat, RegexPosition text,
 }
 
 static bool matchRepeat(const RegexRepeat *repeat, RegexPosition text,
-                        RegexPosition inputStart, RegexPositionArray *out) {
-    return matchRepeatGreedy(repeat, text, inputStart, 0, out);
+                        RegexPosition inputStart, unsigned char flags,
+                        RegexPositionArray *out) {
+    return matchRepeatGreedy(repeat, text, inputStart, flags, 0, out);
 }
 
 static bool matchNode(const RegexNode *node, RegexPosition text,
-                      RegexPosition inputStart, RegexPositionArray *out) {
+                      RegexPosition inputStart, unsigned char flags,
+                      RegexPositionArray *out) {
     switch (node->type) {
     case REGEXNODE_TYPE_EMPTY:
         return appendPosition(out, text);
     case REGEXNODE_TYPE_ATOM:
         if (*text != L'\0' &&
-            matchAtom(getRegexNode_Atom((RegexNode *)node), *text)) {
+            matchAtom(getRegexNode_Atom((RegexNode *)node), *text, flags)) {
             return appendPosition(out, text + 1);
         }
         return true;
@@ -1043,13 +1205,13 @@ static bool matchNode(const RegexNode *node, RegexPosition text,
         return true;
     case REGEXNODE_TYPE_CONCAT:
         return matchSequence(getRegexNode_Concat((RegexNode *)node), text,
-                             inputStart, out);
+                             inputStart, flags, out);
     case REGEXNODE_TYPE_ALTERNATION:
         return matchAlternation(getRegexNode_Alternation((RegexNode *)node),
-                                text, inputStart, out);
+                                text, inputStart, flags, out);
     case REGEXNODE_TYPE_REPEAT:
         return matchRepeat(getRegexNode_Repeat((RegexNode *)node), text,
-                           inputStart, out);
+                           inputStart, flags, out);
     default:
         return false;
     }
@@ -1076,7 +1238,8 @@ int regexMatchp(const Regex *pattern, const Character *text,
         RegexPositionArray *matches = newRegexPositionArray();
         int matchesSave = PROTECT(matches);
 
-        if (!matchNode(pattern->root, text + index, text, matches)) {
+        if (!matchNode(pattern->root, text + index, text, pattern->flags,
+                       matches)) {
             UNPROTECT(save);
             return -1;
         }

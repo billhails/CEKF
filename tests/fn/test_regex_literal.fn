@@ -1,4 +1,5 @@
 assert(#/abc/ == regex("abc"));
+assert(#/(?i)abc/ == regex("(?i)abc"));
 assert(typeof #/abc/ == "regex");
 assert(typeof regex("abc") == "regex");
 assert(#/a\/b/ == regex("a/b"));

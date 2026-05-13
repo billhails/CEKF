@@ -22,6 +22,7 @@
     REGEXSTATUS_TYPE_QUANTIFIER_WITHOUT_TARGET
 #define REGEX_STATUS_CONSECUTIVE_QUANTIFIERS                                   \
     REGEXSTATUS_TYPE_CONSECUTIVE_QUANTIFIERS
+#define REGEX_STATUS_INVALID_INLINE_FLAG REGEXSTATUS_TYPE_INVALID_INLINE_FLAG
 
 Regex *regexCompile(const Character *pattern, RegexStatus *status,
                     Index *errorOffset);

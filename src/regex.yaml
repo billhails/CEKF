@@ -19,6 +19,7 @@ enums:
     - INVALID_RANGE
     - QUANTIFIER_WITHOUT_TARGET
     - CONSECUTIVE_QUANTIFIERS
+    - INVALID_INLINE_FLAG
 
   RegexMetaType:
     data:
@@ -65,6 +66,7 @@ structs:
       brief: Compiled regular expression.
     data:
       root: RegexNode
+      flags: uchar
 
 unions:
   RegexClassItem:

@@ -132,6 +132,35 @@ static void testUnicodeEscapes(void) {
     regexFree(regex);
 }
 
+static void testLeadingCaseInsensitiveFlag(void) {
+    Index matchLength;
+
+    assert(regexMatch(L"(?i)^ab+$", L"ABbb", &matchLength, NULL, NULL) == 0);
+    assert(matchLength == 4);
+
+    assert(regexMatch(L"(?i)^[a-z]+$", L"abcDEF", &matchLength, NULL, NULL) ==
+           0);
+    assert(matchLength == 6);
+}
+
+static void testLeadingCaseInsensitiveUnicodeLiterals(void) {
+    Index matchLength;
+
+    assert(regexMatch(L"(?i)^\u0411\u0438\u043b\u043b$",
+                      L"\u0431\u0418\u043b\u041b", &matchLength, NULL,
+                      NULL) == 0);
+    assert(matchLength == 4);
+}
+
+static void testLeadingCaseInsensitiveKeepsCategoryMeaning(void) {
+    Index matchLength;
+
+    assert(regexMatch(L"(?i)^[[Lu]]+$", L"ABC", &matchLength, NULL, NULL) == 0);
+    assert(matchLength == 3);
+    assert(regexMatch(L"(?i)^[[Lu]]+$", L"abc", &matchLength, NULL, NULL) ==
+           -1);
+}
+
 static void testInvalidCategoryReportsOffset(void) {
     RegexStatus status;
     Index errorOffset;
@@ -172,6 +201,16 @@ static void testInvalidUnicodeEscapeReportsError(void) {
     assert(errorOffset == 4);
 }
 
+static void testInvalidInlineFlagReportsError(void) {
+    RegexStatus status;
+    Index errorOffset;
+    Regex *regex = regexCompile(L"(?s)abc", &status, &errorOffset);
+
+    assert(regex == NULL);
+    assert(status == REGEX_STATUS_INVALID_INLINE_FLAG);
+    assert(errorOffset == 2);
+}
+
 int main(int argc __attribute__((unused)),
          char *argv[] __attribute__((unused))) {
     testAsciiAndAnchors();
@@ -183,9 +222,13 @@ int main(int argc __attribute__((unused)),
     testEscapedMetacharactersMatchLiterally();
     testControlEscapesAndWordUnderscore();
     testUnicodeEscapes();
+    testLeadingCaseInsensitiveFlag();
+    testLeadingCaseInsensitiveUnicodeLiterals();
+    testLeadingCaseInsensitiveKeepsCategoryMeaning();
     testInvalidCategoryReportsOffset();
     testUnterminatedGroupReportsError();
     testTrailingEscapeReportsError();
     testInvalidUnicodeEscapeReportsError();
+    testInvalidInlineFlagReportsError();
     return 0;
 }
