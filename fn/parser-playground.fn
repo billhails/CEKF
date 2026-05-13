@@ -6,9 +6,14 @@ let
     import list.reverse;
 
     typedef expr {
-        num(number) | application(expr, expr, expr) | op(string) | end
+        num(number) | application(expr, expr, expr) | op(string) | end |
+        addition(expr, expr) |
+        multiplication(expr, expr) |
+        subtraction(expr, expr) |
+        division(expr, expr)
     };
 
+    // toNum: string -> number
     fn toNum (str) {
         let fn helper {
             ([], acc) { acc }
@@ -17,6 +22,7 @@ let
         in helper(str, 0)
     }
 
+    // pmap: (#a -> #b) -> (#c -> try(#d, #(#a, #e))) -> #c -> try(#d, #(#b, #e))
     fn pmap(func, parser, input) {
         switch (parser(input)) {
             (success(#(result, rest))) {
@@ -26,6 +32,7 @@ let
         }
     }
 
+    // text: list(#a) -> list(#a) -> try(#(list(#a), list(#a)), #(list(#a), list(#a)))
     fn text(match, input) {
         if (input startsWith match) {
             success(#(match, drop(length(match), input)))
@@ -34,6 +41,7 @@ let
         }
     }
 
+    // rex: regex -> string -> try(#(string, string), #(string, string))
     fn rex(rex, input) {
         switch (regex_match(rex, input)) {
             (just(result)) {
@@ -45,6 +53,7 @@ let
         }
     }
 
+    // apply: (list(#a) -> #b) -> list(#c -> try(#d, #(#a, #c))) -> #c -> try(#d, #(#b, #c))
     fn apply(func, parsers, input) {
         let
             fn helper (throw, parsers, input, acc) {
@@ -73,22 +82,26 @@ let
             }
     }
 
+    // eof: list(#a) -> try(#(string, list(#a)), #(expr, list(#a)))
     fn eof(input) {
         if (input == []) {
-            success(#(end, []))
+            success(#(end, input))
         } else {
             failure(#("End of Input", input))
         }
     }
 
+    // sequence: list(#a -> try(#b, #(#c, #a))) -> #a -> try(#b, #(#c, #a))
     fn sequence (parsers) {
         apply(fn (results) { <reverse(results) }, parsers)
     }
 
+    // collect: list(#a -> try(#b, #(#c, #a))) -> #a -> try(#b, #(list(#c), #a))
     fn collect (parsers) {
         apply(identity, parsers)
     }
 
+    // parse: (#a -> try(#(string, string), #b)) -> #a -> #b
     fn parse (parser, input) {
         switch (parser(input)) {
             (failure(#(expected, actual))) {
@@ -99,22 +112,87 @@ let
         }
     }
 
+    fn oneOf(parsers, input) {
+        let
+            fn helper {
+                ([]) {
+                    failure(#("oneOf", input))
+                }
+                (parser @ parsers) {
+                    switch(parser(input)) {
+                        (success(result)) {
+                            success(result)
+                        }
+                        (_) {
+                            helper(parsers)
+                        }
+                    }
+                }
+            }
+        in
+            helper(parsers)
+    }
+
+    // getOp: string -> expr -> expr -> expr
+    unsafe fn getOp {
+        ("+") { fn (l, r) { addition(l, r) } }
+        ("-") { fn (l, r) { subtraction(l, r) } }
+        ("*") { fn (l, r) { multiplication(l, r) } }
+        ("/") { fn (l, r) { division(l, r) } }
+    }
+
+    // parsePlusExpr:
+    //   (string -> try(#(string, string), #(expr, string))) ->
+    //   (string -> try(#(string, string), #(expr -> expr -> expr, string))) ->
+    //   string -> try(#(string, string), #(expr, string))
+    fn parsePlusExpr(decimal, opp, input) {
+        switch (decimal(input)) {
+            (success(#(num1, rest1))) {
+                switch (opp(rest1)) {
+                    (success(#(opFn, rest2))) {
+                        switch (decimal(rest2)) {
+                            (success(#(num2, rest3))) {
+                                switch (eof(rest3)) {
+                                    (success(#(_, rest4))) {
+                                        success(#(opFn(num1, num2), rest4))
+                                    }
+                                    (failure(fail)) { failure(fail) }
+                                }
+                            }
+                            (failure(fail)) { failure(fail) }
+                        }
+                    }
+                    (failure(fail)) { failure(fail) }
+                }
+            }
+            (failure(fail)) { failure(fail) }
+        }
+    }
+
 in 
 {
     let
+        // decimal: string -> try(#(string, string), #(expr, string))
         decimal = pmap(fn (str) { num(toNum(str)) }, rex(#/\d+/)); 
-        opp = pmap(fn (txt) { op(txt) }, text("+"));
-        plusExpr = apply(unsafe fn ([num1, opp, num2, _]) { application(opp, num1, num2) }, [
-            decimal,
-            opp,
-            decimal,
-            eof
-        ])
+
+        // opp: string -> try(#(string, string), #(expr -> expr -> expr, string))
+        opp = pmap(getOp, oneOf([text("+"), text("-"), text("*"), text("/")]));
+
+        // plusExpr: string -> try(#(string, string), #(expr, string))
+        plusExpr = parsePlusExpr(decimal, opp);
     in
+        puts("opp: "); puts(typeof(opp)); puts("\n");
+
+        puts("123: ");
         print parse(decimal, "123");
+        puts("+123: ");
         print parse(pmap(fn (txt) { op(txt) }, text("+")), "+123");
+        puts("12+34: ");
         print parse(plusExpr, "12+34");
+        puts("hello, world!: ");
         print parse(sequence([text("hello"), text(", "), text("world")]), "hello, world!");
+        puts("hello, world!: ");
         print parse(collect([text("hello"), text(", "), text("world")]), "hello, world!");
+        puts("12+34+: ");
         print parse(plusExpr, "12+34+");
 }

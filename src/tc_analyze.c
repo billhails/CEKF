@@ -374,11 +374,11 @@ static TcType *analyzeComparison(LamExp *exp1, LamExp *exp2, TcEnv *env,
     if (!unify(type1, type2, "comparison")) {
         eprintf("while unifying comparison:\n");
         ppLamExp(stderr, exp1);
-        eprintf(" (type: ");
+        eprintf("\n(type: ");
         ppTcType(stderr, prune(type1));
         eprintf(")\nwith\n");
         ppLamExp(stderr, exp2);
-        eprintf(" (type: ");
+        eprintf("\n(type: ");
         ppTcType(stderr, prune(type2));
         eprintf(")\n");
         REPORT_PARSER_INFO(exp1);
@@ -402,11 +402,11 @@ static TcType *analyzeSpaceship(LamExp *exp1, LamExp *exp2, TcEnv *env,
     if (!unify(type1, type2, "<=>")) {
         eprintf("while unifying <=>:\n");
         ppLamExp(stderr, exp1);
-        eprintf(" (type: ");
+        eprintf("\n(type: ");
         ppTcType(stderr, prune(type1));
         eprintf(")\nwith\n");
         ppLamExp(stderr, exp2);
-        eprintf(" (type: ");
+        eprintf("\n(type: ");
         ppTcType(stderr, prune(type2));
         eprintf(")\n");
         REPORT_PARSER_INFO(exp1);
@@ -723,13 +723,13 @@ static TcType *analyzeApply(LamApply *apply, TcEnv *env, TcNg *ng) {
         PROTECT(functionType);
         // unify(#a -> #b, #c -> #d)
         if (!unify(fn, functionType, "apply")) {
-            eprintf("while analyzing apply ");
+            eprintf("while analyzing apply:\n");
             ppLamExp(stderr, apply->function);
-            eprintf(" (type: ");
+            eprintf("\n(type: ");
             ppTcType(stderr, prune(fn));
-            eprintf(") to ");
+            eprintf(")\nto\n");
             ppLamExp(stderr, apply->args->exp);
-            eprintf(" (type: ");
+            eprintf("\n(type: ");
             ppTcType(stderr, prune(arg));
             eprintf(")\n");
             REPORT_PARSER_INFO(apply->function);
