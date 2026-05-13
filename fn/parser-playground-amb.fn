@@ -1,0 +1,302 @@
+let
+    link "ambutils.fn" as amb;
+    link "listutils.fn" as list;
+    import list.drop;
+    import list.member;
+
+    typedef tree {
+        sentence(tree, tree) |
+        noun_phrase(tree, tree) |
+        verb_phrase(tree, tree) |
+        prep_phrase(tree, tree) |
+        noun(string) |
+        verb(string) |
+        det(string) |
+        adj(string) |
+        prep(string)
+    };
+
+    typedef expr {
+        num(number) |
+        addition(expr, expr) |
+        subtraction(expr, expr)
+    };
+
+    fn toNum(str) {
+        let fn helper {
+            ([], acc) { acc }
+            (h @ t, acc) { helper(t, (ord(h) - ord('0')) + 10 * acc) }
+        }
+        in helper(str, 0)
+    }
+
+    fn bind(parser, next, input) {
+        fn (#(result, rest)) {
+            next(result, rest)
+        }(parser(input))
+    }
+
+    fn pmap(func, parser, input) {
+        bind(parser, fn (result, rest) {
+            #(func(result), rest)
+        }, input)
+    }
+
+    fn pure(value, input) {
+        #(value, input)
+    }
+
+    fn pair(left, right, input) {
+        bind(left, fn (lhs, rest1) {
+            bind(right, fn (rhs, rest2) {
+                #(#(lhs, rhs), rest2)
+            }, rest1)
+        }, input)
+    }
+
+    // choice_all preserves every parser alternative in order. Later semantic
+    // failure can backtrack into later branches after earlier branches are
+    // exhausted.
+    fn choice_all(parsers, input) {
+        amb.one_of(parsers)(input)
+    }
+
+    // choice_first is the ordered-choice surface spelling for grammars that
+    // want to express branch priority. In the current language there is no
+    // cut primitive, so this still backtracks into later branches when an
+    // earlier branch is rejected downstream.
+    fn choice_first(parsers, input) {
+        choice_all(parsers, input)
+    }
+
+    // optional prefers a parse when one exists, but backtracking can still
+    // reveal the absent branch.
+    fn optional(parser, input) {
+        pmap(fn (value) { just(value) }, parser, input) then pure(nothing, input)
+    }
+
+    // many/some assume a list-like input state where `rest != input` means the
+    // parser consumed something. That guard is what prevents non-consuming
+    // parsers from recursing forever.
+    fn many(parser, input) {
+        bind(parser, fn (head, rest1) {
+            amb.require(rest1 != input);
+            bind(many(parser), fn (tail, rest2) {
+                #([head] @@ tail, rest2)
+            }, rest1)
+        }, input) then pure([], input)
+    }
+
+    fn some(parser, input) {
+        bind(parser, fn (head, rest1) {
+            amb.require(rest1 != input);
+            bind(many(parser), fn (tail, rest2) {
+                #([head] @@ tail, rest2)
+            }, rest1)
+        }, input)
+    }
+
+    fn fold_chain {
+        (acc, []) { acc }
+        (acc, #(opFn, rhs) @ rest) { fold_chain(opFn(acc, rhs), rest) }
+    }
+
+    fn chainl1(parser, operatorParser, input) {
+        bind(parser, fn (first, rest1) {
+            bind(many(pair(operatorParser, parser)), fn (tail, rest2) {
+                #(fold_chain(first, tail), rest2)
+            }, rest1)
+        }, input)
+    }
+
+    fn satisfy(predicate, input) {
+        amb.require(input != []);
+        amb.require(predicate(<input));
+        #(<input, drop(1, input))
+    }
+
+    fn is_decimal(token) {
+        switch (regex_match(#/\d+/, token)) {
+            (just(#(_, []))) { true }
+            (_) { false }
+        }
+    }
+
+    fn word(makeNode, lexicon, input) {
+        pmap(makeNode, fn (tokens) {
+            satisfy(fn (token) {
+                member(token, lexicon)
+            }, tokens)
+        }, input)
+    }
+
+    fn parse_number(input) {
+        pmap(fn (token) { num(toNum(token)) }, fn (tokens) {
+            satisfy(is_decimal, tokens)
+        }, input)
+    }
+
+    fn parse_add_op(input) {
+        choice_first([
+            pmap(fn (_) { fn (left, right) { addition(left, right) } }, fn (tokens) {
+                satisfy(fn (token) { token == "+" }, tokens)
+            }),
+            pmap(fn (_) { fn (left, right) { subtraction(left, right) } }, fn (tokens) {
+                satisfy(fn (token) { token == "-" }, tokens)
+            })
+        ], input)
+    }
+
+    fn parse_sum(input) {
+        chainl1(parse_number, parse_add_op, input)
+    }
+
+    fn sentence_from_pair {
+        (#(subject, predicate)) { sentence(subject, predicate) }
+    }
+
+    fn phrase_from_pair {
+        (#(left, right)) { noun_phrase(left, right) }
+    }
+
+    fn verb_phrase_from_pair {
+        (#(left, right)) { verb_phrase(left, right) }
+    }
+
+    fn prep_phrase_from_pair {
+        (#(left, right)) { prep_phrase(left, right) }
+    }
+
+    fn parse_noun(input) {
+        word(fn (token) { noun(token) }, ["time", "fruit", "flies", "banana", "arrow"], input)
+    }
+
+    fn parse_verb(input) {
+        word(fn (token) { verb(token) }, ["flies", "like"], input)
+    }
+
+    fn parse_det(input) {
+        word(fn (token) { det(token) }, ["a", "an"], input)
+    }
+
+    fn parse_adj(input) {
+        word(fn (token) { adj(token) }, ["time", "fruit"], input)
+    }
+
+    fn parse_prep(input) {
+        word(fn (token) { prep(token) }, ["like"], input)
+    }
+
+    fn parse_noun_phrase(input) {
+        choice_first([
+            parse_noun,
+            pmap(phrase_from_pair, pair(parse_det, parse_noun)),
+            pmap(phrase_from_pair, pair(parse_adj, parse_noun))
+        ], input)
+    }
+
+    fn parse_prep_phrase(input) {
+        pmap(prep_phrase_from_pair, pair(parse_prep, parse_noun_phrase), input)
+    }
+
+    fn parse_verb_phrase(input) {
+        choice_first([
+            pmap(verb_phrase_from_pair, pair(parse_verb, parse_prep_phrase)),
+            pmap(verb_phrase_from_pair, pair(parse_verb, parse_noun_phrase))
+        ], input)
+    }
+
+    fn parse_sentence(input) {
+        choice_first([
+            pmap(sentence_from_pair, pair(parse_noun, parse_verb_phrase)),
+            pmap(sentence_from_pair, pair(parse_noun_phrase, parse_verb_phrase))
+        ], input)
+    }
+
+    fn parse_complete(parser, input) {
+        fn (#(tree0, rest)) {
+            amb.require(rest == []);
+            tree0
+        }(parser(input))
+    }
+
+    fn parse_with_meaning(parser, meaning, input) {
+        fn (#(tree0, rest)) {
+            amb.require(rest == []);
+            amb.require(meaning(tree0));
+            tree0
+        }(parser(input))
+    }
+
+    fn fruit_is_insects {
+        (sentence(
+            noun_phrase(adj("fruit"), noun("flies")),
+            verb_phrase(verb("like"), noun_phrase(det("a"), noun("banana")))
+        )) { true }
+        (_) { false }
+    }
+
+    fn fruit_is_flying {
+        (sentence(
+            noun("fruit"),
+            verb_phrase(verb("flies"), prep_phrase(prep("like"), noun_phrase(det("a"), noun("banana"))))
+        )) { true }
+        (_) { false }
+    }
+
+    fn time_is_a_simile {
+        (sentence(
+            noun("time"),
+            verb_phrase(verb("flies"), prep_phrase(prep("like"), noun_phrase(det("an"), noun("arrow"))))
+        )) { true }
+        (_) { false }
+    }
+
+    fn time_flies_are_insects {
+        (sentence(
+            noun_phrase(adj("time"), noun("flies")),
+            verb_phrase(verb("like"), noun_phrase(det("an"), noun("arrow")))
+        )) { true }
+        (_) { false }
+    }
+
+in {
+    puts("optional det present: ");
+    print(optional(parse_det, ["an", "arrow"]));
+
+    puts("optional det absent: ");
+    print(optional(parse_det, ["arrow"]));
+
+    puts("many adjectives: ");
+    print(many(parse_adj, ["fruit", "time", "arrow"]));
+
+    puts("some adjectives: ");
+    print(some(parse_adj, ["fruit", "time", "arrow"]));
+
+    puts("many non-consuming parser: ");
+    print(many(fn (tokens) { #("stuck", tokens) }, ["banana"]));
+
+    puts("chainl1 arithmetic: ");
+    print(parse_complete(parse_sum, ["12", "+", "34", "+", "56"]));
+
+    puts("chainl1 arithmetic with subtraction: ");
+    print(parse_complete(parse_sum, ["20", "-", "3", "-", "4"]));
+
+    puts("raw fruit parse: ");
+    print(parse_complete(parse_sentence, ["fruit", "flies", "like", "a", "banana"]));
+
+    puts("fruit forced to insects: ");
+    print(parse_with_meaning(parse_sentence, fruit_is_insects, ["fruit", "flies", "like", "a", "banana"]));
+
+    puts("fruit forced to flying-fruit: ");
+    print(parse_with_meaning(parse_sentence, fruit_is_flying, ["fruit", "flies", "like", "a", "banana"]));
+
+    puts("raw time parse: ");
+    print(parse_complete(parse_sentence, ["time", "flies", "like", "an", "arrow"]));
+
+    puts("time forced to simile: ");
+    print(parse_with_meaning(parse_sentence, time_is_a_simile, ["time", "flies", "like", "an", "arrow"]));
+
+    puts("time forced to insect reading: ");
+    print(parse_with_meaning(parse_sentence, time_flies_are_insects, ["time", "flies", "like", "an", "arrow"]));
+}

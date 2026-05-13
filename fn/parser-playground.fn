@@ -102,10 +102,9 @@ let
     }
 
     // binary:
-    //   (#i -> try(#f, #(#l, #i))) ->
-    //   (#i -> try(#f, #(#l -> #r -> #o, #i))) ->
-    //   (#i -> try(#f, #(#r, #i))) ->
-    //   #i -> try(#f, #(#o, #i))
+    //   (#a -> try(#b, #(#c, #d))) ->
+    //   (#d -> try(#b, #(#c -> #e -> #f, #g))) ->
+    //   (#g -> try(#b, #(#e, #h))) -> #a -> try(#b, #(#f, #h))
     fn binary(left, operatorParser, right, input) {
         switch (left(input)) {
             (success(#(lhs, rest1))) {

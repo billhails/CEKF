@@ -2,6 +2,9 @@
 
 More of a wish-list than a hard and fast plan.
 
+* Continuations.
+  * Reinstate cut (discards current back continuation)
+  * Consider delimited continuations.
 * Types.
   * Consider type classes as a general solution to `EQ <type>`, `map` etc.
   * Records should create accessor functions for each tag.

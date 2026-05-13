@@ -1,0 +1,16 @@
+let
+    first_result = here fn (k) { k(1 then 2) then 3 };
+
+    second_result = {
+        let chosen = here fn (k) { k(1 then 2) then 3 };
+        in if (chosen == 1) { back } else { chosen }
+    };
+
+    third_result = {
+        let chosen = here fn (k) { k(1 then 2) then 3 };
+        in if (chosen < 3) { back } else { chosen }
+    };
+in
+    assert(first_result == 1);
+    assert(second_result == 2);
+    assert(third_result == 3)
