@@ -101,6 +101,48 @@ let
         apply(identity, parsers)
     }
 
+    // binary:
+    //   (#i -> try(#f, #(#l, #i))) ->
+    //   (#i -> try(#f, #(#l -> #r -> #o, #i))) ->
+    //   (#i -> try(#f, #(#r, #i))) ->
+    //   #i -> try(#f, #(#o, #i))
+    fn binary(left, operatorParser, right, input) {
+        switch (left(input)) {
+            (success(#(lhs, rest1))) {
+                switch (operatorParser(rest1)) {
+                    (success(#(opFn, rest2))) {
+                        switch (right(rest2)) {
+                            (success(#(rhs, rest3))) {
+                                success(#(opFn(lhs, rhs), rest3))
+                            }
+                            (failure(fail)) { failure(fail) }
+                        }
+                    }
+                    (failure(fail)) { failure(fail) }
+                }
+            }
+            (failure(fail)) { failure(fail) }
+        }
+    }
+
+    // terminated:
+    //   (#a -> try(#b, #(#c, #d))) ->
+    //   (#d -> try(#b, #(_, #e))) ->
+    //   #a -> try(#b, #(#c, #e))
+    fn terminated(parser, endParser, input) {
+        switch (parser(input)) {
+            (success(#(result, rest1))) {
+                switch (endParser(rest1)) {
+                    (success(#(_, rest2))) {
+                        success(#(result, rest2))
+                    }
+                    (failure(fail)) { failure(fail) }
+                }
+            }
+            (failure(fail)) { failure(fail) }
+        }
+    }
+
     // parse: (#a -> try(#(string, string), #b)) -> #a -> #b
     fn parse (parser, input) {
         switch (parser(input)) {
@@ -112,6 +154,7 @@ let
         }
     }
 
+    // oneOf: list(#a -> try(_, #b)) -> #a -> try(#(string, #a), #b)
     fn oneOf(parsers, input) {
         let
             fn helper {
@@ -141,34 +184,6 @@ let
         ("/") { fn (l, r) { division(l, r) } }
     }
 
-    // parsePlusExpr:
-    //   (string -> try(#(string, string), #(expr, string))) ->
-    //   (string -> try(#(string, string), #(expr -> expr -> expr, string))) ->
-    //   string -> try(#(string, string), #(expr, string))
-    fn parsePlusExpr(decimal, opp, input) {
-        switch (decimal(input)) {
-            (success(#(num1, rest1))) {
-                switch (opp(rest1)) {
-                    (success(#(opFn, rest2))) {
-                        switch (decimal(rest2)) {
-                            (success(#(num2, rest3))) {
-                                switch (eof(rest3)) {
-                                    (success(#(_, rest4))) {
-                                        success(#(opFn(num1, num2), rest4))
-                                    }
-                                    (failure(fail)) { failure(fail) }
-                                }
-                            }
-                            (failure(fail)) { failure(fail) }
-                        }
-                    }
-                    (failure(fail)) { failure(fail) }
-                }
-            }
-            (failure(fail)) { failure(fail) }
-        }
-    }
-
 in 
 {
     let
@@ -179,9 +194,12 @@ in
         opp = pmap(getOp, oneOf([text("+"), text("-"), text("*"), text("/")]));
 
         // plusExpr: string -> try(#(string, string), #(expr, string))
-        plusExpr = parsePlusExpr(decimal, opp);
+        plusExpr = terminated(binary(decimal, opp, decimal), eof);
     in
         puts("opp: "); puts(typeof(opp)); puts("\n");
+        puts("terminated: "); puts(typeof(terminated)); puts("\n");
+        puts("oneOf: "); puts(typeof(oneOf)); puts("\n");
+        puts("binary: "); puts(typeof(binary)); puts("\n");
 
         puts("123: ");
         print parse(decimal, "123");
