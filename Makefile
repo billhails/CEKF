@@ -3,7 +3,7 @@ list-cores test indent indent-src indent-generated docs \
 install-sqlite3 coverage extracov view-coverage \
 coverage-target test-c test-b test-big-c help \
 establish-baseline test-refactoring update-baseline clean-baseline \
-scratch
+scratch bench-regex-cache
 
 # pass on the command line, i.e. `make test MODE=prod`
 #
@@ -205,6 +205,18 @@ $(TMPDIR)/test_harness.fnc: $(FNDIR)/rewrite/test_harness.fn $(TARGET) | $(TMPDI
 PERF_CASE=fib35
 test-perf-c: $(TMPDIR)/$(PERF_CASE)
 	time $(TMPDIR)/$(PERF_CASE)
+
+bench-regex-cache: all $(TMPDIR)/regex-cache-bench.fnc
+	@echo "regex cache benchmark: cache enabled"
+	@for i in 1 2 3 4 5 ; do \
+		echo "run $$i"; \
+		$(TARGET) --report --binary-in=$(TMPDIR)/regex-cache-bench.fnc; \
+	done
+	@echo "regex cache benchmark: cache disabled"
+	@for i in 1 2 3 4 5 ; do \
+		echo "run $$i"; \
+		$(TARGET) --disable-regex-cache --report --binary-in=$(TMPDIR)/regex-cache-bench.fnc; \
+	done
 
 EXTRA_TYPES=bigint_word \
 BigInt \

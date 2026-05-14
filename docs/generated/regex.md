@@ -4,6 +4,7 @@ Regex AST and helper data structures
 
 ```mermaid
 flowchart LR
+RegexMap --entries--> Regex
 RegexCategory --code--> uchar
 RegexCategory --exact--> bool
 RegexRange --lower--> character
@@ -20,6 +21,8 @@ RegexStringSource --tail--> Vec
 RegexStringSource --cache--> CharacterArray
 RegexStringSource --exhausted--> bool
 RegexFileSource --handle--> file
+RegexFileSource --startPos--> filepos
+RegexFileSource --positions--> RegexFilePosArray
 RegexFileSource --cache--> CharacterArray
 RegexFileSource --exhausted--> bool
 RegexClassItem --literal--> character
@@ -44,7 +47,8 @@ RegexStatus["enum RegexStatus"]
 RegexMetaType["enum RegexMetaType"]
 RegexClassItemArray["RegexClassItemArray[]"] --entries--> RegexClassItem
 RegexNodeArray["RegexNodeArray[]"] --entries--> RegexNode
-RegexPositionArray["RegexPositionArray[]"] --entries--> ptr
+RegexPositionArray["RegexPositionArray[]"] --entries--> index
+RegexFilePosArray["RegexFilePosArray[]"] --entries--> filepos
 ```
 
 > Generated from src/regex.yaml by tools/generate.py

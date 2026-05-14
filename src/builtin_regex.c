@@ -20,24 +20,94 @@
 #include "builtins_helper.h"
 #include "cekf.h"
 #include "common.h"
+#include "regex.h"
 #include "regex_helper.h"
 #include "regex_source.h"
 #include "symbol.h"
 #include "tc_analyze.h"
 #include "value.h"
 
+static RegexMap *regexCache = NULL;
+static bool regexCachingEnabled = true;
+
 static void registerRegexMatch(BuiltIns *registry);
 static void registerRegexMatchFile(BuiltIns *registry);
-static Value builtin_regex_match(Vec *args);
-static Value builtin_regex_match_file(Vec *args);
+Value builtin_regex_match(Vec *args);
+Value builtin_regex_match_file(Vec *args);
+static RegexMap *getRegexCache(void);
+static Regex *compileRegexPattern(Value patternValue, RegexStatus *status,
+                                  Index *errorOffset);
 static TcType *makeFileType(void);
 static TcType *makeRegexType(void);
 static TcType *makeMaybeStringPairType(void);
 static Value unpackRegexPattern(Value regexValue);
 
+void markRegexCache(void) {
+    if (regexCache != NULL) {
+        markHashTable((HashTable *)regexCache);
+    }
+}
+
+bool enableRegexCaching(void) {
+    bool previous = regexCachingEnabled;
+    regexCachingEnabled = true;
+    return previous;
+}
+
+bool disableRegexCaching(void) {
+    bool previous = regexCachingEnabled;
+    regexCachingEnabled = false;
+    return previous;
+}
+
 void registerRegex(BuiltIns *registry) {
     registerRegexMatch(registry);
     registerRegexMatchFile(registry);
+}
+
+static RegexMap *getRegexCache(void) {
+    if (regexCache == NULL) {
+        regexCache = newRegexMap();
+    }
+    return regexCache;
+}
+
+static Regex *compileRegexPattern(Value patternValue, RegexStatus *status,
+                                  Index *errorOffset) {
+    if (!regexCachingEnabled) {
+        CharacterArray *pattern = listToCharArray(patternValue);
+        int save = PROTECT(pattern);
+        Regex *compiled = regexCompile(pattern->entries, status, errorOffset);
+        UNPROTECT(save);
+        return compiled;
+    }
+
+    int save = STARTPROTECT();
+    SCharVec *patternUtf8 = listToUtf8(patternValue);
+    PROTECT(patternUtf8);
+
+    HashSymbol *key = newSymbol(patternUtf8->entries);
+    Regex *compiled = NULL;
+    if (getRegexMap(getRegexCache(), key, &compiled)) {
+        if (status != NULL) {
+            *status = REGEX_STATUS_OK;
+        }
+        if (errorOffset != NULL) {
+            *errorOffset = 0;
+        }
+        UNPROTECT(save);
+        return compiled;
+    }
+
+    CharacterArray *pattern = listToCharArray(patternValue);
+    PROTECT(pattern);
+    compiled = regexCompile(pattern->entries, status, errorOffset);
+    if (compiled != NULL && (status == NULL || *status == REGEX_STATUS_OK)) {
+        PROTECT(compiled);
+        setRegexMap(getRegexCache(), key, compiled);
+    }
+    UNPROTECT(save);
+    return compiled;
 }
 
 static TcType *makeFileType(void) {
@@ -109,15 +179,13 @@ static Value unpackRegexPattern(Value regexValue) {
     return regex->entries[1];
 }
 
-static Value builtin_regex_match(Vec *args) {
+Value builtin_regex_match(Vec *args) {
     int save = STARTPROTECT();
     Value patternValue = unpackRegexPattern(args->entries[0]);
-    CharacterArray *pattern = listToCharArray(patternValue);
-    PROTECT(pattern);
 
     RegexStatus status = REGEX_STATUS_OK;
     Index errorOffset = 0;
-    Regex *compiled = regexCompile(pattern->entries, &status, &errorOffset);
+    Regex *compiled = compileRegexPattern(patternValue, &status, &errorOffset);
     if (compiled == NULL || status != REGEX_STATUS_OK) {
         cant_happen("invalid regex pattern at offset %d", errorOffset);
     }
@@ -149,11 +217,9 @@ static Value builtin_regex_match(Vec *args) {
     return result;
 }
 
-static Value builtin_regex_match_file(Vec *args) {
+Value builtin_regex_match_file(Vec *args) {
     int save = STARTPROTECT();
     Value patternValue = unpackRegexPattern(args->entries[0]);
-    CharacterArray *pattern = listToCharArray(patternValue);
-    PROTECT(pattern);
 
 #ifdef SAFETY_CHECKS
     if (args->entries[1].type != VALUE_TYPE_OPAQUE) {
@@ -167,7 +233,7 @@ static Value builtin_regex_match_file(Vec *args) {
 
     RegexStatus status = REGEX_STATUS_OK;
     Index errorOffset = 0;
-    Regex *compiled = regexCompile(pattern->entries, &status, &errorOffset);
+    Regex *compiled = compileRegexPattern(patternValue, &status, &errorOffset);
     if (compiled == NULL || status != REGEX_STATUS_OK) {
         cant_happen("invalid regex pattern at offset %d", errorOffset);
     }

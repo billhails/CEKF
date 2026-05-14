@@ -18,8 +18,13 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include <stdbool.h>
+
 #include "builtins.h"
 
 void registerRegex(BuiltIns *registry);
+void markRegexCache(void);
+bool enableRegexCaching(void);
+bool disableRegexCaching(void);
 
 #endif

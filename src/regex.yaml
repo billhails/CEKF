@@ -146,6 +146,13 @@ arrays:
     data:
       entries: filepos
 
+hashes:
+  RegexMap:
+    meta:
+      brief: Compiled regex cache
+    data:
+      entries: Regex
+
 primitives: !include primitives.yaml
 
 external:

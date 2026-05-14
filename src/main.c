@@ -34,6 +34,7 @@
 #include "ast_pp.h"
 #include "ast_prepare.h"
 #include "bigint.h"
+#include "builtin_regex.h"
 #include "builtins_helper.h"
 #include "bytecode.h"
 #include "common.h"
@@ -117,6 +118,7 @@ static int amb_flag = 0;
 static int closure_flag = 0;
 static int shake_flag = 0;
 static int flat_closures_flag = 0;
+static int disable_regex_cache_flag = 0;
 
 /**
  * Report the build mode, i.e. the value of the BUILD_MODE macro when compiled.
@@ -213,6 +215,7 @@ static void usage(char *prog, int status) {
         "    --dump-amb               Display the IR after the amb transform.\n"
         "    --dump-shake             Display the IR after tree shaking.\n"
         "    --dump-uncurry           Display the IR after uncurrying.\n"
+        "    --disable-regex-cache    Disable compiled regex caching.\n"
         "    --parse-only             Stop after parsing to enable "
         "parser-only profiling.\n"
         "    --report                 Report statistics.\n"
@@ -273,6 +276,7 @@ static int processArgs(int argc, char *argv[]) {
             {"dump-alpha", optional_argument, 0, 'a'},
             {"dump-beta", optional_argument, 0, 'b'},
             {"flat-closures", no_argument, &flat_closures_flag, 1},
+            {"disable-regex-cache", no_argument, &disable_regex_cache_flag, 1},
             {"include", required_argument, 0, 'i'},
             {"binary-out", required_argument, 0, 'O'},
             {"binary-in", required_argument, 0, 'B'},
@@ -351,6 +355,10 @@ static int processArgs(int argc, char *argv[]) {
 
     if (help_flag) {
         usage(argv[0], 0);
+    }
+
+    if (disable_regex_cache_flag) {
+        disableRegexCaching();
     }
 
     if (binary_input_file != NULL && binary_output_file != NULL) {

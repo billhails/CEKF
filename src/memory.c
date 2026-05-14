@@ -27,6 +27,7 @@
 #include "annotate.h"
 #include "arithmetic_next.h"
 #include "builtin_io.h"
+#include "builtin_regex.h"
 #include "cekf.h"
 #include "common.h"
 #include "memory.h"
@@ -550,6 +551,7 @@ static void mark() {
     markProtected();
     markNameSpaces();
     markMemBufs();
+    markRegexCache();
     minlam_runtime_mark_reg();
 #ifdef DEBUG_LOG_GC
     eprintf("starting markVarTables\n");
