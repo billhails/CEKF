@@ -431,5 +431,57 @@ Once that input abstraction exists, separate builtins still make sense:
 * add a separate `regex_match_file` builtin for file-backed sources.
 
 That keeps the regex engine itself focused on the abstract source interface,
-while file-position management such as `fseek` and `ftell` stays in the file
-facing layer rather than leaking into `regex_helper`.
+while file-position management such as `fgetpos` and `fsetpos` stays in the
+file-facing layer rather than leaking into `regex_helper`.
+
+### Making `amb` work with file-based regex matching
+
+The most promising near-term route is to keep `regex_match_file` itself
+deterministic and layer `amb` behavior on top in F♮ code.
+
+That is a better fit for the current architecture:
+
+* `regex_match_file` can stay a simple prefix matcher over a file-backed
+  source.
+* ordinary match failure can remain `nothing` rather than becoming an implicit
+  `back`.
+* rollback policy can live at the parser layer, alongside other `amb`-driven
+  control flow.
+
+In that shape, the helper should save the file position before attempting the
+match, translate immediate failure into rewind-plus-`back`, and also rewind if
+later backtracking revisits a successful match.
+
+In rough F♮ terms:
+
+```fn
+fn regex_match_file_amb(re, file) {
+    let pos = fgetpos(file);
+    in switch (regex_match_file(re, file)) {
+        (just(matched)) {
+            matched then {
+                fsetpos(file, pos);
+                back
+            }
+        }
+        (nothing) {
+            fsetpos(file, pos);
+            back
+        }
+    }
+}
+```
+
+This is intentionally an `amb` adapter, not a replacement for the base builtin.
+The builtin itself should stay useful in deterministic code, while the helper
+provides the parser-facing rollback semantics.
+
+Two practical notes follow from that:
+
+* this approach needs language-visible `fgetpos` and `fsetpos` operations,
+  together with a `filepos` value surface.
+* if this is later spelled as a macro, the expansion should evaluate the file
+  expression exactly once.
+
+That gives file-backed regex parsing a viable `amb` story without forcing the
+regex engine itself to understand backtracking continuations.

@@ -1,0 +1,17 @@
+namespace
+
+fn regex_match_file_amb(re, file) {
+    let pos = fgetpos(file);
+    in switch (regex_match_file(re, file)) {
+        (just(matched)) {
+            matched then {
+                fsetpos(file, pos);
+                back
+            }
+        }
+        (nothing) {
+            fsetpos(file, pos);
+            back
+        }
+    }
+}
