@@ -28,6 +28,10 @@ Regex *regexCompile(const Character *pattern, RegexStatus *status,
                     Index *errorOffset);
 void regexFree(Regex *regex);
 
+int regexMatchSourcep(const Regex *pattern, RegexSource *source,
+                      Index *matchLength);
+int regexMatchCharArrayp(const Regex *pattern, CharacterArray *text,
+                         Index *matchLength);
 int regexMatchp(const Regex *pattern, const Character *text,
                 Index *matchLength);
 int regexMatch(const Character *pattern, const Character *text,

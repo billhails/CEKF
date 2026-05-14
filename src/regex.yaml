@@ -2,6 +2,9 @@ config:
   name: regex
   description: Regex AST and helper data structures
   parserInfo: false
+  limited_includes:
+  - cekfs.h
+  - cekfs_debug.h
 
 enums:
   RegexStatus:
@@ -68,6 +71,22 @@ structs:
       root: RegexNode
       flags: uchar
 
+  RegexStringSource:
+    meta:
+      brief: Grow-only cached regex input backed by a CEKF string list.
+    data:
+      tail: Vec
+      cache: CharacterArray
+      exhausted: bool=false
+
+  RegexFileSource:
+    meta:
+      brief: Grow-only cached regex input backed by a file handle.
+    data:
+      handle: file
+      cache: CharacterArray
+      exhausted: bool=false
+
 unions:
   RegexClassItem:
     meta:
@@ -100,6 +119,13 @@ unions:
       alternation: RegexNodeArray
       repeat: RegexRepeat
 
+  RegexSource:
+    meta:
+      brief: Tagged regex input source state.
+    data:
+      string: RegexStringSource
+      file: RegexFileSource
+
 arrays:
   RegexClassItemArray:
     data:
@@ -111,6 +137,9 @@ arrays:
 
   RegexPositionArray:
     data:
-      entries: ptr
+      entries: index
 
 primitives: !include primitives.yaml
+
+external:
+- !include cekfs.yaml

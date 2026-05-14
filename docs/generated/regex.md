@@ -15,6 +15,13 @@ RegexRepeat --min--> index
 RegexRepeat --max--> index
 RegexRepeat --unlimited--> bool
 Regex --root--> RegexNode
+Regex --flags--> uchar
+RegexStringSource --tail--> Vec
+RegexStringSource --cache--> CharacterArray
+RegexStringSource --exhausted--> bool
+RegexFileSource --handle--> file
+RegexFileSource --cache--> CharacterArray
+RegexFileSource --exhausted--> bool
 RegexClassItem --literal--> character
 RegexClassItem --range--> RegexRange
 RegexClassItem --meta--> RegexMetaType
@@ -31,6 +38,8 @@ RegexNode --end--> void_ptr
 RegexNode --concat--> RegexNodeArray
 RegexNode --alternation--> RegexNodeArray
 RegexNode --repeat--> RegexRepeat
+RegexSource --string--> RegexStringSource
+RegexSource --file--> RegexFileSource
 RegexStatus["enum RegexStatus"]
 RegexMetaType["enum RegexMetaType"]
 RegexClassItemArray["RegexClassItemArray[]"] --entries--> RegexClassItem

@@ -1,9 +1,10 @@
 #include "regex_helper.h"
 
 #include "memory.h"
+#include "regex_source.h"
 #include "unicode.h"
 
-typedef const Character *RegexPosition;
+typedef Index RegexPosition;
 
 #define REGEX_INLINE_FLAG_CASE_INSENSITIVE ((unsigned char)0x01)
 #define REGEX_INLINE_FLAG_DOTALL ((unsigned char)0x02)
@@ -11,6 +12,7 @@ typedef const Character *RegexPosition;
 static void compileError(RegexStatus *status, Index *errorOffset,
                          RegexStatus code, Index offset);
 static void ensureRegexMemoryReady(void);
+static CharacterArray *copyNullTerminatedText(const Character *text);
 static bool regexFlagEnabled(unsigned char flags, unsigned char mask);
 static bool parseInlineFlag(Character flag, unsigned char *flags);
 static bool parseLeadingInlineFlags(const Character *pattern, Index *cursor,
@@ -64,21 +66,22 @@ static bool matchClassItem(const RegexClassItem *item, Character c,
 static bool matchCharClass(const RegexCharClass *charClass, Character c,
                            unsigned char flags);
 static bool matchAtom(const RegexAtom *atom, Character c, unsigned char flags);
-static bool matchNode(const RegexNode *node, RegexPosition text,
-                      RegexPosition inputStart, unsigned char flags,
-                      RegexPositionArray *out);
-static bool matchSequence(const RegexNodeArray *list, RegexPosition text,
-                          RegexPosition inputStart, unsigned char flags,
-                          RegexPositionArray *out);
-static bool matchAlternation(const RegexNodeArray *list, RegexPosition text,
-                             RegexPosition inputStart, unsigned char flags,
-                             RegexPositionArray *out);
-static bool matchRepeat(const RegexRepeat *repeat, RegexPosition text,
-                        RegexPosition inputStart, unsigned char flags,
-                        RegexPositionArray *out);
-static bool matchRepeatGreedy(const RegexRepeat *repeat, RegexPosition text,
-                              RegexPosition inputStart, unsigned char flags,
-                              Index count, RegexPositionArray *out);
+static bool matchNode(const RegexNode *node, RegexSource *source,
+                      RegexPosition position, RegexPosition inputStart,
+                      unsigned char flags, RegexPositionArray *out);
+static bool matchSequence(const RegexNodeArray *list, RegexSource *source,
+                          RegexPosition position, RegexPosition inputStart,
+                          unsigned char flags, RegexPositionArray *out);
+static bool matchAlternation(const RegexNodeArray *list, RegexSource *source,
+                             RegexPosition position, RegexPosition inputStart,
+                             unsigned char flags, RegexPositionArray *out);
+static bool matchRepeat(const RegexRepeat *repeat, RegexSource *source,
+                        RegexPosition position, RegexPosition inputStart,
+                        unsigned char flags, RegexPositionArray *out);
+static bool matchRepeatGreedy(const RegexRepeat *repeat, RegexSource *source,
+                              RegexPosition position, RegexPosition inputStart,
+                              unsigned char flags, Index count,
+                              RegexPositionArray *out);
 
 static void compileError(RegexStatus *status, Index *errorOffset,
                          RegexStatus code, Index offset) {
@@ -95,6 +98,24 @@ static void ensureRegexMemoryReady(void) {
     if (!protectionInitialized()) {
         initProtection();
     }
+}
+
+static CharacterArray *copyNullTerminatedText(const Character *text) {
+    CharacterArray *chars = newCharacterArray();
+    int save = PROTECT(chars);
+
+    while (true) {
+        Character current = *text;
+
+        pushCharacterArray(chars, current);
+        if (current == L'\0') {
+            break;
+        }
+        text++;
+    }
+
+    UNPROTECT(save);
+    return chars;
 }
 
 static bool regexFlagEnabled(unsigned char flags, unsigned char mask) {
@@ -270,7 +291,7 @@ static bool appendClassItem(RegexCharClass *charClass, RegexClassItem *item) {
 }
 
 static bool appendPosition(RegexPositionArray *set, RegexPosition position) {
-    pushRegexPositionArray(set, (void *)position);
+    pushRegexPositionArray(set, position);
     return true;
 }
 
@@ -286,7 +307,7 @@ static bool appendPositions(RegexPositionArray *dest,
 }
 
 static RegexPosition positionAt(const RegexPositionArray *set, Index index) {
-    return (RegexPosition)set->entries[index];
+    return set->entries[index];
 }
 
 static bool parseUnicodeEscape(const Character *pattern, Index *cursor,
@@ -1064,9 +1085,9 @@ static bool matchAtom(const RegexAtom *atom, Character c, unsigned char flags) {
     }
 }
 
-static bool matchSequence(const RegexNodeArray *list, RegexPosition text,
-                          RegexPosition inputStart, unsigned char flags,
-                          RegexPositionArray *out) {
+static bool matchSequence(const RegexNodeArray *list, RegexSource *source,
+                          RegexPosition position, RegexPosition inputStart,
+                          unsigned char flags, RegexPositionArray *out) {
     int save = STARTPROTECT();
     RegexPositionArray *current = newRegexPositionArray();
     int currentSave = PROTECT(current);
@@ -1076,15 +1097,15 @@ static bool matchSequence(const RegexNodeArray *list, RegexPosition text,
     Index j;
     bool ok;
 
-    appendPosition(current, text);
+    appendPosition(current, position);
 
     for (i = 0; i < list->size; i++) {
         for (j = 0; j < current->size; j++) {
             RegexPositionArray *childMatches = newRegexPositionArray();
             int childSave = PROTECT(childMatches);
 
-            ok = matchNode(list->entries[i], positionAt(current, j), inputStart,
-                           flags, childMatches);
+            ok = matchNode(list->entries[i], source, positionAt(current, j),
+                           inputStart, flags, childMatches);
             if (!ok) {
                 UNPROTECT(save);
                 return false;
@@ -1112,9 +1133,9 @@ static bool matchSequence(const RegexNodeArray *list, RegexPosition text,
     return ok;
 }
 
-static bool matchAlternation(const RegexNodeArray *list, RegexPosition text,
-                             RegexPosition inputStart, unsigned char flags,
-                             RegexPositionArray *out) {
+static bool matchAlternation(const RegexNodeArray *list, RegexSource *source,
+                             RegexPosition position, RegexPosition inputStart,
+                             unsigned char flags, RegexPositionArray *out) {
     Index i;
     bool ok;
 
@@ -1122,8 +1143,8 @@ static bool matchAlternation(const RegexNodeArray *list, RegexPosition text,
         RegexPositionArray *branchMatches = newRegexPositionArray();
         int branchSave = PROTECT(branchMatches);
 
-        ok =
-            matchNode(list->entries[i], text, inputStart, flags, branchMatches);
+        ok = matchNode(list->entries[i], source, position, inputStart, flags,
+                       branchMatches);
         if (!ok) {
             UNPROTECT(branchSave);
             return false;
@@ -1138,9 +1159,10 @@ static bool matchAlternation(const RegexNodeArray *list, RegexPosition text,
     return true;
 }
 
-static bool matchRepeatGreedy(const RegexRepeat *repeat, RegexPosition text,
-                              RegexPosition inputStart, unsigned char flags,
-                              Index count, RegexPositionArray *out) {
+static bool matchRepeatGreedy(const RegexRepeat *repeat, RegexSource *source,
+                              RegexPosition position, RegexPosition inputStart,
+                              unsigned char flags, Index count,
+                              RegexPositionArray *out) {
     Index i;
     bool ok;
 
@@ -1148,7 +1170,8 @@ static bool matchRepeatGreedy(const RegexRepeat *repeat, RegexPosition text,
         RegexPositionArray *childMatches = newRegexPositionArray();
         int childSave = PROTECT(childMatches);
 
-        ok = matchNode(repeat->child, text, inputStart, flags, childMatches);
+        ok = matchNode(repeat->child, source, position, inputStart, flags,
+                       childMatches);
         if (!ok) {
             UNPROTECT(childSave);
             return false;
@@ -1156,11 +1179,11 @@ static bool matchRepeatGreedy(const RegexRepeat *repeat, RegexPosition text,
         for (i = 0; i < childMatches->size; i++) {
             RegexPosition next = positionAt(childMatches, i);
 
-            if (next == text) {
+            if (next == position) {
                 continue;
             }
-            if (!matchRepeatGreedy(repeat, next, inputStart, flags, count + 1,
-                                   out)) {
+            if (!matchRepeatGreedy(repeat, source, next, inputStart, flags,
+                                   count + 1, out)) {
                 UNPROTECT(childSave);
                 return false;
             }
@@ -1169,57 +1192,95 @@ static bool matchRepeatGreedy(const RegexRepeat *repeat, RegexPosition text,
     }
 
     if (count >= repeat->min) {
-        return appendPosition(out, text);
+        return appendPosition(out, position);
     }
 
     return true;
 }
 
-static bool matchRepeat(const RegexRepeat *repeat, RegexPosition text,
-                        RegexPosition inputStart, unsigned char flags,
-                        RegexPositionArray *out) {
-    return matchRepeatGreedy(repeat, text, inputStart, flags, 0, out);
+static bool matchRepeat(const RegexRepeat *repeat, RegexSource *source,
+                        RegexPosition position, RegexPosition inputStart,
+                        unsigned char flags, RegexPositionArray *out) {
+    return matchRepeatGreedy(repeat, source, position, inputStart, flags, 0,
+                             out);
 }
 
-static bool matchNode(const RegexNode *node, RegexPosition text,
-                      RegexPosition inputStart, unsigned char flags,
-                      RegexPositionArray *out) {
+static bool matchNode(const RegexNode *node, RegexSource *source,
+                      RegexPosition position, RegexPosition inputStart,
+                      unsigned char flags, RegexPositionArray *out) {
     switch (node->type) {
     case REGEXNODE_TYPE_EMPTY:
-        return appendPosition(out, text);
+        return appendPosition(out, position);
     case REGEXNODE_TYPE_ATOM:
-        if (*text != L'\0' &&
-            matchAtom(getRegexNode_Atom((RegexNode *)node), *text, flags)) {
-            return appendPosition(out, text + 1);
+        if (regexSourceGet(source, position) != L'\0' &&
+            matchAtom(getRegexNode_Atom((RegexNode *)node),
+                      regexSourceGet(source, position), flags)) {
+            return appendPosition(out, position + 1);
         }
         return true;
     case REGEXNODE_TYPE_BEGIN:
-        if (text == inputStart) {
-            return appendPosition(out, text);
+        if (position == inputStart) {
+            return appendPosition(out, position);
         }
         return true;
     case REGEXNODE_TYPE_END:
-        if (*text == L'\0') {
-            return appendPosition(out, text);
+        if (regexSourceGet(source, position) == L'\0') {
+            return appendPosition(out, position);
         }
         return true;
     case REGEXNODE_TYPE_CONCAT:
-        return matchSequence(getRegexNode_Concat((RegexNode *)node), text,
-                             inputStart, flags, out);
+        return matchSequence(getRegexNode_Concat((RegexNode *)node), source,
+                             position, inputStart, flags, out);
     case REGEXNODE_TYPE_ALTERNATION:
         return matchAlternation(getRegexNode_Alternation((RegexNode *)node),
-                                text, inputStart, flags, out);
+                                source, position, inputStart, flags, out);
     case REGEXNODE_TYPE_REPEAT:
-        return matchRepeat(getRegexNode_Repeat((RegexNode *)node), text,
-                           inputStart, flags, out);
+        return matchRepeat(getRegexNode_Repeat((RegexNode *)node), source,
+                           position, inputStart, flags, out);
     default:
         return false;
     }
 }
 
-int regexMatchp(const Regex *pattern, const Character *text,
-                Index *matchLength) {
-    int index = 0;
+int regexMatchSourcep(const Regex *pattern, RegexSource *source,
+                      Index *matchLength) {
+    RegexPosition index = 0;
+
+    if (matchLength != NULL) {
+        *matchLength = 0;
+    }
+
+    if (pattern == NULL || source == NULL) {
+        return -1;
+    }
+
+    while (true) {
+        RegexPositionArray *matches = newRegexPositionArray();
+        int matchesSave = PROTECT(matches);
+
+        if (!matchNode(pattern->root, source, index, 0, pattern->flags,
+                       matches)) {
+            return -1;
+        }
+
+        if (matches->size > 0) {
+            if (matchLength != NULL) {
+                *matchLength = positionAt(matches, 0) - index;
+            }
+            return (int)index;
+        }
+
+        UNPROTECT(matchesSave);
+        if (regexSourceGet(source, index) == L'\0') {
+            return -1;
+        }
+        index++;
+    }
+}
+
+int regexMatchCharArrayp(const Regex *pattern, CharacterArray *text,
+                         Index *matchLength) {
+    RegexSource *source;
     int save;
 
     if (matchLength != NULL) {
@@ -1233,32 +1294,36 @@ int regexMatchp(const Regex *pattern, const Character *text,
     ensureRegexMemoryReady();
     save = STARTPROTECT();
     PROTECT((Regex *)pattern);
+    PROTECT(text);
+    source = regexSourceFromCharArray(text);
+    PROTECT(source);
 
-    while (true) {
-        RegexPositionArray *matches = newRegexPositionArray();
-        int matchesSave = PROTECT(matches);
+    int result = regexMatchSourcep(pattern, source, matchLength);
+    UNPROTECT(save);
+    return result;
+}
 
-        if (!matchNode(pattern->root, text + index, text, pattern->flags,
-                       matches)) {
-            UNPROTECT(save);
-            return -1;
-        }
+int regexMatchp(const Regex *pattern, const Character *text,
+                Index *matchLength) {
+    CharacterArray *chars;
+    int save;
 
-        if (matches->size > 0) {
-            if (matchLength != NULL) {
-                *matchLength = (Index)(positionAt(matches, 0) - (text + index));
-            }
-            UNPROTECT(save);
-            return index;
-        }
-
-        UNPROTECT(matchesSave);
-        if (text[index] == L'\0') {
-            UNPROTECT(save);
-            return -1;
-        }
-        index++;
+    if (matchLength != NULL) {
+        *matchLength = 0;
     }
+
+    if (pattern == NULL || text == NULL) {
+        return -1;
+    }
+
+    ensureRegexMemoryReady();
+    save = STARTPROTECT();
+    PROTECT((Regex *)pattern);
+    chars = copyNullTerminatedText(text);
+    PROTECT(chars);
+    int result = regexMatchCharArrayp(pattern, chars, matchLength);
+    UNPROTECT(save);
+    return result;
 }
 
 int regexMatch(const Character *pattern, const Character *text,

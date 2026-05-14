@@ -21,6 +21,7 @@
 #include "cekf.h"
 #include "common.h"
 #include "regex_helper.h"
+#include "regex_source.h"
 #include "symbol.h"
 #include "tc_analyze.h"
 #include "value.h"
@@ -30,9 +31,6 @@ static Value builtin_regex_match(Vec *args);
 static TcType *makeRegexType(void);
 static TcType *makeMaybeStringPairType(void);
 static Value unpackRegexPattern(Value regexValue);
-static CharacterArray *sliceCharacterArray(const CharacterArray *source,
-                                           Index start, Index end);
-static Index logicalCharArrayLength(const CharacterArray *source);
 
 void registerRegex(BuiltIns *registry) { registerRegexMatch(registry); }
 
@@ -84,35 +82,11 @@ static Value unpackRegexPattern(Value regexValue) {
     return regex->entries[1];
 }
 
-static Index logicalCharArrayLength(const CharacterArray *source) {
-    if (source->size == 0) {
-        return 0;
-    }
-    if (source->entries[source->size - 1] == (Character)0) {
-        return source->size - 1;
-    }
-    return source->size;
-}
-
-static CharacterArray *sliceCharacterArray(const CharacterArray *source,
-                                           Index start, Index end) {
-    CharacterArray *slice = newCharacterArray();
-    int save = PROTECT(slice);
-    for (Index i = start; i < end; ++i) {
-        pushCharacterArray(slice, source->entries[i]);
-    }
-    pushCharacterArray(slice, (Character)0);
-    UNPROTECT(save);
-    return slice;
-}
-
 static Value builtin_regex_match(Vec *args) {
     int save = STARTPROTECT();
     Value patternValue = unpackRegexPattern(args->entries[0]);
     CharacterArray *pattern = listToCharArray(patternValue);
     PROTECT(pattern);
-    CharacterArray *text = listToCharArray(args->entries[1]);
-    PROTECT(text);
 
     RegexStatus status = REGEX_STATUS_OK;
     Index errorOffset = 0;
@@ -120,25 +94,21 @@ static Value builtin_regex_match(Vec *args) {
     if (compiled == NULL || status != REGEX_STATUS_OK) {
         cant_happen("invalid regex pattern at offset %d", errorOffset);
     }
+    PROTECT(compiled);
+
+    RegexSource *source = regexSourceFromStringList(args->entries[1].val.vec);
+    PROTECT(source);
 
     Index matchLength = 0;
-    int matchStart = regexMatchp(compiled, text->entries, &matchLength);
+    int matchStart = regexMatchSourcep(compiled, source, &matchLength);
     if (matchStart != 0) {
         UNPROTECT(save);
         return makeNothing();
     }
 
-    Index totalLength = logicalCharArrayLength(text);
-    CharacterArray *prefixChars = sliceCharacterArray(text, 0, matchLength);
-    PROTECT(prefixChars);
-    CharacterArray *restChars =
-        sliceCharacterArray(text, matchLength, totalLength);
-    PROTECT(restChars);
-
-    Value prefix = charArrayToList(prefixChars);
-    protectValue(prefix);
-    Value rest = charArrayToList(restChars);
-    protectValue(rest);
+    Value prefix;
+    Value rest;
+    regexSourceSplitAt(source, matchLength, &prefix, &rest);
 
     Vec *tuple = newVec(2);
     PROTECT(tuple);
