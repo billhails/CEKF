@@ -1,0 +1,20 @@
+let
+    link "ioutils.fn" as io;
+    testFile = "/tmp/cekf_regex_match_file";
+    testData = "abcDEF";
+in
+    assert(typeof regex_match_file == "regex -> opaque:file -> maybe(list(char))");
+
+    io.with_output_to(testFile, fn(fh) {
+        fputs(fh, testData);
+    });
+
+    assert(io.with_input_from(testFile, fn(fh) {
+        assert(regex_match_file(#/[a-z]+/, fh) == just("abc"));
+        fgets(fh)
+    }) == just("DEF"));
+
+    assert(io.with_input_from(testFile, fn(fh) {
+        assert(regex_match_file(#/z+/, fh) == nothing);
+        fgets(fh)
+    }) == just(testData));

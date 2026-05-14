@@ -5,6 +5,7 @@ config:
   limited_includes:
   - cekfs.h
   - cekfs_debug.h
+  - regex_filepos.h
 
 enums:
   RegexStatus:
@@ -84,6 +85,8 @@ structs:
       brief: Grow-only cached regex input backed by a file handle.
     data:
       handle: file
+      startPos: filepos
+      positions: RegexFilePosArray
       cache: CharacterArray
       exhausted: bool=false
 
@@ -138,6 +141,10 @@ arrays:
   RegexPositionArray:
     data:
       entries: index
+
+  RegexFilePosArray:
+    data:
+      entries: filepos
 
 primitives: !include primitives.yaml
 

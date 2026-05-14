@@ -1260,18 +1260,23 @@ int regexMatchSourcep(const Regex *pattern, RegexSource *source,
 
         if (!matchNode(pattern->root, source, index, 0, pattern->flags,
                        matches)) {
+            regexSourceSetPosition(source, 0);
             return -1;
         }
 
         if (matches->size > 0) {
+            Index matchedLength = positionAt(matches, 0) - index;
+
             if (matchLength != NULL) {
-                *matchLength = positionAt(matches, 0) - index;
+                *matchLength = matchedLength;
             }
+            regexSourceSetPosition(source, index + matchedLength);
             return (int)index;
         }
 
         UNPROTECT(matchesSave);
         if (regexSourceGet(source, index) == L'\0') {
+            regexSourceSetPosition(source, 0);
             return -1;
         }
         index++;

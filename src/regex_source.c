@@ -3,9 +3,13 @@
 #include "memory.h"
 #include "value.h"
 
+#include <limits.h>
+#include <string.h>
+
 static void ensureRegexSourceMemoryReady(void);
 static Value charArraySliceToList(const CharacterArray *source, Index start,
                                   Index end, Value tail);
+static bool regexFileSourceReadNext(RegexFileSource *fileSource);
 
 static void ensureRegexSourceMemoryReady(void) {
     if (!protectionInitialized()) {
@@ -60,8 +64,98 @@ Character regexSourceGet(RegexSource *source, Index position) {
         }
         return L'\0';
     }
-    case REGEXSOURCE_TYPE_FILE:
-        cant_happen("regex file source get not implemented yet");
+    case REGEXSOURCE_TYPE_FILE: {
+        RegexFileSource *fileSource = getRegexSource_File(source);
+
+        while (position >= fileSource->cache->size && !fileSource->exhausted) {
+            if (!regexFileSourceReadNext(fileSource)) {
+                break;
+            }
+        }
+
+        if (position < fileSource->cache->size) {
+            return getCharacterArray(fileSource->cache, position);
+        }
+        return L'\0';
+    }
+    default:
+        cant_happen("unrecognised regex source type %d", source->type);
+    }
+}
+
+static bool regexFileSourceReadNext(RegexFileSource *fileSource) {
+    Character wc = 0;
+    char buf[MB_LEN_MAX];
+    int bytesRead = 0;
+    bool consumed = false;
+    fpos_t nextPos;
+
+    while (bytesRead < MB_LEN_MAX) {
+        int byte = fgetc(fileSource->handle);
+        if (byte == EOF) {
+            fileSource->exhausted = true;
+            break;
+        }
+        buf[bytesRead++] = (char)byte;
+        consumed = true;
+
+        mbstate_t state;
+        memset(&state, 0, sizeof(state));
+
+        size_t result = mbrtowc(&wc, buf, (size_t)bytesRead, &state);
+        if (result == (size_t)-1) {
+            wc = 0xFFFD;
+            break;
+        }
+        if (result == (size_t)-2) {
+            continue;
+        }
+        break;
+    }
+
+    if (!consumed) {
+        return false;
+    }
+
+    if (fgetpos(fileSource->handle, &nextPos) != 0) {
+        cant_happen("unable to capture regex file position after read");
+    }
+
+    pushCharacterArray(fileSource->cache, wc);
+    pushRegexFilePosArray(fileSource->positions, nextPos);
+    return true;
+}
+
+void regexSourceSetPosition(RegexSource *source, Index position) {
+    if (source == NULL) {
+        return;
+    }
+
+    switch (source->type) {
+    case REGEXSOURCE_TYPE_STRING:
+        return;
+    case REGEXSOURCE_TYPE_FILE: {
+        RegexFileSource *fileSource = getRegexSource_File(source);
+
+        while (position > fileSource->cache->size && !fileSource->exhausted) {
+            if (!regexFileSourceReadNext(fileSource)) {
+                break;
+            }
+        }
+
+#ifdef SAFETY_CHECKS
+        if (position >= fileSource->positions->size) {
+            cant_happen(
+                "regex file source position %u exceeds cached boundary %u",
+                position, fileSource->positions->size - 1);
+        }
+#endif
+        if (fsetpos(fileSource->handle,
+                    &fileSource->positions->entries[position]) != 0) {
+            cant_happen("unable to restore regex file position");
+        }
+        return;
+    }
     default:
         cant_happen("unrecognised regex source type %d", source->type);
     }
@@ -125,13 +219,47 @@ void regexSourceSplitAt(RegexSource *source, Index offset, Value *prefix,
         }
         break;
     }
-    case REGEXSOURCE_TYPE_FILE:
-        cant_happen("regex file source split not implemented yet");
+    case REGEXSOURCE_TYPE_FILE: {
+        RegexFileSource *fileSource = getRegexSource_File(source);
+        Value empty = makeNull();
+
+        protectValue(empty);
+        if (rest != NULL) {
+            cant_happen("regex file source rest split not implemented yet");
+        }
+        if (prefix != NULL) {
+            *prefix = charArraySliceToList(fileSource->cache, 0, offset, empty);
+            protectValue(*prefix);
+        }
+        break;
+    }
     default:
         cant_happen("unrecognised regex source type %d", source->type);
     }
 
     UNPROTECT(save);
+}
+
+RegexSource *regexSourceFromFileHandle(FILE *handle) {
+    CharacterArray *cache;
+    RegexFilePosArray *positions;
+    RegexSource *source;
+    fpos_t startPos;
+    int save;
+
+    ensureRegexSourceMemoryReady();
+    if (fgetpos(handle, &startPos) != 0) {
+        cant_happen("unable to capture initial regex file position");
+    }
+
+    cache = newCharacterArray();
+    save = PROTECT(cache);
+    positions = newRegexFilePosArray();
+    PROTECT(positions);
+    pushRegexFilePosArray(positions, startPos);
+    source = makeRegexSource_File(handle, startPos, positions, cache);
+    UNPROTECT(save);
+    return source;
 }
 
 RegexSource *regexSourceFromStringList(Vec *tail) {

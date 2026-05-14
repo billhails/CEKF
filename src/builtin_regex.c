@@ -27,12 +27,22 @@
 #include "value.h"
 
 static void registerRegexMatch(BuiltIns *registry);
+static void registerRegexMatchFile(BuiltIns *registry);
 static Value builtin_regex_match(Vec *args);
+static Value builtin_regex_match_file(Vec *args);
+static TcType *makeFileType(void);
 static TcType *makeRegexType(void);
 static TcType *makeMaybeStringPairType(void);
 static Value unpackRegexPattern(Value regexValue);
 
-void registerRegex(BuiltIns *registry) { registerRegexMatch(registry); }
+void registerRegex(BuiltIns *registry) {
+    registerRegexMatch(registry);
+    registerRegexMatchFile(registry);
+}
+
+static TcType *makeFileType(void) {
+    return newTcType_Opaque(newSymbol("file"));
+}
 
 static TcType *makeRegexType(void) {
     return makeTypeSig(newSymbol("regex"), NULL);
@@ -66,6 +76,23 @@ static void registerRegexMatch(BuiltIns *registry) {
     PROTECT(resultType);
     pushNewBuiltIn(registry, "regex_match", resultType, args,
                    (void *)builtin_regex_match, "builtin_regex_match");
+    UNPROTECT(save);
+}
+
+static void registerRegexMatchFile(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    TcType *regexType = makeRegexType();
+    PROTECT(regexType);
+    pushBuiltInArgs(args, regexType);
+    TcType *fileType = makeFileType();
+    PROTECT(fileType);
+    pushBuiltInArgs(args, fileType);
+    TcType *maybeStringType = makeMaybeStringType();
+    PROTECT(maybeStringType);
+    pushNewBuiltIn(registry, "regex_match_file", maybeStringType, args,
+                   (void *)builtin_regex_match_file,
+                   "builtin_regex_match_file");
     UNPROTECT(save);
 }
 
@@ -109,6 +136,8 @@ static Value builtin_regex_match(Vec *args) {
     Value prefix;
     Value rest;
     regexSourceSplitAt(source, matchLength, &prefix, &rest);
+    protectValue(prefix);
+    protectValue(rest);
 
     Vec *tuple = newVec(2);
     PROTECT(tuple);
@@ -116,6 +145,49 @@ static Value builtin_regex_match(Vec *args) {
     tuple->entries[1] = rest;
 
     Value result = makeSome(value_Vec(tuple));
+    UNPROTECT(save);
+    return result;
+}
+
+static Value builtin_regex_match_file(Vec *args) {
+    int save = STARTPROTECT();
+    Value patternValue = unpackRegexPattern(args->entries[0]);
+    CharacterArray *pattern = listToCharArray(patternValue);
+    PROTECT(pattern);
+
+#ifdef SAFETY_CHECKS
+    if (args->entries[1].type != VALUE_TYPE_OPAQUE) {
+        cant_happen("unexpected %s", valueTypeName(args->entries[1].type));
+    }
+#endif
+    Opaque *data = args->entries[1].val.opaque;
+    if (data == NULL || data->data == NULL) {
+        cant_happen("regex_match_file on closed file handle");
+    }
+
+    RegexStatus status = REGEX_STATUS_OK;
+    Index errorOffset = 0;
+    Regex *compiled = regexCompile(pattern->entries, &status, &errorOffset);
+    if (compiled == NULL || status != REGEX_STATUS_OK) {
+        cant_happen("invalid regex pattern at offset %d", errorOffset);
+    }
+    PROTECT(compiled);
+
+    RegexSource *source = regexSourceFromFileHandle((FILE *)data->data);
+    PROTECT(source);
+
+    Index matchLength = 0;
+    int matchStart = regexMatchSourcep(compiled, source, &matchLength);
+    if (matchStart != 0) {
+        UNPROTECT(save);
+        return makeNothing();
+    }
+
+    Value prefix;
+    regexSourceSplitAt(source, matchLength, &prefix, NULL);
+    protectValue(prefix);
+
+    Value result = makeSome(prefix);
     UNPROTECT(save);
     return result;
 }
