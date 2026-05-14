@@ -6,11 +6,14 @@ let
     import list.reverse;
 
     typedef expr {
-        num(number) | application(expr, expr, expr) | op(string) | end |
+        num(number) |
+        application(expr, expr, expr) |
+        op(string) |
         addition(expr, expr) |
         multiplication(expr, expr) |
         subtraction(expr, expr) |
-        division(expr, expr)
+        division(expr, expr) |
+        end
     };
 
     // toNum: string -> number
