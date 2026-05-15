@@ -1,0 +1,55 @@
+let
+    link "ioutils.fn" as io;
+    link "parseramb.fn" as parser;
+    testFile = "/tmp/cekf_parseramb_file";
+
+    import parser.match_regex_file;
+    import parser.parse_complete_file;
+
+    fn filePair(fh) {
+        fn (#(letters, rest1)) {
+            fn (#(digits, rest2)) {
+                #(#(letters, digits), rest2)
+            }(match_regex_file(#/\d+/)(rest1))
+        }(match_regex_file(#/[a-z]+/)(fh))
+    }
+in {
+    io.with_output_to(testFile, fn (fh) {
+        fputs(fh, "abc123DEF");
+    });
+
+    assert(io.with_input_from(testFile, fn (fh) {
+        fn (#(parsed, rest)) {
+            assert(parsed == #("abc", "123"));
+            fgets(rest)
+        }(filePair(fh))
+    }) == just("DEF"));
+
+    io.with_output_to(testFile, fn (fh) {
+        fputs(fh, "abc123");
+    });
+
+    assert(io.with_input_from(testFile, fn (fh) {
+        assert(parse_complete_file(filePair, fh) == #("abc", "123"));
+        fgets(fh)
+    }) == just(""));
+
+    io.with_output_to(testFile, fn (fh) {
+        fputs(fh, "abcDEF");
+    });
+
+    assert(io.with_input_from(testFile, fn (fh) {
+        let branch = 0 then 1;
+        in if (branch == 0) {
+            let parsed = filePair(fh);
+            in
+                fn (#(result, _)) {
+                    assert(result == #("abc", "123"));
+                }(parsed);
+                false or back;
+                "unreachable"
+        } else {
+            fgets(fh)
+        }
+    }) == just("abcDEF"))
+}

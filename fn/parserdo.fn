@@ -1,0 +1,20 @@
+namespace
+
+export macro pdo: Expr parserDoHead;
+
+syntax parserDoHead ::= "[" body: Syntax(parserDoClauses) "]" {
+    body
+};
+
+syntax parserDoClauses ::= "yield" result: Expr ";" {
+    pure(result)
+}
+| "yield" result: Expr {
+    pure(result)
+}
+| "from" parser: Expr "as" name: Name ";" rest: Syntax(parserDoClauses) quote {
+    bind(unquote(parser), fn (unquote(name)) { unquote(rest) })
+}
+| parser: Expr ";" rest: Syntax(parserDoClauses) quote {
+    bind(unquote(parser), fn (_) { unquote(rest) })
+};

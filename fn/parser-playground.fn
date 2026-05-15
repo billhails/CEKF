@@ -1,9 +1,25 @@
 let
-    link "listutils.fn" as list;
-    import list operator "_startsWith_";
-    import list.drop;
-    import list.length;
-    import list.reverse;
+    link "ioutils.fn" as io;
+    link "parserdet.fn" as parser;
+    link "parserdo.fn" as parserdo;
+    testFile = "/tmp/cekf_parser_playground";
+
+    import parser.binary;
+    import parser.bind;
+    import parser.choice;
+    import parser.collect;
+    import parser.eof;
+    import parser.file_eof;
+    import parser.literal;
+    import parser.map;
+    import parser.match_regex;
+    import parser.match_regex_file;
+    import parser.parse;
+    import parser.parse_complete_file;
+    import parser.pure;
+    import parser.sequence;
+    import parser.terminated;
+    import parserdo macro pdo;
 
     typedef expr {
         num(number) |
@@ -25,159 +41,6 @@ let
         in helper(str, 0)
     }
 
-    // pmap: (#a -> #b) -> (#c -> try(#d, #(#a, #e))) -> #c -> try(#d, #(#b, #e))
-    fn pmap(func, parser, input) {
-        switch (parser(input)) {
-            (success(#(result, rest))) {
-                success(#(func(result), rest))
-            }
-            (failure(fail)) { failure(fail) }
-        }
-    }
-
-    // text: list(#a) -> list(#a) -> try(#(list(#a), list(#a)), #(list(#a), list(#a)))
-    fn text(match, input) {
-        if (input startsWith match) {
-            success(#(match, drop(length(match), input)))
-        } else {
-            failure(#(match, input))
-        }
-    }
-
-    // rex: regex -> string -> try(#(string, string), #(string, string))
-    fn rex(rex, input) {
-        switch (regex_match(rex, input)) {
-            (just(result)) {
-                success(result)
-            }
-            (nothing) {
-                fn (regex(body)) { failure(#(body, input)) }(rex)
-            }
-        }
-    }
-
-    // apply: (list(#a) -> #b) -> list(#c -> try(#d, #(#a, #c))) -> #c -> try(#d, #(#b, #c))
-    fn apply(func, parsers, input) {
-        let
-            fn helper (throw, parsers, input, acc) {
-                switch (parsers) {
-                    ([]) {
-                        success(#(acc, input))
-                    }
-                    (parser @ parsers) {
-                        switch(parser(input)) {
-                            (success(#(data, rest))) {
-                                helper(throw, parsers, rest, data @ acc)
-                            }
-                            (failure(fail)) {
-                                throw(failure(fail))
-                            }
-                        }
-                    }
-                }
-            }
-        in
-            switch (here fn (throw) { helper(throw, parsers, input, [])}) {
-                (success(#(accData, input))) {
-                    success(#(func(reverse(accData)), input))
-                }
-                (failure(fail)) { failure(fail) }
-            }
-    }
-
-    // eof: list(#a) -> try(#(string, list(#a)), #(expr, list(#a)))
-    fn eof(input) {
-        if (input == []) {
-            success(#(end, input))
-        } else {
-            failure(#("End of Input", input))
-        }
-    }
-
-    // sequence: list(#a -> try(#b, #(#c, #a))) -> #a -> try(#b, #(#c, #a))
-    fn sequence (parsers) {
-        apply(fn (results) { <reverse(results) }, parsers)
-    }
-
-    // collect: list(#a -> try(#b, #(#c, #a))) -> #a -> try(#b, #(list(#c), #a))
-    fn collect (parsers) {
-        apply(identity, parsers)
-    }
-
-    // binary:
-    //   (#a -> try(#b, #(#c, #d))) ->
-    //   (#d -> try(#b, #(#c -> #e -> #f, #g))) ->
-    //   (#g -> try(#b, #(#e, #h))) -> #a -> try(#b, #(#f, #h))
-    fn binary(left, operatorParser, right, input) {
-        switch (left(input)) {
-            (success(#(lhs, rest1))) {
-                switch (operatorParser(rest1)) {
-                    (success(#(opFn, rest2))) {
-                        switch (right(rest2)) {
-                            (success(#(rhs, rest3))) {
-                                success(#(opFn(lhs, rhs), rest3))
-                            }
-                            (failure(fail)) { failure(fail) }
-                        }
-                    }
-                    (failure(fail)) { failure(fail) }
-                }
-            }
-            (failure(fail)) { failure(fail) }
-        }
-    }
-
-    // terminated:
-    //   (#a -> try(#b, #(#c, #d))) ->
-    //   (#d -> try(#b, #(_, #e))) ->
-    //   #a -> try(#b, #(#c, #e))
-    fn terminated(parser, endParser, input) {
-        switch (parser(input)) {
-            (success(#(result, rest1))) {
-                switch (endParser(rest1)) {
-                    (success(#(_, rest2))) {
-                        success(#(result, rest2))
-                    }
-                    (failure(fail)) { failure(fail) }
-                }
-            }
-            (failure(fail)) { failure(fail) }
-        }
-    }
-
-    // parse: (#a -> try(#(string, string), #b)) -> #a -> #b
-    fn parse (parser, input) {
-        switch (parser(input)) {
-            (failure(#(expected, actual))) {
-                error("Parse error, expected " @@ expected @@
-                    " got \"" @@ actual @@ "\"")
-            }
-            (success(result)) { result }
-        }
-    }
-
-    // oneOf: list(#a -> try(_, #b)) -> #a -> try(#(string, #a), #b)
-    fn oneOf(parsers, input) {
-        let
-            fn helper {
-                ([]) {
-                    failure(#("oneOf", input))
-                }
-                (parser @ parsers) {
-                    switch(parser(input)) {
-                        (success(result)) {
-                            success(result)
-                        }
-                        (_) {
-                            helper(parsers)
-                        }
-                    }
-                }
-            }
-        in
-            helper(parsers)
-    }
-
     // getOp: string -> expr -> expr -> expr
     unsafe fn getOp {
         ("+") { fn (l, r) { addition(l, r) } }
@@ -186,33 +49,72 @@ let
         ("/") { fn (l, r) { division(l, r) } }
     }
 
+    fn filePair(fh) {
+        switch (match_regex_file(#/[a-z]+/)(fh)) {
+            (success(#(letters, rest1))) {
+                switch (match_regex_file(#/\d+/)(rest1)) {
+                    (success(#(digits, rest2))) {
+                        success(#(#(letters, digits), rest2))
+                    }
+                    (failure(fail)) { failure(fail) }
+                }
+            }
+            (failure(fail)) { failure(fail) }
+        }
+    }
+
 in 
 {
     let
-        // decimal: string -> try(#(string, string), #(expr, string))
-        decimal = pmap(fn (str) { num(toNum(str)) }, rex(#/\d+/)); 
+        decimal = map(fn (str) { num(toNum(str)) }, match_regex(#/\d+/));
 
-        // opp: string -> try(#(string, string), #(expr -> expr -> expr, string))
-        opp = pmap(getOp, oneOf([text("+"), text("-"), text("*"), text("/")]));
+        opp = map(getOp, choice([literal("+"), literal("-"), literal("*"), literal("/")]));
 
-        // plusExpr: string -> try(#(string, string), #(expr, string))
         plusExpr = terminated(binary(decimal, opp, decimal), eof);
+        plusExprDo = terminated(pdo[
+            from decimal as lhs;
+            from opp as opFn;
+            from decimal as rhs;
+            yield opFn(lhs, rhs)
+        ], eof);
     in
-        puts("opp: "); puts(typeof(opp)); puts("\n");
-        puts("terminated: "); puts(typeof(terminated)); puts("\n");
-        puts("oneOf: "); puts(typeof(oneOf)); puts("\n");
-        puts("binary: "); puts(typeof(binary)); puts("\n");
-
         puts("123: ");
         print parse(decimal, "123");
         puts("+123: ");
-        print parse(pmap(fn (txt) { op(txt) }, text("+")), "+123");
+        print parse(map(fn (txt) { op(txt) }, literal("+")), "+123");
         puts("12+34: ");
         print parse(plusExpr, "12+34");
+        puts("12+34 via pdo: ");
+        print parse(plusExprDo, "12+34");
         puts("hello, world!: ");
-        print parse(sequence([text("hello"), text(", "), text("world")]), "hello, world!");
-        puts("hello, world!: ");
-        print parse(collect([text("hello"), text(", "), text("world")]), "hello, world!");
+        print parse(sequence([literal("hello"), literal(", "), literal("world")]), "hello, world!");
+        puts("hello, world! collect: ");
+        print parse(collect([literal("hello"), literal(", "), literal("world")]), "hello, world!");
+        puts("file abc123DEF: ");
+        io.with_output_to(testFile, fn (fh) {
+            fputs(fh, "abc123DEF");
+        });
+        unsafe switch (io.with_input_from(testFile, fn (fh) {
+            switch (filePair(fh)) {
+                (success(#(parsed, rest))) {
+                    #(parsed, fgets(rest))
+                }
+                (failure(fail)) {
+                    fail
+                }
+            }
+        })) {
+            (just(result)) { print(result) }
+        };
+        puts("file abc123 complete: ");
+        io.with_output_to(testFile, fn (fh) {
+            fputs(fh, "abc123");
+        });
+        unsafe switch (io.with_input_from(testFile, fn (fh) {
+            #(parse_complete_file(filePair, fh), fgets(fh))
+        })) {
+            (just(result)) { print(result) }
+        };
         puts("12+34+: ");
         print parse(plusExpr, "12+34+");
 }

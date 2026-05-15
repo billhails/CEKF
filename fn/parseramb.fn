@@ -1,0 +1,228 @@
+namespace
+
+link "ambutils.fn" as amb;
+link "listutils.fn" as list;
+link "parsercore.fn" as core;
+link "regexutils.fn" as regexutils;
+
+import list operator "_startsWith_";
+import list.drop;
+import list.length;
+
+fn bind_state(parser, next, input) {
+    fn (#(result, rest)) {
+        next(result, rest)
+    }(parser(input))
+}
+
+fn bind(parser, next) {
+    fn (input) {
+        bind_state(parser, fn (result, rest) {
+            next(result)(rest)
+        }, input)
+    }
+}
+
+fn pure(value) {
+    fn (input) {
+        #(value, input)
+    }
+}
+
+fn map(func, parser) {
+    core.map_with(bind, pure, func, parser)
+}
+
+fn pair(left, right) {
+    core.pair_with(bind, pure, left, right)
+}
+
+fn apply(func, parsers) {
+    core.apply_with(bind, pure, func, parsers)
+}
+
+fn collect(parsers) {
+    core.collect_with(bind, pure, parsers)
+}
+
+fn sequence(parsers) {
+    core.sequence_with(bind, pure, parsers)
+}
+
+fn binary(left, operatorParser, right) {
+    fn (input) {
+        bind_state(left, fn (lhs, rest1) {
+            bind_state(operatorParser, fn (opFn, rest2) {
+                bind_state(right, fn (rhs, rest3) {
+                    #(opFn(lhs, rhs), rest3)
+                }, rest2)
+            }, rest1)
+        }, input)
+    }
+}
+
+fn terminated(parser, endParser) {
+    fn (input) {
+        bind_state(parser, fn (result, rest1) {
+            bind_state(endParser, fn (_, rest2) {
+                #(result, rest2)
+            }, rest1)
+        }, input)
+    }
+}
+
+fn choice_all(parsers) {
+    fn (input) {
+        amb.one_of(parsers)(input)
+    }
+}
+
+// There is no cut primitive yet, so ordered choice is still backtrackable.
+fn choice_first(parsers) {
+    choice_all(parsers)
+}
+
+fn choice(parsers) {
+    choice_first(parsers)
+}
+
+fn optional(parser) {
+    choice_first([
+        map(fn (value) { just(value) }, parser),
+        pure(nothing)
+    ])
+}
+
+fn many(parser) {
+    choice_first([
+        fn (input) {
+            bind_state(parser, fn (head, rest1) {
+                if (rest1 != input) {
+                    bind_state(many(parser), fn (tail, rest2) {
+                        pure([head] @@ tail)(rest2)
+                    }, rest1)
+                } else {
+                    back
+                }
+            }, input)
+        },
+        pure([])
+    ])
+}
+
+fn some(parser) {
+    fn (input) {
+        bind_state(parser, fn (head, rest1) {
+            if (rest1 != input) {
+                bind_state(many(parser), fn (tail, rest2) {
+                    pure([head] @@ tail)(rest2)
+                }, rest1)
+            } else {
+                back
+            }
+        }, input)
+    }
+}
+
+fn chainl1(parser, operatorParser) {
+    let fn step(input) {
+        bind_state(operatorParser, fn (opFn, rest1) {
+            bind_state(parser, fn (rhs, rest2) {
+                #(#(opFn, rhs), rest2)
+            }, rest1)
+        }, input)
+    }
+    in fn (input) {
+        bind_state(parser, fn (first, rest1) {
+            bind_state(many(step), fn (tail, rest2) {
+                #(core.fold_chain(first, tail), rest2)
+            }, rest1)
+        }, input)
+    }
+}
+
+fn satisfy(predicate) {
+    fn (input) {
+        amb.require(input != []);
+        amb.require(predicate(<input));
+        #(<input, drop(1, input))
+    }
+}
+
+fn literal(match) {
+    fn (input) {
+        amb.require(input startsWith match);
+        #(match, drop(length(match), input))
+    }
+}
+
+fn match_regex(re) {
+    fn (input) {
+        switch (regex_match(re, input)) {
+            (just(result)) {
+                result
+            }
+            (nothing) {
+                back
+            }
+        }
+    }
+}
+
+fn match_regex_file(re) {
+    fn (file) {
+        let pos = fgetpos(file);
+        in switch (regex_match_file(re, file)) {
+            (just(matched)) {
+                #(matched, file) then {
+                    fsetpos(file, pos);
+                    back
+                }
+            }
+            (nothing) {
+                fsetpos(file, pos);
+                back
+            }
+        }
+    }
+}
+
+fn eof(input) {
+    amb.require(input == []);
+    #(nothing, input)
+}
+
+fn file_eof(file) {
+    let pos = fgetpos(file);
+        tail = fgets(file);
+    in if (tail == "") {
+        #(nothing, file) then {
+            fsetpos(file, pos);
+            back
+        }
+    } else {
+        fsetpos(file, pos);
+        back
+    }
+}
+
+fn parse_complete(parser, input) {
+    fn (#(result, rest)) {
+        amb.require(rest == []);
+        result
+    }(parser(input))
+}
+
+fn parse_complete_file(parser, input) {
+    fn (#(result, _)) {
+        result
+    }(terminated(parser, file_eof)(input))
+}
+
+fn parse_with_meaning(parser, meaning, input) {
+    fn (#(result, rest)) {
+        amb.require(rest == []);
+        amb.require(meaning(result));
+        result
+    }(parser(input))
+}

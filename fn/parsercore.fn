@@ -1,0 +1,45 @@
+namespace
+
+link "listutils.fn" as list;
+import list.reverse;
+
+fn map_with(bind, pure, func, parser) {
+    bind(parser, fn (result) {
+        pure(func(result))
+    })
+}
+
+fn pair_with(bind, pure, left, right) {
+    bind(left, fn (lhs) {
+        bind(right, fn (rhs) {
+            pure(#(lhs, rhs))
+        })
+    })
+}
+
+fn apply_with(bind, pure, func, parsers) {
+    let fn helper {
+        ([], acc) {
+            pure(func(reverse(acc)))
+        }
+        (parser @ rest, acc) {
+            bind(parser, fn (data) {
+                helper(rest, data @ acc)
+            })
+        }
+    }
+    in helper(parsers, [])
+}
+
+fn collect_with(bind, pure, parsers) {
+    apply_with(bind, pure, identity, parsers)
+}
+
+fn sequence_with(bind, pure, parsers) {
+    apply_with(bind, pure, fn (results) { <reverse(results) }, parsers)
+}
+
+fn fold_chain {
+    (acc, []) { acc }
+    (acc, #(opFn, rhs) @ rest) { fold_chain(opFn(acc, rhs), rest) }
+}

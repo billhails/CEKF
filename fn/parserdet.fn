@@ -1,0 +1,242 @@
+namespace
+
+link "listutils.fn" as list;
+link "parsercore.fn" as core;
+
+import list operator "_startsWith_";
+import list.drop;
+import list.length;
+
+fn bind_state(parser, next, input) {
+    switch (parser(input)) {
+        (success(#(result, rest))) {
+            next(result, rest)
+        }
+        (failure(fail)) { failure(fail) }
+    }
+}
+
+fn bind(parser, next) {
+    fn (input) {
+        bind_state(parser, fn (result, rest) {
+            next(result)(rest)
+        }, input)
+    }
+}
+
+fn pure(value) {
+    fn (input) {
+        success(#(value, input))
+    }
+}
+
+fn map(func, parser) {
+    core.map_with(bind, pure, func, parser)
+}
+
+fn pair(left, right) {
+    core.pair_with(bind, pure, left, right)
+}
+
+fn apply(func, parsers) {
+    core.apply_with(bind, pure, func, parsers)
+}
+
+fn collect(parsers) {
+    core.collect_with(bind, pure, parsers)
+}
+
+fn sequence(parsers) {
+    core.sequence_with(bind, pure, parsers)
+}
+
+fn binary(left, operatorParser, right) {
+    fn (input) {
+        bind_state(left, fn (lhs, rest1) {
+            bind_state(operatorParser, fn (opFn, rest2) {
+                bind_state(right, fn (rhs, rest3) {
+                    success(#(opFn(lhs, rhs), rest3))
+                }, rest2)
+            }, rest1)
+        }, input)
+    }
+}
+
+fn terminated(parser, endParser) {
+    fn (input) {
+        bind_state(parser, fn (result, rest1) {
+            bind_state(endParser, fn (_, rest2) {
+                success(#(result, rest2))
+            }, rest1)
+        }, input)
+    }
+}
+
+fn choice(parsers) {
+    fn (input) {
+        let fn helper {
+            ([], last_fail) {
+                failure(last_fail)
+            }
+            (parser @ rest, _) {
+                switch (parser(input)) {
+                    (success(result)) {
+                        success(result)
+                    }
+                    (failure(fail)) {
+                        helper(rest, fail)
+                    }
+                }
+            }
+        }
+        in helper(parsers, #("choice", input))
+    }
+}
+
+fn choice_first(parsers) {
+    choice(parsers)
+}
+
+fn optional(parser) {
+    choice_first([
+        map(fn (value) { just(value) }, parser),
+        pure(nothing)
+    ])
+}
+
+fn many(parser) {
+    choice_first([
+        fn (input) {
+            bind_state(parser, fn (head, rest1) {
+                if (rest1 != input) {
+                    bind_state(many(parser), fn (tail, rest2) {
+                        pure([head] @@ tail)(rest2)
+                    }, rest1)
+                } else {
+                    pure([])(input)
+                }
+            }, input)
+        },
+        pure([])
+    ])
+}
+
+fn some(parser) {
+    fn (input) {
+        bind_state(parser, fn (head, rest1) {
+            if (rest1 != input) {
+                bind_state(many(parser), fn (tail, rest2) {
+                    pure([head] @@ tail)(rest2)
+                }, rest1)
+            } else {
+                failure(#("some", input))
+            }
+        }, input)
+    }
+}
+
+fn chainl1(parser, operatorParser) {
+    let fn step(input) {
+        bind_state(operatorParser, fn (opFn, rest1) {
+            bind_state(parser, fn (rhs, rest2) {
+                success(#(#(opFn, rhs), rest2))
+            }, rest1)
+        }, input)
+    }
+    in fn (input) {
+        bind_state(parser, fn (first, rest1) {
+            bind_state(many(step), fn (tail, rest2) {
+                success(#(core.fold_chain(first, tail), rest2))
+            }, rest1)
+        }, input)
+    }
+}
+
+fn satisfy(predicate) {
+    fn (input) {
+        if (input != [] and predicate(<input)) {
+            success(#(<input, drop(1, input)))
+        } else {
+            failure(#("satisfy", input))
+        }
+    }
+}
+
+fn literal(match) {
+    fn (input) {
+        if (input startsWith match) {
+            success(#(match, drop(length(match), input)))
+        } else {
+            failure(#(match, input))
+        }
+    }
+}
+
+fn match_regex(re) {
+    fn (input) {
+        switch (regex_match(re, input)) {
+            (just(result)) {
+                success(result)
+            }
+            (nothing) {
+                fn (regex(body)) { failure(#(body, input)) }(re)
+            }
+        }
+    }
+}
+
+fn match_regex_file(re) {
+    fn (file) {
+        switch (regex_match_file(re, file)) {
+            (just(result)) {
+                success(#(result, file))
+            }
+            (nothing) {
+                fn (regex(body)) { failure(#(body, file)) }(re)
+            }
+        }
+    }
+}
+
+fn eof(input) {
+    if (input == []) {
+        success(#(nothing, input))
+    } else {
+        failure(#("End of Input", input))
+    }
+}
+
+fn file_eof(file) {
+    let pos = fgetpos(file);
+        tail = fgets(file);
+    in if (tail == "") {
+        success(#(nothing, file))
+    } else {
+        fsetpos(file, pos);
+        failure(#("End of File", file))
+    }
+}
+
+fn parse(parser, input) {
+    switch (parser(input)) {
+        (failure(#(expected, actual))) {
+            error("Parse error, expected " @@ expected @@
+                " got \"" @@ actual @@ "\"")
+        }
+        (success(#(result, _))) { result }
+    }
+}
+
+fn parse_complete(parser, input) {
+    parse(terminated(parser, eof), input)
+}
+
+fn parse_complete_file(parser, input) {
+    switch (terminated(parser, file_eof)(input)) {
+        (failure(#(expected, _))) {
+            error("Parse error, expected " @@ expected @@
+                " got file input")
+        }
+        (success(#(result, _))) { result }
+    }
+}
