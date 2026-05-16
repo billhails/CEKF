@@ -23,4 +23,8 @@
 
 void brun(BLinkedImage *image, BuiltIns *builtins);
 
+#ifdef TRACE_BRUN
+extern int trace_brun_flag;
+#endif
+
 #endif

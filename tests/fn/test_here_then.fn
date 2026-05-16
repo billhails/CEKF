@@ -1,13 +1,13 @@
 let
-    first_result = here fn (k) { k(1 then 2) then 3 };
+    first_result = here fn (k) { print("first"); k(1 then 2) then 3 };
 
     second_result = {
-        let chosen = here fn (k) { k(1 then 2) then 3 };
+        let chosen = here fn (k) { print("second"); k(1 then 2) then 3 };
         in if (chosen == 1) { back } else { chosen }
     };
 
     third_result = {
-        let chosen = here fn (k) { k(1 then 2) then 3 };
+        let chosen = here fn (k) { print("third"); k(1 then 2) then 3 };
         in if (chosen < 3) { back } else { chosen }
     };
 in

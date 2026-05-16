@@ -331,7 +331,7 @@ static void emitGoto(ER *target, RA *args, EC *ctx) {
     }
 
     // Copy-down to reg[0..N-1]
-    comment(ctx, "emitGoto copy-down into reg[0..%u]", sourceSlots->size);
+    comment(ctx, "emitGoto copy-down into reg[0..%u]", sourceSlots->size - 1);
     for (Index i = 0; i < sourceSlots->size; i++) {
         ER *dest = erForSlot(i, ctx);
         int save2 = PROTECT(dest);

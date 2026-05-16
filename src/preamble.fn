@@ -45,7 +45,7 @@ operator "_%_" left 11 MODULUS;
 operator "_gcd_" left 11 GCD;
 operator "_lcm_" left 11 LCM;
 operator "_**_" left 12 EXPONENTIAL;
-lazy operator "here_" 13 callcc;
+operator "here_" 13 callcc;
 
 typedef cmp { lt | eq | gt }
 typedef bool { false | true }

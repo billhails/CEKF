@@ -1,7 +1,7 @@
 .PHONY: all clean realclean deps profile leak-check check-grammar \
 list-cores test indent indent-src indent-generated docs \
 install-sqlite3 coverage extracov view-coverage \
-coverage-target test-c test-b test-big-c help \
+coverage-target test-a test-fail test-sh test-c test-unit test-b test-big-c help \
 establish-baseline test-refactoring update-baseline clean-baseline \
 scratch bench-regex-cache
 
@@ -172,18 +172,7 @@ $(FN_OFILES) $(TEST_FN_OFILES): %.o: %.c
 $(FN_BINARIES) $(TEST_FN_BINARIES): %: %.o $(ALL_OBJ)
 	$(LAXCC) -o $@ $< $(ALL_OBJ) $(LIBS)
 
-test-c: all $(TEST_FN_BINARIES)
-	@for t in $(TEST_FN_BINARIES) ; do echo $$t ; $$t || exit 1 ; done
-	@echo All generated C tests pass
-
 irs: $(TEST_FN_SFILES) $(TMPDIR)/test_harness.scm
-
-test-big-c: all $(TMPDIR)/test_harness
-	$(TMPDIR)/test_harness
-
-test-b: all
-	@for t in $(TEST_FN_FILES) ; do set -x; $(TARGET) $(TARGET_ARGS) --target-b $$t || exit 1 ; done
-	@echo All B-code tests pass
 
 $(TMPDIR)/test_harness: $(TMPDIR)/test_harness.o $(ALL_OBJ)
 	$(LAXCC) -o $@ $< $(ALL_OBJ) $(LIBS)
@@ -318,12 +307,35 @@ $(EXTRA_DEP) $(PREAMBLE_DEP): $(DEPDIR)/%.d: $(GENDIR)/%.c .generated | $(DEPDIR
 $(TEST_DEP): $(DEPDIR)/%.d: $(TSTDIR)/src/%.c .generated | $(DEPDIR)
 	$(CC) $(INCLUDE_PATHS) -MM -MT $(patsubst $(DEPDIR)/%,$(OBJDIR)/%,$(patsubst %.d,%.o,$@)) -o $@ $<
 
-test: $(TEST_TARGETS) $(TARGET) $(UNIDIR)/unicode.db
-	for t in $(TSTDIR)/fn/test_*.fn ; do echo '***' $$t '***' ; ./$(TARGET) --include=fn --assertions-accumulate $$t || exit 1 ; done
-	for t in $(TSTDIR)/sh/*.sh ; do [ -e $$t ] || continue ; echo '***' $$t '***' ; bash $$t || exit 1 ; done
-	for t in $(TSTDIR)/fn/fail_*.fn ; do echo '***' $$t '***' ; ! ./$(TARGET) --include=fn --assertions-accumulate $$t >/dev/null 2>&1 || exit 1 ; done
-	for t in $(TEST_TARGETS) ; do echo '***' $$t '***' ; $$t || exit 1 ; done
+test: test-unit test-a test-b test-sh test-fail
 	@echo "All tests passed."
+
+test-unit: all $(TEST_TARGETS)
+	for t in $(TEST_TARGETS) ; do echo '***' $$t '***' ; $$t || exit 1 ; done
+	@echo "All unit tests passed."
+
+test-a: all
+	for t in $(TSTDIR)/fn/test_*.fn ; do echo '***' $$t '***' ; ./$(TARGET) --include=fn --assertions-accumulate $$t || exit 1 ; done
+	@echo "All a tests passed."
+
+test-sh: all
+	for t in $(TSTDIR)/sh/*.sh ; do [ -e $$t ] || continue ; echo '***' $$t '***' ; bash $$t || exit 1 ; done
+	@echo "All A tests passed."
+
+test-fail: all
+	for t in $(TSTDIR)/fn/fail_*.fn ; do echo '***' $$t '***' ; ! ./$(TARGET) --include=fn --assertions-accumulate $$t >/dev/null 2>&1 || exit 1 ; done
+	@echo "All negative tests passed."
+
+test-c: all $(TEST_FN_BINARIES)
+	@for t in $(TEST_FN_BINARIES) ; do echo $$t ; $$t || exit 1 ; done
+	@echo All generated C tests pass
+
+test-big-c: all $(TMPDIR)/test_harness
+	$(TMPDIR)/test_harness
+
+test-b: all
+	@for t in $(TEST_FN_FILES) ; do set -x; $(TARGET) $(TARGET_ARGS) --target-b $$t || exit 1 ; done
+	@echo All B-code tests pass
 
 $(TEST_TARGETS): $(TSTDIR)/%: $(OBJDIR)/%.o $(ALL_OBJ)
 	$(CC) -o $@ $< $(ALL_OBJ) $(LIBS)

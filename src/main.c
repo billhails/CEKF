@@ -229,6 +229,9 @@ static void usage(char *prog, int status) {
 #ifdef UNIT_TESTS
         "    --test                   Run unit tests.\n"
 #endif
+#ifdef TRACE_BRUN
+        "    --trace-b                Trace bytecode execution (b-path).\n"
+#endif
     );
     exit(status);
 }
@@ -277,6 +280,9 @@ static int processArgs(int argc, char *argv[]) {
             {"dump-beta", optional_argument, 0, 'b'},
             {"flat-closures", no_argument, &flat_closures_flag, 1},
             {"disable-regex-cache", no_argument, &disable_regex_cache_flag, 1},
+#ifdef TRACE_BRUN
+            {"trace-b", no_argument, &trace_brun_flag, 1},
+#endif
             {"include", required_argument, 0, 'i'},
             {"binary-out", required_argument, 0, 'O'},
             {"binary-in", required_argument, 0, 'B'},
@@ -619,7 +625,7 @@ int main(int argc, char *argv[]) {
 
         if (desugar_flag) {
             ppMinExp(stdout, minExp);
-            eprintf("\n");
+            printf("\n");
             exit(0);
         }
 
@@ -637,7 +643,7 @@ int main(int argc, char *argv[]) {
 
         if (alpha_flag) {
             ppMinExp(stdout, minExp);
-            eprintf("\n");
+            printf("\n");
             exit(0);
         }
 
@@ -649,7 +655,7 @@ int main(int argc, char *argv[]) {
 
         if (curry_flag) {
             ppMinExp(stdout, minExp);
-            eprintf("\n");
+            printf("\n");
             exit(0);
         }
 
@@ -661,7 +667,7 @@ int main(int argc, char *argv[]) {
 
         if (beta_flag) {
             ppMinExp(stdout, minExp);
-            eprintf("\n");
+            printf("\n");
             exit(0);
         }
 
@@ -673,7 +679,7 @@ int main(int argc, char *argv[]) {
 
         if (fold_flag) {
             ppMinExp(stdout, minExp);
-            eprintf("\n");
+            printf("\n");
             exit(0);
         }
 
@@ -685,7 +691,7 @@ int main(int argc, char *argv[]) {
 
         if (uncurry_flag) {
             ppMinExp(stdout, minExp);
-            eprintf("\n");
+            printf("\n");
             exit(0);
         }
 
@@ -706,7 +712,7 @@ int main(int argc, char *argv[]) {
 
             if (cps_flag) {
                 ppMinExp(stdout, minExp);
-                eprintf("\n");
+                printf("\n");
                 exit(0);
             }
 
@@ -720,7 +726,7 @@ int main(int argc, char *argv[]) {
 
             if (amb_flag) {
                 ppMinExp(stdout, minExp);
-                eprintf("\n");
+                printf("\n");
                 exit(0);
             }
 
@@ -732,7 +738,7 @@ int main(int argc, char *argv[]) {
 
             if (shake_flag) {
                 ppMinExp(stdout, minExp);
-                eprintf("\n");
+                printf("\n");
                 exit(0);
             }
 
@@ -781,6 +787,7 @@ int main(int argc, char *argv[]) {
 
             if (inline_f_flag) {
                 ppMinExp(stdout, minExp);
+                printf("\n");
                 exit(0);
             }
 
@@ -800,7 +807,7 @@ int main(int argc, char *argv[]) {
 
             if (closure_flag) {
                 ppMinExp(stdout, minExp);
-                eprintf("\n");
+                printf("\n");
                 exit(0);
             }
 
@@ -812,6 +819,7 @@ int main(int argc, char *argv[]) {
 
             if (dumpIR) {
                 ppMinExp(stdout, minExp);
+                printf("\n");
                 exit(0);
             }
 
