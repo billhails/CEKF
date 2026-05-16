@@ -433,17 +433,24 @@ static void emitApplyBuiltin(MinApply *node, EC *ctx) {
     // (env result)
     MinExprList *builtinArgs = takeMinExprList(node->args, numBuiltinArgs);
     PROTECT(builtinArgs);
+    comment(ctx, "emitApplyBuiltin outgoing arg[0]=closure env");
+    commentER(ctx, "emitApplyBuiltin env", env);
     ER *builtinResult = emitBuiltin(bi, builtinArgs, ctx);
     PROTECT(builtinResult);
     pushRA(targetArgs, builtinResult);
 
+    commentER(ctx, "emitApplyBuiltin target", target);
     continuations = continuations->next;
 
     // (env result f)
     ER *f = emitSimpleExp(continuations->exp, ctx);
     PROTECT(f);
+    comment(ctx, "emitApplyBuiltin outgoing arg[2]=fail continuation");
+    commentER(ctx, "emitApplyBuiltin fail", f);
     pushRA(targetArgs, f);
 
+    comment(ctx, "emitApplyBuiltin outgoing arg[1]=builtin result");
+    commentER(ctx, "emitApplyBuiltin result", builtinResult);
     // (k env result f)
     emitGoto(target, targetArgs, ctx);
     releaseSlots(targetArgs, ctx);
@@ -485,10 +492,12 @@ static void emitApplyClosure(MinApply *apply, EC *ctx) {
 
     ER *closure = emitArg(apply->function, ctx);
     PROTECT(closure);
+    commentER(ctx, "emitApplyClosure closure", closure);
 
     comment(ctx, "emitApplyClosure extract target from closure");
     ER *target = emitExtractFromClosure(closure, 0, ctx);
     PROTECT(target);
+    commentER(ctx, "emitApplyClosure target", target);
     // deliberate early release allows for behaviour like
     // tmp_1 = vec(..., tmp_1);
     releaseSlot(closure, ctx);
@@ -496,16 +505,23 @@ static void emitApplyClosure(MinApply *apply, EC *ctx) {
     comment(ctx, "emitApplyClosure extract env from closure");
     ER *env = emitExtractFromClosure(closure, 1, ctx);
     PROTECT(env);
+    comment(ctx, "emitApplyClosure outgoing arg[0]=closure env");
+    commentER(ctx, "emitApplyClosure env", env);
 
     RA *targetArgs = newRA();
     PROTECT(targetArgs);
     pushRA(targetArgs, env);
 
+    Index argIndex = 0;
     for (MinExprList *arg = apply->args; arg != NULL; arg = arg->next) {
         ER *result = emitSimpleExp(arg->exp, ctx);
         int save2 = PROTECT(result);
+        comment(ctx, "emitApplyClosure outgoing arg[%u]=apply arg[%u]",
+                argIndex + 1, argIndex);
+        commentER(ctx, "emitApplyClosure arg", result);
         pushRA(targetArgs, result);
         UNPROTECT(save2);
+        argIndex++;
     }
 
     emitGoto(target, targetArgs, ctx);

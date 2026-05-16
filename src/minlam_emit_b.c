@@ -55,6 +55,7 @@ static void emitMinCharCondCases(MinCharCondCases *, EC *, CharCondSwitch *,
 static void emitMinIntCondCases(MinIntCondCases *, EC *, IntCondSwitch *,
                                 HashSymbol *);
 static void emitMinMatchList(MinMatchList *, EC *, IndexArray *, HashSymbol *);
+static void commentER(EC *, char *, ER *);
 
 #include "minlam_emit_contract.h"
 
@@ -255,6 +256,21 @@ static inline bool resultNeedsMaterialization(ER *result) {
     return false;
 }
 
+static void commentER(EC *ctx, char *label, ER *result) {
+    if (isEmitBResult_Slot(result)) {
+        HashSymbol *symbol = getEmitBResult_Slot(result);
+        comment(ctx, "%s kind=slot symbol=%s reg=r%u materialize=%s", label,
+                symbol->name, IX(result, ctx),
+                resultNeedsMaterialization(result) ? "yes" : "no");
+    } else if (isEmitBResult_Immediate(result)) {
+        comment(ctx, "%s kind=immediate reg=r%u materialize=%s", label,
+                IX(result, ctx),
+                resultNeedsMaterialization(result) ? "yes" : "no");
+    } else {
+        cant_happen("unrecognised EmitBResult");
+    }
+}
+
 /////////////////
 // Leaf Emitters
 /////////////////
@@ -341,10 +357,11 @@ static void emitUnprotect(EC *ctx) {
     bemit_code(ctx, BBC_TYPE_UNPROTECT, 0, 0, 0);
 }
 
-// not supported for now
-static void emitTrace(ER *target __attribute__((unused)),
-                      RA *args __attribute__((unused)),
-                      EC *ctx __attribute__((unused))) {}
+static void emitTrace(ER *target, RA *args, EC *ctx) {
+    comment(ctx, "emitTrace binding=%s argc=%u",
+            ctx->context.currentBinding->name, args->size);
+    commentER(ctx, "emitTrace target", target);
+}
 
 static void emitJumpToLambda(ER *target, EC *ctx) {
     bemit_code(ctx, BBC_TYPE_JMP_REG, IX(target, ctx), 0, 0);
