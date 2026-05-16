@@ -266,8 +266,8 @@ static ER *emitMakeVec(MinExprList *vecs, EC *ctx) {
     } else {
         target = claimSlot(ctx);
         PROTECT(target);
-        releaseSlots(results, ctx);
         emitConstructVec(target, count, results, ctx);
+        releaseSlots(results, ctx);
     }
     UNPROTECT(save);
     return target;
@@ -498,13 +498,13 @@ static void emitApplyClosure(MinApply *apply, EC *ctx) {
     ER *target = emitExtractFromClosure(closure, 0, ctx);
     PROTECT(target);
     commentER(ctx, "emitApplyClosure target", target);
-    // deliberate early release allows for behaviour like
-    // tmp_1 = vec(..., tmp_1);
-    releaseSlot(closure, ctx);
 
     comment(ctx, "emitApplyClosure extract env from closure");
     ER *env = emitExtractFromClosure(closure, 1, ctx);
     PROTECT(env);
+    // Keep the closure live until both fields are extracted; otherwise the
+    // slot allocator can recycle its register for the env read.
+    releaseSlot(closure, ctx);
     comment(ctx, "emitApplyClosure outgoing arg[0]=closure env");
     commentER(ctx, "emitApplyClosure env", env);
 

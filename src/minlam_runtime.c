@@ -17,6 +17,7 @@
  */
 
 #include "minlam_runtime.h"
+#include "regex_filepos.h"
 
 static Value *minlam_runtime_reg = NULL;
 static int minlam_runtime_max_reg = 0;
@@ -132,6 +133,9 @@ Cmp minlam_runtime_cmp(Value left, Value right) {
         return ncmp(left, right);
     case VALUE_TYPE_CHARACTER:
         return _CMP_(left.val.character, right.val.character);
+    case VALUE_TYPE_FILEPOS:
+        return cmpRegexFilePos(left.val.filePos->position,
+                               right.val.filePos->position);
     case VALUE_TYPE_PCLO:
         return _CMP_(left.val.addr, right.val.addr);
     case VALUE_TYPE_VEC:

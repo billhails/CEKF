@@ -328,7 +328,7 @@ Value builtin_fgetpos(Vec *args) {
 #endif
     Opaque *data = args->entries[0].val.opaque;
     FilePos *position;
-    fpos_t saved;
+    fpos_t saved = {0};
     int save;
 
     if (data == NULL || data->data == NULL) {
