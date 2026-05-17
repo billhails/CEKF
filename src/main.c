@@ -65,6 +65,7 @@
 #include "minlam_emit_c.h"
 #include "minlam_eta.h"
 #include "minlam_fold.h"
+#include "minlam_foldCmp.h"
 #include "minlam_foldIff.h"
 #include "minlam_foldVec.h"
 #include "minlam_inline.h"
@@ -796,6 +797,12 @@ int main(int argc, char *argv[]) {
                 // Fold Iff
                 ////////////
                 minExp = foldIffMinExp(minExp);
+                REPLACE_PROTECT(save2, minExp);
+
+                ////////////
+                // Fold Cmp
+                ////////////
+                minExp = foldCmpMinExp(minExp);
                 REPLACE_PROTECT(save2, minExp);
 
 #ifdef DEBUG_FIXED_POINT

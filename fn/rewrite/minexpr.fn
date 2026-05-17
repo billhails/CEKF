@@ -420,6 +420,7 @@ namespace
                 (sexp([atom(">"),  e1, e2])) { apply(primop(">"),  [to_expr(e1), to_expr(e2)]) }
                 (sexp([atom("<="), e1, e2])) { apply(primop("<="), [to_expr(e1), to_expr(e2)]) }
                 (sexp([atom(">="), e1, e2])) { apply(primop(">="), [to_expr(e1), to_expr(e2)]) }
+                (sexp([atom("!="), e1, e2])) { apply(primop("!="), [to_expr(e1), to_expr(e2)]) }
                 (sexp([])) { error("Empty expression") }
                 (sexp(func @ args)) { apply(to_expr(func), args |> to_expr) }
                 (x) {
