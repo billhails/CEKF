@@ -65,6 +65,7 @@
 #include "minlam_emit_c.h"
 #include "minlam_eta.h"
 #include "minlam_fold.h"
+#include "minlam_foldVec.h"
 #include "minlam_inline.h"
 #include "minlam_pp.h"
 #include "minlam_shake.h"
@@ -782,6 +783,12 @@ int main(int argc, char *argv[]) {
                 // Shake
                 /////////
                 minExp = shakeMinExp(minExp);
+                REPLACE_PROTECT(save2, minExp);
+
+                /////////////////////
+                // Fold vec/make-vec
+                /////////////////////
+                minExp = foldVecMinExp(minExp);
                 REPLACE_PROTECT(save2, minExp);
 #ifdef DEBUG_FIXED_POINT
                 iterations++;
