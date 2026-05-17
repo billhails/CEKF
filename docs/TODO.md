@@ -2,8 +2,12 @@
 
 More of a wish-list than a hard and fast plan.
 
+* More folding opportunities
+  * `(vec 0 (make-vec (vec 0 (make-vec (make-vec 0) 2)) 2)) => (make-vec 0)`
+  * fold boolean expressions `true and false => false`
+  * fold constant conditions `(if true a b) => a`
 * Continuations.
-  * Reinstate cut (discards current back continuation)
+  * Reinstate cut (prunes current back continuation)
   * Consider delimited continuations.
 * Types.
   * Consider type classes as a general solution to `EQ <type>`, `map` etc.

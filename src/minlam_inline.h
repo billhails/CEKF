@@ -18,8 +18,9 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include "builtins.h"
 #include "minlam.h"
 
-MinExp *inlineMinExp(MinExp *node);
+MinExp *inlineMinExp(MinExp *node, BuiltIns *builtIns);
 
 #endif

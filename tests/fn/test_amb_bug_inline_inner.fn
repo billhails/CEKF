@@ -1,0 +1,30 @@
+let
+    fn bind_state(parser, next, input) {
+        fn (#(result, rest)) {
+            next(result, rest)
+        }(parser(input))
+    }
+
+    fn stateDoneAlways(_) {
+        #(nothing, 2)
+    }
+
+in {
+    // print("amb_bug_if_compare_constant_rest2_inline_inner");
+    if (fn (#(value, _)) {
+        value == 0
+    }(bind_state(fn (_) {
+        #(0, 1)
+    }, fn (result, _) {
+        bind_state(fn (_) {
+            #(nothing, 2)
+        }, fn (_, _) {
+            #(result, 2)
+        }, 1)
+    }, 0))) {
+        0
+    } else {
+        1
+    };
+
+}

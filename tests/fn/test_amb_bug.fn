@@ -1,0 +1,36 @@
+let
+    fn bind_state(parser, next, input) {
+        fn (#(result, rest)) {
+            next(result, rest)
+        }(parser(input))
+    }
+
+    fn stateDoneAlways(_) {
+        #(nothing, 2)
+    }
+
+in {
+    // good:
+    // (== (vec 0 (make-vec (vec 0 (make-vec 0            1)) 2)) 0)
+    // bad:
+    // (== (vec 0 (make-vec (vec 0 (make-vec (make-vec 0) 2)) 2)) 0)
+    // (== (vec 0 (make-vec (vec 0 (make-vec [0] 2)) 2)) 0)
+    // (== (vec 0 (make-vec (vec 0 [[0], 2]) 2)) 0)
+    // (== (vec 0 (make-vec [0] 2)) 0)
+    // (== (vec 0 [[0], 2]) 0)
+    // (== [0] 0)
+    if (fn (#(value, _)) {
+        value == 0
+    }(bind_state(fn (_) {
+        #(0, 1)
+    }, fn (result, _) {
+        bind_state(stateDoneAlways, fn (_, _) {
+            #(result, 2)
+        }, 1)
+    }, 0))) {
+        0
+    } else {
+        1
+    };
+
+}

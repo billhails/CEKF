@@ -21,6 +21,8 @@
 
 #include "memory.h"
 #include "minlam.h"
+#include "minlam_freeVars.h"
+#include "symbol.h"
 #include "utils_helper.h"
 
 #include "minlam_subst.h"
@@ -51,6 +53,10 @@ static MinBindings *substMinBindings(MinBindings *node, MinExpTable *context);
 static MinAmb *substMinAmb(MinAmb *node, MinExpTable *context);
 static MinCondCases *substMinCondCases(MinCondCases *node,
                                        MinExpTable *context);
+static SymbolSet *freeVarsInContext(MinExpTable *context);
+static MinExpTable *makeBinderRenames(SymbolList *vars, SymbolSet *freeVars);
+static bool isMinExpTableEmpty(MinExpTable *table);
+static SymbolList *renameSymbolList(SymbolList *node, MinExpTable *renames);
 
 static MinExpTable *excludeBoundVars(MinExpTable *context, SymbolList *vars) {
     MinExpTable *new = newMinExpTable();
@@ -79,6 +85,65 @@ static SymbolList *getBindingVars(MinBindings *bindings) {
     return vars;
 }
 
+static SymbolSet *freeVarsInContext(MinExpTable *context) {
+    SymbolSet *freeVars = newSymbolSet();
+    int save = PROTECT(freeVars);
+    Index i = 0;
+    HashSymbol *current = NULL;
+    MinExp *exp = NULL;
+    while ((current = iterateMinExpTable(context, &i, &exp)) != NULL) {
+        freeVarsMinExp(exp, freeVars, NULL);
+    }
+    UNPROTECT(save);
+    return freeVars;
+}
+
+static MinExpTable *makeBinderRenames(SymbolList *vars, SymbolSet *freeVars) {
+    MinExpTable *renames = newMinExpTable();
+    int save = PROTECT(renames);
+    while (vars != NULL) {
+        if (getSymbolSet(freeVars, vars->symbol)) {
+            HashSymbol *fresh = genSymDollar(vars->symbol->name);
+            MinExp *replacement = newMinExp_Var(CPI(vars), fresh);
+            int replacementSave = PROTECT(replacement);
+            setMinExpTable(renames, vars->symbol, replacement);
+            UNPROTECT(replacementSave);
+        }
+        vars = vars->next;
+    }
+    UNPROTECT(save);
+    return renames;
+}
+
+static bool isMinExpTableEmpty(MinExpTable *table) {
+    Index i = 0;
+    MinExp *value = NULL;
+    return iterateMinExpTable(table, &i, &value) == NULL;
+}
+
+static SymbolList *renameSymbolList(SymbolList *node, MinExpTable *renames) {
+    if (node == NULL) {
+        return NULL;
+    }
+
+    SymbolList *new_next = renameSymbolList(node->next, renames);
+    int save = PROTECT(new_next);
+    HashSymbol *symbol = node->symbol;
+    MinExp *replacement = NULL;
+    if (getMinExpTable(renames, node->symbol, &replacement)) {
+        symbol = getMinExp_Var(replacement);
+    }
+
+    if (symbol != node->symbol || new_next != node->next) {
+        SymbolList *result = newSymbolList(CPI(node), symbol, new_next);
+        UNPROTECT(save);
+        return result;
+    }
+
+    UNPROTECT(save);
+    return node;
+}
+
 // Visitor implementations
 
 static MinLam *substMinLam(MinLam *node, MinExpTable *context) {
@@ -88,16 +153,32 @@ static MinLam *substMinLam(MinLam *node, MinExpTable *context) {
         return NULL;
     }
 
+    int save = STARTPROTECT();
     bool changed = false;
     MinExpTable *reducedContext = excludeBoundVars(context, node->args);
-    int save = PROTECT(reducedContext);
-    MinExp *new_exp = substMinExp(node->exp, reducedContext);
+    PROTECT(reducedContext);
+    SymbolSet *freeVars = freeVarsInContext(reducedContext);
+    PROTECT(freeVars);
+    MinExpTable *renames = makeBinderRenames(node->args, freeVars);
+    PROTECT(renames);
+    SymbolList *new_args = renameSymbolList(node->args, renames);
+    PROTECT(new_args);
+    changed = changed || (new_args != node->args);
+
+    MinExp *renamed_exp = node->exp;
+    if (!isMinExpTableEmpty(renames)) {
+        renamed_exp = substMinExp(node->exp, renames);
+    }
+    PROTECT(renamed_exp);
+    changed = changed || (renamed_exp != node->exp);
+
+    MinExp *new_exp = substMinExp(renamed_exp, reducedContext);
     PROTECT(new_exp);
-    changed = changed || (new_exp != node->exp);
+    changed = changed || (new_exp != renamed_exp);
 
     if (changed) {
         // Create new node with modified fields
-        MinLam *result = newMinLam(CPI(node), node->args, new_exp);
+        MinLam *result = newMinLam(CPI(node), new_args, new_exp);
         UNPROTECT(save);
         LEAVE(substMinLam);
         return result;
@@ -412,8 +493,9 @@ static MinLetRec *substMinLetRec(MinLetRec *node, MinExpTable *context) {
         return NULL;
     }
 
+    int save = STARTPROTECT();
     SymbolList *vars = getBindingVars(node->bindings);
-    int save = PROTECT(vars);
+    PROTECT(vars);
     MinExpTable *reducedContext = excludeBoundVars(context, vars);
     PROTECT(reducedContext);
     bool changed = false;
