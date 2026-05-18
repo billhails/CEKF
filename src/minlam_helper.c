@@ -33,17 +33,67 @@ SymbolList *minBindingsToSymbolList(MinBindings *bindings) {
     return this;
 }
 
-MinExp *makeDoneCont(ParserInfo PI, int status, bool hasArg) {
+MinExp *makeDoneCont(ParserInfo PI, int status) {
     MinExp *body = newMinExp_Done(PI, status);
     int save = PROTECT(body);
-    SymbolList *args = NULL;
-    if (hasArg) {
-        args = newSymbolList(PI, genSymDollar("k"), NULL);
-        PROTECT(args);
-    }
+    SymbolList *args = newSymbolList(PI, genSymDollar("k"), NULL);
+    PROTECT(args);
     MinExp *lambda = makeMinExp_Lam(PI, args, body);
     UNPROTECT(save);
     return lambda;
+}
+
+MinExp *makeExhaustedCont(ParserInfo PI, int exhaustedStatus, int cutStatus) {
+    MinExp *ordinary = newMinExp_Done(PI, exhaustedStatus);
+    int save = PROTECT(ordinary);
+    MinExp *cut = newMinExp_Done(PI, cutStatus);
+    PROTECT(cut);
+    HashSymbol *skipVar = genSymDollar("skip");
+    MinExp *skipExp = newMinExp_Var(PI, skipVar);
+    PROTECT(skipExp);
+    MinExp *body = makeMinExp_Iff(PI, skipExp, cut, ordinary);
+    PROTECT(body);
+    SymbolList *args = newSymbolList(PI, skipVar, NULL);
+    PROTECT(args);
+    MinExp *lambda = makeMinExp_Lam(PI, args, body);
+    UNPROTECT(save);
+    return lambda;
+}
+
+MinExp *makeCallFail(ParserInfo PI, MinExp *fail, int skipValue) {
+    MinExp *skip = newMinExp_Stdint(PI, skipValue);
+    int save = PROTECT(skip);
+    MinExprList *arg = newMinExprList(PI, skip, NULL);
+    PROTECT(arg);
+    MinExp *result = makeMinExp_Apply(PI, fail, arg);
+    UNPROTECT(save);
+    return result;
+}
+
+MinExp *makeChoiceFailCont(MinExp *body, MinExp *fail) {
+    MinExp *callFail = makeCallFail(CPI(body), fail, 0);
+    int save = PROTECT(callFail);
+    HashSymbol *skipVar = genSymDollar("skip");
+    MinExp *skipExp = newMinExp_Var(CPI(body), skipVar);
+    PROTECT(skipExp);
+    MinExp *ifThenElse = makeMinExp_Iff(CPI(body), skipExp, callFail, body);
+    PROTECT(ifThenElse);
+    SymbolList *newArgs = newSymbolList(CPI(body), skipVar, NULL);
+    PROTECT(newArgs);
+    MinExp *fail2 = makeMinExp_Lam(CPI(body), newArgs, ifThenElse);
+    UNPROTECT(save);
+    return fail2;
+}
+
+MinExp *makeCutFailCont(MinExp *fail) {
+    MinExp *callFail = makeCallFail(CPI(fail), fail, 1);
+    int save = PROTECT(callFail);
+    HashSymbol *skipVar = genSymDollar("skip");
+    SymbolList *newArgs = newSymbolList(CPI(fail), skipVar, NULL);
+    PROTECT(newArgs);
+    MinExp *fail2 = makeMinExp_Lam(CPI(fail), newArgs, callFail);
+    UNPROTECT(save);
+    return fail2;
 }
 
 // returns the the free variables in exp that are in keys

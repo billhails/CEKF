@@ -21,6 +21,7 @@
 
 #include "minlam_amb.h"
 #include "memory.h"
+#include "minlam_helper.h"
 #include "symbol.h"
 
 #ifdef DEBUG_MINLAM_AMB
@@ -387,7 +388,7 @@ static MinExp *ambMinAmb(MinAmb *node, MinExp *fail) {
     MinExp *new_right = ambMinExp(node->right, fail);
     int save = PROTECT(new_right);
     // create a new failure continuation
-    MinExp *fail2 = makeMinExp_Lam(CPI(new_right), NULL, new_right);
+    MinExp *fail2 = makeChoiceFailCont(new_right, fail);
     PROTECT(fail2);
     MinExp *result = ambMinExp(node->left, fail2);
     UNPROTECT(save);
@@ -420,7 +421,7 @@ MinExp *ambMinExp(MinExp *node, MinExp *fail) {
         break;
     }
     case MINEXP_TYPE_BACK: {
-        result = makeMinExp_Apply(CPI(node), fail, NULL);
+        result = makeCallFail(CPI(node), fail, 0);
         break;
     }
     case MINEXP_TYPE_BIGINTEGER: {
@@ -449,6 +450,13 @@ MinExp *ambMinExp(MinExp *node, MinExp *fail) {
             PROTECT(new_variant);
             result = newMinExp_Cond(CPI(node), new_variant);
         }
+        break;
+    }
+    case MINEXP_TYPE_CUT: {
+        MinExp *exp = getMinExp_Cut(node);
+        MinExp *new_fail = makeCutFailCont(fail);
+        PROTECT(new_fail);
+        result = ambMinExp(exp, new_fail);
         break;
     }
     case MINEXP_TYPE_DONE: {
@@ -534,7 +542,7 @@ MinExp *ambMinExp(MinExp *node, MinExp *fail) {
         break;
     }
     default:
-        cant_happen("unrecognized MinExp type %d", node->type);
+        cant_happen("unrecognized MinExp type %s", minExpTypeName(node->type));
     }
 
     UNPROTECT(save);

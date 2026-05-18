@@ -22,7 +22,11 @@
 #include "utils.h"
 
 SymbolList *minBindingsToSymbolList(MinBindings *);
-MinExp *makeDoneCont(ParserInfo, int, bool);
+MinExp *makeDoneCont(ParserInfo, int);
+MinExp *makeExhaustedCont(ParserInfo, int, int);
+MinExp *makeCallFail(ParserInfo, MinExp *, int);
+MinExp *makeChoiceFailCont(MinExp *, MinExp *);
+MinExp *makeCutFailCont(MinExp *);
 SymbolSet *computeRoots(SymbolSet *, MinExp *);
 SymbolSet *getAllKeys(MinBindings *);
 SymbolSetMap *buildDependencyGraph(MinBindings *, SymbolSet *);
