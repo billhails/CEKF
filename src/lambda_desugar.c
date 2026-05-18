@@ -707,6 +707,11 @@ static MinExp *_desugarLamExp(LamExp *node) {
         result = newMinExp_CallCC(CPI(node), new_callcc);
         break;
     }
+    case LAMEXP_TYPE_CUT: {
+        cant_happen(
+            "cut should not reach lambda_desugar before minlam support");
+        break;
+    }
     case LAMEXP_TYPE_CHARACTER: {
         result = newMinExp_Character(CPI(node), getLamExp_Character(node));
         break;

@@ -130,6 +130,11 @@ void ppLamExp(FILE *out, LamExp *exp) {
     case LAMEXP_TYPE_CALLCC:
         ppLamCallCC(out, getLamExp_CallCC(exp)); // LamExp
         break;
+    case LAMEXP_TYPE_CUT:
+        fprintf(out, "(cut ");
+        ppLamExp(out, getLamExp_Cut(exp));
+        fprintf(out, ")");
+        break;
     case LAMEXP_TYPE_PRINT:
         ppLamPrint(out, getLamExp_Print(exp));
         break;

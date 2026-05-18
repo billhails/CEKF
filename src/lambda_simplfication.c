@@ -342,6 +342,9 @@ LamExp *lamPerformSimplifications(LamExp *exp) {
         case LAMEXP_TYPE_CONSTRUCTOR:
         case LAMEXP_TYPE_ENV:
             break;
+        case LAMEXP_TYPE_CUT:
+            setLamExp_Cut(exp, lamPerformSimplifications(getLamExp_Cut(exp)));
+            break;
         case LAMEXP_TYPE_LAM:
             exp = performLamSimplifications(getLamExp_Lam(exp));
             break;
