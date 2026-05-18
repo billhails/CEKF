@@ -32,6 +32,7 @@ Fail --F--> Fail
 Location --loc--> index
 Location --lineNo--> int
 Location --fileName--> string
+FilePos --position--> filepos
 Vec["(Vec)"] --entries--> Value
 Value --none--> void_ptr
 Value --stdint--> int
@@ -50,6 +51,7 @@ Value --kont--> Kont
 Value --vec--> Vec
 Value --builtIn--> BuiltInImplementation
 Value --opaque--> opaque
+Value --filePos--> FilePos
 Value --addr--> ptr
 Value --index--> index
 ByteCodeArray["ByteCodeArray[]"] --entries--> byte

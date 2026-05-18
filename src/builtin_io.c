@@ -57,6 +57,8 @@ static void registerFGets(BuiltIns *registry);
 static void registerOpen(BuiltIns *registry);
 static void registerOpenMemstream(BuiltIns *registry);
 static void registerClose(BuiltIns *registry);
+static void registerFGetPos(BuiltIns *registry);
+static void registerFSetPos(BuiltIns *registry);
 
 static void registerOpenDir(BuiltIns *registry);
 static void registerReadDir(BuiltIns *registry);
@@ -95,6 +97,8 @@ void registerIO(BuiltIns *registry) {
     registerOpen(registry);
     registerOpenMemstream(registry);
     registerClose(registry);
+    registerFGetPos(registry);
+    registerFSetPos(registry);
     registerOpenDir(registry);
     registerReadDir(registry);
     registerCloseDir(registry);
@@ -103,9 +107,15 @@ void registerIO(BuiltIns *registry) {
 
 static HashSymbol *fileSymbol(void) { return newSymbol("file"); }
 
+static HashSymbol *filePosSymbol(void) { return newSymbol("filepos"); }
+
 static HashSymbol *dirSymbol(void) { return newSymbol("dir"); }
 
 static TcType *makeFileType(void) { return newTcType_Opaque(fileSymbol()); }
+
+static TcType *makeFilePosType(void) {
+    return makeTypeSig(filePosSymbol(), NULL);
+}
 
 static TcType *makeDirType(void) { return newTcType_Opaque(dirSymbol()); }
 
@@ -310,6 +320,52 @@ Value builtin_close(Vec *args) {
     return value_Stdint(1);
 }
 
+Value builtin_fgetpos(Vec *args) {
+#ifdef SAFETY_CHECKS
+    if (args->entries[0].type != VALUE_TYPE_OPAQUE) {
+        cant_happen("unexpected %s", valueTypeName(args->entries[0].type));
+    }
+#endif
+    Opaque *data = args->entries[0].val.opaque;
+    FilePos *position;
+    fpos_t saved = {0};
+    int save;
+
+    if (data == NULL || data->data == NULL) {
+        cant_happen("fgetpos on closed file handle");
+    }
+    if (fgetpos((FILE *)data->data, &saved) != 0) {
+        cant_happen("fgetpos failed");
+    }
+
+    position = newFilePos(saved);
+    save = PROTECT(position);
+    Value result = value_FilePos(position);
+    UNPROTECT(save);
+    return result;
+}
+
+Value builtin_fsetpos(Vec *args) {
+#ifdef SAFETY_CHECKS
+    if (args->entries[0].type != VALUE_TYPE_OPAQUE) {
+        cant_happen("unexpected %s", valueTypeName(args->entries[0].type));
+    }
+    if (args->entries[1].type != VALUE_TYPE_FILEPOS) {
+        cant_happen("unexpected %s", valueTypeName(args->entries[1].type));
+    }
+#endif
+    Opaque *data = args->entries[0].val.opaque;
+    FilePos *position = getValue_FilePos(args->entries[1]);
+
+    if (data == NULL || data->data == NULL) {
+        cant_happen("fsetpos on closed file handle");
+    }
+    if (fsetpos((FILE *)data->data, &position->position) != 0) {
+        cant_happen("fsetpos failed");
+    }
+    return value_Stdint(1);
+}
+
 Value builtin_closedir(Vec *args) {
 #ifdef SAFETY_CHECKS
     if (args->entries[0].type != VALUE_TYPE_OPAQUE) {
@@ -395,6 +451,9 @@ void fputValue(FILE *fh, Value x) {
         break;
     case VALUE_TYPE_CHARACTER:
         fprintf(fh, "%s", charRep(x.val.character));
+        break;
+    case VALUE_TYPE_FILEPOS:
+        fprintRegexFilePos(fh, x.val.filePos->position, 0);
         break;
     case VALUE_TYPE_CLO:
         fprintf(fh, "<closure>");
@@ -533,6 +592,14 @@ static TcType *pushFileArg(BuiltInArgs *args) {
     pushBuiltInArgs(args, fileType);
     UNPROTECT(save);
     return fileType;
+}
+
+static TcType *pushFilePosArg(BuiltInArgs *args) {
+    TcType *filePosType = makeFilePosType();
+    int save = PROTECT(filePosType);
+    pushBuiltInArgs(args, filePosType);
+    UNPROTECT(save);
+    return filePosType;
 }
 
 static TcType *pushDirArg(BuiltInArgs *args) {
@@ -706,6 +773,31 @@ static void registerClose(BuiltIns *registry) {
     PROTECT(b);
     pushNewBuiltIn(registry, "close", b, args, (void *)builtin_close,
                    "builtin_close");
+    UNPROTECT(save);
+}
+
+// opaque(file) -> filepos
+static void registerFGetPos(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    pushFileArg(args);
+    TcType *filePosType = makeFilePosType();
+    PROTECT(filePosType);
+    pushNewBuiltIn(registry, "fgetpos", filePosType, args,
+                   (void *)builtin_fgetpos, "builtin_fgetpos");
+    UNPROTECT(save);
+}
+
+// opaque(file) -> filepos -> bool
+static void registerFSetPos(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    pushFileArg(args);
+    pushFilePosArg(args);
+    TcType *b = makeBoolean();
+    PROTECT(b);
+    pushNewBuiltIn(registry, "fsetpos", b, args, (void *)builtin_fsetpos,
+                   "builtin_fsetpos");
     UNPROTECT(save);
 }
 

@@ -84,6 +84,15 @@ fn length(lst) {
 }
 export operator "len_" left 9 length;
 
+// starts_with: list(#a) -> list(#a) -> bool
+fn starts_with {
+    (_, []) { true }
+    ([], _) { false }
+    (a @ h1, a @ h2) { starts_with(h1, h2) }
+    (_, _) { false }
+}
+export operator "_startsWith_" none 7 starts_with;
+
 // foldl (#a -> #b -> #b) -> #b -> list(#a) -> #b
 fn foldl {
     (_, acc, []) { acc }

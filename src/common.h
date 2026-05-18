@@ -68,6 +68,7 @@
 // #    define DEBUG_TPMC_MATCH
 // #    define DEBUG_TPMC_TRANSLATE
 #define SAFETY_CHECKS
+#define TRACE_BRUN
 #endif
 
 #ifndef __GNUC__

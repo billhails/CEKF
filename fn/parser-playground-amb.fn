@@ -1,0 +1,226 @@
+let
+    link "ioutils.fn" as io;
+    link "listutils.fn" as list;
+    link "parseramb.fn" as parser;
+    link "parserdo.fn" as parserdo;
+    testFile = "/tmp/cekf_parser_playground_amb";
+
+    import list.drop;
+    import list.member;
+    import parser.bind;
+    import parser.chainl1;
+    import parser.choice_first;
+    import parser.file_eof;
+    import parser.many;
+    import parser.map;
+    import parser.match_regex_file;
+    import parser.optional;
+    import parser.parse_complete;
+    import parser.parse_complete_file;
+    import parser.parse_with_meaning;
+    import parser.pure;
+    import parser.satisfy;
+    import parser.some;
+    import parser.terminated;
+    import parserdo macro pdo;
+
+    typedef tree {
+        sentence(tree, tree) |
+        noun_phrase(tree, tree) |
+        verb_phrase(tree, tree) |
+        prep_phrase(tree, tree) |
+        noun(string) |
+        verb(string) |
+        det(string) |
+        adj(string) |
+        prep(string)
+    };
+
+    typedef expr {
+        num(number) |
+        addition(expr, expr) |
+        subtraction(expr, expr)
+    };
+
+    fn toNum(str) {
+        let fn helper {
+            ([], acc) { acc }
+            (h @ t, acc) { helper(t, (ord(h) - ord('0')) + 10 * acc) }
+        }
+        in helper(str, 0)
+    }
+
+    fn is_decimal(token) {
+        switch (regex_match(#/\d+/, token)) {
+            (just(#(_, []))) { true }
+            (_) { false }
+        }
+    }
+
+    fn word(makeNode, lexicon) {
+        map(makeNode, satisfy(fn (token) {
+            member(token, lexicon)
+        }))
+    }
+
+    fn fruit_is_insects {
+        (sentence(
+            noun_phrase(adj("fruit"), noun("flies")),
+            verb_phrase(verb("like"), noun_phrase(det("a"), noun("banana")))
+        )) { true }
+        (_) { false }
+    }
+
+    fn fruit_is_flying {
+        (sentence(
+            noun("fruit"),
+            verb_phrase(verb("flies"), prep_phrase(prep("like"), noun_phrase(det("a"), noun("banana"))))
+        )) { true }
+        (_) { false }
+    }
+
+    fn time_is_a_simile {
+        (sentence(
+            noun("time"),
+            verb_phrase(verb("flies"), prep_phrase(prep("like"), noun_phrase(det("an"), noun("arrow"))))
+        )) { true }
+        (_) { false }
+    }
+
+    fn time_flies_are_insects {
+        (sentence(
+            noun_phrase(adj("time"), noun("flies")),
+            verb_phrase(verb("like"), noun_phrase(det("an"), noun("arrow")))
+        )) { true }
+        (_) { false }
+    }
+
+    fn filePair(fh) {
+        fn (#(letters, rest1)) {
+            fn (#(digits, rest2)) {
+                #(#(letters, digits), rest2)
+            }(match_regex_file(#/\d+/)(rest1))
+        }(match_regex_file(#/[a-z]+/)(fh))
+    }
+
+in {
+    let
+        parse_number = map(fn (token) { num(toNum(token)) }, satisfy(is_decimal));
+
+        parse_add_op = choice_first([
+            map(fn (_) { fn (left, right) { addition(left, right) } }, satisfy(fn (token) { token == "+" })),
+            map(fn (_) { fn (left, right) { subtraction(left, right) } }, satisfy(fn (token) { token == "-" }))
+        ]);
+
+        parse_sum = chainl1(parse_number, parse_add_op);
+
+        parse_noun = word(fn (token) { noun(token) }, ["time", "fruit", "flies", "banana", "arrow"]);
+        parse_verb = word(fn (token) { verb(token) }, ["flies", "like"]);
+        parse_det = word(fn (token) { det(token) }, ["a", "an"]);
+        parse_adj = word(fn (token) { adj(token) }, ["time", "fruit"]);
+        parse_prep = word(fn (token) { prep(token) }, ["like"]);
+        parse_noun_phrase = choice_first([
+            parse_noun,
+            pdo[
+                from parse_det as determiner;
+                from parse_noun as noun0;
+                yield noun_phrase(determiner, noun0)
+            ],
+            pdo[
+                from parse_adj as adjective;
+                from parse_noun as noun0;
+                yield noun_phrase(adjective, noun0)
+            ]
+        ]);
+        parse_prep_phrase = pdo[
+            from parse_prep as preposition;
+            from parse_noun_phrase as object;
+            yield prep_phrase(preposition, object)
+        ];
+        parse_verb_phrase = choice_first([
+            pdo[
+                from parse_verb as verb0;
+                from parse_prep_phrase as phrase0;
+                yield verb_phrase(verb0, phrase0)
+            ],
+            pdo[
+                from parse_verb as verb0;
+                from parse_noun_phrase as phrase0;
+                yield verb_phrase(verb0, phrase0)
+            ]
+        ]);
+        parse_sentence = choice_first([
+            pdo[
+                from parse_noun as subject;
+                from parse_verb_phrase as predicate;
+                yield sentence(subject, predicate)
+            ],
+            pdo[
+                from parse_noun_phrase as subject;
+                from parse_verb_phrase as predicate;
+                yield sentence(subject, predicate)
+            ]
+        ]);
+    in {
+        puts("optional det present: ");
+        print(optional(parse_det, ["an", "arrow"]));
+
+        puts("optional det absent: ");
+        print(optional(parse_det, ["arrow"]));
+
+        puts("many adjectives: ");
+        print(many(parse_adj, ["fruit", "time", "arrow"]));
+
+        puts("some adjectives: ");
+        print(some(parse_adj, ["fruit", "time", "arrow"]));
+
+        puts("many non-consuming parser: ");
+        print(many(fn (tokens) { #("stuck", tokens) }, ["banana"]));
+
+        puts("chainl1 arithmetic: ");
+        print(parse_complete(parse_sum, ["12", "+", "34", "+", "56"]));
+
+        puts("chainl1 arithmetic with subtraction: ");
+        print(parse_complete(parse_sum, ["20", "-", "3", "-", "4"]));
+
+        puts("raw fruit parse: ");
+        print(parse_complete(parse_sentence, ["fruit", "flies", "like", "a", "banana"]));
+
+        puts("fruit forced to insects: ");
+        print(parse_with_meaning(parse_sentence, fruit_is_insects, ["fruit", "flies", "like", "a", "banana"]));
+
+        puts("fruit forced to flying-fruit: ");
+        print(parse_with_meaning(parse_sentence, fruit_is_flying, ["fruit", "flies", "like", "a", "banana"]));
+
+        puts("raw time parse: ");
+        print(parse_complete(parse_sentence, ["time", "flies", "like", "an", "arrow"]));
+
+        puts("time forced to simile: ");
+        print(parse_with_meaning(parse_sentence, time_is_a_simile, ["time", "flies", "like", "an", "arrow"]));
+
+        puts("time forced to insect reading: ");
+        print(parse_with_meaning(parse_sentence, time_flies_are_insects, ["time", "flies", "like", "an", "arrow"]));
+
+        puts("file abc123DEF: ");
+        io.with_output_to(testFile, fn (fh) {
+            fputs(fh, "abc123DEF");
+        });
+        unsafe switch (io.with_input_from(testFile, fn (fh) {
+            fn (#(parsed, rest)) {
+                #(parsed, fgets(rest))
+            }(filePair(fh))
+        })) {
+            (just(result)) { print(result) }
+        };
+
+        puts("file abc123 complete: ");
+        io.with_output_to(testFile, fn (fh) {
+            fputs(fh, "abc123");
+        });
+        unsafe switch (io.with_input_from(testFile, fn (fh) {
+            #(parse_complete_file(filePair, fh), fgets(fh))
+        })) {
+            (just(result)) { print(result) }
+        };
+    }
+}

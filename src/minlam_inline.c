@@ -21,6 +21,7 @@
 
 #include "minlam_inline.h"
 #include "memory.h"
+#include "minlam_alphaconvert.h"
 #include "minlam_helper.h"
 #include "minlam_inSafe.h"
 #include "minlam_isSimple.h"
@@ -36,32 +37,32 @@
 
 #define INLINE_SIZE_LIMIT 40
 
-static MinLam *inlineMinLam(MinLam *);
-static MinAnnotatedVar *inlineMinAnnotatedVar(MinAnnotatedVar *);
-static MinExprList *inlineMinExprList(MinExprList *);
-static MinPrimApp *inlineMinPrimApp(MinPrimApp *);
-static MinApply *inlineMinApply(MinApply *);
-static MinIff *inlineMinIff(MinIff *);
-static MinCond *inlineMinCond(MinCond *);
-static MinIntCondCases *inlineMinIntCondCases(MinIntCondCases *);
-static MinCharCondCases *inlineMinCharCondCases(MinCharCondCases *);
-static MinMatch *inlineMinMatch(MinMatch *);
-static MinMatchList *inlineMinMatchList(MinMatchList *);
-static MinLetRec *inlineMinLetRec(MinLetRec *);
-static MinBindings *inlineMinBindings(MinBindings *);
-static MinAmb *inlineMinAmb(MinAmb *);
-static MinCondCases *inlineMinCondCases(MinCondCases *);
+static MinLam *inlineMinLam(MinLam *, BuiltIns *);
+static MinAnnotatedVar *inlineMinAnnotatedVar(MinAnnotatedVar *, BuiltIns *);
+static MinExprList *inlineMinExprList(MinExprList *, BuiltIns *);
+static MinPrimApp *inlineMinPrimApp(MinPrimApp *, BuiltIns *);
+static MinApply *inlineMinApply(MinApply *, BuiltIns *);
+static MinIff *inlineMinIff(MinIff *, BuiltIns *);
+static MinCond *inlineMinCond(MinCond *, BuiltIns *);
+static MinIntCondCases *inlineMinIntCondCases(MinIntCondCases *, BuiltIns *);
+static MinCharCondCases *inlineMinCharCondCases(MinCharCondCases *, BuiltIns *);
+static MinMatch *inlineMinMatch(MinMatch *, BuiltIns *);
+static MinMatchList *inlineMinMatchList(MinMatchList *, BuiltIns *);
+static MinLetRec *inlineMinLetRec(MinLetRec *, BuiltIns *);
+static MinBindings *inlineMinBindings(MinBindings *, BuiltIns *);
+static MinAmb *inlineMinAmb(MinAmb *, BuiltIns *);
+static MinCondCases *inlineMinCondCases(MinCondCases *, BuiltIns *);
 
 ///////////////////////////
 // Visitor implementations
 ///////////////////////////
 
-static MinLam *inlineMinLam(MinLam *node) {
+static MinLam *inlineMinLam(MinLam *node, BuiltIns *builtIns) {
     if (node == NULL)
         return NULL;
     ENTER(inlineMinLam);
     bool changed = false;
-    MinExp *new_exp = inlineMinExp(node->exp);
+    MinExp *new_exp = inlineMinExp(node->exp, builtIns);
     int save = PROTECT(new_exp);
     changed = changed || (new_exp != node->exp);
     MinLam *result = node;
@@ -74,24 +75,26 @@ static MinLam *inlineMinLam(MinLam *node) {
     return result;
 }
 
-static MinAnnotatedVar *inlineMinAnnotatedVar(MinAnnotatedVar *node) {
+static MinAnnotatedVar *inlineMinAnnotatedVar(MinAnnotatedVar *node,
+                                              BuiltIns *builtIns) {
     if (node == NULL)
         return NULL;
     ENTER(inlineMinAnnotatedVar);
+    (void)builtIns;
     MinAnnotatedVar *result = node;
     LEAVE(inlineMinAnnotatedVar);
     return result;
 }
 
-static MinExprList *inlineMinExprList(MinExprList *node) {
+static MinExprList *inlineMinExprList(MinExprList *node, BuiltIns *builtIns) {
     if (node == NULL)
         return NULL;
     ENTER(inlineMinExprList);
     bool changed = false;
-    MinExp *new_exp = inlineMinExp(node->exp);
+    MinExp *new_exp = inlineMinExp(node->exp, builtIns);
     int save = PROTECT(new_exp);
     changed = changed || (new_exp != node->exp);
-    MinExprList *new_next = inlineMinExprList(node->next);
+    MinExprList *new_next = inlineMinExprList(node->next, builtIns);
     PROTECT(new_next);
     changed = changed || (new_next != node->next);
     MinExprList *result = node;
@@ -103,15 +106,15 @@ static MinExprList *inlineMinExprList(MinExprList *node) {
     return result;
 }
 
-static MinPrimApp *inlineMinPrimApp(MinPrimApp *node) {
+static MinPrimApp *inlineMinPrimApp(MinPrimApp *node, BuiltIns *builtIns) {
     if (node == NULL)
         return NULL;
     ENTER(inlineMinPrimApp);
     bool changed = false;
-    MinExp *new_exp1 = inlineMinExp(node->exp1);
+    MinExp *new_exp1 = inlineMinExp(node->exp1, builtIns);
     int save = PROTECT(new_exp1);
     changed = changed || (new_exp1 != node->exp1);
-    MinExp *new_exp2 = inlineMinExp(node->exp2);
+    MinExp *new_exp2 = inlineMinExp(node->exp2, builtIns);
     PROTECT(new_exp2);
     changed = changed || (new_exp2 != node->exp2);
     MinPrimApp *result = node;
@@ -123,15 +126,15 @@ static MinPrimApp *inlineMinPrimApp(MinPrimApp *node) {
     return result;
 }
 
-static MinApply *inlineMinApply(MinApply *node) {
+static MinApply *inlineMinApply(MinApply *node, BuiltIns *builtIns) {
     if (node == NULL)
         return NULL;
     ENTER(inlineMinApply);
     bool changed = false;
-    MinExp *new_function = inlineMinExp(node->function);
+    MinExp *new_function = inlineMinExp(node->function, builtIns);
     int save = PROTECT(new_function);
     changed = changed || (new_function != node->function);
-    MinExprList *new_args = inlineMinExprList(node->args);
+    MinExprList *new_args = inlineMinExprList(node->args, builtIns);
     PROTECT(new_args);
     changed = changed || (new_args != node->args);
     MinApply *result = node;
@@ -145,18 +148,18 @@ static MinApply *inlineMinApply(MinApply *node) {
     return result;
 }
 
-static MinIff *inlineMinIff(MinIff *node) {
+static MinIff *inlineMinIff(MinIff *node, BuiltIns *builtIns) {
     if (node == NULL)
         return NULL;
     ENTER(inlineMinIff);
     bool changed = false;
-    MinExp *new_condition = inlineMinExp(node->condition);
+    MinExp *new_condition = inlineMinExp(node->condition, builtIns);
     int save = PROTECT(new_condition);
     changed = changed || (new_condition != node->condition);
-    MinExp *new_consequent = inlineMinExp(node->consequent);
+    MinExp *new_consequent = inlineMinExp(node->consequent, builtIns);
     PROTECT(new_consequent);
     changed = changed || (new_consequent != node->consequent);
-    MinExp *new_alternative = inlineMinExp(node->alternative);
+    MinExp *new_alternative = inlineMinExp(node->alternative, builtIns);
     PROTECT(new_alternative);
     changed = changed || (new_alternative != node->alternative);
     MinIff *result = node;
@@ -169,15 +172,15 @@ static MinIff *inlineMinIff(MinIff *node) {
     return result;
 }
 
-static MinCond *inlineMinCond(MinCond *node) {
+static MinCond *inlineMinCond(MinCond *node, BuiltIns *builtIns) {
     if (node == NULL)
         return NULL;
     ENTER(inlineMinCond);
     bool changed = false;
-    MinExp *new_value = inlineMinExp(node->value);
+    MinExp *new_value = inlineMinExp(node->value, builtIns);
     int save = PROTECT(new_value);
     changed = changed || (new_value != node->value);
-    MinCondCases *new_cases = inlineMinCondCases(node->cases);
+    MinCondCases *new_cases = inlineMinCondCases(node->cases, builtIns);
     PROTECT(new_cases);
     changed = changed || (new_cases != node->cases);
     MinCond *result = node;
@@ -189,15 +192,16 @@ static MinCond *inlineMinCond(MinCond *node) {
     return result;
 }
 
-static MinIntCondCases *inlineMinIntCondCases(MinIntCondCases *node) {
+static MinIntCondCases *inlineMinIntCondCases(MinIntCondCases *node,
+                                              BuiltIns *builtIns) {
     if (node == NULL)
         return NULL;
     ENTER(inlineMinIntCondCases);
     bool changed = false;
-    MinExp *new_body = inlineMinExp(node->body);
+    MinExp *new_body = inlineMinExp(node->body, builtIns);
     int save = PROTECT(new_body);
     changed = changed || (new_body != node->body);
-    MinIntCondCases *new_next = inlineMinIntCondCases(node->next);
+    MinIntCondCases *new_next = inlineMinIntCondCases(node->next, builtIns);
     PROTECT(new_next);
     changed = changed || (new_next != node->next);
     MinIntCondCases *result = node;
@@ -210,15 +214,16 @@ static MinIntCondCases *inlineMinIntCondCases(MinIntCondCases *node) {
     return result;
 }
 
-static MinCharCondCases *inlineMinCharCondCases(MinCharCondCases *node) {
+static MinCharCondCases *inlineMinCharCondCases(MinCharCondCases *node,
+                                                BuiltIns *builtIns) {
     if (node == NULL)
         return NULL;
     ENTER(inlineMinCharCondCases);
     bool changed = false;
-    MinExp *new_body = inlineMinExp(node->body);
+    MinExp *new_body = inlineMinExp(node->body, builtIns);
     int save = PROTECT(new_body);
     changed = changed || (new_body != node->body);
-    MinCharCondCases *new_next = inlineMinCharCondCases(node->next);
+    MinCharCondCases *new_next = inlineMinCharCondCases(node->next, builtIns);
     PROTECT(new_next);
     changed = changed || (new_next != node->next);
     MinCharCondCases *result = node;
@@ -232,15 +237,15 @@ static MinCharCondCases *inlineMinCharCondCases(MinCharCondCases *node) {
     return result;
 }
 
-static MinMatch *inlineMinMatch(MinMatch *node) {
+static MinMatch *inlineMinMatch(MinMatch *node, BuiltIns *builtIns) {
     if (node == NULL)
         return NULL;
     ENTER(inlineMinMatch);
     bool changed = false;
-    MinExp *new_index = inlineMinExp(node->index);
+    MinExp *new_index = inlineMinExp(node->index, builtIns);
     int save = PROTECT(new_index);
     changed = changed || (new_index != node->index);
-    MinMatchList *new_cases = inlineMinMatchList(node->cases);
+    MinMatchList *new_cases = inlineMinMatchList(node->cases, builtIns);
     PROTECT(new_cases);
     changed = changed || (new_cases != node->cases);
     MinMatch *result = node;
@@ -252,15 +257,16 @@ static MinMatch *inlineMinMatch(MinMatch *node) {
     return result;
 }
 
-static MinMatchList *inlineMinMatchList(MinMatchList *node) {
+static MinMatchList *inlineMinMatchList(MinMatchList *node,
+                                        BuiltIns *builtIns) {
     if (node == NULL)
         return NULL;
     ENTER(inlineMinMatchList);
     bool changed = false;
-    MinExp *new_body = inlineMinExp(node->body);
+    MinExp *new_body = inlineMinExp(node->body, builtIns);
     int save = PROTECT(new_body);
     changed = changed || (new_body != node->body);
-    MinMatchList *new_next = inlineMinMatchList(node->next);
+    MinMatchList *new_next = inlineMinMatchList(node->next, builtIns);
     PROTECT(new_next);
     changed = changed || (new_next != node->next);
     MinMatchList *result = node;
@@ -272,15 +278,15 @@ static MinMatchList *inlineMinMatchList(MinMatchList *node) {
     return result;
 }
 
-static MinLetRec *inlineMinLetRec(MinLetRec *node) {
+static MinLetRec *inlineMinLetRec(MinLetRec *node, BuiltIns *builtIns) {
     if (node == NULL)
         return NULL;
     ENTER(inlineMinLetRec);
     bool changed = false;
-    MinBindings *new_bindings = inlineMinBindings(node->bindings);
+    MinBindings *new_bindings = inlineMinBindings(node->bindings, builtIns);
     int save = PROTECT(new_bindings);
     changed = changed || (new_bindings != node->bindings);
-    MinExp *new_body = inlineMinExp(node->body);
+    MinExp *new_body = inlineMinExp(node->body, builtIns);
     PROTECT(new_body);
     changed = changed || (new_body != node->body);
 
@@ -368,15 +374,15 @@ static MinLetRec *inlineMinLetRec(MinLetRec *node) {
     return result;
 }
 
-static MinBindings *inlineMinBindings(MinBindings *node) {
+static MinBindings *inlineMinBindings(MinBindings *node, BuiltIns *builtIns) {
     if (node == NULL)
         return NULL;
     ENTER(inlineMinBindings);
     bool changed = false;
-    MinExp *new_val = inlineMinExp(node->val);
+    MinExp *new_val = inlineMinExp(node->val, builtIns);
     int save = PROTECT(new_val);
     changed = changed || (new_val != node->val);
-    MinBindings *new_next = inlineMinBindings(node->next);
+    MinBindings *new_next = inlineMinBindings(node->next, builtIns);
     PROTECT(new_next);
     changed = changed || (new_next != node->next);
     MinBindings *result = node;
@@ -389,15 +395,15 @@ static MinBindings *inlineMinBindings(MinBindings *node) {
     return result;
 }
 
-static MinAmb *inlineMinAmb(MinAmb *node) {
+static MinAmb *inlineMinAmb(MinAmb *node, BuiltIns *builtIns) {
     if (node == NULL)
         return NULL;
     ENTER(inlineMinAmb);
     bool changed = false;
-    MinExp *new_left = inlineMinExp(node->left);
+    MinExp *new_left = inlineMinExp(node->left, builtIns);
     int save = PROTECT(new_left);
     changed = changed || (new_left != node->left);
-    MinExp *new_right = inlineMinExp(node->right);
+    MinExp *new_right = inlineMinExp(node->right, builtIns);
     PROTECT(new_right);
     changed = changed || (new_right != node->right);
     MinAmb *result = node;
@@ -409,7 +415,7 @@ static MinAmb *inlineMinAmb(MinAmb *node) {
     return result;
 }
 
-MinExp *inlineMinExp(MinExp *node) {
+MinExp *inlineMinExp(MinExp *node, BuiltIns *builtIns) {
     if (node == NULL)
         return NULL;
     ENTER(inlineMinExp);
@@ -419,7 +425,7 @@ MinExp *inlineMinExp(MinExp *node) {
     case MINEXP_TYPE_AMB: {
         // MinAmb
         MinAmb *variant = getMinExp_Amb(node);
-        MinAmb *new_variant = inlineMinAmb(variant);
+        MinAmb *new_variant = inlineMinAmb(variant, builtIns);
         if (new_variant != variant) {
             PROTECT(new_variant);
             result = newMinExp_Amb(CPI(node), new_variant);
@@ -429,7 +435,7 @@ MinExp *inlineMinExp(MinExp *node) {
     case MINEXP_TYPE_APPLY: {
         // MinApply
         MinApply *variant = getMinExp_Apply(node);
-        MinApply *new_variant = inlineMinApply(variant);
+        MinApply *new_variant = inlineMinApply(variant, builtIns);
         if (new_variant != variant) {
             PROTECT(new_variant);
             result = newMinExp_Apply(CPI(node), new_variant);
@@ -439,7 +445,7 @@ MinExp *inlineMinExp(MinExp *node) {
     case MINEXP_TYPE_ARGS: {
         // MinExprList
         MinExprList *variant = getMinExp_Args(node);
-        MinExprList *new_variant = inlineMinExprList(variant);
+        MinExprList *new_variant = inlineMinExprList(variant, builtIns);
         if (new_variant != variant) {
             PROTECT(new_variant);
             result = newMinExp_Args(CPI(node), new_variant);
@@ -449,7 +455,7 @@ MinExp *inlineMinExp(MinExp *node) {
     case MINEXP_TYPE_AVAR: {
         // MinAnnotatedVar
         MinAnnotatedVar *variant = getMinExp_Avar(node);
-        MinAnnotatedVar *new_variant = inlineMinAnnotatedVar(variant);
+        MinAnnotatedVar *new_variant = inlineMinAnnotatedVar(variant, builtIns);
         if (new_variant != variant) {
             PROTECT(new_variant);
             result = newMinExp_Avar(CPI(node), new_variant);
@@ -467,7 +473,7 @@ MinExp *inlineMinExp(MinExp *node) {
     case MINEXP_TYPE_BINDINGS: {
         // MinBindings
         MinBindings *variant = getMinExp_Bindings(node);
-        MinBindings *new_variant = inlineMinBindings(variant);
+        MinBindings *new_variant = inlineMinBindings(variant, builtIns);
         if (new_variant != variant) {
             PROTECT(new_variant);
             result = newMinExp_Bindings(CPI(node), new_variant);
@@ -477,7 +483,7 @@ MinExp *inlineMinExp(MinExp *node) {
     case MINEXP_TYPE_CALLCC: {
         // MinExp
         MinExp *variant = getMinExp_CallCC(node);
-        MinExp *new_variant = inlineMinExp(variant);
+        MinExp *new_variant = inlineMinExp(variant, builtIns);
         if (new_variant != variant) {
             PROTECT(new_variant);
             result = newMinExp_CallCC(CPI(node), new_variant);
@@ -491,7 +497,7 @@ MinExp *inlineMinExp(MinExp *node) {
     case MINEXP_TYPE_COND: {
         // MinCond
         MinCond *variant = getMinExp_Cond(node);
-        MinCond *new_variant = inlineMinCond(variant);
+        MinCond *new_variant = inlineMinCond(variant, builtIns);
         if (new_variant != variant) {
             PROTECT(new_variant);
             result = newMinExp_Cond(CPI(node), new_variant);
@@ -505,7 +511,7 @@ MinExp *inlineMinExp(MinExp *node) {
     case MINEXP_TYPE_IFF: {
         // MinIff
         MinIff *variant = getMinExp_Iff(node);
-        MinIff *new_variant = inlineMinIff(variant);
+        MinIff *new_variant = inlineMinIff(variant, builtIns);
         if (new_variant != variant) {
             PROTECT(new_variant);
             result = newMinExp_Iff(CPI(node), new_variant);
@@ -515,7 +521,7 @@ MinExp *inlineMinExp(MinExp *node) {
     case MINEXP_TYPE_LAM: {
         // MinLam
         MinLam *variant = getMinExp_Lam(node);
-        MinLam *new_variant = inlineMinLam(variant);
+        MinLam *new_variant = inlineMinLam(variant, builtIns);
         if (new_variant != variant) {
             PROTECT(new_variant);
             result = newMinExp_Lam(CPI(node), new_variant);
@@ -525,7 +531,7 @@ MinExp *inlineMinExp(MinExp *node) {
     case MINEXP_TYPE_LETREC: {
         // MinLetRec
         MinLetRec *variant = getMinExp_LetRec(node);
-        MinLetRec *new_variant = inlineMinLetRec(variant);
+        MinLetRec *new_variant = inlineMinLetRec(variant, builtIns);
         if (new_variant != variant) {
             PROTECT(new_variant);
             result = newMinExp_LetRec(CPI(node), new_variant);
@@ -535,7 +541,7 @@ MinExp *inlineMinExp(MinExp *node) {
     case MINEXP_TYPE_MAKEVEC: {
         // MinExprList
         MinExprList *variant = getMinExp_MakeVec(node);
-        MinExprList *new_variant = inlineMinExprList(variant);
+        MinExprList *new_variant = inlineMinExprList(variant, builtIns);
         if (new_variant != variant) {
             PROTECT(new_variant);
             result = newMinExp_MakeVec(CPI(node), new_variant);
@@ -545,7 +551,7 @@ MinExp *inlineMinExp(MinExp *node) {
     case MINEXP_TYPE_MATCH: {
         // MinMatch
         MinMatch *variant = getMinExp_Match(node);
-        MinMatch *new_variant = inlineMinMatch(variant);
+        MinMatch *new_variant = inlineMinMatch(variant, builtIns);
         if (new_variant != variant) {
             PROTECT(new_variant);
             result = newMinExp_Match(CPI(node), new_variant);
@@ -555,7 +561,7 @@ MinExp *inlineMinExp(MinExp *node) {
     case MINEXP_TYPE_PRIM: {
         // MinPrimApp
         MinPrimApp *variant = getMinExp_Prim(node);
-        MinPrimApp *new_variant = inlineMinPrimApp(variant);
+        MinPrimApp *new_variant = inlineMinPrimApp(variant, builtIns);
         if (new_variant != variant) {
             PROTECT(new_variant);
             result = newMinExp_Prim(CPI(node), new_variant);
@@ -565,7 +571,7 @@ MinExp *inlineMinExp(MinExp *node) {
     case MINEXP_TYPE_SEQUENCE: {
         // MinExprList
         MinExprList *variant = getMinExp_Sequence(node);
-        MinExprList *new_variant = inlineMinExprList(variant);
+        MinExprList *new_variant = inlineMinExprList(variant, builtIns);
         if (new_variant != variant) {
             PROTECT(new_variant);
             result = newMinExp_Sequence(CPI(node), new_variant);
@@ -588,7 +594,8 @@ MinExp *inlineMinExp(MinExp *node) {
     return result;
 }
 
-static MinCondCases *inlineMinCondCases(MinCondCases *node) {
+static MinCondCases *inlineMinCondCases(MinCondCases *node,
+                                        BuiltIns *builtIns) {
     if (node == NULL)
         return NULL;
     ENTER(inlineMinCondCases);
@@ -598,7 +605,7 @@ static MinCondCases *inlineMinCondCases(MinCondCases *node) {
     case MINCONDCASES_TYPE_INTEGERS: {
         // MinIntCondCases
         MinIntCondCases *variant = getMinCondCases_Integers(node);
-        MinIntCondCases *new_variant = inlineMinIntCondCases(variant);
+        MinIntCondCases *new_variant = inlineMinIntCondCases(variant, builtIns);
         if (new_variant != variant) {
             PROTECT(new_variant);
             result = newMinCondCases_Integers(CPI(node), new_variant);
@@ -608,7 +615,8 @@ static MinCondCases *inlineMinCondCases(MinCondCases *node) {
     case MINCONDCASES_TYPE_CHARACTERS: {
         // MinCharCondCases
         MinCharCondCases *variant = getMinCondCases_Characters(node);
-        MinCharCondCases *new_variant = inlineMinCharCondCases(variant);
+        MinCharCondCases *new_variant =
+            inlineMinCharCondCases(variant, builtIns);
         if (new_variant != variant) {
             PROTECT(new_variant);
             result = newMinCondCases_Characters(CPI(node), new_variant);

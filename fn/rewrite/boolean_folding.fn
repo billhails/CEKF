@@ -1,0 +1,195 @@
+namespace
+
+link "minexpr.fn" as M;
+link "../listutils.fn" as list;
+import list operator "_|>_"; // map
+import list operator "_&&_"; // (#a -> #b) -> (#c -> #d) -> #(#a, #c) -> #(#b, #d)
+
+fn simplify (e) {
+    let
+        typedef term {
+            TRUE             |
+            FALSE            |
+            AND(term, term)  |
+            OR(term, term)   |
+            NOT(term)        |
+            XOR(term, term)  |
+            NAND(term, term) |
+            NOR(term, term)  |
+            XNOR(term, term) |
+            OTHER(M.expr)
+        }
+
+        fn e2t {
+            (M.apply(M.primop("and"),  [e1, e2])) { AND(e2t(e1),  e2t(e2)) }
+            (M.apply(M.primop("or"),   [e1, e2])) { OR(e2t(e1),   e2t(e2)) }
+            (M.apply(M.primop("not"),  [e1]))     { NOT(e2t(e1))           }
+            (M.apply(M.primop("xor"),  [e1, e2])) { XOR(e2t(e1),  e2t(e2)) }
+            (M.apply(M.primop("nand"), [e1, e2])) { NAND(e2t(e1), e2t(e2)) }
+            (M.apply(M.primop("nor"),  [e1, e2])) { NOR(e2t(e1),  e2t(e2)) }
+            (M.apply(M.primop("xnor"), [e1, e2])) { XNOR(e2t(e1), e2t(e2)) }
+            (M.stdint(0))                         { FALSE                  }
+            (M.stdint(1))                         { TRUE                   }
+            (x)                                   { OTHER(x)               }
+        }
+
+        fn t2e {
+            (TRUE)       { M.stdint(1)                                 }
+            (FALSE)      { M.stdint(0)                                 }
+            (AND(a, b))  { M.apply(M.primop("and"),  [t2e(a), t2e(b)]) }
+            (OR(a, b))   { M.apply(M.primop("or"),   [t2e(a), t2e(b)]) }
+            (NOT(a))     { M.apply(M.primop("not"),  [t2e(a)])         }
+            (XOR(a, b))  { M.apply(M.primop("xor"),  [t2e(a), t2e(b)]) }
+            (NAND(a, b)) { M.apply(M.primop("nand"), [t2e(a), t2e(b)]) }
+            (NOR(a, b))  { M.apply(M.primop("nor"),  [t2e(a), t2e(b)]) }
+            (XNOR(a, b)) { M.apply(M.primop("xnor"), [t2e(a), t2e(b)]) }
+            (OTHER(a))   { a                                           }
+        }
+
+        fn prep {
+            (AND(a, b))  { AND(S(a),  S(b)) }
+            (OR(a, b))   { OR(S(a),   S(b)) }
+            (NOT(a))     { NOT(S(a))        }
+            (XOR(a, b))  { XOR(S(a),  S(b)) }
+            (NAND(a, b)) { NAND(S(a), S(b)) }
+            (NOR(a, b))  { NOR(S(a),  S(b)) }
+            (XNOR(a, b)) { XNOR(S(a), S(b)) }
+            (x) { x }
+        }
+
+        fn S(t) {
+            switch(prep(t)) {
+                (AND(FALSE, _))      |
+                (AND(_, FALSE))      { FALSE }
+                (AND(TRUE, x))       |
+                (AND(x, TRUE))       { x }
+
+                (OR(TRUE, _))        |
+                (OR(_, TRUE))        { TRUE }
+                (OR(FALSE, x))       |
+                (OR(x, FALSE))       { x }
+
+                (NOT(TRUE))          { FALSE }
+                (NOT(FALSE))         { TRUE }
+                (NOT(NOT(x)))        { x }
+
+                (XOR(TRUE, x))       |
+                (XOR(x, TRUE))       { S(NOT(x)) }
+                (XOR(FALSE, x))      |
+                (XOR(x, FALSE))      { x }
+
+                (NAND(_, FALSE))     |
+                (NAND(FALSE, _))     { TRUE }
+                (NAND(x, TRUE))      |
+                (NAND(TRUE, x))      |
+                (NAND(x, x))         { S(NOT(x)) }
+
+                (NOR(TRUE, _))       |
+                (NOR(_, TRUE))       { FALSE }
+                (NOR(FALSE, x))      |
+                (NOR(x, FALSE))      |
+                (NOR(x, x))          { S(NOT(x)) }
+
+                (XNOR(TRUE, x))      |
+                (XNOR(x, TRUE))      { x }
+                (XNOR(FALSE, x))     |
+                (XNOR(x, FALSE))     { S(NOT(x)) }
+                (x) { x }
+            }
+        }
+    in
+        t2e(S(e2t(e)))
+}
+
+fn fold {
+    (M.amb_expr(expr1, expr2)) {
+        // amb_expr(expr, expr)
+        M.amb_expr(fold(expr1), fold(expr2))
+    }
+
+    (x = M.apply(fun, args)) {
+        // apply(expr, list(expr))
+        {
+        let f = fold(fun);
+            a = args |> fold;
+        in
+            switch (f) {
+                (M.primop(_)) {
+                    simplify(M.apply(f, a))
+                }
+                (_) {
+                    M.apply(f, a)
+                }
+            }
+        }
+    }
+
+    (x = M.back_expr)    |
+    (x = M.primop(_))    |
+    (x = M.bigint(_))    |
+    (x = M.character(_)) |
+    (x = M.done_expr)    |
+    (x = M.var(_))       |
+    (x = M.stdint(_)) {
+        x
+    }
+
+    (M.callcc_expr(e)) {
+        // callcc_expr(expr)
+        M.callcc_expr(fold(e))
+    }
+
+    (M.cond_expr(test, branches)) {
+        // cond_expr(expr, list(#(expr, expr)))
+        M.cond_expr(fold(test), branches |> fold && fold)
+    }
+
+    (M.if_expr(exprc, exprt, exprf)) {
+        // if_expr(expr, expr, expr)
+        let exprc = fold(exprc);
+        in
+            switch (exprc) {
+                (M.bigint(n)) {
+                    if (n != 0) {
+                        fold(exprt)
+                    } else {
+                        fold(exprf)
+                    }
+                }
+                (_) {
+                    M.if_expr(exprc, fold(exprt), fold(exprf))
+                }
+            }
+    }
+
+    (M.lambda(params, body)) {
+        // lambda(list(string), expr)
+        M.lambda(params, fold(body))
+    }
+
+    (M.letrec_expr(bindings, expr)) {
+        // letrec_expr(list(#(string, expr)), expr)
+        M.letrec_expr(bindings |> identity && fold && identity, fold(expr))
+    }
+
+    (M.make_vec(size, args)) {
+        // make_vec(number, list(expr))
+        M.make_vec(size, args |> fold)
+    }
+
+    (M.match_cases(test, cases)) {
+        // match_cases(expr, list(#(list(number), expr)))
+        M.match_cases(fold(test), cases |> identity && fold)
+    }
+
+    (M.sequence(exprs)) {
+        // sequence(list(expr))
+        M.sequence(exprs |> fold)
+    }
+
+    (x) {
+        M.print_expr(x);
+        puts("\n");
+        error("fold: unsupported expression")
+    }
+}

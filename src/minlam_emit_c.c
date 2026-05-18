@@ -65,6 +65,7 @@ static void emitMinMatchList(MinMatchList *, EC *);
 static void emitStdint(Integer, EC *);
 static void emitVec(MinExp *, MinExp *, EC *);
 static void printEmitBuffer(FILE *, void *);
+static void commentER(EC *, char *, ER *);
 static inline Opaque *newOpaque_EmitBuffer();
 static inline char *opaqueEmitBufferContent(Opaque *container);
 static inline FILE *opaqueEmitBufferFh(Opaque *container);
@@ -322,6 +323,19 @@ static inline HashSymbol *getResultSlotSymbol(ER *result) {
 }
 static inline bool resultNeedsMaterialization(ER *result) {
     return isEmitCResult_Buf(result);
+}
+
+static void commentER(EC *ctx, char *label, ER *result) {
+    if (isEmitCResult_Var(result)) {
+        HashSymbol *symbol = getEmitCResult_Var(result);
+        fprintf(FH(ctx), "// %s kind=var symbol=%s text=%s materialize=%s\n",
+                label, symbol->name, resultText(result, ctx),
+                resultNeedsMaterialization(result) ? "yes" : "no");
+    } else {
+        fprintf(FH(ctx), "// %s kind=%s text=%s materialize=%s\n", label,
+                emitCResultTypeName(result->type), resultText(result, ctx),
+                resultNeedsMaterialization(result) ? "yes" : "no");
+    }
 }
 
 /////////////////

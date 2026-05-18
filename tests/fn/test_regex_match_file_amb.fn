@@ -1,0 +1,38 @@
+let
+    link "ioutils.fn" as io;
+    link "regexutils.fn" as rx;
+    testFile = "/tmp/cekf_regex_match_file_amb";
+    testData = "abcDEF";
+in
+    assert(typeof rx.regex_match_file_amb ==
+           "regex -> opaque:file -> list(char)");
+
+    io.with_output_to(testFile, fn(fh) {
+        fputs(fh, testData);
+    });
+
+    assert(io.with_input_from(testFile, fn(fh) {
+        rx.regex_match_file_amb(#/[a-z]+/, fh)
+    }) == just("abc"));
+
+    assert(io.with_input_from(testFile, fn(fh) {
+        let branch = 0 then 1;
+        in if (branch == 0) {
+            let matched = rx.regex_match_file_amb(#/[a-z]+/, fh);
+            in
+                assert(matched == "abc");
+                false or back;
+                matched
+        } else {
+            fgets(fh)
+        }
+    }) == just(testData));
+
+    assert(io.with_input_from(testFile, fn(fh) {
+        let branch = 0 then 1;
+        in if (branch == 0) {
+            rx.regex_match_file_amb(#/z+/, fh)
+        } else {
+            fgets(fh)
+        }
+    }) == just(testData));

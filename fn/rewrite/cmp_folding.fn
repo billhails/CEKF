@@ -1,0 +1,149 @@
+namespace
+
+link "minexpr.fn" as M;
+link "../listutils.fn" as list;
+import list operator "_|>_"; // map
+import list operator "_&&_"; // (#a -> #b) -> (#c -> #d) -> #(#a, #c) -> #(#b, #d)
+
+fn simplify (e) {
+    let
+        typedef term {
+            CHAR(char)       |
+            BIG(number)      |
+            STD(number)      |
+            CMP(term, term)  |
+            EQ(term, term)   |
+            NE(term, term)   |
+            GT(term, term)   |
+            LT(term, term)   |
+            GE(term, term)   |
+            LE(term, term)   |
+            OTHER(M.expr)
+        }
+
+        fn e2t {
+            (M.apply(M.primop("<=>"), [e1, e2])) { CMP(e2t(e1), e2t(e2)) }
+            (M.apply(M.primop("=="),  [e1, e2])) { EQ(e2t(e1), e2t(e2))  }
+            (M.apply(M.primop("!="),  [e1, e2])) { NE(e2t(e1), e2t(e2))  }
+            (M.apply(M.primop(">"),   [e1, e2])) { GT(e2t(e1), e2t(e2))  }
+            (M.apply(M.primop("<"),   [e1, e2])) { LT(e2t(e1), e2t(e2))  }
+            (M.apply(M.primop(">="),  [e1, e2])) { GE(e2t(e1), e2t(e2))  }
+            (M.apply(M.primop("<="),  [e1, e2])) { LE(e2t(e1), e2t(e2))  }
+            (M.character(c))                     { CHAR(c)               }
+            (M.bigint(c))                        { BIG(c)                }
+            (M.stdint(c))                        { STD(c)                }
+            (x)                                  { OTHER(x)              }
+        }
+
+        fn t2e {
+            (CMP(a, b)) { M.apply(M.primop("<=>"), [t2e(a), t2e(b)]) }
+            (EQ(a, b))  { M.apply(M.primop("=="), [t2e(a), t2e(b)])  }
+            (NE(a, b))  { M.apply(M.primop("!="), [t2e(a), t2e(b)])  }
+            (GT(a, b))  { M.apply(M.primop(">"), [t2e(a), t2e(b)])   }
+            (LT(a, b))  { M.apply(M.primop("<"), [t2e(a), t2e(b)])   }
+            (GE(a, b))  { M.apply(M.primop(">="), [t2e(a), t2e(b)])  }
+            (LE(a, b))  { M.apply(M.primop("<="), [t2e(a), t2e(b)])  }
+            (CHAR(c))   { M.character(c)                             }
+            (BIG(n))    { M.bigint(n)                                }
+            (STD(n))    { M.stdint(n)                                }
+            (OTHER(a))  { a                                          }
+        }
+
+        fn S(t) {
+        }
+    in
+        t2e(S(e2t(e)))
+}
+
+fn fold {
+    (M.amb_expr(expr1, expr2)) {
+        // amb_expr(expr, expr)
+        M.amb_expr(fold(expr1), fold(expr2))
+    }
+
+    (x = M.apply(fun, args)) {
+        // apply(expr, list(expr))
+        {
+        let f = fold(fun);
+            a = args |> fold;
+        in
+            switch (f) {
+                (M.primop(_)) {
+                    simplify(M.apply(f, a))
+                }
+                (_) {
+                    M.apply(f, a)
+                }
+            }
+        }
+    }
+
+    (x = M.back_expr)    |
+    (x = M.primop(_))    |
+    (x = M.bigint(_))    |
+    (x = M.character(_)) |
+    (x = M.done_expr)    |
+    (x = M.var(_))       |
+    (x = M.stdint(_)) {
+        x
+    }
+
+    (M.callcc_expr(e)) {
+        // callcc_expr(expr)
+        M.callcc_expr(fold(e))
+    }
+
+    (M.cond_expr(test, branches)) {
+        // cond_expr(expr, list(#(expr, expr)))
+        M.cond_expr(fold(test), branches |> fold && fold)
+    }
+
+    (M.if_expr(exprc, exprt, exprf)) {
+        // if_expr(expr, expr, expr)
+        let exprc = fold(exprc);
+        in
+            switch (exprc) {
+                (M.bigint(n)) {
+                    if (n != 0) {
+                        fold(exprt)
+                    } else {
+                        fold(exprf)
+                    }
+                }
+                (_) {
+                    M.if_expr(exprc, fold(exprt), fold(exprf))
+                }
+            }
+    }
+
+    (M.lambda(params, body)) {
+        // lambda(list(string), expr)
+        M.lambda(params, fold(body))
+    }
+
+    (M.letrec_expr(bindings, expr)) {
+        // letrec_expr(list(#(string, expr)), expr)
+        M.letrec_expr(bindings |> identity && fold && identity, fold(expr))
+    }
+
+    (M.make_vec(size, args)) {
+        // make_vec(number, list(expr))
+        M.make_vec(size, args |> fold)
+    }
+
+    (M.match_cases(test, cases)) {
+        // match_cases(expr, list(#(list(number), expr)))
+        M.match_cases(fold(test), cases |> identity && fold)
+    }
+
+    (M.sequence(exprs)) {
+        // sequence(list(expr))
+        M.sequence(exprs |> fold)
+    }
+
+    (x) {
+        M.print_expr(x);
+        puts("\n");
+        error("fold: unsupported expression")
+    }
+}

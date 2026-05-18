@@ -27,6 +27,7 @@
 #include "annotate.h"
 #include "arithmetic_next.h"
 #include "builtin_io.h"
+#include "builtin_regex.h"
 #include "cekf.h"
 #include "common.h"
 #include "memory.h"
@@ -63,6 +64,8 @@ typedef struct ProtectionStack {
 } ProtectionStack;
 
 static ProtectionStack *protected = NULL;
+
+bool protectionInitialized(void) { return protected != NULL; }
 
 void reportMemory() {
     printf("gc runs: %d\ncurrent memory: %d\nmax memory: %d\n", numGc,
@@ -115,6 +118,8 @@ __attribute__((unused)) static const char *typeName(ObjType type) {
         return typenameBuiltinsObj(type);
         PRATT_OBJTYPE_CASES()
         return typenamePrattObj(type);
+        REGEX_OBJTYPE_CASES()
+        return typenameRegexObj(type);
         CEKFS_OBJTYPE_CASES()
         return typenameCekfsObj(type);
         ANF_KONT_OBJTYPE_CASES()
@@ -411,6 +416,9 @@ void markObj(Header *h, Index i) {
         BUILTINS_OBJTYPE_CASES()
         markBuiltinsObj(h);
         break;
+        REGEX_OBJTYPE_CASES()
+        markRegexObj(h);
+        break;
         ANF_KONT_OBJTYPE_CASES()
         markAnf_kontObj(h);
         break;
@@ -492,6 +500,9 @@ void freeObj(Header *h) {
         BUILTINS_OBJTYPE_CASES()
         freeBuiltinsObj(h);
         break;
+        REGEX_OBJTYPE_CASES()
+        freeRegexObj(h);
+        break;
         ANF_KONT_OBJTYPE_CASES()
         freeAnf_kontObj(h);
         break;
@@ -540,6 +551,7 @@ static void mark() {
     markProtected();
     markNameSpaces();
     markMemBufs();
+    markRegexCache();
     minlam_runtime_mark_reg();
 #ifdef DEBUG_LOG_GC
     eprintf("starting markVarTables\n");

@@ -367,6 +367,9 @@ static Cmp _cmp(Value left, Value right) {
         return runtimeCmp(left, right);
     case VALUE_TYPE_CHARACTER:
         return _CMP_(left.val.character, right.val.character);
+    case VALUE_TYPE_FILEPOS:
+        return cmpRegexFilePos(left.val.filePos->position,
+                               right.val.filePos->position);
     case VALUE_TYPE_CLO:
     case VALUE_TYPE_PCLO:
         return _CMP_(left.val.clo->C, right.val.clo->C);

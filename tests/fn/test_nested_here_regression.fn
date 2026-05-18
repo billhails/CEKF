@@ -1,0 +1,18 @@
+let
+    fn nested_here_target_b_repro() {
+        let
+            result = here fn (k1) {
+                here fn (k2) {
+                    here fn (k3) {
+                        k1(100)
+                    };
+                    k2(200)
+                };
+                300
+            };
+        in
+            assert(result == 100) or { print(result); false };
+            true
+    }
+in
+    nested_here_target_b_repro();

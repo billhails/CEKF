@@ -1,0 +1,62 @@
+let
+    link "ioutils.fn" as io;
+    link "parserdet.fn" as parser;
+    testFile = "/tmp/cekf_parserdet_file";
+
+    import parser.match_regex_file;
+    import parser.parse_complete_file;
+
+    fn filePair(fh) {
+        switch (match_regex_file(#/[a-z]+/)(fh)) {
+            (success(#(letters, rest1))) {
+                switch (match_regex_file(#/\d+/)(rest1)) {
+                    (success(#(digits, rest2))) {
+                        success(#(#(letters, digits), rest2))
+                    }
+                    (failure(fail)) { failure(fail) }
+                }
+            }
+            (failure(fail)) { failure(fail) }
+        }
+    }
+in {
+    io.with_output_to(testFile, fn (fh) {
+        fputs(fh, "abc123DEF");
+    });
+
+    assert(io.with_input_from(testFile, fn (fh) {
+        switch (filePair(fh)) {
+            (success(#(parsed, rest))) {
+                assert(parsed == #("abc", "123"));
+                fgets(rest)
+            }
+            (_) {
+                error("expected file parser success")
+            }
+        }
+    }) == just("DEF"));
+
+    io.with_output_to(testFile, fn (fh) {
+        fputs(fh, "abc123");
+    });
+
+    assert(io.with_input_from(testFile, fn (fh) {
+        assert(parse_complete_file(filePair, fh) == #("abc", "123"));
+        fgets(fh)
+    }) == just(""));
+
+    io.with_output_to(testFile, fn (fh) {
+        fputs(fh, "abcDEF");
+    });
+
+    assert(io.with_input_from(testFile, fn (fh) {
+        switch (match_regex_file(#/\d+/)(fh)) {
+            (failure(#(_, rest))) {
+                fgets(rest)
+            }
+            (_) {
+                error("expected file parser failure")
+            }
+        }
+    }) == just("abcDEF"))
+}

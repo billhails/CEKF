@@ -3,6 +3,9 @@ let
     testFile = "/tmp/junk";
     testData = "¡Hello, World!";
 in
+    assert(typeof fgetpos == "opaque:file -> filepos");
+    assert(typeof fsetpos == "opaque:file -> filepos -> bool");
+
     io.with_output_to(testFile, fn(fh) {
         fputs(fh, testData);
     });
@@ -29,4 +32,17 @@ in
         assert(fgets(fh) == "1234");
         fputn(fh, 5678);
         assert(fgets(fh) == "5678");
+    });
+
+    io.with_input_from(testFile, fn(fh) {
+        let
+            pos0 = fgetpos(fh);
+            c = fgetc(fh);
+            pos1 = fgetpos(fh);
+        in
+            assert(c == '\ua1;');
+            assert(pos0 != pos1);
+            assert(fsetpos(fh, pos0));
+            assert(fgetpos(fh) == pos0);
+            assert(fgetc(fh) == '\ua1;');
     })

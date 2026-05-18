@@ -2,6 +2,15 @@
 
 More of a wish-list than a hard and fast plan.
 
+* More folding opportunities.
+  * fold boolean expressions `true and false => false`.
+  * fold boolean comparisons `a == a => true`, `a >= a => true` etc.
+  * fold constant conditions `(if true a b) => a`.
+* Continuations.
+  * Reinstate `cut` (prunes current back continuation).
+    * all back continuations would take a boolean `skip` argument.
+    * `cut` would install a new back continuation that calls its parent with `skip` true.
+  * Implement delimited continuations.
 * Types.
   * Consider type classes as a general solution to `EQ <type>`, `map` etc.
   * Records should create accessor functions for each tag.

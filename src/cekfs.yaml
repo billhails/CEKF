@@ -25,6 +25,7 @@ config:
       - builtins_debug.h
       - types.h
       - opaque.h
+      - regex_filepos.h
 
 structs:
     CEKF:
@@ -97,6 +98,13 @@ structs:
             lineNo: int
             fileName: string
 
+    FilePos:
+        meta:
+            brief: FilePos
+            description: A GC-managed wrapper for file position snapshots
+        data:
+            position: filepos
+
 inline:
     unions:
         Value:
@@ -121,6 +129,7 @@ inline:
                 vec: Vec
                 builtIn: BuiltInImplementation
                 opaque: opaque
+                filePos: FilePos
                 addr: ptr
                 index: index
 

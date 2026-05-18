@@ -258,7 +258,7 @@ let
                 300
             };
         in
-            assert(result == 100);
+            assert(result == 100) or {print result; false };
             true
     }
     

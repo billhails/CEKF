@@ -1,0 +1,12 @@
+assert(typeof regex_match == "regex -> list(char) -> maybe(#(list(char), list(char)))");
+
+assert(regex_match(#/ab/, "abcd") == just(#("ab", "cd")));
+assert(regex_match(regex("a+b"), "aaab") == just(#("aaab", "")));
+assert(regex_match(#/[a-z]+/, "abcDEF") == just(#("abc", "DEF")));
+assert(regex_match(#/(?i)ab/, "ABcd") == just(#("AB", "cd")));
+assert(regex_match(regex("(?i)[a-z]+"), "ABCdef!") == just(#("ABCdef", "!")));
+assert(regex_match(#/(?i)\u0411;\u0438;\u043b;\u043b;/, "\u0431;\u0418;\u043b;\u041b;!") == just(#("\u0431;\u0418;\u043b;\u041b;", "!")));
+assert(regex_match(#/ab/, "zabcd") == nothing);
+assert(regex_match(#/\w+/, "_abc123!") == just(#("_abc123", "!")));
+assert(regex_match(#/a\tb\nc\r/, "a\tb\nc\r!") == just(#("a\tb\nc\r", "!")));
+assert(regex_match(#/\u0041;\u03b2;/, "\u0041;\u03b2;!") == just(#("\u0041;\u03b2;", "!")));

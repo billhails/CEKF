@@ -106,6 +106,7 @@ HashSymbol *TOK_PIPE(void);
 HashSymbol *TOK_PRINT(void);
 HashSymbol *TOK_PRODUCTION(void);
 HashSymbol *TOK_RCURLY(void);
+HashSymbol *TOK_REGEX(void);
 HashSymbol *TOK_RIGHT(void);
 HashSymbol *TOK_RSQUARE(void);
 HashSymbol *TOK_SEMI(void);

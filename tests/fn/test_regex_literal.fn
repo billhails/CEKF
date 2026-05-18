@@ -1,0 +1,9 @@
+assert(#/abc/ == regex("abc"));
+assert(#/(?i)abc/ == regex("(?i)abc"));
+assert(typeof #/abc/ == "regex");
+assert(typeof regex("abc") == "regex");
+assert(#/a\/b/ == regex("a/b"));
+assert(#/a\.b/ == regex("a\\.b"));
+assert(#/\w+/ == regex("\\w+"));
+assert(#/a\tb\nc\r/ == regex("a\\tb\\nc\\r"));
+assert(#/\u0041;\u03b2;/ == regex("\\u0041;\\u03b2;"));

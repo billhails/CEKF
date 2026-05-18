@@ -55,6 +55,7 @@ static void emitMinCharCondCases(MinCharCondCases *, EC *, CharCondSwitch *,
 static void emitMinIntCondCases(MinIntCondCases *, EC *, IntCondSwitch *,
                                 HashSymbol *);
 static void emitMinMatchList(MinMatchList *, EC *, IndexArray *, HashSymbol *);
+static void commentER(EC *, char *, ER *);
 
 #include "minlam_emit_contract.h"
 
@@ -249,10 +250,25 @@ static inline HashSymbol *getResultSlotSymbol(ER *result) {
 }
 
 static inline bool resultNeedsMaterialization(ER *result) {
-    (void)result;
-    // All current B results denote live registers, so emitGoto must stage them
-    // through temporaries before left-to-right copy-down into reg[0..N-1].
-    return false;
+    // Slot-backed B results denote live registers. Stage them through
+    // temporaries before copy-down so outgoing arg moves cannot clobber
+    // later sources or the jump target.
+    return isEmitBResult_Slot(result);
+}
+
+static void commentER(EC *ctx, char *label, ER *result) {
+    if (isEmitBResult_Slot(result)) {
+        HashSymbol *symbol = getEmitBResult_Slot(result);
+        comment(ctx, "%s kind=slot symbol=%s reg=r%u materialize=%s", label,
+                symbol->name, IX(result, ctx),
+                resultNeedsMaterialization(result) ? "yes" : "no");
+    } else if (isEmitBResult_Immediate(result)) {
+        comment(ctx, "%s kind=immediate reg=r%u materialize=%s", label,
+                IX(result, ctx),
+                resultNeedsMaterialization(result) ? "yes" : "no");
+    } else {
+        cant_happen("unrecognised EmitBResult");
+    }
 }
 
 /////////////////
@@ -341,10 +357,11 @@ static void emitUnprotect(EC *ctx) {
     bemit_code(ctx, BBC_TYPE_UNPROTECT, 0, 0, 0);
 }
 
-// not supported for now
-static void emitTrace(ER *target __attribute__((unused)),
-                      RA *args __attribute__((unused)),
-                      EC *ctx __attribute__((unused))) {}
+static void emitTrace(ER *target, RA *args, EC *ctx) {
+    comment(ctx, "emitTrace binding=%s argc=%u",
+            ctx->context.currentBinding->name, args->size);
+    commentER(ctx, "emitTrace target", target);
+}
 
 static void emitJumpToLambda(ER *target, EC *ctx) {
     bemit_code(ctx, BBC_TYPE_JMP_REG, IX(target, ctx), 0, 0);

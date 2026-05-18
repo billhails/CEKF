@@ -168,6 +168,13 @@ file:
         printf: "%p"
         valued: true
 
+filepos:
+    data:
+        cname: fpos_t
+        printFn: fprintRegexFilePos
+        cmpFn: cmpRegexFilePos
+        valued: true
+
 size:
     data:
         cname: size_t

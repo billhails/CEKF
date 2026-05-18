@@ -1,0 +1,46 @@
+let
+    link "parseramb.fn" as parser;
+    link "parserdo.fn" as parserdo;
+
+    import parser.bind;
+    import parser.chainl1;
+    import parser.choice_first;
+    import parser.map;
+    import parser.parse_complete;
+    import parser.pure;
+    import parser.satisfy;
+    import parserdo macro pdo;
+
+    fn toNum(str) {
+        let fn helper {
+            ([], acc) { acc }
+            (h @ t, acc) { helper(t, (ord(h) - ord('0')) + 10 * acc) }
+        }
+        in helper(str, 0)
+    }
+
+    fn is_decimal(token) {
+        switch (regex_match(#/\d+/, token)) {
+            (just(#(_, []))) { true }
+            (_) { false }
+        }
+    }
+in {
+    let
+        parse_number = map(toNum, satisfy(is_decimal));
+        parse_add_op = choice_first([
+            map(fn (_) { fn (left, right) { left + right } }, satisfy(fn (token) { token == "+" })),
+            map(fn (_) { fn (left, right) { left - right } }, satisfy(fn (token) { token == "-" }))
+        ]);
+        parse_sum = chainl1(parse_number, parse_add_op);
+        parse_pair = pdo[
+            from parse_number as lhs;
+            from parse_number as rhs;
+            yield #(lhs, rhs)
+        ];
+    in {
+        assert(parse_complete(parse_sum, ["12", "+", "34", "+", "56"]) == 102);
+        assert(parse_complete(parse_sum, ["20", "-", "3", "-", "4"]) == 13);
+        assert(parse_complete(parse_pair, ["7", "8"]) == #(7, 8))
+    }
+}

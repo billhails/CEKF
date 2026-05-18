@@ -603,7 +603,7 @@ static MinExp *cpsTkMinExp(MinExp *node, CpsKont *k) {
     case MINEXP_TYPE_APPLY:
         return cpsTkMinApply(node, k);
     case MINEXP_TYPE_CALLCC:
-        return cpsTkCallCC(getMinExp_CallCC(node), k);
+        return cpsTkCallCC(node, k);
     case MINEXP_TYPE_COND:
         return cpsTkMinCond(getMinExp_Cond(node), k);
     case MINEXP_TYPE_IFF:

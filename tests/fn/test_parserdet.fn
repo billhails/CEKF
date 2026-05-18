@@ -1,0 +1,36 @@
+let
+    link "parserdet.fn" as parser;
+    link "parserdo.fn" as parserdo;
+
+    import parser.bind;
+    import parser.eof;
+    import parser.literal;
+    import parser.map;
+    import parser.match_regex;
+    import parser.parse;
+    import parser.pure;
+    import parser.terminated;
+    import parserdo macro pdo;
+
+    fn toNum(str) {
+        let fn helper {
+            ([], acc) { acc }
+            (h @ t, acc) { helper(t, (ord(h) - ord('0')) + 10 * acc) }
+        }
+        in helper(str, 0)
+    }
+in {
+    let
+        decimal = map(toNum, match_regex(#/\d+/));
+        addOp = map(fn (_) { fn (left, right) { left + right } }, literal("+"));
+        sum = terminated(pdo[
+            from decimal as lhs;
+            from addOp as opFn;
+            from decimal as rhs;
+            yield opFn(lhs, rhs)
+        ], eof);
+    in {
+        assert(parse(decimal, "123") == 123);
+        assert(parse(sum, "12+34") == 46)
+    }
+}

@@ -35,6 +35,7 @@ struct Header;
 #include "lambda_objtypes.h"
 #include "minlam_objtypes.h"
 #include "pratt_objtypes.h"
+#include "regex_objtypes.h"
 #include "tc_objtypes.h"
 #include "term_objtypes.h"
 #include "tpmc_objtypes.h"
@@ -67,6 +68,7 @@ typedef enum {
     BUILTINS_OBJTYPES(),
     CEKFS_OBJTYPES(),
     PRATT_OBJTYPES(),
+    REGEX_OBJTYPES(),
     ANF_KONT_OBJTYPES(),
     CPS_KONT_OBJTYPES(),
     UTILS_OBJTYPES(),
@@ -102,6 +104,7 @@ void initProtection(void);
 void validateLastAlloc(void);
 void reportMemory(void);
 void collectGarbage();
+bool protectionInitialized(void);
 
 #define EXIT_OOM 2
 

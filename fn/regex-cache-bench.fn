@@ -1,0 +1,49 @@
+let
+    link "listutils.fn" as list;
+    import list.length;
+
+    fn score(re, input) {
+        switch (regex_match(re, input)) {
+            (just(#(matched, rest))) {
+                1 + length(matched) + 2 * length(rest)
+            }
+            (nothing) {
+                0
+            }
+        }
+    }
+
+    fn suite() {
+        score(#/^ab+$/, "abbbbb") +
+        score(#/^((ab)|c)+d$/, "ababcd") +
+        score(#/^(a.)?(bc)$/, "axbc") +
+        score(#/^[a-z]+/, "abcDEF") +
+        score(#/(?i)^ab+$/, "ABbb") +
+        score(#/(?i)^[a-z]+$/, "abcDEF") +
+        score(#/^\w+$/, "_var123") +
+        score(#/^\W+$/, "?!") +
+        score(#/^a\tb\nc\r$/, "a\tb\nc\r") +
+        score(#/^\d+$/, "1234567890") +
+        score(#/^\u0041;\u03b2;$/, "\u0041;\u03b2;") +
+        score(#/^z+$/, "nope") +
+        score(#/^[[Lu]][[Ll]]+$/, "\u0411;\u0438;\u043b;\u043b;") +
+        score(#/^[[L]]+$/, "\u0041;\u3042;\u0411;")
+    }
+
+    fn batch() {
+        suite() +
+        suite() +
+        suite() +
+        suite() +
+        suite() +
+        suite() +
+        suite() +
+        suite()
+    }
+
+    fn run {
+        (0, acc) { acc }
+        (n, acc) { run(n - 1, acc + batch()) }
+    }
+in
+    print(run(1000, 0))

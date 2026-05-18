@@ -485,9 +485,9 @@ static MinExp *makeCallCC(ParserInfo PI) {
     PROTECT(vars);
     MinExp *lambda = makeMinExp_Lam(PI, vars, apply); // (lambda (x i) (cc x))
     PROTECT(lambda);
-    args = newMinExprList(PI, lambda, NULL); // ((lambda (x i) (cc x)))
+    args = newMinExprList(PI, cc, NULL); // (cc)
     PROTECT(args);
-    args = newMinExprList(PI, cc, args); // ((lambda (x i) (cc x)) cc)
+    args = newMinExprList(PI, lambda, args); // ((lambda (x i) (cc x)) cc)
     PROTECT(args);
     apply = makeMinExp_Apply(PI, f, args); // (f (lambda (x i) (cc x)) cc)
     PROTECT(apply);
