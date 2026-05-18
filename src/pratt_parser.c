@@ -106,6 +106,8 @@ static AstDefinitions *definitions(PrattParser *, HashSymbol *);
 static AstDefinitions *prattParseLink(PrattParser *, char *, PrattParser **);
 static AstExpression *back(PrattRecord *, PrattParser *, AstExpression *,
                            PrattToken *);
+static AstExpression *cut(PrattRecord *, PrattParser *, AstExpression *,
+                          PrattToken *);
 static AstExpression *call(PrattRecord *, PrattParser *, AstExpression *,
                            PrattToken *);
 static AstExpression *makeStruct(PrattRecord *, PrattParser *, AstExpression *,
@@ -435,6 +437,7 @@ static PrattParser *makePrattParser(void) {
     addRecord(table, TOK_IMPORT(), NULL, 0, NULL, 0, NULL, 0);
     addRecord(table, TOK_IN(), NULL, 0, NULL, 0, NULL, 0);
     addRecord(table, TOK_KW_CHAR(), NULL, 0, NULL, 0, NULL, 0);
+    addRecord(table, TOK_KW_CUT(), cut, 0, NULL, 0, NULL, 0);
     addRecord(table, TOK_KW_ERROR(), error, 0, NULL, 0, NULL, 0);
     addRecord(table, TOK_KW_NUMBER(), NULL, 0, NULL, 0, NULL, 0);
     addRecord(table, TOK_LCURLY(), nestExpr, 0, makeStruct, 0, NULL, 0);
@@ -4188,6 +4191,10 @@ static AstLookUpOrSymbol *astFunctionToLos(PrattParser *parser,
         parserErrorAt(CPI(function), parser,
                       "invalid use of \"back\" as structure name");
         return makeLosError(CPI(function));
+    case AST_EXPRESSION_TYPE_CUT:
+        parserErrorAt(CPI(function), parser,
+                      "invalid use of \"cut\" as structure name");
+        return makeLosError(CPI(function));
     case AST_EXPRESSION_TYPE_FUNCALL:
         parserErrorAt(CPI(function), parser,
                       "invalid use of function call as structure name");
@@ -4386,6 +4393,10 @@ static AstFarg *astExpressionToFarg(PrattParser *parser, AstExpression *expr) {
     case AST_EXPRESSION_TYPE_BACK:
         parserErrorAt(CPI(expr), parser,
                       "invalid use of \"back\" as formal argument");
+        return newAstFarg_WildCard(CPI(expr));
+    case AST_EXPRESSION_TYPE_CUT:
+        parserErrorAt(CPI(expr), parser,
+                      "invalid use of \"cut\" as formal argument");
         return newAstFarg_WildCard(CPI(expr));
     case AST_EXPRESSION_TYPE_FUNCALL:
         return astFunCallToFarg(parser, expr->val.funCall);
@@ -5156,6 +5167,21 @@ static AstExpression *back(PrattRecord *record __attribute__((unused)),
     ENTER(back);
     AstExpression *res = newAstExpression_Back(LEXPI(parser->lexer));
     LEAVE(back);
+    return res;
+}
+
+/**
+ * @brief parselet triggered by a prefix `cut` token.
+ */
+static AstExpression *cut(PrattRecord *record, PrattParser *parser,
+                          AstExpression *lhs __attribute__((unused)),
+                          PrattToken *tok __attribute__((unused))) {
+    ENTER(cut);
+    AstExpression *toCut = expressionPrecedence(parser, record->prefix.prec);
+    int save = PROTECT(toCut);
+    AstExpression *res = newAstExpression_Cut(CPI(toCut), toCut);
+    LEAVE(cut);
+    UNPROTECT(save);
     return res;
 }
 

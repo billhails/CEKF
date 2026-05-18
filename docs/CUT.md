@@ -75,6 +75,42 @@ run-time error.
   target-b/target-c closure conversion and emitters count lambda arguments
   generically and do not appear to hard-code failure-continuation arity.
 
+## CPS transform detail
+
+Inspection of `minlam_cpsTc.c` and `minlam_cpsTk.c` suggests that `cut`
+should behave like `amb`, not like `back`.
+
+- `back` is treated as a leaf control marker. Both `T_c` and `T_k` return it
+  unchanged.
+- `amb` is structurally preserved by CPS. The transform does not assign it any
+  new operational meaning; instead it recursively CPS-transforms both
+  branches under the same continuation and rebuilds `MinAmb`.
+- That is consistent with the later pipeline split: `back` and `amb` are still
+  interpreted by `minlam_amb.c`, so the CPS pass should preserve those
+  markers rather than compiling them away.
+
+That suggests `cut` should also survive CPS as an explicit control form, with
+its operand recursively CPS-transformed but the `cut` node itself preserved for
+`minlam_amb.c` to eliminate later.
+
+Candidate equations:
+
+```text
+T_c(cut e, c) = ((lambda (k) (cut (T_c(e, k)))) c)
+T_k(cut e, k) = let c = kToC(k) in cut (T_c(e, c))
+```
+
+The important point is not the exact administrative redex shape, but the
+control discipline:
+
+- `cut` should remain a special form after CPS.
+- The transformed code for the operand should still run under the same
+  continuation that `amb` would use.
+- The `cut` effect must still happen before evaluation of the transformed
+  operand.
+- The CPS pass should not change the meaning of `back` or `amb`, because the
+  later `minlam_amb.c` pass still relies on seeing those forms.
+
 ## Work to be done
 
 ### Shared work through uncurrying
@@ -116,6 +152,9 @@ emission.
 
 1. Thread `cut` through `runCpsTrampolineTc`; this is likely the trickiest
  branch-specific change.
+  The current code suggests `cut` should be preserved structurally through
+  both `T_c` and `T_k`, following the existing `amb` pattern rather than the
+  `back` pattern.
 2. Confirm that the repeated post-split `betaEtaFixedPoint` and
  `shakeMinExp` passes still behave correctly on the CPS-transformed IR once
  the shared-path support is in place.
@@ -131,6 +170,60 @@ emission.
  `checkMinExp`, closure conversion, and `indexMinExp`.
 8. Make the final back continuation report a run-time error when called with
  `skip = true`.
+
+### Staged implementation plan
+
+This order is by implementation slice, not by a pure front-to-back or
+back-to-front traversal.
+
+#### Stage 1: shared surface and IR plumbing
+
+Implement the shared path from parsing through uncurrying. That means scanner
+and parser support, AST and syntax-template IR support, lambda conversion,
+type checking, desugaring to minlam, and the shared pre-split minlam passes.
+
+Checkpoint: a small `cut` example should parse, type-check, and survive to the
+post-uncurry dump path still as `cut`, without yet needing the CEKF or
+target-b/target-c tails to work end-to-end.
+
+#### Stage 2: reconnect the default CEKF tail
+
+Once `cut` exists in minlam, reconnect the already surviving ANF, bytecode,
+and CEKF runtime support. This is the cheapest end-to-end path to validate
+first because the back end largely already exists.
+
+Checkpoint: the default CEKF path should run targeted `amb` and `cut`
+examples, including the unguarded-cut run-time error case.
+
+#### Stage 3: thread `cut` through CPS
+
+Extend `runCpsTrampolineTc` so that `cut` remains a special form with the
+correct evaluation order and continuation behaviour after CPS conversion. This
+is the riskiest part of the work and should be treated as its own slice.
+
+Checkpoint: the CPS dump should still show a coherent `cut` representation,
+with the control effect occurring before evaluation of the argument.
+
+#### Stage 4: eliminate `cut` in `minlam_amb`
+
+Change the back-continuation protocol to carry `skip`, make ordinary `back`
+use `skip = false`, and rewrite `cut` away by installing a failure
+continuation that invokes its parent with `skip = true` before evaluating the
+argument expression.
+
+Checkpoint: after the `amb` dump point, `cut` should be gone from the IR and
+the transformed code should express the committed-backtracking behaviour via
+the new back-continuation protocol.
+
+#### Stage 5: validate the post-split target-b/target-c tail
+
+Audit the repeated and branch-only minExp passes after `minlam_amb.c`, then
+validate closure conversion, indexing, and emission for both target-b and
+target-c.
+
+Checkpoint: the target-b and target-c paths should both run targeted `cut`
+examples end-to-end, and the final-back `skip = true` case should report the
+intended run-time error.
 
 ### Tests
 

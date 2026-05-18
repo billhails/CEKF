@@ -956,6 +956,14 @@ static AstExpression *instantiateTemplateExpr(AstSyntaxTemplateExpr *node,
         UNPROTECT(save);
         return result;
     }
+    case AST_SYNTAXTEMPLATEEXPR_TYPE_CUT: {
+        AstExpression *exp = instantiateTemplateExpr(
+            getAstSyntaxTemplateExpr_Cut(node), context);
+        int save = PROTECT(exp);
+        AstExpression *result = newAstExpression_Cut(CPI(node), exp);
+        UNPROTECT(save);
+        return result;
+    }
     case AST_SYNTAXTEMPLATEEXPR_TYPE_ERROR: {
         AstExpression *exp = instantiateTemplateExpr(
             getAstSyntaxTemplateExpr_Error(node), context);
@@ -3157,6 +3165,16 @@ static AstExpression *lowerAstExpression(AstExpression *node,
         }
         break;
     }
+    case AST_EXPRESSION_TYPE_CUT: {
+        // AstExpression
+        AstExpression *variant = getAstExpression_Cut(node);
+        AstExpression *new_variant = lowerAstExpression(variant, context);
+        if (new_variant != variant) {
+            PROTECT(new_variant);
+            result = newAstExpression_Cut(CPI(node), new_variant);
+        }
+        break;
+    }
     case AST_EXPRESSION_TYPE_ERROR: {
         // AstExpression
         AstExpression *variant = getAstExpression_Error(node);
@@ -3574,6 +3592,17 @@ lowerAstSyntaxTemplateExpr(AstSyntaxTemplateExpr *node,
         if (new_variant != variant) {
             PROTECT(new_variant);
             result = newAstSyntaxTemplateExpr_Assertion(CPI(node), new_variant);
+        }
+        break;
+    }
+    case AST_SYNTAXTEMPLATEEXPR_TYPE_CUT: {
+        // AstSyntaxTemplateExpr
+        AstSyntaxTemplateExpr *variant = getAstSyntaxTemplateExpr_Cut(node);
+        AstSyntaxTemplateExpr *new_variant =
+            lowerAstSyntaxTemplateExpr(variant, context);
+        if (new_variant != variant) {
+            PROTECT(new_variant);
+            result = newAstSyntaxTemplateExpr_Cut(CPI(node), new_variant);
         }
         break;
     }
