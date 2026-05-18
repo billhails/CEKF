@@ -48,6 +48,7 @@ static AnfExp *normalizeSequence(MinExprList *sequence, AnfExp *tail);
 static AnfExp *normalizePrim(MinPrimApp *app, AnfExp *tail);
 static AnfExp *normalizeApply(MinApply *minApply, AnfExp *tail);
 static AnfExp *normalizeBack(ParserInfo I, AnfExp *tail);
+static AnfExp *normalizeCut(MinExp *minExp, AnfExp *tail);
 static HashSymbol *freshSymbol();
 static Aexp *replaceMinExp(MinExp *minExp, MinExpTable *replacements);
 static AnfExp *letBind(AnfExp *body, MinExpTable *replacements);
@@ -107,6 +108,8 @@ static AnfExp *normalize(MinExp *minExp, AnfExp *tail) {
         return normalizeIff(getMinExp_Iff(minExp), tail);
     case MINEXP_TYPE_CALLCC:
         return normalizeCallCc(getMinExp_CallCC(minExp), tail);
+    case MINEXP_TYPE_CUT:
+        return normalizeCut(getMinExp_Cut(minExp), tail);
     case MINEXP_TYPE_LETREC:
         return normalizeLetRec(getMinExp_LetRec(minExp), tail);
     case MINEXP_TYPE_MATCH:
@@ -237,6 +240,20 @@ static AnfExp *normalizeCallCc(MinExp *minExp, AnfExp *tail) {
     UNPROTECT(save);
     LEAVE(normalizeCallCc);
     return res;
+}
+
+static AnfExp *normalizeCut(MinExp *minExp, AnfExp *tail) {
+    ENTER(normalizeCut);
+    AnfExp *cutExp = normalize(minExp, NULL);
+    int save = PROTECT(cutExp);
+    Cexp *cexp = newCexp_Cut(CPI(cutExp), newCexpCut(CPI(cutExp), cutExp));
+    REPLACE_PROTECT(save, cexp);
+    AnfExp *exp = wrapCexp(cexp);
+    REPLACE_PROTECT(save, exp);
+    exp = wrapTail(exp, tail);
+    UNPROTECT(save);
+    LEAVE(normalizeCut);
+    return exp;
 }
 
 static AnfExp *normalizeIff(MinIff *minIff, AnfExp *tail) {
@@ -642,6 +659,7 @@ static Aexp *replaceMinExp(MinExp *minExp, MinExpTable *replacements) {
     case MINEXP_TYPE_APPLY:
     case MINEXP_TYPE_IFF:
     case MINEXP_TYPE_CALLCC:
+    case MINEXP_TYPE_CUT:
     case MINEXP_TYPE_LETREC:
     case MINEXP_TYPE_MATCH:
     case MINEXP_TYPE_COND:
@@ -670,6 +688,7 @@ static bool minExpIsMinbda(MinExp *val) {
     case MINEXP_TYPE_APPLY:
     case MINEXP_TYPE_IFF:
     case MINEXP_TYPE_CALLCC:
+    case MINEXP_TYPE_CUT:
     case MINEXP_TYPE_LETREC:
     case MINEXP_TYPE_MATCH:
     case MINEXP_TYPE_COND:
