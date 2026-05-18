@@ -230,6 +230,9 @@ static void checkMinExpI(MinExp *node, Context *context) {
     case MINEXP_TYPE_CALLCC:
         checkMinExpI(getMinExp_CallCC(node), context);
         break;
+    case MINEXP_TYPE_CUT:
+        checkMinExpI(getMinExp_Cut(node), context);
+        break;
     case MINEXP_TYPE_COND:
         checkMinCond(getMinExp_Cond(node), context);
         break;

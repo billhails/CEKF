@@ -199,6 +199,7 @@ unions:
             bigInteger: MaybeBigInt
             bindings: MinBindings # so that ANF normalize can be uniformly typed
             callCC: MinExp # desugared by minlam_cps*
+            cut: MinExp # preserved until ANF or minlam_amb depending target path
             character: character
             cond: MinCond
             done: int # exit status

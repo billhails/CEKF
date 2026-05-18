@@ -172,6 +172,12 @@ static void iMinExp(FILE *out, MinExp *exp, int d) {
     case MINEXP_TYPE_CALLCC:
         iMinCallCC(out, getMinExp_CallCC(exp), d);
         break;
+    case MINEXP_TYPE_CUT:
+        fprintf(out, "(cut");
+        newlineIndent(out, d + 1);
+        iMinExp(out, getMinExp_Cut(exp), d + 1);
+        fprintf(out, ")");
+        break;
     case MINEXP_TYPE_LETREC:
         iMinLetRec(out, getMinExp_LetRec(exp), d);
         break;

@@ -420,6 +420,16 @@ static MinExp *transformMinExp(MinExp *node, Context *c) {
         result = transformMinExp(getMinExp_CallCC(node), c);
         break;
 
+    case MINEXP_TYPE_CUT: {
+        MinExp *variant = getMinExp_Cut(node);
+        MinExp *new_variant = apply(c, variant);
+        if (new_variant != variant) {
+            PROTECT(new_variant);
+            result = newMinExp_Cut(CPI(node), new_variant);
+        }
+        break;
+    }
+
     case MINEXP_TYPE_COND:
         result = transformMinCond(getMinExp_Cond(node), c);
         break;

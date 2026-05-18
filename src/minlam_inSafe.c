@@ -130,6 +130,7 @@ static bool inSafeMinExpInternal(MinExp *node) {
     case MINEXP_TYPE_AMB:
     case MINEXP_TYPE_BACK:
     case MINEXP_TYPE_CALLCC:
+    case MINEXP_TYPE_CUT:
     case MINEXP_TYPE_DONE:
     case MINEXP_TYPE_LETREC:
         return false;
