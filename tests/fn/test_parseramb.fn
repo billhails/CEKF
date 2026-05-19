@@ -5,10 +5,18 @@ let
     import parser.bind;
     import parser.chainl1;
     import parser.choice_first;
+    import parser.literal;
     import parser.map;
+    import parser.many;
+    import parser.many_commit;
+    import parser.optional;
+    import parser.optional_commit;
     import parser.parse_complete;
+    import parser.parse_with_meaning;
     import parser.pure;
     import parser.satisfy;
+    import parser.some;
+    import parser.some_commit;
     import parserdo macro pdo;
 
     fn toNum(str) {
@@ -38,9 +46,99 @@ in {
             from parse_number as rhs;
             yield #(lhs, rhs)
         ];
+        parse_optional = optional(literal(["a"]));
+        parse_optional_commit = optional_commit(literal(["a"]));
+        parse_many = many(literal(["a"]));
+        parse_many_commit = many_commit(literal(["a"]));
+        parse_some = some(literal(["a"]));
+        parse_some_commit = some_commit(literal(["a"]));
+        parse_optional_overlap = pdo[
+            from optional(literal(["a"])) as prefix;
+            from literal(["a"]) as noun;
+            yield #(prefix, noun)
+        ];
+        parse_optional_overlap_commit = pdo[
+            from optional_commit(literal(["a"])) as prefix;
+            from literal(["a"]) as noun;
+            yield #(prefix, noun)
+        ];
+        parse_many_overlap = pdo[
+            from many(literal(["a"])) as prefixes;
+            from literal(["a"]) as noun;
+            yield #(prefixes, noun)
+        ];
+        parse_many_overlap_commit = pdo[
+            from many_commit(literal(["a"])) as prefixes;
+            from literal(["a"]) as noun;
+            yield #(prefixes, noun)
+        ];
+        parse_some_overlap = pdo[
+            from some(literal(["a"])) as prefixes;
+            from literal(["a"]) as noun;
+            yield #(prefixes, noun)
+        ];
+        parse_some_overlap_commit = pdo[
+            from some_commit(literal(["a"])) as prefixes;
+            from literal(["a"]) as noun;
+            yield #(prefixes, noun)
+        ];
     in {
         assert(parse_complete(parse_sum, ["12", "+", "34", "+", "56"]) == 102);
         assert(parse_complete(parse_sum, ["20", "-", "3", "-", "4"]) == 13);
-        assert(parse_complete(parse_pair, ["7", "8"]) == #(7, 8))
+        assert(parse_complete(parse_pair, ["7", "8"]) == #(7, 8));
+
+        assert(parse_with_meaning(parse_optional, fn (result) { result == nothing }, ["a"]) == nothing);
+        assert(
+            ({
+                parse_with_meaning(parse_optional_commit, fn (result) { result == nothing }, ["a"])
+                then just(["fallback"])
+            })
+            == just(["fallback"])
+        );
+
+        assert(parse_with_meaning(parse_many, fn (result) { result == [] }, ["a"]) == []);
+        assert(
+            ({
+                parse_with_meaning(parse_many_commit, fn (result) { result == [] }, ["a"])
+                then [["fallback"]]
+            })
+            == [["fallback"]]
+        );
+
+        assert(parse_with_meaning(parse_some, fn (result) { result == [["a"]] }, ["a", "a"]) == [["a"]]);
+        assert(
+            ({
+                parse_with_meaning(parse_some_commit, fn (result) { result == [["a"]] }, ["a", "a"])
+                then [["fallback"]]
+            })
+            == [["fallback"]]
+        );
+
+        assert(parse_complete(parse_optional_overlap, ["a"]) == #(nothing, ["a"]));
+        assert(
+            ({
+                parse_complete(parse_optional_overlap_commit, ["a"])
+                then #(nothing, ["fallback"])
+            })
+            == #(nothing, ["fallback"])
+        );
+
+        assert(parse_complete(parse_many_overlap, ["a"]) == #([], ["a"]));
+        assert(
+            ({
+                parse_complete(parse_many_overlap_commit, ["a"])
+                then #([], ["fallback"])
+            })
+            == #([], ["fallback"])
+        );
+
+        assert(parse_complete(parse_some_overlap, ["a", "a"]) == #([["a"]], ["a"]));
+        assert(
+            ({
+                parse_complete(parse_some_overlap_commit, ["a", "a"])
+                then #([], ["fallback"])
+            })
+            == #([], ["fallback"])
+        )
     }
 }

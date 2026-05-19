@@ -38,6 +38,10 @@ fn annotate(expr) {
                         M.callcc_expr(ann(e))
                     }
 
+                    (M.cut_expr(e)) {
+                        M.cut_expr(ann(e))
+                    }
+
                     (M.cond_expr(test, branches)) {
                         M.cond_expr(ann(test), branches |> ann && ann)
                     }

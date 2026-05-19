@@ -167,6 +167,8 @@ int sizeMinExp(MinExp *node) {
         return sizeMinBindings(getMinExp_Bindings(node));
     case MINEXP_TYPE_CALLCC:
         return sizeMinExp(getMinExp_CallCC(node));
+    case MINEXP_TYPE_CUT:
+        return sizeMinExp(getMinExp_Cut(node));
     case MINEXP_TYPE_COND:
         return sizeMinCond(getMinExp_Cond(node));
     case MINEXP_TYPE_IFF:
@@ -184,7 +186,7 @@ int sizeMinExp(MinExp *node) {
     case MINEXP_TYPE_SEQUENCE:
         return sizeMinExprList(getMinExp_Sequence(node));
     default:
-        cant_happen("unrecognized MinExp type %d", node->type);
+        cant_happen("unrecognized MinExp type %s", minExpTypeName(node->type));
     }
     return 0;
 }

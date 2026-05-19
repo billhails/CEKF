@@ -163,101 +163,44 @@ static bool isSimpleMinExp(MinExp *node, Context context) {
     if (node == NULL)
         return true;
     switch (node->type) {
-    case MINEXP_TYPE_AMB: {
-        // MinAmb
-        MinAmb *variant = getMinExp_Amb(node);
-        return isSimpleMinAmb(variant, context);
-    }
-    case MINEXP_TYPE_APPLY: {
-        // MinApply
-        MinApply *variant = getMinExp_Apply(node);
-        return isSimpleMinApply(variant, context);
-    }
-    case MINEXP_TYPE_ARGS: {
-        // MinExprList
-        MinExprList *variant = getMinExp_Args(node);
-        return isSimpleMinExprList(variant, context);
-    }
-    case MINEXP_TYPE_AVAR: {
-        // MinAnnotatedVar
+    case MINEXP_TYPE_AMB:
+        return isSimpleMinAmb(getMinExp_Amb(node), context);
+    case MINEXP_TYPE_APPLY:
+        return isSimpleMinApply(getMinExp_Apply(node), context);
+    case MINEXP_TYPE_ARGS:
+        return isSimpleMinExprList(getMinExp_Args(node), context);
+    case MINEXP_TYPE_BINDINGS:
+        return isSimpleMinBindings(getMinExp_Bindings(node), context);
+    case MINEXP_TYPE_CALLCC:
+        return isSimpleMinExp(getMinExp_CallCC(node), context);
+    case MINEXP_TYPE_CUT:
+        return isSimpleMinExp(getMinExp_Cut(node), context);
+    case MINEXP_TYPE_COND:
+        return isSimpleMinCond(getMinExp_Cond(node), context);
+    case MINEXP_TYPE_IFF:
+        return isSimpleMinIff(getMinExp_Iff(node), context);
+    case MINEXP_TYPE_LAM:
+        return isSimpleMinLam(getMinExp_Lam(node), context);
+    case MINEXP_TYPE_LETREC:
+        return isSimpleMinLetRec(getMinExp_LetRec(node), context);
+    case MINEXP_TYPE_MAKEVEC:
+        return isSimpleMinExprList(getMinExp_MakeVec(node), context);
+    case MINEXP_TYPE_MATCH:
+        return isSimpleMinMatch(getMinExp_Match(node), context);
+    case MINEXP_TYPE_PRIM:
+        return isSimpleMinPrimApp(getMinExp_Prim(node), context);
+    case MINEXP_TYPE_SEQUENCE:
+        return isSimpleMinExprList(getMinExp_Sequence(node), context);
+    case MINEXP_TYPE_DONE:
+    case MINEXP_TYPE_CHARACTER:
+    case MINEXP_TYPE_STDINT:
+    case MINEXP_TYPE_VAR:
+    case MINEXP_TYPE_AVAR:
+    case MINEXP_TYPE_BACK:
+    case MINEXP_TYPE_BIGINTEGER:
         return true;
-    }
-    case MINEXP_TYPE_BACK: {
-        // void_ptr
-        return true;
-    }
-    case MINEXP_TYPE_BIGINTEGER: {
-        // MaybeBigInt
-        return true;
-    }
-    case MINEXP_TYPE_BINDINGS: {
-        // MinBindings
-        MinBindings *variant = getMinExp_Bindings(node);
-        return isSimpleMinBindings(variant, context);
-    }
-    case MINEXP_TYPE_CALLCC: {
-        // MinExp
-        MinExp *variant = getMinExp_CallCC(node);
-        return isSimpleMinExp(variant, context);
-    }
-    case MINEXP_TYPE_CHARACTER: {
-        // character
-        return true;
-    }
-    case MINEXP_TYPE_COND: {
-        // MinCond
-        MinCond *variant = getMinExp_Cond(node);
-        return isSimpleMinCond(variant, context);
-    }
-    case MINEXP_TYPE_DONE: {
-        // int
-        return true;
-    }
-    case MINEXP_TYPE_IFF: {
-        // MinIff
-        MinIff *variant = getMinExp_Iff(node);
-        return isSimpleMinIff(variant, context);
-    }
-    case MINEXP_TYPE_LAM: {
-        // MinLam
-        MinLam *variant = getMinExp_Lam(node);
-        return isSimpleMinLam(variant, context);
-    }
-    case MINEXP_TYPE_LETREC: {
-        // MinLetRec
-        MinLetRec *variant = getMinExp_LetRec(node);
-        return isSimpleMinLetRec(variant, context);
-    }
-    case MINEXP_TYPE_MAKEVEC: {
-        // MinExprList
-        MinExprList *variant = getMinExp_MakeVec(node);
-        return isSimpleMinExprList(variant, context);
-    }
-    case MINEXP_TYPE_MATCH: {
-        // MinMatch
-        MinMatch *variant = getMinExp_Match(node);
-        return isSimpleMinMatch(variant, context);
-    }
-    case MINEXP_TYPE_PRIM: {
-        // MinPrimApp
-        MinPrimApp *variant = getMinExp_Prim(node);
-        return isSimpleMinPrimApp(variant, context);
-    }
-    case MINEXP_TYPE_SEQUENCE: {
-        // MinExprList
-        MinExprList *variant = getMinExp_Sequence(node);
-        return isSimpleMinExprList(variant, context);
-    }
-    case MINEXP_TYPE_STDINT: {
-        // int
-        return true;
-    }
-    case MINEXP_TYPE_VAR: {
-        // HashSymbol
-        return true;
-    }
     default:
-        cant_happen("unrecognized MinExp type %d", node->type);
+        cant_happen("unrecognized MinExp type %s", minExpTypeName(node->type));
     }
 }
 

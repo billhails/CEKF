@@ -151,69 +151,41 @@ bool occursMinExp(MinExp *node, SymbolSet *targets) {
         return false;
     }
     switch (node->type) {
-    case MINEXP_TYPE_AMB: {
-        MinAmb *variant = getMinExp_Amb(node);
-        return occursMinAmb(variant, targets);
-    }
-    case MINEXP_TYPE_APPLY: {
-        MinApply *variant = getMinExp_Apply(node);
-        return occursMinApply(variant, targets);
-    }
-    case MINEXP_TYPE_BACK: {
+    case MINEXP_TYPE_AMB:
+        return occursMinAmb(getMinExp_Amb(node), targets);
+    case MINEXP_TYPE_APPLY:
+        return occursMinApply(getMinExp_Apply(node), targets);
+    case MINEXP_TYPE_CALLCC:
+        return occursMinExp(getMinExp_CallCC(node), targets);
+    case MINEXP_TYPE_CUT:
+        return occursMinExp(getMinExp_Cut(node), targets);
+    case MINEXP_TYPE_COND:
+        return occursMinCond(getMinExp_Cond(node), targets);
+    case MINEXP_TYPE_IFF:
+        return occursMinIff(getMinExp_Iff(node), targets);
+    case MINEXP_TYPE_LAM:
+        return occursMinLam(getMinExp_Lam(node), targets);
+    case MINEXP_TYPE_LETREC:
+        return occursMinLetRec(getMinExp_LetRec(node), targets);
+    case MINEXP_TYPE_MAKEVEC:
+        return occursMinExprList(getMinExp_MakeVec(node), targets);
+    case MINEXP_TYPE_MATCH:
+        return occursMinMatch(getMinExp_Match(node), targets);
+    case MINEXP_TYPE_PRIM:
+        return occursMinPrimApp(getMinExp_Prim(node), targets);
+    case MINEXP_TYPE_SEQUENCE:
+        return occursMinExprList(getMinExp_Sequence(node), targets);
+    case MINEXP_TYPE_BACK:
+    case MINEXP_TYPE_BIGINTEGER:
+    case MINEXP_TYPE_CHARACTER:
+    case MINEXP_TYPE_STDINT:
         return false;
-    }
-    case MINEXP_TYPE_BIGINTEGER: {
-        return false;
-        break;
-    }
-    case MINEXP_TYPE_CALLCC: {
-        MinExp *variant = getMinExp_CallCC(node);
-        return occursMinExp(variant, targets);
-    }
-    case MINEXP_TYPE_CHARACTER: {
-        return false;
-    }
-    case MINEXP_TYPE_COND: {
-        MinCond *variant = getMinExp_Cond(node);
-        return occursMinCond(variant, targets);
-    }
-    case MINEXP_TYPE_IFF: {
-        MinIff *variant = getMinExp_Iff(node);
-        return occursMinIff(variant, targets);
-    }
-    case MINEXP_TYPE_LAM: {
-        MinLam *variant = getMinExp_Lam(node);
-        return occursMinLam(variant, targets);
-    }
-    case MINEXP_TYPE_LETREC: {
-        MinLetRec *variant = getMinExp_LetRec(node);
-        return occursMinLetRec(variant, targets);
-    }
-    case MINEXP_TYPE_MAKEVEC: {
-        MinExprList *variant = getMinExp_MakeVec(node);
-        return occursMinExprList(variant, targets);
-    }
-    case MINEXP_TYPE_MATCH: {
-        MinMatch *variant = getMinExp_Match(node);
-        return occursMinMatch(variant, targets);
-    }
-    case MINEXP_TYPE_PRIM: {
-        MinPrimApp *variant = getMinExp_Prim(node);
-        return occursMinPrimApp(variant, targets);
-    }
-    case MINEXP_TYPE_SEQUENCE: {
-        MinExprList *variant = getMinExp_Sequence(node);
-        return occursMinExprList(variant, targets);
-    }
-    case MINEXP_TYPE_STDINT: {
-        return false;
-    }
     case MINEXP_TYPE_VAR: {
         HashSymbol *var = getMinExp_Var(node);
         return getSymbolSet(targets, var);
     }
     default:
-        cant_happen("unrecognized MinExp type %d", node->type);
+        cant_happen("unrecognized MinExp type %s", minExpTypeName(node->type));
     }
 }
 

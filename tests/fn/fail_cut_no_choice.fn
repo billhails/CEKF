@@ -1,0 +1,7 @@
+// test files starting with 'fail_' are expected to fail
+// cut without an enclosing choice point should raise a runtime error
+
+let
+    result = cut 1;
+in
+    assert(result == 1)

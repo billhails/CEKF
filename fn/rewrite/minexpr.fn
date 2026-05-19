@@ -12,6 +12,7 @@ namespace
         callcc_expr(expr) |
         character(char) |
         cond_expr(expr, list(#(expr, expr))) |
+        cut_expr(expr) |
         done_expr |
         env_ref(expr, number) |
         if_expr(expr, expr, expr) |
@@ -180,6 +181,13 @@ namespace
                     }
                     (callcc_expr(e)) {
                         puts("(call/cc");
+                        put_indent(depth + 1);
+                        go(depth + 1, e);
+                        puts(")");
+                        x;
+                    }
+                    (cut_expr(e)) {
+                        puts("(cut");
                         put_indent(depth + 1);
                         go(depth + 1, e);
                         puts(")");
@@ -379,6 +387,7 @@ namespace
                 (sexp([atom("done")])) { done_expr }
                 (sexp([atom("amb"), a, b])) { amb_expr(to_expr(a), to_expr(b)) }
                 (sexp([atom("call/cc"), e])) { callcc_expr(to_expr(e)) }
+                (sexp([atom("cut"), e])) { cut_expr(to_expr(e)) }
                 (sexp([atom("if"), e1, e2, e3])) { if_expr(to_expr(e1), to_expr(e2), to_expr(e3)) }
                 (sexp(atom("cond") @ test @ branches)) { cond_expr(to_expr(test), branches |> fn {
                     (sexp([e1, e2])) { #(to_expr(e1), to_expr(e2)) }

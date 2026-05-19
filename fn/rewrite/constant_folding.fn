@@ -242,6 +242,11 @@ fn fold {
         M.callcc_expr(fold(e))
     }
 
+    (M.cut_expr(e)) {
+        // cut_expr(expr)
+        M.cut_expr(fold(e))
+    }
+
     (M.cond_expr(test, branches)) {
         // cond_expr(expr, list(#(expr, expr)))
         M.cond_expr(fold(test), branches |> fold && fold)

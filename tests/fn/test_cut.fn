@@ -1,0 +1,44 @@
+// Test cut control effects and parsing precedence
+
+let
+    fn test_cut_returns_value() {
+        let
+            result = (cut 1) then 2;
+        in
+            assert(result == 1);
+    }
+
+    fn test_cut_commits_current_branch() {
+        let
+            result = {
+                let chosen = ((cut 1) then 2) then 3;
+                in if (chosen == 1) { back } else { chosen }
+            };
+        in
+            assert(result == 3);
+    }
+
+    fn test_cut_wraps_whole_choice() {
+        let
+            result = {
+                let chosen = (cut 1 then 2) then 3;
+                in if (chosen == 1) { back } else { chosen }
+            };
+        in
+            assert(result == 2);
+    }
+
+    fn test_cut_through_here() {
+        let
+            result = {
+                let chosen = here fn (k) { k((cut 1) then 2) then 3 };
+                in if (chosen == 1) { back } else { chosen }
+            };
+        in
+            assert(result == 3);
+    }
+in
+    test_cut_returns_value();
+    test_cut_commits_current_branch();
+    test_cut_wraps_whole_choice();
+    test_cut_through_here()
