@@ -269,6 +269,11 @@ static void cfoMinExp(MinExp *node, VisitorContext context) {
         cfoMinCond(variant, context);
         break;
     }
+    case MINEXP_TYPE_CUT: {
+        MinExp *variant = getMinExp_Cut(node);
+        cfoMinExp(variant, context);
+        break;
+    }
     case MINEXP_TYPE_DONE: {
         // int
         break;

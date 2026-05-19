@@ -93,6 +93,20 @@ fn optional(parser) {
     ])
 }
 
+// Commits to the present branch after a successful parse.
+// This is useful when downstream backtracking should not reinterpret
+// a present token as absent.
+fn optional_commit(parser) {
+    choice_first([
+        fn (input) {
+            bind_state(parser, fn (value, rest) {
+                cut (pure(just(value))(rest))
+            }, input)
+        },
+        pure(nothing)
+    ])
+}
+
 fn many(parser) {
     choice_first([
         fn (input) {
@@ -110,6 +124,25 @@ fn many(parser) {
     ])
 }
 
+// Greedy repetition: once a consuming iteration succeeds, do not
+// backtrack to a shorter split at this repetition node.
+fn many_commit(parser) {
+    choice_first([
+        fn (input) {
+            bind_state(parser, fn (head, rest1) {
+                if (rest1 != input) {
+                    cut (bind_state(many_commit(parser), fn (tail, rest2) {
+                        pure([head] @@ tail)(rest2)
+                    }, rest1))
+                } else {
+                    back
+                }
+            }, input)
+        },
+        pure([])
+    ])
+}
+
 fn some(parser) {
     fn (input) {
         bind_state(parser, fn (head, rest1) {
@@ -117,6 +150,20 @@ fn some(parser) {
                 bind_state(many(parser), fn (tail, rest2) {
                     pure([head] @@ tail)(rest2)
                 }, rest1)
+            } else {
+                back
+            }
+        }, input)
+    }
+}
+
+fn some_commit(parser) {
+    fn (input) {
+        bind_state(parser, fn (head, rest1) {
+            if (rest1 != input) {
+                cut (bind_state(many_commit(parser), fn (tail, rest2) {
+                    pure([head] @@ tail)(rest2)
+                }, rest1))
             } else {
                 back
             }

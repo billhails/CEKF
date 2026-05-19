@@ -635,6 +635,15 @@ MinExp *substMinExp(MinExp *node, MinExpTable *context) {
         }
         break;
     }
+    case MINEXP_TYPE_CUT: {
+        MinExp *variant = getMinExp_Cut(node);
+        MinExp *new_variant = substMinExp(variant, context);
+        if (new_variant != variant) {
+            PROTECT(new_variant);
+            result = newMinExp_Cut(CPI(node), new_variant);
+        }
+        break;
+    }
     case MINEXP_TYPE_IFF: {
         // MinIff
         MinIff *variant = getMinExp_Iff(node);
