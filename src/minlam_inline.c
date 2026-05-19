@@ -504,6 +504,16 @@ MinExp *inlineMinExp(MinExp *node, BuiltIns *builtIns) {
         }
         break;
     }
+    case MINEXP_TYPE_CUT: {
+        // MinExp
+        MinExp *variant = getMinExp_Cut(node);
+        MinExp *new_variant = inlineMinExp(variant, builtIns);
+        if (new_variant != variant) {
+            PROTECT(new_variant);
+            result = newMinExp_Cut(CPI(node), new_variant);
+        }
+        break;
+    }
     case MINEXP_TYPE_DONE: {
         // int
         break;
