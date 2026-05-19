@@ -231,3 +231,22 @@ intended run-time error.
 2. Nested `amb` and `cut`.
 3. `cut` with no enclosing choice point.
 4. Interaction with `here` and escaped continuations.
+
+### Examples
+
+```shell
+$ ./bin/fn --exec='print (1 then 2) then 3; back'
+1
+2
+3
+
+$ ./bin/fn --exec='print ((cut 1) then 2) then 3; back'
+1
+3
+
+$ ./bin/fn --exec='print (cut 1 then 2) then 3; back'
+1
+2
+
+$ 
+```
