@@ -42,6 +42,10 @@ fn reduce {
         M.callcc_expr(reduce(e))
     }
 
+    (M.cut_expr(e)) {
+        M.cut_expr(reduce(e))
+    }
+
     (M.cond_expr(test, branches)) {
         M.cond_expr(reduce(test), branches |> reduce && reduce)
     }

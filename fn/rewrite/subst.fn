@@ -39,6 +39,10 @@ namespace
                     M.callcc_expr(substitute(c, e))
                 }
 
+                (M.cut_expr(e)) {
+                    M.cut_expr(substitute(c, e))
+                }
+
                 // cond_expr(expr, list(#(expr, expr)))
                 (M.cond_expr(test, branches)) {
                     M.cond_expr(substitute(c, test),

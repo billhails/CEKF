@@ -1,0 +1,84 @@
+namespace
+
+// (if true a b) => a
+
+link "minexpr.fn" as M;
+link "env.fn" as Env;
+link "subst.fn" as SUBST;
+link "occurs_in.fn" as O;
+link "../listutils.fn" as list;
+link "../dictutils.fn" as DICT;
+import list operator "_|>_";
+import list operator "_&&_";
+import list operator "_any_";
+
+fn fold {
+    (M.amb_expr(expr1, expr2)) {
+        M.amb_expr(fold(expr1), fold(expr2))
+    }
+
+    (M.apply(fun, args)) {
+        M.apply(fold(fun), args |> fold)
+    }
+
+    (x = M.back_expr) |
+    (x = M.primop(_)) |
+    (x = M.bigint(_)) |
+    (x = M.character(_)) |
+    (x = M.var(_)) |
+    (x = M.stdint(_)) {
+        x
+    }
+
+    (M.callcc_expr(e)) {
+        M.callcc_expr(fold(e))
+    }
+
+    (M.cut_expr(e)) {
+        M.cut_expr(fold(e))
+    }
+
+    (M.cond_expr(test, branches)) {
+        M.cond_expr(fold(test), branches |> fold && fold)
+    }
+
+    (M.if_expr(exprc, exprt, exprf)) {
+        switch (fold(exprc)) {
+            (c = M.stdint(1)) {
+                fold(exprt)
+            }
+            (c = M.stdint(0)) {
+                fold(exprf)
+            }
+            (c) {
+                M.if_expr(c, fold(exprt), fold(exprf))
+            }
+        }
+    }
+
+    (M.lambda(params, body)) {
+        M.lambda(params, fold(body))
+    }
+
+    (M.letrec_expr(bindings, expr)) {
+        M.letrec_expr(bindings |> identity && (fold && identity), fold(expr))
+    }
+
+    (M.make_vec(size, args)) {
+        M.make_vec(size, args |> fold)
+    }
+
+    (M.match_cases(test, cases)) {
+        M.match_cases(fold(test), cases |> identity && fold)
+    }
+
+    (M.sequence(exprs)) {
+        M.sequence(exprs |> fold)
+    }
+
+    (x) {
+        M.print_expr(x);
+        puts("\n");
+        error("fold_iff: unsupported expression")
+    }
+}

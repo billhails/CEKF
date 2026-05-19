@@ -43,6 +43,10 @@ fn _transform(t, a, exp) {
             M.callcc_expr(t(a, e))
         }
 
+        (M.cut_expr(e)) {
+            M.cut_expr(t(a, e))
+        }
+
         (M.cond_expr(test, branches)) {
             M.cond_expr(t(a, test), branches |> t(a) && t(a))
         }

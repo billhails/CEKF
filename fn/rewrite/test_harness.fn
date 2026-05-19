@@ -16,6 +16,7 @@ let
     link "unconvert.fn" as UCV;
     link "annotate.fn" as AN;
     link "amb.fn" as AMB;
+    link "fold_iff.fn" as IFF;
 in
     list.for_each(fn {
         (';' @ s) {
@@ -27,7 +28,6 @@ in
         (str) {
             let
                 halt = M.var("□");
-                // halt = M.parse("(lambda (f) (done))")
                 fail = M.var("Ω");
                 a = E.parse(str);
                 b = DS.desugar(a);
@@ -40,7 +40,8 @@ in
                 g = OF.fold(f);
                 gg = AMB.amb(g, fail);
                 ggg = β.reduce(gg);
-                h = CC.shared_closure_convert(ggg);
+                gggg = IFF.fold(ggg);
+                h = CC.shared_closure_convert(gggg);
                 hh = UCV.unconvert(h);
                 hhh = AN.annotate(hh);
                 nltab = "\n";

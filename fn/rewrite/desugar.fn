@@ -56,6 +56,10 @@ namespace
             M.callcc_expr(desugar(e))
         }
 
+        (E.cut_expr(e)) {
+            M.cut_expr(desugar(e))
+        }
+
         (E.cond_expr(test, branches)) {
             M.cond_expr(desugar(test), branches |> desugar && desugar);
         }

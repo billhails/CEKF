@@ -39,6 +39,10 @@ fn unconvert {
         M.callcc_expr(unconvert(e))
     }
 
+    (M.cut_expr(e)) {
+        M.cut_expr(unconvert(e))
+    }
+
     (M.cond_expr(test, branches)) {
         M.cond_expr(unconvert(test), branches |> unconvert && unconvert)
     }

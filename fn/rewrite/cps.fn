@@ -58,6 +58,10 @@ namespace
                         T_c(M.callcc_expr(e), c)
                 }
 
+                (M.cut_expr(e)) {
+                    M.cut_expr(T_c(e, kToC(k)))
+                }
+
                 (M.cond_expr(test, branches)) {
                     let
                         c = kToC(k);
@@ -152,6 +156,10 @@ namespace
                             [sf, c]
                         )
                     })
+                }
+
+                (M.cut_expr(e)) {
+                    M.cut_expr(T_c(e, c))
                 }
 
                 (M.cond_expr(test, branches)) {

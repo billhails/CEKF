@@ -14,11 +14,21 @@ fn amb(e, f) {
 
     switch (e) {
         (M.amb_expr(a, b)) {
-            amb(a, M.lambda([], amb(b, f)))
+            // amb(a, M.lambda([], amb(b, f)))
+            amb(a,
+               M.lambda(["skip"],
+                        M.if_expr(M.var("skip"),
+                                  M.apply(f, [M.stdint(0)]),
+                                  amb(b, f))))
+        }
+
+        (M.cut_expr(e)) {
+            amb(e, M.lambda(["skip"],
+                            M.apply(f, [M.stdint(1)])))
         }
 
         (M.back_expr) {
-            M.apply(f, [])
+            M.apply(f, [M.stdint(0)])
         }
 
         (M.apply(x=M.primop(_), args)) {
