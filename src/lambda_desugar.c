@@ -707,6 +707,12 @@ static MinExp *_desugarLamExp(LamExp *node) {
         result = newMinExp_CallCC(CPI(node), new_callcc);
         break;
     }
+    case LAMEXP_TYPE_CUT: {
+        MinExp *new_cut = _desugarLamExp(getLamExp_Cut(node));
+        PROTECT(new_cut);
+        result = newMinExp_Cut(CPI(node), new_cut);
+        break;
+    }
     case LAMEXP_TYPE_CHARACTER: {
         result = newMinExp_Character(CPI(node), getLamExp_Character(node));
         break;

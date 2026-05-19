@@ -710,7 +710,7 @@ int main(int argc, char *argv[]) {
             ///////
             // CPS
             ///////
-            MinExp *done = makeDoneCont(CPI(minExp), 0, true);
+            MinExp *done = makeDoneCont(CPI(minExp), 0);
             PROTECT(done);
             minExp = runCpsTrampolineTc(minExp, done);
             REPLACE_PROTECT(save2, minExp);
@@ -730,7 +730,7 @@ int main(int argc, char *argv[]) {
             ///////
             // AMB
             ///////
-            MinExp *fail = makeDoneCont(CPI(minExp), 1, false);
+            MinExp *fail = makeExhaustedCont(CPI(minExp), 0, 1);
             PROTECT(fail);
             minExp = ambMinExp(minExp, fail);
             REPLACE_PROTECT(save2, minExp);

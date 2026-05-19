@@ -343,6 +343,11 @@ static void commentER(EC *ctx, char *label, ER *result) {
 /////////////////
 
 static void emitDone(int status, EC *ctx) {
+    if (status == 1) {
+        fprintf(FH(ctx),
+                "fprintf(stderr, \"runtime error: cut with no enclosing "
+                "choice point\\n\");\n");
+    }
     fprintf(FH(ctx), "exit(%d);\n", status);
 }
 

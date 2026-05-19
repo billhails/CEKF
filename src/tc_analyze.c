@@ -266,6 +266,8 @@ static TcType *analyzeExp(LamExp *exp, TcEnv *env, TcNg *ng) {
         return prune(analyzeCond(getLamExp_Cond(exp), env, ng));
     case LAMEXP_TYPE_AMB:
         return prune(analyzeAmb(getLamExp_Amb(exp), env, ng));
+    case LAMEXP_TYPE_CUT:
+        return prune(analyzeExp(getLamExp_Cut(exp), env, ng));
     case LAMEXP_TYPE_CHARACTER:
         return prune(analyzeCharacter());
     case LAMEXP_TYPE_BACK:

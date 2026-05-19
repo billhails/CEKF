@@ -81,6 +81,12 @@ void ppLamVarList(FILE *out, SymbolList *varList) {
     fprintf(out, ")");
 }
 
+void ppLamTypeOf(FILE *out, LamTypeOf *typo) {
+    fprintf(out, "(typeof ");
+    ppLamExp(out, typo->exp);
+    fprintf(out, ")");
+}
+
 void ppLamExp(FILE *out, LamExp *exp) {
     // sleep(1);
     if (exp == NULL) {
@@ -129,6 +135,14 @@ void ppLamExp(FILE *out, LamExp *exp) {
         break;
     case LAMEXP_TYPE_CALLCC:
         ppLamCallCC(out, getLamExp_CallCC(exp)); // LamExp
+        break;
+    case LAMEXP_TYPE_CUT:
+        fprintf(out, "(cut ");
+        ppLamExp(out, getLamExp_Cut(exp));
+        fprintf(out, ")");
+        break;
+    case LAMEXP_TYPE_TYPEOF:
+        ppLamTypeOf(out, getLamExp_TypeOf(exp));
         break;
     case LAMEXP_TYPE_PRINT:
         ppLamPrint(out, getLamExp_Print(exp));

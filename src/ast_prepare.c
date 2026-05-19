@@ -2687,6 +2687,16 @@ static AstExpression *prepareAstExpression(AstExpression *node,
         }
         break;
     }
+    case AST_EXPRESSION_TYPE_CUT: {
+        // AstExpression
+        AstExpression *variant = getAstExpression_Cut(node);
+        AstExpression *new_variant = prepareAstExpression(variant, context);
+        if (new_variant != variant) {
+            PROTECT(new_variant);
+            result = newAstExpression_Cut(CPI(node), new_variant);
+        }
+        break;
+    }
     case AST_EXPRESSION_TYPE_ERROR: {
         // AstExpression
         AstExpression *variant = getAstExpression_Error(node);
@@ -3123,6 +3133,17 @@ prepareAstSyntaxTemplateExpr(AstSyntaxTemplateExpr *node,
         if (new_variant != variant) {
             PROTECT(new_variant);
             result = newAstSyntaxTemplateExpr_Assertion(CPI(node), new_variant);
+        }
+        break;
+    }
+    case AST_SYNTAXTEMPLATEEXPR_TYPE_CUT: {
+        // AstSyntaxTemplateExpr
+        AstSyntaxTemplateExpr *variant = getAstSyntaxTemplateExpr_Cut(node);
+        AstSyntaxTemplateExpr *new_variant =
+            prepareAstSyntaxTemplateExpr(variant, context);
+        if (new_variant != variant) {
+            PROTECT(new_variant);
+            result = newAstSyntaxTemplateExpr_Cut(CPI(node), new_variant);
         }
         break;
     }

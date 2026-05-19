@@ -298,6 +298,9 @@ void freeVarsMinExp(MinExp *node, SymbolSet *result, SymbolEnv *context) {
     case MINEXP_TYPE_SEQUENCE:
         freeVarsMinExprList(getMinExp_Sequence(node), result, context);
         break;
+    case MINEXP_TYPE_CUT:
+        freeVarsMinExp(getMinExp_Cut(node), result, context);
+        break;
     case MINEXP_TYPE_VAR:
         if (!isSymbolInEnv(context, getMinExp_Var(node))) {
             setSymbolSet(result, getMinExp_Var(node));

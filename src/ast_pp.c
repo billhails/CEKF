@@ -1201,6 +1201,11 @@ static void ppAstSyntaxTemplateExpr(FILE *out,
                                 getAstSyntaxTemplateExpr_Assertion(expression));
         fprintf(out, ")");
         break;
+    case AST_SYNTAXTEMPLATEEXPR_TYPE_CUT:
+        fprintf(out, "cut(");
+        ppAstSyntaxTemplateExpr(out, getAstSyntaxTemplateExpr_Cut(expression));
+        fprintf(out, ")");
+        break;
     case AST_SYNTAXTEMPLATEEXPR_TYPE_ERROR:
         fprintf(out, "error(");
         ppAstSyntaxTemplateExpr(out,
@@ -1364,6 +1369,11 @@ void ppAstExpression(FILE *out, AstExpression *expr) {
     case AST_EXPRESSION_TYPE_ASSERTION:
         fprintf(out, "assert(");
         ppAstExpression(out, expr->val.assertion);
+        fprintf(out, ")");
+        break;
+    case AST_EXPRESSION_TYPE_CUT:
+        fprintf(out, "cut(");
+        ppAstExpression(out, expr->val.cut);
         fprintf(out, ")");
         break;
     case AST_EXPRESSION_TYPE_ERROR:

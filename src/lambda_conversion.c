@@ -67,6 +67,7 @@ static LamExp *convertNest(AstNest *, LamContext *);
 static LamExp *lamConvert(AstDefinitions *, AstExpressions *, LamContext *);
 static LamExp *convertSymbol(ParserInfo, HashSymbol *, LamContext *);
 static LamExp *convertAnnotatedSymbol(AstAnnotatedSymbol *, LamContext *);
+static LamExp *convertCut(AstExpression *, LamContext *);
 
 #ifdef DEBUG_LAMBDA_CONVERT
 #include "debugging_on.h"
@@ -115,6 +116,14 @@ static LamExp *convertNest(AstNest *nest, LamContext *env) {
     PROTECT(result);
     UNPROTECT(save);
     LEAVE(convertNest);
+    return result;
+}
+
+static LamExp *convertCut(AstExpression *value, LamContext *env) {
+    LamExp *exp = convertExpression(value, env);
+    int save = PROTECT(exp);
+    LamExp *result = newLamExp_Cut(CPI(value), exp);
+    UNPROTECT(save);
     return result;
 }
 
@@ -2134,6 +2143,10 @@ static LamExp *convertExpression(AstExpression *expression, LamContext *env) {
     case AST_EXPRESSION_TYPE_IFF:
         DEBUG("iff");
         result = lamConvertIff(getAstExpression_Iff(expression), env);
+        break;
+    case AST_EXPRESSION_TYPE_CUT:
+        DEBUG("cut");
+        result = convertCut(getAstExpression_Cut(expression), env);
         break;
     case AST_EXPRESSION_TYPE_PRINT:
         DEBUG("print");

@@ -21,6 +21,8 @@
 #include "cekfs.h"
 #include "minlam_runtime.h"
 
+#include <stdio.h>
+
 #ifdef TRACE_BRUN
 int trace_brun_flag = 0;
 #define EPRINTF(...)                                                           \
@@ -201,6 +203,10 @@ void brun(BLinkedImage *image, BuiltIns *builtins) {
         }
         case BBC_TYPE_DONE: { // exit_status
             EPRINTF("DONE exit=%d\n", inst.a1);
+            if (inst.a1 == 1) {
+                fprintf(stderr,
+                        "runtime error: cut with no enclosing choice point\n");
+            }
             exit(inst.a1); // reconsider return instead
         }
         case BBC_TYPE_EXT: {    // unpacked modifier for the next instruction

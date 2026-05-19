@@ -451,6 +451,16 @@ MinExp *shakeMinExp(MinExp *node) {
         }
         break;
     }
+    case MINEXP_TYPE_CUT: {
+        // MinExp
+        MinExp *variant = getMinExp_Cut(node);
+        MinExp *new_variant = shakeMinExp(variant);
+        if (new_variant != variant) {
+            PROTECT(new_variant);
+            result = newMinExp_Cut(CPI(node), new_variant);
+        }
+        break;
+    }
     case MINEXP_TYPE_CHARACTER: {
         // character
         break;
@@ -544,7 +554,7 @@ MinExp *shakeMinExp(MinExp *node) {
         break;
     }
     default:
-        cant_happen("unrecognized MinExp type %d", node->type);
+        cant_happen("unrecognized MinExp type %s", minExpTypeName(node->type));
     }
     UNPROTECT(save);
     LEAVE(shakeMinExp);

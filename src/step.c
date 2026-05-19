@@ -66,6 +66,8 @@ int dump_bytecode_flag = 0;
 static void step();
 static Value lookUp(int frame, int offset);
 void putCharacter(Character x);
+static Location *lookupCurrentLocation(Control control);
+static void runtimeSourceError(Control control, const char *message);
 
 static CEKF state;
 
@@ -241,6 +243,7 @@ static void inject(ByteCodeArray B, LocationArray *L,
 void run(ByteCodeArray B, LocationArray *L, BuiltIns *builtIns) {
     inject(B, L, builtIns);
     step();
+    state.L = NULL;
     state.E = NULL;
     state.K = NULL;
     state.F = NULL;
@@ -277,6 +280,32 @@ static inline BigInt *readCurrentBigInt(void) {
 
 static inline int readCurrentOffset(void) {
     return readOffset(&state.B, &state.C);
+}
+
+static Location *lookupCurrentLocation(Control control) {
+    if (state.L == NULL || countLocationArray(state.L) == 0) {
+        return NULL;
+    }
+
+    Location *result = NULL;
+    for (Index i = 0; i < countLocationArray(state.L); i++) {
+        Location *candidate = getLocationArray(state.L, i);
+        if (candidate->loc > control) {
+            break;
+        }
+        result = candidate;
+    }
+    return result;
+}
+
+static void runtimeSourceError(Control control, const char *message) {
+    Location *location = lookupCurrentLocation(control);
+    if (location != NULL && location->fileName != NULL) {
+        eprintf("%s at %s:%d\n", message, location->fileName, location->lineNo);
+    } else {
+        eprintf("%s at bytecode offset %04lx\n", message, control);
+    }
+    exit(1);
 }
 
 // assumes state.C is at the start of the MATCH table
@@ -634,7 +663,6 @@ static void step() {
         dumpByteCode(stdout, &state.B, state.L);
         exit(0);
     }
-    state.L = NULL;
     state.C = 0;
     while (state.C != END_CONTROL) {
         ++count;
@@ -1104,11 +1132,11 @@ static void step() {
         case BYTECODES_TYPE_CUT: {
             // discard the current failure continuation
             DEBUG("CUT");
-#ifdef SAFETY_CHECKS
             if (state.F == NULL) {
-                cant_happen("cut with no extant failure continuation");
+                runtimeSourceError(
+                    state.C - 1,
+                    "runtime error: cut with no enclosing choice point");
             }
-#endif
             state.F = state.F->F;
         } break;
 

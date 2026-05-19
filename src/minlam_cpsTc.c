@@ -46,6 +46,7 @@ static MinExp *cpsTcMinCond(MinCond *node, MinExp *c);
 static MinExp *cpsTcMinMatch(MinMatch *node, MinExp *c);
 static MinExp *cpsTcMinLetRec(MinLetRec *node, MinExp *c);
 static MinExp *cpsTcMinAmb(MinAmb *node, MinExp *c);
+static MinExp *cpsTcMinCut(MinExp *node, MinExp *c);
 static MinExp *cpsTcMinExp(MinExp *node, MinExp *c);
 
 /*
@@ -462,6 +463,21 @@ static MinExp *cpsTcMinAmb(MinAmb *node, MinExp *c) {
 }
 
 /*
+    (E.cut_expr(expr)) {
+        E.cut_expr(T_c(expr, c))
+    }
+*/
+static MinExp *cpsTcMinCut(MinExp *node, MinExp *c) {
+    ENTER(cpsTcMinCut);
+    MinExp *body = cpsTc(getMinExp_Cut(node), c);
+    int save = PROTECT(body);
+    MinExp *result = newMinExp_Cut(CPI(node), body);
+    UNPROTECT(save);
+    LEAVE(cpsTcMinCut);
+    return result;
+}
+
+/*
     (lambda (f cc)
         (f (lambda (x i) (cc x))
            cc))
@@ -563,6 +579,8 @@ static MinExp *cpsTcMinExp(MinExp *node, MinExp *c) {
         return node;
     case MINEXP_TYPE_AMB:
         return cpsTcMinAmb(getMinExp_Amb(node), c);
+    case MINEXP_TYPE_CUT:
+        return cpsTcMinCut(node, c);
     case MINEXP_TYPE_APPLY:
         return cpsTcMinApply(getMinExp_Apply(node), c);
     case MINEXP_TYPE_CALLCC:
@@ -733,6 +751,18 @@ CpsWork *cpsStepTc(CpsWork *work) {
             int save = PROTECT(kVar);
             CpsWork *next =
                 makeCpsWork_TcAmbAfterLeft(amb->left, amb->right, kVar, c);
+            UNPROTECT(save);
+            return next;
+        }
+
+        case MINEXP_TYPE_CUT: {
+            CpsWork *tcWork = makeCpsWork_Tc(getMinExp_Cut(node), c);
+            int save = PROTECT(tcWork);
+            MinExp *body = runCpsWorkToResult(tcWork);
+            PROTECT(body);
+            MinExp *result = newMinExp_Cut(CPI(node), body);
+            PROTECT(result);
+            CpsWork *next = newCpsWork_Result(result);
             UNPROTECT(save);
             return next;
         }

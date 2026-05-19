@@ -46,6 +46,7 @@ static MinExp *cpsTkMinCond(MinCond *node, CpsKont *k);
 static MinExp *cpsTkMinMatch(MinMatch *node, CpsKont *k);
 static MinExp *cpsTkMinLetRec(MinLetRec *node, CpsKont *k);
 static MinExp *cpsTkMinAmb(MinAmb *node, CpsKont *k);
+static MinExp *cpsTkMinCut(MinExp *node, CpsKont *k);
 static MinExp *cpsTkMinExp(MinExp *node, CpsKont *k);
 
 static MinExp *packArgsExp(ParserInfo PI, MinExprList *args) {
@@ -564,6 +565,28 @@ static MinExp *cpsTkMinAmb(MinAmb *node, CpsKont *k) {
 }
 
 /*
+    (E.cut_expr(expr)) {
+        let
+            c = kToC(k);
+        in
+            E.cut_expr(T_c(expr, c))
+    }
+*/
+static MinExp *cpsTkMinCut(MinExp *node, CpsKont *k) {
+    ENTER(cpsTkMinCut);
+    MinExp *c = kToC(CPI(node), k);
+    int save = PROTECT(c);
+    CpsWork *tcWork = makeCpsWork_Tc(getMinExp_Cut(node), c);
+    PROTECT(tcWork);
+    MinExp *body = runCpsWorkToResult(tcWork);
+    PROTECT(body);
+    MinExp *result = newMinExp_Cut(CPI(node), body);
+    UNPROTECT(save);
+    LEAVE(cpsTkMinCut);
+    return result;
+}
+
+/*
     (E.callCC_expr(e)) {
         let
             c = kToC(k);
@@ -600,6 +623,8 @@ static MinExp *cpsTkMinExp(MinExp *node, CpsKont *k) {
         return node;
     case MINEXP_TYPE_AMB:
         return cpsTkMinAmb(getMinExp_Amb(node), k);
+    case MINEXP_TYPE_CUT:
+        return cpsTkMinCut(node, k);
     case MINEXP_TYPE_APPLY:
         return cpsTkMinApply(node, k);
     case MINEXP_TYPE_CALLCC:
@@ -795,6 +820,20 @@ CpsWork *cpsStepTk(CpsWork *work) {
             int save = PROTECT(c);
             CpsWork *next =
                 makeCpsWork_TkAmbAfterLeft(amb->left, amb->right, c);
+            UNPROTECT(save);
+            return next;
+        }
+
+        case MINEXP_TYPE_CUT: {
+            MinExp *c = kToC(CPI(node), k);
+            int save = PROTECT(c);
+            CpsWork *tcWork = makeCpsWork_Tc(getMinExp_Cut(node), c);
+            PROTECT(tcWork);
+            MinExp *body = runCpsWorkToResult(tcWork);
+            PROTECT(body);
+            MinExp *result = newMinExp_Cut(CPI(node), body);
+            PROTECT(result);
+            CpsWork *next = newCpsWork_Result(result);
             UNPROTECT(save);
             return next;
         }

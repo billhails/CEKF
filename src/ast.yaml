@@ -866,6 +866,7 @@ unions:
             tuple: AstExpressions
             env: void_ptr
             structure: AstStruct
+            cut: AstExpression
             assertion: AstExpression
             error: AstExpression
             syntaxUse: AstExprSyntaxUse
@@ -931,6 +932,7 @@ unions:
             typeOf: AstSyntaxTemplateTypeOf
             tuple: AstSyntaxTemplateExprs
             structure: AstSyntaxTemplateStruct
+            cut: AstSyntaxTemplateExpr
             assertion: AstSyntaxTemplateExpr
             error: AstSyntaxTemplateExpr
 

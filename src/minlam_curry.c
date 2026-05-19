@@ -504,6 +504,15 @@ MinExp *curryMinExp(MinExp *node) {
         }
         break;
     }
+    case MINEXP_TYPE_CUT: {
+        MinExp *variant = getMinExp_Cut(node);
+        MinExp *new_variant = curryMinExp(variant);
+        if (new_variant != variant) {
+            PROTECT(new_variant);
+            result = newMinExp_Cut(CPI(node), new_variant);
+        }
+        break;
+    }
     case MINEXP_TYPE_CHARACTER: {
         break;
     }

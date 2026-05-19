@@ -109,6 +109,7 @@ LamExp --bigInteger--> MaybeBigInt
 LamExp --bindings--> LamBindings
 LamExp --callCC--> LamExp
 LamExp --character--> character
+LamExp --cut--> LamExp
 LamExp --cond--> LamCond
 LamExp --constant--> LamConstant
 LamExp --construct--> LamConstruct

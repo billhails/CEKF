@@ -320,7 +320,7 @@ test-a: all
 
 test-sh: all
 	for t in $(TSTDIR)/sh/*.sh ; do [ -e $$t ] || continue ; echo '***' $$t '***' ; bash $$t || exit 1 ; done
-	@echo "All A tests passed."
+	@echo "All sh tests passed."
 
 test-fail: all
 	for t in $(TSTDIR)/fn/fail_*.fn ; do echo '***' $$t '***' ; ! ./$(TARGET) --include=fn --assertions-accumulate $$t >/dev/null 2>&1 || exit 1 ; done

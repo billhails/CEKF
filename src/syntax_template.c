@@ -859,6 +859,15 @@ static AstSyntaxTemplateExpr *convertTemplateExpr(AstExpression *expr,
     switch (expr->type) {
     case AST_EXPRESSION_TYPE_BACK:
         return newAstSyntaxTemplateExpr_Back(CPI(expr));
+    case AST_EXPRESSION_TYPE_CUT: {
+        AstSyntaxTemplateExpr *inner =
+            convertTemplateExpr(getAstExpression_Cut(expr), context);
+        int save = PROTECT(inner);
+        AstSyntaxTemplateExpr *result =
+            newAstSyntaxTemplateExpr_Cut(CPI(expr), inner);
+        UNPROTECT(save);
+        return result;
+    }
     case AST_EXPRESSION_TYPE_WILDCARD:
         return newAstSyntaxTemplateExpr_WildCard(CPI(expr));
     case AST_EXPRESSION_TYPE_SYMBOL:

@@ -83,6 +83,7 @@ HashSymbol *TOK_IF(void);
 HashSymbol *TOK_IMPORT(void);
 HashSymbol *TOK_IN(void);
 HashSymbol *TOK_KW_CHAR(void);
+HashSymbol *TOK_KW_CUT(void);
 HashSymbol *TOK_KW_ERROR(void);
 HashSymbol *TOK_KW_NUMBER(void);
 HashSymbol *TOK_LCURLY(void);

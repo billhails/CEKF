@@ -216,6 +216,7 @@ AstExpression --typeOf--> AstTypeOf
 AstExpression --tuple--> AstExpressions
 AstExpression --env--> void_ptr
 AstExpression --structure--> AstStruct
+AstExpression --cut--> AstExpression
 AstExpression --assertion--> AstExpression
 AstExpression --error--> AstExpression
 AstExpression --syntaxUse--> AstExprSyntaxUse
@@ -247,6 +248,7 @@ AstSyntaxTemplateExpr --print--> AstSyntaxTemplatePrint
 AstSyntaxTemplateExpr --typeOf--> AstSyntaxTemplateTypeOf
 AstSyntaxTemplateExpr --tuple--> AstSyntaxTemplateExprs
 AstSyntaxTemplateExpr --structure--> AstSyntaxTemplateStruct
+AstSyntaxTemplateExpr --cut--> AstSyntaxTemplateExpr
 AstSyntaxTemplateExpr --assertion--> AstSyntaxTemplateExpr
 AstSyntaxTemplateExpr --error--> AstSyntaxTemplateExpr
 AstSyntaxTemplateFarg --wildCard--> void_ptr

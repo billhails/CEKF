@@ -340,6 +340,10 @@ LamExp *lamPerformSubstitutions(LamExp *exp, SymbolMap *substitutions) {
         case LAMEXP_TYPE_CONSTANT:
         case LAMEXP_TYPE_CONSTRUCTOR:
             break;
+        case LAMEXP_TYPE_CUT:
+            setLamExp_Cut(exp, lamPerformSubstitutions(getLamExp_Cut(exp),
+                                                       substitutions));
+            break;
         case LAMEXP_TYPE_LAM:
             setLamExp_Lam(exp, performLamSubstitutions(getLamExp_Lam(exp),
                                                        substitutions));

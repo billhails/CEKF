@@ -271,6 +271,9 @@ static LamExp *inlineExp(LamExp *x) {
     case LAMEXP_TYPE_AMB:
         setLamExp_Amb(x, inlineAmb(getLamExp_Amb(x)));
         break;
+    case LAMEXP_TYPE_CUT:
+        setLamExp_Cut(x, inlineExp(getLamExp_Cut(x)));
+        break;
     case LAMEXP_TYPE_TUPLEINDEX:
         setLamExp_TupleIndex(x, inlineTupleIndex(getLamExp_TupleIndex(x)));
         break;

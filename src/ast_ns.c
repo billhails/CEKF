@@ -2393,6 +2393,16 @@ nsAstSyntaxTemplateExpr(AstSyntaxTemplateExpr *node, VisitorContext context) {
         }
         break;
     }
+    case AST_SYNTAXTEMPLATEEXPR_TYPE_CUT: {
+        AstSyntaxTemplateExpr *variant = getAstSyntaxTemplateExpr_Cut(node);
+        AstSyntaxTemplateExpr *new_variant =
+            nsAstSyntaxTemplateExpr(variant, context);
+        if (new_variant != variant) {
+            PROTECT(new_variant);
+            result = newAstSyntaxTemplateExpr_Cut(CPI(node), new_variant);
+        }
+        break;
+    }
     case AST_SYNTAXTEMPLATEEXPR_TYPE_ERROR: {
         AstSyntaxTemplateExpr *variant = getAstSyntaxTemplateExpr_Error(node);
         AstSyntaxTemplateExpr *new_variant =
@@ -2825,6 +2835,15 @@ static AstExpression *nsAstExpression(AstExpression *node,
         AstExpression *new_variant = nsAstExpression(variant, context);
         PROTECT(new_variant);
         result = rewriteAssertionToCall(new_variant, context);
+        break;
+    }
+    case AST_EXPRESSION_TYPE_CUT: {
+        AstExpression *variant = getAstExpression_Cut(node);
+        AstExpression *new_variant = nsAstExpression(variant, context);
+        if (new_variant != variant) {
+            PROTECT(new_variant);
+            result = newAstExpression_Cut(CPI(node), new_variant);
+        }
         break;
     }
     case AST_EXPRESSION_TYPE_ERROR: {

@@ -379,6 +379,7 @@ unions:
             bindings: LamBindings # so that ANF normalize can be uniformly typed
             callCC: LamExp
             character: character
+            cut: LamExp
             cond: LamCond
             constant: LamConstant
             construct: LamConstruct
