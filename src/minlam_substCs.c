@@ -400,7 +400,6 @@ MinExp *substCsMinExp(MinExp *node, MinExpTable *context) {
     MinExp *result = node;
     switch (node->type) {
     case MINEXP_TYPE_AMB: {
-        // MinAmb
         MinAmb *variant = getMinExp_Amb(node);
         MinAmb *new_variant = substCsMinAmb(variant, context);
         if (new_variant != variant) {
@@ -410,7 +409,6 @@ MinExp *substCsMinExp(MinExp *node, MinExpTable *context) {
         break;
     }
     case MINEXP_TYPE_APPLY: {
-        // MinApply
         MinApply *variant = getMinExp_Apply(node);
         MinApply *new_variant = substCsMinApply(variant, context);
         if (new_variant != variant) {
@@ -420,7 +418,6 @@ MinExp *substCsMinExp(MinExp *node, MinExpTable *context) {
         break;
     }
     case MINEXP_TYPE_ARGS: {
-        // MinExprList
         MinExprList *variant = getMinExp_Args(node);
         MinExprList *new_variant = substCsMinExprList(variant, context);
         if (new_variant != variant) {
@@ -430,7 +427,6 @@ MinExp *substCsMinExp(MinExp *node, MinExpTable *context) {
         break;
     }
     case MINEXP_TYPE_AVAR: {
-        // MinAnnotatedVar
         MinAnnotatedVar *variant = getMinExp_Avar(node);
         MinAnnotatedVar *new_variant = substCsMinAnnotatedVar(variant, context);
         if (new_variant != variant) {
@@ -439,16 +435,7 @@ MinExp *substCsMinExp(MinExp *node, MinExpTable *context) {
         }
         break;
     }
-    case MINEXP_TYPE_BACK: {
-        // void_ptr
-        break;
-    }
-    case MINEXP_TYPE_BIGINTEGER: {
-        // MaybeBigInt
-        break;
-    }
     case MINEXP_TYPE_BINDINGS: {
-        // MinBindings
         MinBindings *variant = getMinExp_Bindings(node);
         MinBindings *new_variant = substCsMinBindings(variant, context);
         if (new_variant != variant) {
@@ -458,7 +445,6 @@ MinExp *substCsMinExp(MinExp *node, MinExpTable *context) {
         break;
     }
     case MINEXP_TYPE_CALLCC: {
-        // MinExp
         MinExp *variant = getMinExp_CallCC(node);
         MinExp *new_variant = substCsMinExp(variant, context);
         if (new_variant != variant) {
@@ -467,12 +453,16 @@ MinExp *substCsMinExp(MinExp *node, MinExpTable *context) {
         }
         break;
     }
-    case MINEXP_TYPE_CHARACTER: {
-        // character
+    case MINEXP_TYPE_CUT: {
+        MinExp *variant = getMinExp_Cut(node);
+        MinExp *new_variant = substCsMinExp(variant, context);
+        if (new_variant != variant) {
+            PROTECT(new_variant);
+            result = newMinExp_Cut(CPI(node), new_variant);
+        }
         break;
     }
     case MINEXP_TYPE_COND: {
-        // MinCond
         MinCond *variant = getMinExp_Cond(node);
         MinCond *new_variant = substCsMinCond(variant, context);
         if (new_variant != variant) {
@@ -481,12 +471,7 @@ MinExp *substCsMinExp(MinExp *node, MinExpTable *context) {
         }
         break;
     }
-    case MINEXP_TYPE_DONE: {
-        // int
-        break;
-    }
     case MINEXP_TYPE_IFF: {
-        // MinIff
         MinIff *variant = getMinExp_Iff(node);
         MinIff *new_variant = substCsMinIff(variant, context);
         if (new_variant != variant) {
@@ -496,7 +481,6 @@ MinExp *substCsMinExp(MinExp *node, MinExpTable *context) {
         break;
     }
     case MINEXP_TYPE_LAM: {
-        // MinLam
         MinLam *variant = getMinExp_Lam(node);
         MinLam *new_variant = substCsMinLam(variant, context);
         if (new_variant != variant) {
@@ -506,7 +490,6 @@ MinExp *substCsMinExp(MinExp *node, MinExpTable *context) {
         break;
     }
     case MINEXP_TYPE_LETREC: {
-        // MinLetRec
         MinLetRec *variant = getMinExp_LetRec(node);
         MinLetRec *new_variant = substCsMinLetRec(variant, context);
         if (new_variant != variant) {
@@ -516,7 +499,6 @@ MinExp *substCsMinExp(MinExp *node, MinExpTable *context) {
         break;
     }
     case MINEXP_TYPE_MAKEVEC: {
-        // MinExprList
         MinExprList *variant = getMinExp_MakeVec(node);
         MinExprList *new_variant = substCsMinExprList(variant, context);
         if (new_variant != variant) {
@@ -526,7 +508,6 @@ MinExp *substCsMinExp(MinExp *node, MinExpTable *context) {
         break;
     }
     case MINEXP_TYPE_MATCH: {
-        // MinMatch
         MinMatch *variant = getMinExp_Match(node);
         MinMatch *new_variant = substCsMinMatch(variant, context);
         if (new_variant != variant) {
@@ -536,7 +517,6 @@ MinExp *substCsMinExp(MinExp *node, MinExpTable *context) {
         break;
     }
     case MINEXP_TYPE_PRIM: {
-        // MinPrimApp
         MinPrimApp *variant = getMinExp_Prim(node);
         MinPrimApp *new_variant = substCsMinPrimApp(variant, context);
         if (new_variant != variant) {
@@ -546,7 +526,6 @@ MinExp *substCsMinExp(MinExp *node, MinExpTable *context) {
         break;
     }
     case MINEXP_TYPE_SEQUENCE: {
-        // MinExprList
         MinExprList *variant = getMinExp_Sequence(node);
         MinExprList *new_variant = substCsMinExprList(variant, context);
         if (new_variant != variant) {
@@ -555,16 +534,15 @@ MinExp *substCsMinExp(MinExp *node, MinExpTable *context) {
         }
         break;
     }
-    case MINEXP_TYPE_STDINT: {
-        // int
+    case MINEXP_TYPE_BACK:
+    case MINEXP_TYPE_BIGINTEGER:
+    case MINEXP_TYPE_CHARACTER:
+    case MINEXP_TYPE_DONE:
+    case MINEXP_TYPE_STDINT:
+    case MINEXP_TYPE_VAR:
         break;
-    }
-    case MINEXP_TYPE_VAR: {
-        // HashSymbol
-        break;
-    }
     default:
-        cant_happen("unrecognized MinExp type %d", node->type);
+        cant_happen("unrecognized MinExp type %s", minExpTypeName(node->type));
     }
     UNPROTECT(save);
     LEAVE(substCsMinExp);
