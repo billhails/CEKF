@@ -25,6 +25,8 @@ RegexFileSource --startPos--> filepos
 RegexFileSource --positions--> RegexFilePosArray
 RegexFileSource --cache--> CharacterArray
 RegexFileSource --exhausted--> bool
+RegexTextSource --data--> WCharVec
+RegexTextSource --start--> wstring
 RegexClassItem --literal--> character
 RegexClassItem --range--> RegexRange
 RegexClassItem --meta--> RegexMetaType
@@ -43,6 +45,7 @@ RegexNode --alternation--> RegexNodeArray
 RegexNode --repeat--> RegexRepeat
 RegexSource --string--> RegexStringSource
 RegexSource --file--> RegexFileSource
+RegexSource --text--> RegexTextSource
 RegexStatus["enum RegexStatus"]
 RegexMetaType["enum RegexMetaType"]
 RegexClassItemArray["RegexClassItemArray[]"] --entries--> RegexClassItem

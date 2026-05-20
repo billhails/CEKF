@@ -2,6 +2,12 @@
 
 Regex support is no longer just a standalone engine.
 
+For the current implementation status, including the `RegexSource`
+string/file source model and the existing parser-combinator library, see
+[REGEX_STATUS.md](./REGEX_STATUS.md). This document still contains useful
+design background, but parts of its status and future-work discussion are now
+historical.
+
 The current system already includes:
 
 * a unicode-centric regex compiler and matcher over `wchar_t`-style

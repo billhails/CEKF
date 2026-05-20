@@ -5,7 +5,7 @@ More of a wish-list than a hard and fast plan.
 * More folding opportunities.
   * fold boolean expressions `true and false => false`.
     * tricky because `and`, `or` etc. are not primitive, they are lazy operators defined in terms of `if` in the preamble.
-  * fold boolean comparisons `a == a => true`, `a >= a => true` etc. DONE
+  * fold comparisons `a == a => true`, `a >= a => true` etc. DONE
   * fold constant conditions `(if true a b) => a`. DONE
     * This solves the boolean expression folding problem, after β/η-reduction:
       * `true and false => (if true false false) => false`
@@ -13,6 +13,8 @@ More of a wish-list than a hard and fast plan.
 * Continuations.
   * Reinstate `cut` (prunes current back continuation). DONE
   * Implement delimited continuations.
+* Regular Expressions.
+  * Enlist the new regex engine to support the core Pratt scanner.
 * Types.
   * Consider type classes as a general solution to `EQ <type>`, `map` etc.
   * Records should create accessor functions for each tag.

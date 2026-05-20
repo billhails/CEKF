@@ -26,8 +26,11 @@
 #include <wctype.h>
 
 #include "bigint.h"
+#include "memory.h"
 #include "pratt_debug.h"
 #include "pratt_scanner.h"
+#include "regex_helper.h"
+#include "regex_source.h"
 #include "symbol.h"
 #include "unicode.h"
 
@@ -114,11 +117,31 @@ TOKFN(WILDCARD, "_")
 
 #undef TOKFN
 
+static Regex *leadingZeroNumericRegex = NULL;
+static Regex *decimalNumericRegex = NULL;
+static Regex *stringLiteralRegex = NULL;
+static Regex *charLiteralRegex = NULL;
+
 /**
  * @brief Checks if a symbol is an internal symbol.
  */
 static inline bool isInternal(HashSymbol *symbol) {
     return symbol->name[0] == ' ';
+}
+
+void markPrattScannerRegexCache(void) {
+    if (leadingZeroNumericRegex != NULL) {
+        markObject((Header *)leadingZeroNumericRegex);
+    }
+    if (decimalNumericRegex != NULL) {
+        markObject((Header *)decimalNumericRegex);
+    }
+    if (stringLiteralRegex != NULL) {
+        markObject((Header *)stringLiteralRegex);
+    }
+    if (charLiteralRegex != NULL) {
+        markObject((Header *)charLiteralRegex);
+    }
 }
 
 /**
@@ -535,136 +558,208 @@ static MaybeBigInt *makeIrrational(Character *str, int length) {
     return irrationalBigInt(f / div, imag);
 }
 
+static Regex *getCachedRegex(const Character *pattern, Regex **cacheSlot) {
+    if (*cacheSlot == NULL) {
+        RegexStatus status = REGEX_STATUS_OK;
+        Index errorOffset = 0;
+
+        *cacheSlot = regexCompile(pattern, &status, &errorOffset);
+        if (*cacheSlot == NULL || status != REGEX_STATUS_OK) {
+            cant_happen("invalid scanner numeric regex at offset %d",
+                        (int)errorOffset);
+        }
+    }
+
+    return *cacheSlot;
+}
+
+static int matchCachedPrefixRegex(PrattBuffer *buffer, const Character *pattern,
+                                  Regex **cacheSlot, Index *matchLength) {
+    int save = STARTPROTECT();
+    Regex *compiled = getCachedRegex(pattern, cacheSlot);
+    RegexSource *source =
+        regexSourceFromWCharVecSlice(buffer->data, buffer->start);
+
+    PROTECT(source);
+    int matchStart = regexMatchPrefixSourcep(compiled, source, matchLength);
+    UNPROTECT(save);
+    return matchStart;
+}
+
+static Character hexDigitValue(Character c) {
+    if (c >= L'0' && c <= L'9') {
+        return c - L'0';
+    }
+    if (c >= L'a' && c <= L'f') {
+        return 10 + c - L'a';
+    }
+    if (c >= L'A' && c <= L'F') {
+        return 10 + c - L'A';
+    }
+    cant_happen("invalid hex digit %lc in validated string literal", c);
+}
+
+static bool tryHexDigitValue(Character c, Character *value) {
+    if (c >= L'0' && c <= L'9') {
+        *value = c - L'0';
+        return true;
+    }
+    if (c >= L'a' && c <= L'f') {
+        *value = 10 + c - L'a';
+        return true;
+    }
+    if (c >= L'A' && c <= L'F') {
+        *value = 10 + c - L'A';
+        return true;
+    }
+    return false;
+}
+
+static Character extendUnicodeEscape(Character value, Character hexDigit) {
+    return (value << 4) | hexDigit;
+}
+
+static bool tryDecodeSimpleEscape(Character escaped, Character *decoded) {
+    switch (escaped) {
+    case L'n':
+        *decoded = L'\n';
+        return true;
+    case L't':
+        *decoded = L'\t';
+        return true;
+    case L'r':
+        *decoded = L'\r';
+        return true;
+    default:
+        return false;
+    }
+}
+
+static WCharArray *decodeValidatedStringLiteral(const Character *start,
+                                                Index length) {
+    WCharArray *string = newWCharArray();
+    int save = PROTECT(string);
+
+    ASSERT(length >= 2);
+    for (Index i = 1; i + 1 < length; ++i) {
+        if (start[i] != L'\\') {
+            pushWCharArray(string, start[i]);
+            continue;
+        }
+
+        i++;
+        Character decoded = 0;
+
+        if (tryDecodeSimpleEscape(start[i], &decoded)) {
+            pushWCharArray(string, decoded);
+            continue;
+        }
+
+        switch (start[i]) {
+        case L'u':
+        case L'U': {
+            Character uni = 0;
+
+            for (i++; start[i] != L';'; ++i) {
+                uni = extendUnicodeEscape(uni, hexDigitValue(start[i]));
+            }
+            pushWCharArray(string, uni);
+            break;
+        }
+        default:
+            pushWCharArray(string, start[i]);
+            break;
+        }
+    }
+
+    pushWCharArray(string, L'\0');
+    UNPROTECT(save);
+    return string;
+}
+
+static PrattToken *finishStringToken(PrattLexer *lexer, WCharArray *string,
+                                     HashSymbol *tokenType, Index length) {
+    PrattBuffer *buffer = lexer->bufList->buffer;
+    int save = PROTECT(string);
+
+    buffer->offset = (int)length;
+    PrattToken *token = tokenFromString(lexer->bufList, string, tokenType);
+    advance(buffer);
+    UNPROTECT(save);
+    return token;
+}
+
+static Index stringLiteralMatchLength(PrattBuffer *buffer,
+                                      bool parsingSingleChar) {
+    static const Character *stringLiteralPattern =
+        L"^\"([^\"\\\\\n]|\\\\([ntr]|[uU][0-9A-Fa-f]+;|[^uUntr\n]))*\"";
+    static const Character *charLiteralPattern =
+        L"^'([^'\\\\\n]|\\\\([ntr]|[uU][0-9A-Fa-f]+;|[^uUntr\n]))'";
+    const Character *pattern =
+        parsingSingleChar ? charLiteralPattern : stringLiteralPattern;
+    Regex **cacheSlot =
+        parsingSingleChar ? &charLiteralRegex : &stringLiteralRegex;
+    Index matchLength = 0;
+    int matchStart =
+        matchCachedPrefixRegex(buffer, pattern, cacheSlot, &matchLength);
+
+    if (matchStart == 0) {
+        return matchLength;
+    }
+
+    return 0;
+}
+
+static PrattStringState nextStringContentState(bool parsingSingleChar) {
+    return parsingSingleChar ? PRATTSTRINGSTATE_TYPE_CHR
+                             : PRATTSTRINGSTATE_TYPE_STR;
+}
+
+static PrattStringState appendDecodedStringCharacter(WCharArray *string,
+                                                     Character decoded,
+                                                     bool parsingSingleChar) {
+    pushWCharArray(string, decoded);
+    return nextStringContentState(parsingSingleChar);
+}
+
+static Index numericMatchLength(PrattBuffer *buffer) {
+    static const Character *leadingZeroPattern =
+        L"^0_*([xX][0-9A-Fa-f_]*i?|\\d[\\d_]*(\\.[\\d_]*)?i?|\\.[\\d_]*i?|i?)?";
+    static const Character *decimalPattern = L"^\\d[\\d_]*(\\.[\\d_]*)?i?";
+    Index matchLength = 0;
+    int matchStart =
+        buffer->start[0] == L'0'
+            ? matchCachedPrefixRegex(buffer, leadingZeroPattern,
+                                     &leadingZeroNumericRegex, &matchLength)
+            : matchCachedPrefixRegex(buffer, decimalPattern,
+                                     &decimalNumericRegex, &matchLength);
+
+    if (matchStart != 0 || matchLength == 0) {
+        cant_happen("regex numeric scanner mismatch at %lc", buffer->start[0]);
+    }
+
+    return matchLength;
+}
+
+static bool numericTokenIsFloating(PrattBuffer *buffer) {
+    for (int i = 0; i < buffer->offset; i++) {
+        if (buffer->start[i] == L'.') {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 /**
  * @brief Parses a numeric token from the current position in the buffer.
  */
 static PrattToken *parseNumeric(PrattLexer *lexer) {
     PrattBuffer *buffer = lexer->bufList->buffer;
     HashSymbol *type = TOK_NUMBER();
-    PrattNumberState state = PRATTNUMBERSTATE_TYPE_START;
-    bool floating = false;
-    while (state != PRATTNUMBERSTATE_TYPE_END) {
-        if (buffer->start[buffer->offset] == L'_') {
-            ++buffer->offset;
-            continue;
-        }
-        switch (state) {
-        case PRATTNUMBERSTATE_TYPE_START:
-            switch (buffer->start[buffer->offset]) {
-            case L'0':
-                ++buffer->offset;
-                state = PRATTNUMBERSTATE_TYPE_ZERO;
-                break;
-            default:
-                ++buffer->offset;
-                state = PRATTNUMBERSTATE_TYPE_DEC;
-                break;
-            }
-            break;
-        case PRATTNUMBERSTATE_TYPE_ZERO:
-            if (unicode_isdigit(buffer->start[buffer->offset])) {
-                ++buffer->offset;
-                state = PRATTNUMBERSTATE_TYPE_DEC;
-                break;
-            } else {
-                switch (buffer->start[buffer->offset]) {
-                case L'x':
-                case L'X':
-                    ++buffer->offset;
-                    state = PRATTNUMBERSTATE_TYPE_HEX;
-                    break;
-                case L'.':
-                    ++buffer->offset;
-                    state = PRATTNUMBERSTATE_TYPE_FLOAT;
-                    floating = true;
-                    break;
-                case L'i':
-                    ++buffer->offset;
-                    state = PRATTNUMBERSTATE_TYPE_END;
-                    break;
-                default:
-                    state = PRATTNUMBERSTATE_TYPE_END;
-                    break;
-                }
-            }
-            break;
-        case PRATTNUMBERSTATE_TYPE_HEX:
-            switch (buffer->start[buffer->offset]) {
-            case L'0':
-            case L'1':
-            case L'2':
-            case L'3':
-            case L'4':
-            case L'5':
-            case L'6':
-            case L'7':
-            case L'8':
-            case L'9':
-            case L'a':
-            case L'b':
-            case L'c':
-            case L'd':
-            case L'e':
-            case L'f':
-            case L'A':
-            case L'B':
-            case L'C':
-            case L'D':
-            case L'E':
-            case L'F':
-            case L'_':
-                ++buffer->offset;
-                break;
-            case L'i':
-                ++buffer->offset;
-                state = PRATTNUMBERSTATE_TYPE_END;
-                break;
-            default:
-                state = PRATTNUMBERSTATE_TYPE_END;
-                break;
-            }
-            break;
-        case PRATTNUMBERSTATE_TYPE_DEC:
-            if (unicode_isdigit(buffer->start[buffer->offset])) {
-                ++buffer->offset;
-                break;
-            } else {
-                switch (buffer->start[buffer->offset]) {
-                case L'.':
-                    ++buffer->offset;
-                    state = PRATTNUMBERSTATE_TYPE_FLOAT;
-                    floating = true;
-                    break;
-                case L'i':
-                    ++buffer->offset;
-                    state = PRATTNUMBERSTATE_TYPE_END;
-                    break;
-                default:
-                    state = PRATTNUMBERSTATE_TYPE_END;
-                    break;
-                }
-            }
-            break;
-        case PRATTNUMBERSTATE_TYPE_FLOAT:
-            if (unicode_isdigit(buffer->start[buffer->offset])) {
-                ++buffer->offset;
-                break;
-            } else {
-                switch (buffer->start[buffer->offset]) {
-                case L'i':
-                    ++buffer->offset;
-                    state = PRATTNUMBERSTATE_TYPE_END;
-                    break;
-                default:
-                    state = PRATTNUMBERSTATE_TYPE_END;
-                    break;
-                }
-            }
-            break;
-        case PRATTNUMBERSTATE_TYPE_END:
-            cant_happen("end state in loop");
-        }
-    }
+    buffer->offset = (int)numericMatchLength(buffer);
+    bool floating = numericTokenIsFloating(buffer);
+
     MaybeBigInt *bi = NULL;
     if (floating) {
         bi = makeIrrational(buffer->start, buffer->offset);
@@ -735,14 +830,14 @@ static PrattToken *tokenERROR(PrattLexer *lexer) {
 }
 
 /**
- * @brief Parses a string or character from the current position in the buffer.
+ * @brief Slow-path string and char parser used for malformed literals.
  *
- * This function handles both single quoted characters and double-quoted
- * strings, including escape sequences.
- * It returns a PrattToken containing the parsed character or string.
+ * This preserves the original state-machine behavior, including detailed error
+ * reporting and local recovery, when the regex fast path does not recognize a
+ * complete valid literal.
  */
-static PrattToken *parseString(PrattParser *parser, bool parsingSingleChar,
-                               Character sep) {
+static PrattToken *parseStringSlow(PrattParser *parser, bool parsingSingleChar,
+                                   Character sep) {
     PrattLexer *lexer = parser->lexer;
     PrattBuffer *buffer = lexer->bufList->buffer;
     WCharArray *string = newWCharArray();
@@ -791,12 +886,14 @@ static PrattToken *parseString(PrattParser *parser, bool parsingSingleChar,
                         parserError(parser, "unexpected EOF");
                         state = PRATTSTRINGSTATE_TYPE_END;
                         break;
-                    default:
-                        pushWCharArray(string, buffer->start[buffer->offset]);
+                    default: {
+                        Character decoded = buffer->start[buffer->offset];
+
                         ++buffer->offset;
-                        state = parsingSingleChar ? PRATTSTRINGSTATE_TYPE_CHR
-                                                  : PRATTSTRINGSTATE_TYPE_STR;
+                        state = appendDecodedStringCharacter(string, decoded,
+                                                             parsingSingleChar);
                         break;
+                    }
                     }
                 }
             } else { // PRATTSTRINGSTATE_TYPE_ESCS
@@ -810,12 +907,14 @@ static PrattToken *parseString(PrattParser *parser, bool parsingSingleChar,
                     parserError(parser, "unexpected EOF");
                     state = PRATTSTRINGSTATE_TYPE_END;
                     break;
-                default:
-                    pushWCharArray(string, buffer->start[buffer->offset]);
+                default: {
+                    Character decoded = buffer->start[buffer->offset];
+
                     ++buffer->offset;
-                    state = parsingSingleChar ? PRATTSTRINGSTATE_TYPE_CHR
-                                              : PRATTSTRINGSTATE_TYPE_STR;
+                    state = appendDecodedStringCharacter(string, decoded,
+                                                         parsingSingleChar);
                     break;
+                }
                 }
             }
 
@@ -824,30 +923,22 @@ static PrattToken *parseString(PrattParser *parser, bool parsingSingleChar,
             DEBUG("parseString %s %d (sep %lc) ESC: %lc",
                   lexer->bufList->fileName->name, lexer->bufList->lineNo, sep,
                   buffer->start[buffer->offset]);
+            Character decoded = 0;
+
+            if (tryDecodeSimpleEscape(buffer->start[buffer->offset],
+                                      &decoded)) {
+                ++buffer->offset;
+                state = appendDecodedStringCharacter(string, decoded,
+                                                     parsingSingleChar);
+                break;
+            }
+
             switch (buffer->start[buffer->offset]) {
             case L'u':
             case L'U':
                 ++buffer->offset;
                 uni = 0; // reset
                 state = PRATTSTRINGSTATE_TYPE_UNI;
-                break;
-            case L'n':
-                pushWCharArray(string, L'\n');
-                ++buffer->offset;
-                state = parsingSingleChar ? PRATTSTRINGSTATE_TYPE_CHR
-                                          : PRATTSTRINGSTATE_TYPE_STR;
-                break;
-            case L't':
-                pushWCharArray(string, L'\t');
-                ++buffer->offset;
-                state = parsingSingleChar ? PRATTSTRINGSTATE_TYPE_CHR
-                                          : PRATTSTRINGSTATE_TYPE_STR;
-                break;
-            case L'r':
-                pushWCharArray(string, L'\r');
-                ++buffer->offset;
-                state = parsingSingleChar ? PRATTSTRINGSTATE_TYPE_CHR
-                                          : PRATTSTRINGSTATE_TYPE_STR;
                 break;
             case L'\n':
                 parserError(parser, "unexpected EOL");
@@ -865,54 +956,26 @@ static PrattToken *parseString(PrattParser *parser, bool parsingSingleChar,
             DEBUG("parseString %s %d (sep %lc) UNI: %lc",
                   lexer->bufList->fileName->name, lexer->bufList->lineNo, sep,
                   buffer->start[buffer->offset]);
+            Character hexDigit = 0;
+
+            if (tryHexDigitValue(buffer->start[buffer->offset], &hexDigit)) {
+                uni = extendUnicodeEscape(uni, hexDigit);
+                buffer->offset++;
+                break;
+            }
+
             switch (buffer->start[buffer->offset]) {
-            case L'0':
-            case L'1':
-            case L'2':
-            case L'3':
-            case L'4':
-            case L'5':
-            case L'6':
-            case L'7':
-            case L'8':
-            case L'9': {
-                Character c = buffer->start[buffer->offset] - L'0';
-                uni <<= 4;
-                uni |= c;
-                buffer->offset++;
-            } break;
-            case L'a':
-            case L'b':
-            case L'c':
-            case L'd':
-            case L'e':
-            case L'f': {
-                Character c = 10 + buffer->start[buffer->offset] - L'a';
-                uni <<= 4;
-                uni |= c;
-                buffer->offset++;
-            } break;
-            case L'A':
-            case L'B':
-            case L'C':
-            case L'D':
-            case L'E':
-            case L'F': {
-                Character c = 10 + buffer->start[buffer->offset] - L'A';
-                uni <<= 4;
-                uni |= c;
-                buffer->offset++;
-            } break;
             case L';':
                 ++buffer->offset;
                 if (uni == 0) {
                     parserError(parser,
                                 "Empty Unicode escape while parsing string");
                 } else {
-                    pushWCharArray(string, uni);
+                    state = appendDecodedStringCharacter(string, uni,
+                                                         parsingSingleChar);
+                    break;
                 }
-                state = parsingSingleChar ? PRATTSTRINGSTATE_TYPE_CHR
-                                          : PRATTSTRINGSTATE_TYPE_STR;
+                state = nextStringContentState(parsingSingleChar);
                 break;
             case L'\0':
                 parserError(parser, "EOF while parsing unicode escape");
@@ -944,11 +1007,34 @@ static PrattToken *parseString(PrattParser *parser, bool parsingSingleChar,
         }
     }
     pushWCharArray(string, '\0');
-    PrattToken *token = tokenFromString(
-        lexer->bufList, string, parsingSingleChar ? TOK_CHAR() : TOK_STRING());
-    advance(buffer);
     UNPROTECT(save);
-    return token;
+    return finishStringToken(lexer, string,
+                             parsingSingleChar ? TOK_CHAR() : TOK_STRING(),
+                             buffer->offset);
+}
+
+/**
+ * @brief Parses a string or character from the current position in the buffer.
+ *
+ * This function handles both single quoted characters and double-quoted
+ * strings, including escape sequences.
+ * It returns a PrattToken containing the parsed character or string.
+ */
+static PrattToken *parseString(PrattParser *parser, bool parsingSingleChar,
+                               Character sep) {
+    PrattLexer *lexer = parser->lexer;
+    PrattBuffer *buffer = lexer->bufList->buffer;
+    Index matchLength = stringLiteralMatchLength(buffer, parsingSingleChar);
+
+    if (matchLength > 0) {
+        WCharArray *string =
+            decodeValidatedStringLiteral(buffer->start, matchLength);
+        return finishStringToken(lexer, string,
+                                 parsingSingleChar ? TOK_CHAR() : TOK_STRING(),
+                                 matchLength);
+    }
+
+    return parseStringSlow(parser, parsingSingleChar, sep);
 }
 
 static PrattToken *parseRegex(PrattParser *parser) {

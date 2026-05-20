@@ -161,6 +161,16 @@ static void testLeadingCaseInsensitiveKeepsCategoryMeaning(void) {
            -1);
 }
 
+static void testPrefixMatcherDoesNotSearchLaterOffsets(void) {
+    Index matchLength;
+
+    assert(regexMatchPrefix(L"ab", L"abcd", &matchLength, NULL, NULL) == 0);
+    assert(matchLength == 2);
+    assert(regexMatchPrefix(L"ab", L"zabcd", &matchLength, NULL, NULL) == -1);
+    assert(regexMatch(L"ab", L"zabcd", &matchLength, NULL, NULL) == 1);
+    assert(matchLength == 2);
+}
+
 static void testInvalidCategoryReportsOffset(void) {
     RegexStatus status;
     Index errorOffset;
@@ -225,6 +235,7 @@ int main(int argc __attribute__((unused)),
     testLeadingCaseInsensitiveFlag();
     testLeadingCaseInsensitiveUnicodeLiterals();
     testLeadingCaseInsensitiveKeepsCategoryMeaning();
+    testPrefixMatcherDoesNotSearchLaterOffsets();
     testInvalidCategoryReportsOffset();
     testUnterminatedGroupReportsError();
     testTrailingEscapeReportsError();
