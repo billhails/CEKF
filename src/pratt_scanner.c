@@ -570,7 +570,6 @@ static Index numericMatchLength(PrattBuffer *buffer) {
         L"^0_*([xX][0-9A-Fa-f_]*i?|\\d[\\d_]*(\\.[\\d_]*)?i?|\\.[\\d_]*i?|i?)?";
     static const Character *decimalPattern = L"^\\d[\\d_]*(\\.[\\d_]*)?i?";
     Index matchLength = 0;
-    int save = STARTPROTECT();
     Regex *compiled =
         buffer->start[0] == L'0'
             ? getNumericRegex(leadingZeroPattern, &leadingZeroNumericRegex)
@@ -578,7 +577,7 @@ static Index numericMatchLength(PrattBuffer *buffer) {
 
     RegexSource *source =
         regexSourceFromWCharVecSlice(buffer->data, buffer->start);
-    PROTECT(source);
+    int save = PROTECT(source);
 
     int matchStart = regexMatchPrefixSourcep(compiled, source, &matchLength);
     UNPROTECT(save);
