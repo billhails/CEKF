@@ -23,6 +23,7 @@
 
 PrattLexer *makePrattLexerFromMbString(char *input, char *origin);
 PrattTrie *insertPrattTrie(PrattTrie *current, HashSymbol *symbol);
+void markPrattScannerRegexCache(void);
 
 void enqueueToken(PrattLexer *lexer, PrattToken *token);
 

@@ -2,10 +2,13 @@ config:
   name: regex
   description: Regex AST and helper data structures
   parserInfo: false
+  includes:
+  - utils.h
   limited_includes:
   - cekfs.h
   - cekfs_debug.h
   - regex_filepos.h
+  - utils_debug.h
 
 enums:
   RegexStatus:
@@ -90,6 +93,13 @@ structs:
       cache: CharacterArray
       exhausted: bool=false
 
+  RegexTextSource:
+    meta:
+      brief: Regex input backed by an existing contiguous wide-character buffer.
+    data:
+      data: WCharVec
+      start: wstring=NULL
+
 unions:
   RegexClassItem:
     meta:
@@ -128,6 +138,7 @@ unions:
     data:
       string: RegexStringSource
       file: RegexFileSource
+      text: RegexTextSource
 
 arrays:
   RegexClassItemArray:
@@ -157,3 +168,4 @@ primitives: !include primitives.yaml
 
 external:
 - !include cekfs.yaml
+- !include utils.yaml

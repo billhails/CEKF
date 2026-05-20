@@ -11,5 +11,6 @@ void regexSourceSplitAt(RegexSource *source, Index offset, Value *prefix,
 RegexSource *regexSourceFromFileHandle(FILE *handle);
 RegexSource *regexSourceFromStringList(Vec *tail);
 RegexSource *regexSourceFromCharArray(CharacterArray *text);
+RegexSource *regexSourceFromWCharVecSlice(WCharVec *text, Character *start);
 
 #endif

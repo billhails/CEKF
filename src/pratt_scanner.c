@@ -26,8 +26,11 @@
 #include <wctype.h>
 
 #include "bigint.h"
+#include "memory.h"
 #include "pratt_debug.h"
 #include "pratt_scanner.h"
+#include "regex_helper.h"
+#include "regex_source.h"
 #include "symbol.h"
 #include "unicode.h"
 
@@ -114,11 +117,23 @@ TOKFN(WILDCARD, "_")
 
 #undef TOKFN
 
+static Regex *leadingZeroNumericRegex = NULL;
+static Regex *decimalNumericRegex = NULL;
+
 /**
  * @brief Checks if a symbol is an internal symbol.
  */
 static inline bool isInternal(HashSymbol *symbol) {
     return symbol->name[0] == ' ';
+}
+
+void markPrattScannerRegexCache(void) {
+    if (leadingZeroNumericRegex != NULL) {
+        markObject((Header *)leadingZeroNumericRegex);
+    }
+    if (decimalNumericRegex != NULL) {
+        markObject((Header *)decimalNumericRegex);
+    }
 }
 
 /**
@@ -535,136 +550,65 @@ static MaybeBigInt *makeIrrational(Character *str, int length) {
     return irrationalBigInt(f / div, imag);
 }
 
+static Regex *getNumericRegex(const Character *pattern, Regex **cacheSlot) {
+    if (*cacheSlot == NULL) {
+        RegexStatus status = REGEX_STATUS_OK;
+        Index errorOffset = 0;
+
+        *cacheSlot = regexCompile(pattern, &status, &errorOffset);
+        if (*cacheSlot == NULL || status != REGEX_STATUS_OK) {
+            cant_happen("invalid scanner numeric regex at offset %d",
+                        (int)errorOffset);
+        }
+    }
+
+    return *cacheSlot;
+}
+
+static Index numericMatchLength(PrattBuffer *buffer) {
+    static const Character *leadingZeroPattern =
+        L"^0_*([xX][0-9A-Fa-f_]*i?|\\d[\\d_]*(\\.[\\d_]*)?i?|\\.[\\d_]*i?|i?)?";
+    static const Character *decimalPattern = L"^\\d[\\d_]*(\\.[\\d_]*)?i?";
+    Index matchLength = 0;
+    int save = STARTPROTECT();
+    Regex *compiled =
+        buffer->start[0] == L'0'
+            ? getNumericRegex(leadingZeroPattern, &leadingZeroNumericRegex)
+            : getNumericRegex(decimalPattern, &decimalNumericRegex);
+
+    RegexSource *source =
+        regexSourceFromWCharVecSlice(buffer->data, buffer->start);
+    PROTECT(source);
+
+    int matchStart = regexMatchPrefixSourcep(compiled, source, &matchLength);
+    UNPROTECT(save);
+
+    if (matchStart != 0 || matchLength == 0) {
+        cant_happen("regex numeric scanner mismatch at %lc", buffer->start[0]);
+    }
+
+    return matchLength;
+}
+
+static bool numericTokenIsFloating(PrattBuffer *buffer) {
+    for (int i = 0; i < buffer->offset; i++) {
+        if (buffer->start[i] == L'.') {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 /**
  * @brief Parses a numeric token from the current position in the buffer.
  */
 static PrattToken *parseNumeric(PrattLexer *lexer) {
     PrattBuffer *buffer = lexer->bufList->buffer;
     HashSymbol *type = TOK_NUMBER();
-    PrattNumberState state = PRATTNUMBERSTATE_TYPE_START;
-    bool floating = false;
-    while (state != PRATTNUMBERSTATE_TYPE_END) {
-        if (buffer->start[buffer->offset] == L'_') {
-            ++buffer->offset;
-            continue;
-        }
-        switch (state) {
-        case PRATTNUMBERSTATE_TYPE_START:
-            switch (buffer->start[buffer->offset]) {
-            case L'0':
-                ++buffer->offset;
-                state = PRATTNUMBERSTATE_TYPE_ZERO;
-                break;
-            default:
-                ++buffer->offset;
-                state = PRATTNUMBERSTATE_TYPE_DEC;
-                break;
-            }
-            break;
-        case PRATTNUMBERSTATE_TYPE_ZERO:
-            if (unicode_isdigit(buffer->start[buffer->offset])) {
-                ++buffer->offset;
-                state = PRATTNUMBERSTATE_TYPE_DEC;
-                break;
-            } else {
-                switch (buffer->start[buffer->offset]) {
-                case L'x':
-                case L'X':
-                    ++buffer->offset;
-                    state = PRATTNUMBERSTATE_TYPE_HEX;
-                    break;
-                case L'.':
-                    ++buffer->offset;
-                    state = PRATTNUMBERSTATE_TYPE_FLOAT;
-                    floating = true;
-                    break;
-                case L'i':
-                    ++buffer->offset;
-                    state = PRATTNUMBERSTATE_TYPE_END;
-                    break;
-                default:
-                    state = PRATTNUMBERSTATE_TYPE_END;
-                    break;
-                }
-            }
-            break;
-        case PRATTNUMBERSTATE_TYPE_HEX:
-            switch (buffer->start[buffer->offset]) {
-            case L'0':
-            case L'1':
-            case L'2':
-            case L'3':
-            case L'4':
-            case L'5':
-            case L'6':
-            case L'7':
-            case L'8':
-            case L'9':
-            case L'a':
-            case L'b':
-            case L'c':
-            case L'd':
-            case L'e':
-            case L'f':
-            case L'A':
-            case L'B':
-            case L'C':
-            case L'D':
-            case L'E':
-            case L'F':
-            case L'_':
-                ++buffer->offset;
-                break;
-            case L'i':
-                ++buffer->offset;
-                state = PRATTNUMBERSTATE_TYPE_END;
-                break;
-            default:
-                state = PRATTNUMBERSTATE_TYPE_END;
-                break;
-            }
-            break;
-        case PRATTNUMBERSTATE_TYPE_DEC:
-            if (unicode_isdigit(buffer->start[buffer->offset])) {
-                ++buffer->offset;
-                break;
-            } else {
-                switch (buffer->start[buffer->offset]) {
-                case L'.':
-                    ++buffer->offset;
-                    state = PRATTNUMBERSTATE_TYPE_FLOAT;
-                    floating = true;
-                    break;
-                case L'i':
-                    ++buffer->offset;
-                    state = PRATTNUMBERSTATE_TYPE_END;
-                    break;
-                default:
-                    state = PRATTNUMBERSTATE_TYPE_END;
-                    break;
-                }
-            }
-            break;
-        case PRATTNUMBERSTATE_TYPE_FLOAT:
-            if (unicode_isdigit(buffer->start[buffer->offset])) {
-                ++buffer->offset;
-                break;
-            } else {
-                switch (buffer->start[buffer->offset]) {
-                case L'i':
-                    ++buffer->offset;
-                    state = PRATTNUMBERSTATE_TYPE_END;
-                    break;
-                default:
-                    state = PRATTNUMBERSTATE_TYPE_END;
-                    break;
-                }
-            }
-            break;
-        case PRATTNUMBERSTATE_TYPE_END:
-            cant_happen("end state in loop");
-        }
-    }
+    buffer->offset = (int)numericMatchLength(buffer);
+    bool floating = numericTokenIsFloating(buffer);
+
     MaybeBigInt *bi = NULL;
     if (floating) {
         bi = makeIrrational(buffer->start, buffer->offset);

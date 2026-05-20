@@ -28,12 +28,21 @@ Regex *regexCompile(const Character *pattern, RegexStatus *status,
                     Index *errorOffset);
 void regexFree(Regex *regex);
 
+int regexMatchPrefixSourcep(const Regex *pattern, RegexSource *source,
+                            Index *matchLength);
 int regexMatchSourcep(const Regex *pattern, RegexSource *source,
                       Index *matchLength);
+int regexMatchPrefixCharArrayp(const Regex *pattern, CharacterArray *text,
+                               Index *matchLength);
 int regexMatchCharArrayp(const Regex *pattern, CharacterArray *text,
                          Index *matchLength);
+int regexMatchPrefixp(const Regex *pattern, const Character *text,
+                      Index *matchLength);
 int regexMatchp(const Regex *pattern, const Character *text,
                 Index *matchLength);
+int regexMatchPrefix(const Character *pattern, const Character *text,
+                     Index *matchLength, RegexStatus *status,
+                     Index *errorOffset);
 int regexMatch(const Character *pattern, const Character *text,
                Index *matchLength, RegexStatus *status, Index *errorOffset);
 

@@ -1242,6 +1242,44 @@ static bool matchNode(const RegexNode *node, RegexSource *source,
     }
 }
 
+int regexMatchPrefixSourcep(const Regex *pattern, RegexSource *source,
+                            Index *matchLength) {
+    RegexPositionArray *matches;
+    int save;
+
+    if (matchLength != NULL) {
+        *matchLength = 0;
+    }
+
+    if (pattern == NULL || source == NULL) {
+        return -1;
+    }
+
+    matches = newRegexPositionArray();
+    save = PROTECT(matches);
+
+    if (!matchNode(pattern->root, source, 0, 0, pattern->flags, matches)) {
+        UNPROTECT(save);
+        regexSourceSetPosition(source, 0);
+        return -1;
+    }
+
+    if (matches->size > 0) {
+        Index matchedLength = positionAt(matches, 0);
+
+        if (matchLength != NULL) {
+            *matchLength = matchedLength;
+        }
+        regexSourceSetPosition(source, matchedLength);
+        UNPROTECT(save);
+        return 0;
+    }
+
+    UNPROTECT(save);
+    regexSourceSetPosition(source, 0);
+    return -1;
+}
+
 int regexMatchSourcep(const Regex *pattern, RegexSource *source,
                       Index *matchLength) {
     RegexPosition index = 0;
@@ -1281,6 +1319,31 @@ int regexMatchSourcep(const Regex *pattern, RegexSource *source,
         }
         index++;
     }
+}
+
+int regexMatchPrefixCharArrayp(const Regex *pattern, CharacterArray *text,
+                               Index *matchLength) {
+    RegexSource *source;
+    int save;
+
+    if (matchLength != NULL) {
+        *matchLength = 0;
+    }
+
+    if (pattern == NULL || text == NULL) {
+        return -1;
+    }
+
+    ensureRegexMemoryReady();
+    save = STARTPROTECT();
+    PROTECT((Regex *)pattern);
+    PROTECT(text);
+    source = regexSourceFromCharArray(text);
+    PROTECT(source);
+
+    int result = regexMatchPrefixSourcep(pattern, source, matchLength);
+    UNPROTECT(save);
+    return result;
 }
 
 int regexMatchCharArrayp(const Regex *pattern, CharacterArray *text,
@@ -1331,6 +1394,29 @@ int regexMatchp(const Regex *pattern, const Character *text,
     return result;
 }
 
+int regexMatchPrefixp(const Regex *pattern, const Character *text,
+                      Index *matchLength) {
+    CharacterArray *chars;
+    int save;
+
+    if (matchLength != NULL) {
+        *matchLength = 0;
+    }
+
+    if (pattern == NULL || text == NULL) {
+        return -1;
+    }
+
+    ensureRegexMemoryReady();
+    save = STARTPROTECT();
+    PROTECT((Regex *)pattern);
+    chars = copyNullTerminatedText(text);
+    PROTECT(chars);
+    int result = regexMatchPrefixCharArrayp(pattern, chars, matchLength);
+    UNPROTECT(save);
+    return result;
+}
+
 int regexMatch(const Character *pattern, const Character *text,
                Index *matchLength, RegexStatus *status, Index *errorOffset) {
     Regex *compiled = regexCompile(pattern, status, errorOffset);
@@ -1344,6 +1430,24 @@ int regexMatch(const Character *pattern, const Character *text,
     }
 
     result = regexMatchp(compiled, text, matchLength);
+    regexFree(compiled);
+    return result;
+}
+
+int regexMatchPrefix(const Character *pattern, const Character *text,
+                     Index *matchLength, RegexStatus *status,
+                     Index *errorOffset) {
+    Regex *compiled = regexCompile(pattern, status, errorOffset);
+    int result;
+
+    if (compiled == NULL) {
+        if (matchLength != NULL) {
+            *matchLength = 0;
+        }
+        return -1;
+    }
+
+    result = regexMatchPrefixp(compiled, text, matchLength);
     regexFree(compiled);
     return result;
 }

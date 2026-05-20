@@ -33,6 +33,7 @@
 #include "memory.h"
 #include "minlam_runtime.h"
 #include "opaque.h"
+#include "pratt_scanner.h"
 #include "step.h"
 #include "symbol.h"
 #include "wrapper_synthesis.h"
@@ -551,6 +552,7 @@ static void mark() {
     markProtected();
     markNameSpaces();
     markMemBufs();
+    markPrattScannerRegexCache();
     markRegexCache();
     minlam_runtime_mark_reg();
 #ifdef DEBUG_LOG_GC

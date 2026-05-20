@@ -5,10 +5,13 @@
 
 #include <limits.h>
 #include <string.h>
+#include <wchar.h>
 
 static void ensureRegexSourceMemoryReady(void);
 static Value charArraySliceToList(const CharacterArray *source, Index start,
                                   Index end, Value tail);
+static Value textSliceToList(const Character *source, Index start, Index end,
+                             Value tail);
 static bool regexFileSourceReadNext(RegexFileSource *fileSource);
 
 static void ensureRegexSourceMemoryReady(void) {
@@ -78,6 +81,11 @@ Character regexSourceGet(RegexSource *source, Index position) {
         }
         return L'\0';
     }
+    case REGEXSOURCE_TYPE_TEXT: {
+        RegexTextSource *textSource = getRegexSource_Text(source);
+
+        return textSource->start[position];
+    }
     default:
         cant_happen("unrecognised regex source type %d", source->type);
     }
@@ -133,6 +141,7 @@ void regexSourceSetPosition(RegexSource *source, Index position) {
 
     switch (source->type) {
     case REGEXSOURCE_TYPE_STRING:
+    case REGEXSOURCE_TYPE_TEXT:
         return;
     case REGEXSOURCE_TYPE_FILE: {
         RegexFileSource *fileSource = getRegexSource_File(source);
@@ -168,6 +177,20 @@ static Value charArraySliceToList(const CharacterArray *source, Index start,
 
     for (Index i = end; i > start; i--) {
         list = makePair(value_Character(source->entries[i - 1]), list);
+        protectValue(list);
+    }
+
+    UNPROTECT(save);
+    return list;
+}
+
+static Value textSliceToList(const Character *source, Index start, Index end,
+                             Value tail) {
+    Value list = tail;
+    int save = protectValue(list);
+
+    for (Index i = end; i > start; i--) {
+        list = makePair(value_Character(source[i - 1]), list);
         protectValue(list);
     }
 
@@ -233,6 +256,22 @@ void regexSourceSplitAt(RegexSource *source, Index offset, Value *prefix,
         }
         break;
     }
+    case REGEXSOURCE_TYPE_TEXT: {
+        RegexTextSource *textSource = getRegexSource_Text(source);
+        Value empty = makeNull();
+        Index length = (Index)wcslen(textSource->start);
+
+        protectValue(empty);
+        if (prefix != NULL) {
+            *prefix = textSliceToList(textSource->start, 0, offset, empty);
+            protectValue(*prefix);
+        }
+        if (rest != NULL) {
+            *rest = textSliceToList(textSource->start, offset, length, empty);
+            protectValue(*rest);
+        }
+        break;
+    }
     default:
         cant_happen("unrecognised regex source type %d", source->type);
     }
@@ -283,6 +322,21 @@ RegexSource *regexSourceFromCharArray(CharacterArray *text) {
     source = makeRegexSource_String(NULL, text);
     save = PROTECT(source);
     getRegexSource_String(source)->exhausted = true;
+    UNPROTECT(save);
+    return source;
+}
+
+RegexSource *regexSourceFromWCharVecSlice(WCharVec *text, Character *start) {
+    RegexTextSource *textSource;
+    RegexSource *source;
+    int save;
+
+    ensureRegexSourceMemoryReady();
+    save = PROTECT(text);
+    textSource = newRegexTextSource(text);
+    PROTECT(textSource);
+    textSource->start = start;
+    source = newRegexSource_Text(textSource);
     UNPROTECT(save);
     return source;
 }
