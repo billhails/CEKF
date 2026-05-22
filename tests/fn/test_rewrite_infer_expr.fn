@@ -1,0 +1,13 @@
+let
+    link "../../fn/rewrite/infer_expr.fn" as INFER;
+    link "../../fn/rewrite/expr.fn" as E;
+
+    fn infer_type(source) {
+        INFER.infer_to_string(E.parse(source))
+    }
+in
+    assert(infer_type("((λ (x) x) 1)") == "Int");
+    assert(infer_type("(letrec ((id (λ (x) x))) (if (id true) (id 1) (id 2)))") == "Int");
+    assert(infer_type("(letrec ((i (λ (x) x)) (j (λ (x y) (begin (i x) (i y))))) (j true 1))") == "Int");
+    assert(infer_type("(letrec ((f (λ (x) (g x))) (g (λ (n) (+ n 1)))) (f 1))") == "Int");
+    assert(infer_type("(letrec ((fact (λ (n) (if (= n 0) 1 (* n (fact (- n 1))))))) (fact 5))") == "Int");

@@ -159,15 +159,15 @@ FN_BFILES=$(patsubst $(FNDIR)/%,$(TMPDIR)/%,$(patsubst %.fn,%.fnc,$(FN_FILES)))
 FN_OFILES=$(patsubst %.c,%.o,$(FN_CFILES))
 FN_BINARIES=$(patsubst %.o,%,$(FN_OFILES))
 
-TARGET_ARGS=--include=fn --flat-closure
+TARGET_ARGS=--include=fn --assertions-accumulate
 
 $(TEST_FN_CFILES): $(TMPDIR)/%.c: $(TEST_FN_DIR)/%.fn $(TARGET) | $(TMPDIR)
-	$(TARGET) $(TARGET_ARGS) --target-c=$@~ $<  && mv $@~ $@
+	$(TARGET) $(TARGET_ARGS) --flat-closure --target-c=$@~ $<  && mv $@~ $@
 	indent $@
 	rm -f $@~
 
 $(FN_CFILES): $(TMPDIR)/%.c: $(FNDIR)/%.fn $(TARGET) | $(TMPDIR)
-	$(TARGET) $(TARGET_ARGS) --target-c=$@~ $< && mv $@~ $@
+	$(TARGET) $(TARGET_ARGS) --flat-closure --target-c=$@~ $< && mv $@~ $@
 	indent $@
 	rm -f $@~
 
@@ -178,10 +178,10 @@ $(FN_BFILES): $(TMPDIR)/%.fnc: $(FNDIR)/%.fn $(TARGET) | $(TMPDIR)
 	$(TARGET) --binary-out=$@~ $<  && mv $@~ $@
 
 $(TEST_FN_SFILES): $(TMPDIR)/%.scm: $(TEST_FN_DIR)/%.fn $(TARGET) | $(TMPDIR)
-	$(TARGET) $(TARGET_ARGS) --target-c --dump-inline-f $<  > $@~ && mv $@~ $@
+	$(TARGET) $(TARGET_ARGS) --flat-closure --target-c --dump-inline-f $<  > $@~ && mv $@~ $@
 
 $(FN_SFILES): $(TMPDIR)/%.scm: $(FNDIR)/%.fn $(TARGET) | $(TMPDIR)
-	$(TARGET) $(TARGET_ARGS) --target-c --dump-inline-f $<  > $@~ && mv $@~ $@
+	$(TARGET) $(TARGET_ARGS) --flat-closure --target-c --dump-inline-f $<  > $@~ && mv $@~ $@
 
 $(FN_OFILES) $(TEST_FN_OFILES): %.o: %.c
 	$(LAXCC) $(INCLUDE_PATHS) -c $< -o $@
@@ -315,31 +315,31 @@ $(TEST_OBJ): $(OBJDIR)/%.o: $(TSTDIR)/src/%.c | $(OBJDIR) $(DEPDIR) $(GENERATED_
 test: test-unit test-a test-b test-sh test-fail
 	@echo "All tests passed."
 
-test-unit: all $(TEST_TARGETS)
-	for t in $(TEST_TARGETS) ; do echo '***' $$t '***' ; $$t || exit 1 ; done
+test-unit: $(TEST_TARGETS)
+	set -x; for t in $(TEST_TARGETS) ; do $$t || exit 1 ; done
 	@echo "All unit tests passed."
 
 test-a: all
-	for t in $(TSTDIR)/fn/test_*.fn ; do echo '***' $$t '***' ; ./$(TARGET) --include=fn --assertions-accumulate $$t || exit 1 ; done
+	set -x; for t in $(TSTDIR)/fn/test_*.fn ; do $(TARGET) $(TARGET_ARGS) $$t || exit 1 ; done
 	@echo "All a tests passed."
 
 test-sh: all
-	for t in $(TSTDIR)/sh/*.sh ; do [ -e $$t ] || continue ; echo '***' $$t '***' ; bash $$t || exit 1 ; done
+	set -x ; for t in $(TSTDIR)/sh/*.sh ; do bash $$t || exit 1 ; done
 	@echo "All sh tests passed."
 
 test-fail: all
-	for t in $(TSTDIR)/fn/fail_*.fn ; do echo '***' $$t '***' ; ! ./$(TARGET) --include=fn --assertions-accumulate $$t >/dev/null 2>&1 || exit 1 ; done
+	set -x ; for t in $(TSTDIR)/fn/fail_*.fn ; do ! ./$(TARGET) $(TARGET_ARGS) $$t >/dev/null 2>&1 || exit 1 ; done
 	@echo "All negative tests passed."
 
 test-c: all $(TEST_FN_BINARIES)
-	@for t in $(TEST_FN_BINARIES) ; do echo $$t ; $$t || exit 1 ; done
+	set -x ; for t in $(TEST_FN_BINARIES) ; do $$t || exit 1 ; done
 	@echo All generated C tests pass
 
 test-big-c: all $(TMPDIR)/test_harness
 	$(TMPDIR)/test_harness
 
 test-b: all
-	@for t in $(TEST_FN_FILES) ; do set -x; $(TARGET) $(TARGET_ARGS) --target-b $$t || exit 1 ; done
+	set -x; for t in $(TSTDIR)/fn/test_*.fn ; do $(TARGET) $(TARGET_ARGS) --flat-closure --target-b $$t || exit 1 ; done
 	@echo All B-code tests pass
 
 $(TEST_TARGETS): $(TSTDIR)/%: $(OBJDIR)/%.o $(ALL_OBJ)
