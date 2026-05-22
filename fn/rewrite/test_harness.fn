@@ -53,7 +53,8 @@ in
                 nltab = "\n";
             in
                 E.print_expr(a);
-                puts("\n==> infer_expr\n");
+                puts("\n");
+                // puts("\n==> infer_expr\n");
                 puts(inferred);
                 // puts("\n==> desugar");
                 // puts(nltab);
@@ -88,9 +89,9 @@ in
                 // puts("\n==> closure unconvert");
                 // puts(nltab);
                 // M.print_expr(hh);
-                puts("\n==> annotate");
-                puts(nltab);
-                M.print_expr(hhh);
+                // puts("\n==> annotate");
+                // puts(nltab);
+                // M.print_expr(hhh);
                 puts("\n\n")
         }
     }, Samples.data());

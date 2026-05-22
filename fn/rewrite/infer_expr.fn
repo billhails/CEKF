@@ -212,6 +212,41 @@ fn renderTypeList {
 
 fn print_type(type) { puts(renderType(type)) }
 
+fn normalizeVarName(counter) { "'" @@ $counter }
+
+fn canonicalizeType {
+    (varType(name), renv, counter) {
+        switch (lookupCopy(name, renv)) {
+            (just(type)) { #(type, renv, counter) }
+            (nothing) {
+                let canonical = varType(normalizeVarName(counter))
+                in #(canonical, cpEnv(name, canonical, renv), counter + 1)
+            }
+        }
+    }
+    (operType(name, args), renv, counter) {
+        bind(canonicalizeArgs(args, renv, counter), fn (#(canonicalArgs, renv2, counter2)) {
+            #(operType(name, canonicalArgs), renv2, counter2)
+        })
+    }
+}
+
+fn canonicalizeArgs {
+    ([], renv, counter) { #([], renv, counter) }
+    (arg @ rest, renv, counter) {
+        bind(canonicalizeType(arg, renv, counter), fn (#(canonicalArg, renv1, counter1)) {
+            bind(canonicalizeArgs(rest, renv1, counter1), fn (#(canonicalRest, renv2, counter2)) {
+                #(canonicalArg @ canonicalRest, renv2, counter2)
+            })
+        })
+    }
+}
+
+fn isLambdaBinding {
+    (#(_, E.lambda(_, _))) { true }
+    (_) { false }
+}
+
 fn supportedPrimitive {
     ("+") | ("-") | ("*") | ("/") | ("%") | ("**") |
     ("=") | ("==") | ("!=") | ("<") | (">") | ("<=") | (">=") {
@@ -336,24 +371,94 @@ fn analyzeSequence {
 }
 
 fn bindRecBindings {
-    ([], envt, ng) { #(envt, ng) }
-    (#(name, _) @ rest, envt, ng) {
+    ([], envt) { envt }
+    (#(name, expr = E.lambda(_, _)) @ rest, envt) {
         let binderType = freshTypeVar();
-            binderName = typeVarName(binderType)
-        in bind(bindRecBindings(rest, tcEnv(name, binderType, envt), binderName @ ng), fn (#(env2, ng2)) {
-            #(env2, ng2)
+        in bindRecBindings(rest, tcEnv(name, binderType, envt))
+    }
+    (#(_, _) @ rest, envt) {
+        bindRecBindings(rest, envt)
+    }
+}
+
+fn finalizeRecBindings {
+    ([], _, subst) { [] }
+    (#(name, _) @ rest, envt, subst) {
+        #(name, applySubst(retrieveBound(name, envt), subst)) @ finalizeRecBindings(rest, envt, subst)
+    }
+}
+
+fn snapshotRecBindings(bindings, envt, subst) {
+    bind(snapshotRecBindingsAcc(bindings, envt, subst, nullCpEnv, 0), fn (#(snapshot, _, _)) {
+        snapshot
+    })
+}
+
+fn snapshotRecBindingsAcc {
+    ([], _, _, renv, counter) { #("", renv, counter) }
+    (#(name, expr = E.lambda(_, _)) @ rest, envt, subst, renv, counter) {
+        bind(canonicalizeType(applySubst(retrieveBound(name, envt), subst), renv, counter), fn (#(canonicalType, renv1, counter1)) {
+            bind(snapshotRecBindingsAcc(rest, envt, subst, renv1, counter1), fn (#(tailSnapshot, renv2, counter2)) {
+                #(name @@ "::" @@ renderType(canonicalType) @@ ";" @@ tailSnapshot, renv2, counter2)
+            })
         })
     }
+    (#(_, _) @ rest, envt, subst, renv, counter) {
+        snapshotRecBindingsAcc(rest, envt, subst, renv, counter)
+    }
+}
+
+fn processRecBinding(name, expr, envt, ng, subst) {
+    let binderType = retrieveBound(name, envt);
+        ng2 = typeVarName(binderType) @ ng
+    in bind(analyzeExpr(expr, envt, ng2, subst), fn (#(exprType, subst1)) {
+        unifyType(binderType, exprType, subst1)
+    })
 }
 
 fn checkRecBindings {
     ([], _, _, subst) { subst }
     (#(name, expr) @ rest, envt, ng, subst) {
-        bind(analyzeExpr(expr, envt, ng, subst), fn (#(exprType, subst1)) {
-            let binderType = retrieveBound(name, envt);
-                subst2 = unifyType(binderType, exprType, subst1)
-            in checkRecBindings(rest, envt, ng, subst2)
-        })
+        let subst1 = processRecBinding(name, expr, envt, ng, subst)
+        in checkRecBindings(rest, envt, ng, subst1)
+    }
+}
+
+fn processFirstRecBindings {
+    ([], envt, _, subst) { #(envt, subst) }
+    (#(name, expr = E.lambda(_, _)) @ rest, envt, ng, subst) {
+        let subst1 = processRecBinding(name, expr, envt, ng, subst)
+        in processFirstRecBindings(rest, envt, ng, subst1)
+    }
+    (#(name, expr) @ rest, envt, ng, subst) {
+        let binderType = freshTypeVar();
+            env2 = tcEnv(name, binderType, envt);
+            subst1 = processRecBinding(name, expr, env2, ng, subst)
+        in processFirstRecBindings(rest, env2, ng, subst1)
+    }
+}
+
+fn checkRecLambdaBindings {
+    ([], _, _, subst) { subst }
+    (#(name, expr = E.lambda(_, _)) @ rest, envt, ng, subst) {
+        let subst1 = processRecBinding(name, expr, envt, ng, subst)
+        in checkRecLambdaBindings(rest, envt, ng, subst1)
+    }
+    (#(_, _) @ rest, envt, ng, subst) {
+        checkRecLambdaBindings(rest, envt, ng, subst)
+    }
+}
+
+fn iterateRecBindings {
+    (_, _, _, subst, 0, _) { subst }
+    (bindings, envt, ng, subst, passesLeft, previousSnapshot) {
+        let subst1 = checkRecLambdaBindings(bindings, envt, ng, subst);
+            currentSnapshot = snapshotRecBindings(bindings, envt, subst1)
+        in if (currentSnapshot == previousSnapshot) {
+            subst1
+        } else {
+            iterateRecBindings(bindings, envt, ng, subst1, passesLeft - 1, currentSnapshot)
+        }
     }
 }
 
@@ -444,9 +549,12 @@ fn analyzeExpr {
         })
     }
     (E.letrec_expr(bindings, body), envt, ng, subst) {
-        bind(bindRecBindings(bindings, envt, ng), fn (#(env2, ng2)) {
-            let subst1 = checkRecBindings(bindings, env2, ng2, subst)
-            in analyzeExpr(body, env2, ng2, subst1)
+        let env2 = bindRecBindings(bindings, envt)
+        in bind(processFirstRecBindings(bindings, env2, ng, subst), fn (#(env3, subst1)) {
+            let snapshot = snapshotRecBindings(bindings, env3, subst1);
+                subst2 = iterateRecBindings(bindings, env3, ng, subst1, 9, snapshot);
+                finalized = finalizeRecBindings(bindings, env3, subst2)
+            in analyzeExpr(body, extendTypeEnv(finalized, envt), ng, subst2)
         })
     }
     (E.letstar_expr(bindings, body), envt, ng, subst) {

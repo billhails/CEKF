@@ -15,6 +15,9 @@ namespace
         ";5. Lambda application with function call in primitive",
         "(letrec ((f (λ (x) (+ x 1)))) ((λ (a b) (+ a (* (f b) 2))) 3 4))",
 
+        ";5b. Letrec identity used polymorphically in body",
+        "(letrec ((id (λ (x) x))) (if (id true) (id 1) (id 2)))",
+
         ";6. Amb operator (non-determinism)",
         "(amb 1 2)",
 
