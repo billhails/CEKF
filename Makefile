@@ -229,7 +229,7 @@ Double \
 Control
 EXTRA_INDENT_ARGS=$(patsubst %,-T %,$(EXTRA_TYPES))
 
-include $(ALL_DEP)
+-include $(ALL_DEP)
 
 $(PREAMBLE): $(PREAMBLE_SRC) | $(GENDIR)
 	tools/make-preamble.sh
@@ -289,23 +289,14 @@ tags: $(SRCDIR)/* $(EXTRA_TARGETS)
 xref: $(SRCDIR)/* $(EXTRA_TARGETS)
 	ctags -x $(SRCDIR)/* $(EXTRA_TARGETS) > $@
 
-$(MAIN_OBJ) $(OBJ): $(OBJDIR)/%.o: $(SRCDIR)/%.c | $(OBJDIR)
-	$(CC) $(INCLUDE_PATHS) -c $< -o $@
+$(MAIN_OBJ) $(OBJ): $(OBJDIR)/%.o: $(SRCDIR)/%.c | $(OBJDIR) $(DEPDIR) .generated
+	$(CC) $(INCLUDE_PATHS) -MMD -MP -MF $(DEPDIR)/$*.d -MT $@ -c $< -o $@
 
-$(EXTRA_OBJ) $(PREAMBLE_OBJ): $(OBJDIR)/%.o: $(GENDIR)/%.c | $(OBJDIR)
-	$(CC) $(INCLUDE_PATHS) -c $< -o $@
+$(EXTRA_OBJ) $(PREAMBLE_OBJ): $(OBJDIR)/%.o: $(GENDIR)/%.c | $(OBJDIR) $(DEPDIR) .generated
+	$(CC) $(INCLUDE_PATHS) -MMD -MP -MF $(DEPDIR)/$*.d -MT $@ -c $< -o $@
 
-$(TEST_OBJ): $(OBJDIR)/%.o: $(TSTDIR)/src/%.c | $(OBJDIR)
-	$(LAXCC) $(INCLUDE_PATHS) -c $< -o $@
-
-$(MAIN_DEP) $(DEP): $(DEPDIR)/%.d: $(SRCDIR)/%.c .generated | $(DEPDIR)
-	$(CC) $(INCLUDE_PATHS) -MM -MT $(patsubst $(DEPDIR)/%,$(OBJDIR)/%,$(patsubst %.d,%.o,$@)) -o $@ $<
-
-$(EXTRA_DEP) $(PREAMBLE_DEP): $(DEPDIR)/%.d: $(GENDIR)/%.c .generated | $(DEPDIR)
-	$(CC) $(INCLUDE_PATHS) -MM -MT $(patsubst $(DEPDIR)/%,$(OBJDIR)/%,$(patsubst %.d,%.o,$@)) -o $@ $<
-
-$(TEST_DEP): $(DEPDIR)/%.d: $(TSTDIR)/src/%.c .generated | $(DEPDIR)
-	$(CC) $(INCLUDE_PATHS) -MM -MT $(patsubst $(DEPDIR)/%,$(OBJDIR)/%,$(patsubst %.d,%.o,$@)) -o $@ $<
+$(TEST_OBJ): $(OBJDIR)/%.o: $(TSTDIR)/src/%.c | $(OBJDIR) $(DEPDIR) .generated
+	$(LAXCC) $(INCLUDE_PATHS) -MMD -MP -MF $(DEPDIR)/$*.d -MT $@ -c $< -o $@
 
 test: test-unit test-a test-b test-sh test-fail
 	@echo "All tests passed."
