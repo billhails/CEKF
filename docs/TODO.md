@@ -2,19 +2,26 @@
 
 More of a wish-list than a hard and fast plan.
 
+* Fn/Rewrite.
+  * Add an interpreter for the final IR.
+  * Add a parser and AST.
+  * Type Checking.
+  * etc.
+* Graphics.
+  * Integrate with [raylib](https://github.com/raysan5/raylib).
 * More folding opportunities.
-  * fold boolean expressions `true and false => false`.
-    * tricky because `and`, `or` etc. are not primitive, they are lazy operators defined in terms of `if` in the preamble.
-  * fold comparisons `a == a => true`, `a >= a => true` etc. DONE
-  * fold constant conditions `(if true a b) => a`. DONE
+  * Fold boolean expressions `true and false => false`.
+    * Tricky because `and`, `or` etc. are not primitive, they are lazy operators defined in terms of `if` in the preamble.
+  * Fold comparisons `a == a => true`, `a >= a => true` etc. DONE
+  * Fold constant conditions `(if true a b) => a`. DONE
     * This solves the boolean expression folding problem, after β/η-reduction:
       * `true and false => (if true false false) => false`
-  * fold duplicate condition branches `(if x a a) => a`.
+  * Fold duplicate condition branches `(if x a a) => a`.
 * Continuations.
   * Reinstate `cut` (prunes current back continuation). DONE
   * Implement delimited continuations.
 * Regular Expressions.
-  * Enlist the new regex engine to support the core Pratt scanner.
+  * Enlist the new regex engine to support the core Pratt scanner. DONE
 * Types.
   * Consider type classes as a general solution to `EQ <type>`, `map` etc.
   * Records should create accessor functions for each tag.
@@ -24,7 +31,7 @@ More of a wish-list than a hard and fast plan.
     * `typedef container(char);` is shorthand for `typedef container { container(char) };`
     * no additional AST should be required, or if it is it gets immediately desugared so doesn't leak downstream.
 * Namespaces.
-  * We want `import <ns> function <x>` and `import <ns> functions`. DONE mostly.
+  * We want `import <ns>.<function> <x>` and `import <ns> functions`. DONE mostly.
   * And `import <ns> typedef <x>` and `import <ns> typedefs`.
 * Parser.
   * re-elist the now-available `macro` keyword for proper syntactic extensibility. DONE

@@ -60,6 +60,14 @@ namespace
             M.cut_expr(desugar(e))
         }
 
+        (E.reset_expr(e)) {
+            M.reset_expr(desugar(e))
+        }
+
+        (E.shift_expr(e)) {
+            M.shift_expr(desugar(e))
+        }
+
         (E.cond_expr(test, branches)) {
             M.cond_expr(desugar(test), branches |> desugar && desugar);
         }

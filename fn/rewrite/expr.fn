@@ -29,7 +29,9 @@ namespace
         namespaces(list(expr)) |
         primapp(string, expr, expr) |
         print_exp(expr) |
+        reset_expr(expr) |
         sequence(list(expr)) |
+        shift_expr(expr) |
         stdint(number) |
         tag(expr) |
         tuple_index(number, number, expr) |
@@ -128,8 +130,20 @@ namespace
             puts(")");
             x;
         }
+        (x=reset_expr(e)) {
+            puts("(reset ");
+            print_expr(e);
+            puts(")");
+            x;
+        }
         (x=print_exp(e)) {
             puts("(print ");
+            print_expr(e);
+            puts(")");
+            x;
+        }
+        (x=shift_expr(e)) {
+            puts("(shift ");
             print_expr(e);
             puts(")");
             x;
@@ -368,6 +382,8 @@ namespace
                 (sexp([atom("amb"), a, b])) { amb_expr(to_expr(a), to_expr(b)) }
                 (sexp([atom("call/cc"), e])) { callcc_expr(to_expr(e)) }
                 (sexp([atom("cut"), e])) { cut_expr(to_expr(e)) }
+                (sexp([atom("reset"), e])) { reset_expr(to_expr(e)) }
+                (sexp([atom("shift"), e])) { shift_expr(to_expr(e)) }
                 (sexp([atom("if"), e1, e2, e3])) { if_expr(to_expr(e1), to_expr(e2), to_expr(e3)) }
                 (sexp(atom("cond") @ test @ branches)) { cond_expr(to_expr(test), branches |> fn {
                     (sexp([e1, e2])) { #(to_expr(e1), to_expr(e2)) }

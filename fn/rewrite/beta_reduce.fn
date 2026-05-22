@@ -48,6 +48,14 @@ fn reduce {
         M.cut_expr(reduce(e))
     }
 
+    (M.reset_expr(e)) {
+        M.reset_expr(reduce(e))
+    }
+
+    (M.shift_expr(e)) {
+        M.shift_expr(reduce(e))
+    }
+
     (M.cond_expr(test, branches)) {
         M.cond_expr(reduce(test), branches |> reduce && reduce)
     }

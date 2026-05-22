@@ -53,7 +53,7 @@ fn annotate(expr) {
                     (M.lambda(params, body)) {
                         // map param => location
                         let locations = 0 :: ((len params) - 1);
-                            env = D.make(params, locations)
+                            env = D.add_lists(params, locations, e)
                         in  M.lambda(params, ann_rec(env, body))
                     }
 
@@ -61,7 +61,7 @@ fn annotate(expr) {
                         // map param => location
                         let vars = bindings |> fn (#(var, _)) { var };
                             locations = 0::((len bindings) - 1);
-                            env = D.make(vars, locations)
+                            env = D.add_lists(vars, locations, e)
                         in M.letrec_expr(
                             bindings |> fn (#(var, #(val, arity))) {
                                 #(var, #(ann_rec(env, val), arity))
@@ -95,7 +95,8 @@ fn annotate(expr) {
                                 M.var(s @@ "<" @@ $n @@ ">")
                             }
                             (nothing) {
-                                M.var(s @@ "<?>") // should be an error really
+                                error("unbound variable " @@ s)
+                                // M.var(s @@ "<?>") // should be an error really
                             }
                         }
                     }

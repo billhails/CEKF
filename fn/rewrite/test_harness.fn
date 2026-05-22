@@ -33,9 +33,9 @@ in
                 b = DS.desugar(a);
                 c = C.curry(b);
                 cc = β.reduce(c);
-                d = η.reduce(c);
-                dd = U.uncurry(c);
-                e = CPS.T_c(dd, halt);
+                d = η.reduce(cc);
+                dd = U.uncurry(d);
+                e = CPS.T(dd, halt);
                 f = β.reduce(e);
                 g = OF.fold(f);
                 gg = AMB.amb(g, fail);

@@ -24,7 +24,9 @@ namespace
         make_vec(number, list(expr)) |
         match_cases(expr, list(#(list(number), expr))) |
         primop(string) |
+        reset_expr(expr) |
         sequence(list(expr)) |
+        shift_expr(expr) |
         stdint(number) |
         var(string)
     }
@@ -193,6 +195,13 @@ namespace
                         puts(")");
                         x;
                     }
+                    (reset_expr(e)) {
+                        puts("(reset");
+                        put_indent(depth + 1);
+                        go(depth + 1, e);
+                        puts(")");
+                        x;
+                    }
                     (stdint(i)) {
                         putn(i);
                         x;
@@ -200,6 +209,13 @@ namespace
                     (sequence(exprs)) {
                         puts("(begin");
                         go_sequence(depth, exprs);
+                        puts(")");
+                        x;
+                    }
+                    (shift_expr(e)) {
+                        puts("(shift");
+                        put_indent(depth + 1);
+                        go(depth + 1, e);
                         puts(")");
                         x;
                     }
@@ -388,6 +404,8 @@ namespace
                 (sexp([atom("amb"), a, b])) { amb_expr(to_expr(a), to_expr(b)) }
                 (sexp([atom("call/cc"), e])) { callcc_expr(to_expr(e)) }
                 (sexp([atom("cut"), e])) { cut_expr(to_expr(e)) }
+                (sexp([atom("reset"), e])) { reset_expr(to_expr(e)) }
+                (sexp([atom("shift"), e])) { shift_expr(to_expr(e)) }
                 (sexp([atom("if"), e1, e2, e3])) { if_expr(to_expr(e1), to_expr(e2), to_expr(e3)) }
                 (sexp(atom("cond") @ test @ branches)) { cond_expr(to_expr(test), branches |> fn {
                     (sexp([e1, e2])) { #(to_expr(e1), to_expr(e2)) }
