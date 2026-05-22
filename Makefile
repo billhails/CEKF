@@ -1,5 +1,5 @@
 .PHONY: all clean realclean deps profile leak-check check-grammar \
-list-cores test indent indent-src indent-generated docs \
+list-cores test docs \
 install-sqlite3 coverage extracov view-coverage \
 coverage-target test-a test-fail test-sh test-c test-unit test-b test-big-c help \
 establish-baseline test-refactoring update-baseline clean-baseline \
@@ -88,6 +88,23 @@ EXTRA_TARGETS= \
 	$(GENDIR)/cps_kont_debug.c \
 	$(GENDIR)/cps_kont_impl.h \
 	$(GENDIR)/cps_kont_impl.c
+
+GENERATED_BOOTSTRAP= \
+	$(EXTRA_H_TARGETS) \
+	$(EXTRA_OBJTYPES_H_TARGETS) \
+	$(EXTRA_DEBUG_H_TARGETS) \
+	$(GENDIR)/UnicodeData.inc \
+	$(GENDIR)/UnicodeCasing.inc \
+	$(GENDIR)/UnicodeDigits.inc \
+	$(GENDIR)/UnicodeNumbers.inc \
+	$(GENDIR)/anf_kont.h \
+	$(GENDIR)/anf_kont_objtypes.h \
+	$(GENDIR)/anf_kont_debug.h \
+	$(GENDIR)/anf_kont_impl.inc \
+	$(GENDIR)/cps_kont.h \
+	$(GENDIR)/cps_kont_objtypes.h \
+	$(GENDIR)/cps_kont_debug.h \
+	$(GENDIR)/cps_kont_impl.h
 
 MAIN=$(SRCDIR)/main.c
 PREAMBLE=$(GENDIR)/preamble.c
@@ -280,22 +297,19 @@ $(GENDIR)/cps_kont_impl.c: tools/cps_continuations.yaml $(GENDEPS) $(SRCDIR)/pri
 $(EXTRA_DOCS): $(DOCDIR)/%.md: $(SRCDIR)/%.yaml $(GENDEPS) $(SRCDIR)/primitives.yaml | $(DOCDIR)
 	$(MAKE_AST) $< md > $@~ && mv $@~ $@
 
-.generated: $(EXTRA_TARGETS)
-	touch $@
-
 tags: $(SRCDIR)/* $(EXTRA_TARGETS)
 	ctags $(SRCDIR)/* $(EXTRA_TARGETS)
 
 xref: $(SRCDIR)/* $(EXTRA_TARGETS)
 	ctags -x $(SRCDIR)/* $(EXTRA_TARGETS) > $@
 
-$(MAIN_OBJ) $(OBJ): $(OBJDIR)/%.o: $(SRCDIR)/%.c | $(OBJDIR) $(DEPDIR) .generated
+$(MAIN_OBJ) $(OBJ): $(OBJDIR)/%.o: $(SRCDIR)/%.c | $(OBJDIR) $(DEPDIR) $(GENERATED_BOOTSTRAP)
 	$(CC) $(INCLUDE_PATHS) -MMD -MP -MF $(DEPDIR)/$*.d -MT $@ -c $< -o $@
 
-$(EXTRA_OBJ) $(PREAMBLE_OBJ): $(OBJDIR)/%.o: $(GENDIR)/%.c | $(OBJDIR) $(DEPDIR) .generated
+$(EXTRA_OBJ) $(PREAMBLE_OBJ): $(OBJDIR)/%.o: $(GENDIR)/%.c | $(OBJDIR) $(DEPDIR) $(GENERATED_BOOTSTRAP)
 	$(CC) $(INCLUDE_PATHS) -MMD -MP -MF $(DEPDIR)/$*.d -MT $@ -c $< -o $@
 
-$(TEST_OBJ): $(OBJDIR)/%.o: $(TSTDIR)/src/%.c | $(OBJDIR) $(DEPDIR) .generated
+$(TEST_OBJ): $(OBJDIR)/%.o: $(TSTDIR)/src/%.c | $(OBJDIR) $(DEPDIR) $(GENERATED_BOOTSTRAP)
 	$(LAXCC) $(INCLUDE_PATHS) -MMD -MP -MF $(DEPDIR)/$*.d -MT $@ -c $< -o $@
 
 test: test-unit test-a test-b test-sh test-fail
@@ -366,7 +380,7 @@ realclean: clean
 	rm -rf tags xref $(UNIDIR)
 
 clean: deps
-	rm -rf $(BINDIR) $(OBJDIR) callgrind.out.* $(GENDIR) $(TEST_TARGETS) .typedefs $(SRCDIR)/*~ .generated gmon.out *.fnc core.* coverage_html coverage_report.txt gcov_output *.gcda *.gcno coverage.info coverage_filtered.info test_output.log $(TEST_FN_CFILES) $(TEST_FN_OFILES) $(TEST_FN_BINARIES) $(TEST_FN_SFILES) $(TMPDIR)
+	rm -rf $(BINDIR) $(OBJDIR) callgrind.out.* $(GENDIR) $(TEST_TARGETS) $(SRCDIR)/*~ gmon.out *.fnc core.* coverage_html coverage_report.txt gcov_output *.gcda *.gcno coverage.info coverage_filtered.info test_output.log $(TEST_FN_CFILES) $(TEST_FN_OFILES) $(TEST_FN_BINARIES) $(TEST_FN_SFILES) $(TMPDIR)
 	$(MAKE) -C scratch clean
 
 deps:
@@ -400,18 +414,6 @@ profile-parse: all
 
 leak-check: all
 	valgrind --leak-check=full ./$(TARGET) $(FNDIR)/$(PROF_SRC).fn
-
-indent: indent-src indent-generated
-
-indent-src: .typedefs .indent.pro
-	indent `cat .typedefs | sort -u | xargs` $(EXTRA_INDENT_ARGS) $(SRCDIR)/*.[ch]
-	rm -f $(SRCDIR)/*~
-
-indent-generated: .typedefs .indent.pro
-	indent `cat .typedefs | sort -u | xargs` $(EXTRA_INDENT_ARGS) $(GENDIR)/*.[ch]
-	rm -f $(GENDIR)/*~
-
-.typedefs: .generated
 
 list-cores:
 	@ls -rt1 /var/lib/apport/coredump/* | tail -1
