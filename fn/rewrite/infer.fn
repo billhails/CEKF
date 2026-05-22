@@ -46,7 +46,7 @@ let
     typedef DeclClass {
           defClass(list(char), ExpClass)
         | seqClass(DeclClass, DeclClass)
-        | recClass(Decl)
+        | recClass(DeclClass)
     }
 
     fn newTypeVar() { varType(nullType) }
@@ -59,7 +59,7 @@ let
 
     fn occursInType {
         (var, type) {
-            switch(prune(type)) {
+            unsafe switch(prune(type)) {
                 (x = varType(_)) { var == x }
                 (operType(_, args)) { occursInTypeList(var, args) }
             }
@@ -117,7 +117,7 @@ let
     }
 
     fn fresh(typeExp, ng, envt) {
-        switch(prune(typeExp)) {
+        unsafe switch(prune(typeExp)) {
             (x = varType(_)) {
                 if (isGeneric(x, ng)) {
                     freshVar(x, envt, envt)
@@ -150,9 +150,9 @@ let
 
     fn analyzeExp {
         (ideClass(ide), envt, ng) { retrieve(ide, envt, ng) }
-        (condClass(test, cons, alt), envt, ng) {
+        (condClass(test, con, alt), envt, ng) {
             unifyType(test, boolType) and
-            unifyType(analyzeExp(cons, envt, ng), analyzeExp(alt, envt, ng))
+            unifyType(analyzeExp(con, envt, ng), analyzeExp(alt, envt, ng))
             // return type of cons
         }
         (lambClass(binder, body), envt, ng) {

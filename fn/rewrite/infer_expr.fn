@@ -1,0 +1,480 @@
+namespace
+link "expr.fn" as E;
+link "../ioutils.fn" as IO;
+import IO operator "$_";
+
+typedef typeExp {
+      varType(string)
+    | operType(string, list(typeExp))
+}
+
+typedef copyEnv {
+      cpEnv(string, typeExp, copyEnv)
+    | nullCpEnv
+}
+
+typedef typeCheckEnv {
+      tcEnv(string, typeExp, typeCheckEnv)
+    | nullTcEnv
+}
+
+typedef substEnv {
+      bindSubst(string, typeExp, substEnv)
+    | nullSubstEnv
+}
+
+fn bind(arg, fun) { fun(arg) }
+
+fn freshTypeVar() { varType("'" @@ $incr()) }
+
+unsafe fn typeVarName(varType(name)) { name }
+
+fn intType() { operType("Int", []) }
+
+fn boolType() { operType("Bool", []) }
+
+fn charType() { operType("Char", []) }
+
+fn nullValueType() { operType("Null", []) }
+
+fn funType(dom, cod) { operType("->", [dom, cod]) }
+
+fn funTypeList {
+    ([], cod) { cod }
+    (dom @ rest, cod) { funType(dom, funTypeList(rest, cod)) }
+}
+
+fn ensure {
+    (true, _) { true }
+    (false, msg) { error("infer_expr: " @@ msg) }
+}
+
+fn lookupSubst {
+    (name, bindSubst(name, type, _)) { just(type) }
+    (_, nullSubstEnv) { nothing }
+    (name, bindSubst(_, _, tail)) { lookupSubst(name, tail) }
+}
+
+fn member {
+    (_, []) { false }
+    (name, head @ tail) {
+        if (name == head) {
+            true
+        } else {
+            member(name, tail)
+        }
+    }
+}
+
+fn applySubst {
+    (varType(name), subst) {
+        switch (lookupSubst(name, subst)) {
+            (just(type)) { applySubst(type, subst) }
+            (nothing) { varType(name) }
+        }
+    }
+    (operType(name, args), subst) {
+        operType(name, applySubstList(args, subst))
+    }
+}
+
+fn applySubstList {
+    ([], _) { [] }
+    (h @ t, subst) { applySubst(h, subst) @ applySubstList(t, subst) }
+}
+
+fn occursInType {
+    (name, type, subst) {
+        switch (applySubst(type, subst)) {
+            (varType(other)) { name == other }
+            (operType(_, args)) { occursInTypeList(name, args, subst) }
+        }
+    }
+}
+
+fn occursInTypeList {
+    (_, [], _) { false }
+    (name, h @ t, subst) {
+        occursInType(name, h, subst) or occursInTypeList(name, t, subst)
+    }
+}
+
+fn unifyType(left, right, subst) {
+    switch (applySubst(left, subst), applySubst(right, subst)) {
+        (varType(name1), varType(name2)) {
+            if (name1 == name2) {
+                subst
+            } else {
+                bindSubst(name1, varType(name2), subst)
+            }
+        }
+        (varType(name), type) {
+            ensure(not occursInType(name, type, subst), "occurs check failed for " @@ name);
+            bindSubst(name, type, subst)
+        }
+        (type, varType(name)) {
+            unifyType(varType(name), type, subst)
+        }
+        (operType(name1, args1), operType(name2, args2)) {
+            ensure(name1 == name2, "type mismatch between " @@ name1 @@ " and " @@ name2);
+            unifyArgs(args1, args2, subst)
+        }
+    }
+}
+
+fn unifyArgs {
+    ([], [], subst) { subst }
+    (h1 @ t1, h2 @ t2, subst) {
+        unifyArgs(t1, t2, unifyType(h1, h2, subst))
+    }
+    (_, _, _) {
+        error("infer_expr: type constructor arity mismatch")
+    }
+}
+
+fn lookupCopy {
+    (name, cpEnv(name, type, _)) { just(type) }
+    (_, nullCpEnv) { nothing }
+    (name, cpEnv(_, _, tail)) { lookupCopy(name, tail) }
+}
+
+fn instantiateApplied {
+    (varType(name), ng, cp) {
+        if (member(name, ng)) {
+            #(varType(name), cp)
+        } else {
+            switch (lookupCopy(name, cp)) {
+                (just(type)) { #(type, cp) }
+                (nothing) {
+                    let fresh = freshTypeVar()
+                    in #(fresh, cpEnv(name, fresh, cp))
+                }
+            }
+        }
+    }
+    (operType(name, args), ng, cp) {
+        bind(instantiateArgs(args, ng, cp), fn (#(newArgs, cp2)) {
+            #(operType(name, newArgs), cp2)
+        })
+    }
+}
+
+fn instantiateArgs {
+    ([], _, cp) { #([], cp) }
+    (h @ t, ng, cp) {
+        bind(instantiateApplied(h, ng, cp), fn (#(newHead, cp1)) {
+            bind(instantiateArgs(t, ng, cp1), fn (#(newTail, cp2)) {
+                #(newHead @ newTail, cp2)
+            })
+        })
+    }
+}
+
+fn freshType(type, ng, subst) {
+    bind(instantiateApplied(applySubst(type, subst), ng, nullCpEnv), fn (#(newType, _)) {
+        newType
+    })
+}
+
+fn retrieve {
+    (name, tcEnv(name, type, _), ng, subst) { freshType(type, ng, subst) }
+    (_, nullTcEnv, _, _) { error("infer_expr: unbound variable") }
+    (name, tcEnv(_, _, tail), ng, subst) { retrieve(name, tail, ng, subst) }
+}
+
+fn retrieveBound {
+    (name, tcEnv(name, type, _)) { type }
+    (_, nullTcEnv) { error("infer_expr: unbound variable") }
+    (name, tcEnv(_, _, tail)) { retrieveBound(name, tail) }
+}
+
+fn renderType {
+    (varType(name)) { name }
+    (operType("->", [dom, cod])) {
+        renderDomType(dom) @@ " -> " @@ renderType(cod)
+    }
+    (operType(name, [])) { name }
+    (operType(name, args)) {
+        name @@ "(" @@ renderTypeList(args) @@ ")"
+    }
+}
+
+fn renderDomType {
+    (type = operType("->", _)) { "(" @@ renderType(type) @@ ")" }
+    (type) { renderType(type) }
+}
+
+fn renderTypeList {
+    ([]) { "" }
+    (type @ []) { renderType(type) }
+    (type @ rest) { renderType(type) @@ ", " @@ renderTypeList(rest) }
+}
+
+fn print_type(type) { puts(renderType(type)) }
+
+fn supportedPrimitive {
+    ("+") | ("-") | ("*") | ("/") | ("%") | ("**") |
+    ("=") | ("==") | ("!=") | ("<") | (">") | ("<=") | (">=") {
+        true
+    }
+    (_) { false }
+}
+
+fn supports {
+    (E.var(_)) |
+    (E.bigint(_)) |
+    (E.stdint(_)) |
+    (E.character(_)) {
+        true
+    }
+    (E.constant("true", _)) |
+    (E.constant("false", _)) |
+    (E.constant("null", _)) {
+        true
+    }
+    (E.constant(_, _)) {
+        false
+    }
+    (E.lambda([], _)) {
+        false
+    }
+    (E.lambda(_, body)) {
+        supports(body)
+    }
+    (E.apply(_, [])) {
+        false
+    }
+    (E.apply(fun, args)) {
+        supports(fun) and supportsList(args)
+    }
+    (E.if_expr(test, consequent, alternative)) {
+        supports(test) and supports(consequent) and supports(alternative)
+    }
+    (E.let_expr(bindings, body)) {
+        supportsBindings(bindings) and supports(body)
+    }
+    (E.letrec_expr(bindings, body)) {
+        supportsBindings(bindings) and supports(body)
+    }
+    (E.letstar_expr(bindings, body)) {
+        supportsBindings(bindings) and supports(body)
+    }
+    (E.primapp(name, left, right)) {
+        supportedPrimitive(name) and supports(left) and supports(right)
+    }
+    (E.sequence(exprs)) {
+        supportsNonEmptyList(exprs)
+    }
+    (_) {
+        false
+    }
+}
+
+fn supportsList {
+    ([]) { true }
+    (h @ t) { supports(h) and supportsList(t) }
+}
+
+fn supportsNonEmptyList {
+    ([]) { false }
+    (exprs) { supportsList(exprs) }
+}
+
+fn supportsBindings {
+    ([]) { true }
+    (#(_, expr) @ rest) { supports(expr) and supportsBindings(rest) }
+}
+
+fn analyzeArgs {
+    ([], _, _, subst) { #([], subst) }
+    (h @ t, envt, ng, subst) {
+        bind(analyzeExpr(h, envt, ng, subst), fn (#(headType, subst1)) {
+            bind(analyzeArgs(t, envt, ng, subst1), fn (#(tailTypes, subst2)) {
+                #(headType @ tailTypes, subst2)
+            })
+        })
+    }
+}
+
+fn bindParams {
+    ([], envt, ng) { #([], envt, ng) }
+    (param @ rest, envt, ng) {
+        let paramType = freshTypeVar();
+            paramName = typeVarName(paramType)
+        in bind(bindParams(rest, tcEnv(param, paramType, envt), paramName @ ng), fn (#(restTypes, env2, ng2)) {
+            #(paramType @ restTypes, env2, ng2)
+        })
+    }
+}
+
+fn analyzeLetBindings {
+    ([], _, _, subst) { #([], subst) }
+    (#(name, expr) @ rest, envt, ng, subst) {
+        bind(analyzeExpr(expr, envt, ng, subst), fn (#(exprType, subst1)) {
+            bind(analyzeLetBindings(rest, envt, ng, subst1), fn (#(restBindings, subst2)) {
+                #( #(name, applySubst(exprType, subst2)) @ restBindings, subst2 )
+            })
+        })
+    }
+}
+
+fn extendTypeEnv {
+    ([], envt) { envt }
+    (#(name, type) @ rest, envt) {
+        extendTypeEnv(rest, tcEnv(name, type, envt))
+    }
+}
+
+fn analyzeSequence {
+    (expr @ [], envt, ng, subst) { analyzeExpr(expr, envt, ng, subst) }
+    (expr @ rest, envt, ng, subst) {
+        bind(analyzeExpr(expr, envt, ng, subst), fn (#(_, subst1)) {
+            analyzeSequence(rest, envt, ng, subst1)
+        })
+    }
+    ([], _, _, _) { error("infer_expr: empty sequence") }
+}
+
+fn bindRecBindings {
+    ([], envt, ng) { #(envt, ng) }
+    (#(name, _) @ rest, envt, ng) {
+        let binderType = freshTypeVar();
+            binderName = typeVarName(binderType)
+        in bind(bindRecBindings(rest, tcEnv(name, binderType, envt), binderName @ ng), fn (#(env2, ng2)) {
+            #(env2, ng2)
+        })
+    }
+}
+
+fn checkRecBindings {
+    ([], _, _, subst) { subst }
+    (#(name, expr) @ rest, envt, ng, subst) {
+        bind(analyzeExpr(expr, envt, ng, subst), fn (#(exprType, subst1)) {
+            let binderType = retrieveBound(name, envt);
+                subst2 = unifyType(binderType, exprType, subst1)
+            in checkRecBindings(rest, envt, ng, subst2)
+        })
+    }
+}
+
+fn analyzeLetStar {
+    ([], body, envt, ng, subst) { analyzeExpr(body, envt, ng, subst) }
+    (#(name, expr) @ rest, body, envt, ng, subst) {
+        bind(analyzeExpr(expr, envt, ng, subst), fn (#(exprType, subst1)) {
+            analyzeLetStar(rest, body, tcEnv(name, applySubst(exprType, subst1), envt), ng, subst1)
+        })
+    }
+}
+
+fn analyzePrimitive(name, left, right, envt, ng, subst) {
+    bind(analyzeExpr(left, envt, ng, subst), fn (#(leftType, subst1)) {
+        bind(analyzeExpr(right, envt, ng, subst1), fn (#(rightType, subst2)) {
+            if (name == "+" or name == "-" or name == "*" or name == "/" or name == "%" or name == "**") {
+                let subst3 = unifyType(leftType, intType(), subst2);
+                    subst4 = unifyType(rightType, intType(), subst3)
+                in #(intType(), subst4)
+            } else if (name == "=" or name == "==" or name == "!=" or name == "<" or name == ">" or name == "<=" or name == ">=") {
+                let subst3 = unifyType(leftType, intType(), subst2);
+                    subst4 = unifyType(rightType, intType(), subst3)
+                in #(boolType(), subst4)
+            } else {
+                error("infer_expr: unsupported primitive " @@ name)
+            }
+        })
+    })
+}
+
+fn analyzeExpr {
+    (E.var(name), envt, ng, subst) {
+        #(retrieve(name, envt, ng, subst), subst)
+    }
+    (E.bigint(_), _, _, subst) |
+    (E.stdint(_), _, _, subst) {
+        #(intType(), subst)
+    }
+    (E.character(_), _, _, subst) {
+        #(charType(), subst)
+    }
+    (E.constant("true", _), _, _, subst) |
+    (E.constant("false", _), _, _, subst) {
+        #(boolType(), subst)
+    }
+    (E.constant("null", _), _, _, subst) {
+        #(nullValueType(), subst)
+    }
+    (E.constant(name, _), _, _, _) {
+        error("infer_expr: unsupported constant " @@ name)
+    }
+    (E.lambda([], _), _, _, _) {
+        error("infer_expr: zero-argument lambdas are not supported yet")
+    }
+    (E.lambda(params, body), envt, ng, subst) {
+        bind(bindParams(params, envt, ng), fn (#(paramTypes, env2, ng2)) {
+            bind(analyzeExpr(body, env2, ng2, subst), fn (#(bodyType, subst1)) {
+                #(funTypeList(paramTypes, applySubst(bodyType, subst1)), subst1)
+            })
+        })
+    }
+    (E.apply(_, []), _, _, _) {
+        error("infer_expr: zero-argument application is not supported yet")
+    }
+    (E.apply(fun, args), envt, ng, subst) {
+        bind(analyzeExpr(fun, envt, ng, subst), fn (#(funTypeExp, subst1)) {
+            bind(analyzeArgs(args, envt, ng, subst1), fn (#(argTypes, subst2)) {
+                let resultType = freshTypeVar();
+                    subst3 = unifyType(funTypeExp, funTypeList(argTypes, resultType), subst2)
+                in #(applySubst(resultType, subst3), subst3)
+            })
+        })
+    }
+    (E.if_expr(test, consequent, alternative), envt, ng, subst) {
+        bind(analyzeExpr(test, envt, ng, subst), fn (#(testType, subst1)) {
+            let subst2 = unifyType(testType, boolType(), subst1)
+            in bind(analyzeExpr(consequent, envt, ng, subst2), fn (#(consequentType, subst3)) {
+                bind(analyzeExpr(alternative, envt, ng, subst3), fn (#(alternativeType, subst4)) {
+                    let subst5 = unifyType(consequentType, alternativeType, subst4)
+                    in #(applySubst(consequentType, subst5), subst5)
+                })
+            })
+        })
+    }
+    (E.let_expr(bindings, body), envt, ng, subst) {
+        bind(analyzeLetBindings(bindings, envt, ng, subst), fn (#(bindingTypes, subst1)) {
+            analyzeExpr(body, extendTypeEnv(bindingTypes, envt), ng, subst1)
+        })
+    }
+    (E.letrec_expr(bindings, body), envt, ng, subst) {
+        bind(bindRecBindings(bindings, envt, ng), fn (#(env2, ng2)) {
+            let subst1 = checkRecBindings(bindings, env2, ng2, subst)
+            in analyzeExpr(body, env2, ng2, subst1)
+        })
+    }
+    (E.letstar_expr(bindings, body), envt, ng, subst) {
+        analyzeLetStar(bindings, body, envt, ng, subst)
+    }
+    (E.primapp(name, left, right), envt, ng, subst) {
+        analyzePrimitive(name, left, right, envt, ng, subst)
+    }
+    (E.sequence(exprs), envt, ng, subst) {
+        analyzeSequence(exprs, envt, ng, subst)
+    }
+    (x, _, _, _) {
+        E.print_expr(x);
+        puts("\n");
+        error("infer_expr: unsupported expression")
+    }
+}
+
+fn infer(expr) {
+    bind(analyzeExpr(expr, nullTcEnv, [], nullSubstEnv), fn (#(type, subst)) {
+        applySubst(type, subst)
+    })
+}
+
+fn infer_string(source) {
+    infer(E.parse(source))
+}
+
+fn infer_to_string(expr) {
+    renderType(infer(expr))
+}

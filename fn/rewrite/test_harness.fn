@@ -3,6 +3,7 @@ let
     link "beta_reduce.fn" as β;
     link "eta_reduce.fn" as η;
     link "constant_folding.fn" as OF;
+    link "infer_expr.fn" as INFER;
     link "expr.fn" as E;
     link "minexpr.fn" as M;
     link "../listutils.fn" as list;
@@ -30,6 +31,11 @@ in
                 halt = M.var("□");
                 fail = M.var("Ω");
                 a = E.parse(str);
+                inferred = if (INFER.supports(a)) {
+                    INFER.infer_to_string(a)
+                } else {
+                    "<unsupported>"
+                };
                 b = DS.desugar(a);
                 c = C.curry(b);
                 cc = β.reduce(c);
@@ -47,6 +53,8 @@ in
                 nltab = "\n";
             in
                 E.print_expr(a);
+                puts("\n==> infer_expr\n");
+                puts(inferred);
                 // puts("\n==> desugar");
                 // puts(nltab);
                 // M.print_expr(b);
