@@ -7,6 +7,7 @@ let
     }
 in
     assert(infer_type("((λ (x) x) 1)") == "Int");
+    assert(infer_type("(if true (back) 1)") == "Int");
     assert(infer_type("(λ () 42)") == "#() -> Int");
     assert(infer_type("((λ () 42))") == "Int");
     assert(infer_type("(cut 1)") == "Int");
@@ -23,6 +24,8 @@ in
     assert(infer_type("(letrec ((f (λ (x) (+ x 1)))) (let ((x 1)) (tag (f x))))") == "Int");
     assert(infer_type("(letrec ((f (λ (x) (+ x 1))) (result1 (λ () 11)) (result2 (λ () 22))) (let ((x 1)) (cond (tag (f x)) (1 (result1)) (2 (result2)))))") == "Int");
     assert(infer_type("(amb ((λ (x) x) 1) ((λ (y) y) 2))") == "Int");
+    assert(infer_type("(amb 1 (begin (back) 2))") == "Int");
+    assert(infer_type("(+ (amb (begin (back) 10) 20) 3)") == "Int");
     assert(infer_type("(amb (amb (cut 1) 2) 3)") == "Int");
     assert(infer_type("(cond 2 (1 10) (2 20) (3 30))") == "Int");
     assert(infer_type("(match_cases 3 ((1 2) 10) ((3 4 5) 20))") == "Int");

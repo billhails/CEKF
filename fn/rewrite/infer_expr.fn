@@ -287,6 +287,9 @@ fn supports {
     (E.amb_expr(left, right)) {
         supports(left) and supports(right)
     }
+    (E.back_expr) {
+        true
+    }
     (E.callcc_expr(expr)) {
         supports(expr)
     }
@@ -628,6 +631,9 @@ fn analyzeExpr {
                 in #(applySubst(leftType, subst3), subst3)
             })
         })
+    }
+    (E.back_expr, _, _, subst) {
+        #(freshTypeVar(), subst)
     }
     (E.cut_expr(expr), envt, ng, subst) {
         analyzeExpr(expr, envt, ng, subst)
