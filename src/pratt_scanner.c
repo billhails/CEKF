@@ -1344,13 +1344,23 @@ static PrattBuffer *prattBufferFromFileName(char *path) {
 }
 
 /**
- * @brief Re-enqueues a token back into the lexer.
+ * @brief Pushes a token back to the front of the lexer queue.
+ *
+ * Unlike enqueueToken() which appends to the tail, poke() prepends to the
+ * head so that multiple successive poke() calls produce LIFO (stack) order.
+ * This enables arbitrary pushback: the last token poked is the next one
+ * returned by next().
  *
  * @param parser The PrattParser instance containing the lexer.
- * @param token The PrattToken to re-enqueue.
+ * @param token The PrattToken to push back.
  */
 void poke(PrattParser *parser, PrattToken *token) {
-    enqueueToken(parser->lexer, token);
+    PrattLexer *lexer = parser->lexer;
+    token->next = lexer->tokenHead;
+    lexer->tokenHead = token;
+    if (lexer->tokenTail == NULL) {
+        lexer->tokenTail = token;
+    }
 }
 
 /**
