@@ -220,7 +220,7 @@ namespace
                         x;
                     }
                     (match_cases(exp, cases)) {
-                        puts("(match-cases");
+                        puts("(match_cases");
                         put_indent(depth + 1);
                         go(depth + 1, exp);
                         list.for_each(fn(#(indices, caseExpr)) {
@@ -236,7 +236,7 @@ namespace
                         x;
                     }
                     (make_vec(size, elements)) {
-                        puts("(make-vec ");
+                        puts("(make_vec ");
                         putn(size);
                         go_sequence(depth, elements);
                         puts(")");

@@ -334,6 +334,9 @@ fn supports {
     (E.cond_expr(test, cases)) {
         supports(test) and supportsCondCases(cases)
     }
+    (E.match_cases(expr, cases)) {
+        supports(expr) and supportsMatchCases(cases)
+    }
     (E.let_expr(bindings, body)) {
         supportsBindings(bindings) and supports(body)
     }
@@ -390,6 +393,20 @@ fn supportsCondCasesTail {
     }
 }
 
+fn supportsMatchCases {
+    ([]) { false }
+    (#(_, resultExpr) @ rest) {
+        supports(resultExpr) and supportsMatchCasesTail(rest)
+    }
+}
+
+fn supportsMatchCasesTail {
+    ([]) { true }
+    (#(_, resultExpr) @ rest) {
+        supports(resultExpr) and supportsMatchCasesTail(rest)
+    }
+}
+
 fn analyzeArgs {
     ([], _, _, subst) { #([], subst) }
     (h @ t, envt, ng, subst) {
@@ -423,6 +440,22 @@ fn analyzeCondCases {
     ([], _, _, _, _) {
         error("infer_expr: cond requires at least one case")
     }
+}
+
+fn analyzeMatchCases {
+    (#(_, resultExpr) @ [], envt, ng, subst, resultType) {
+        bind(analyzeExpr(resultExpr, envt, ng, subst), fn (#(caseType, subst1)) {
+            let subst2 = unifyType(resultType, caseType, subst1)
+            in #(applySubst(resultType, subst2), subst2)
+        })
+    }
+    (#(_, resultExpr) @ rest, envt, ng, subst, resultType) {
+        bind(analyzeExpr(resultExpr, envt, ng, subst), fn (#(caseType, subst1)) {
+            let subst2 = unifyType(resultType, caseType, subst1)
+            in analyzeMatchCases(rest, envt, ng, subst2, applySubst(resultType, subst2))
+        })
+    }
+    ([], _, _, _, resultType) { #(resultType, nullSubstEnv) }
 }
 
 fn bindParams {
@@ -684,6 +717,13 @@ fn analyzeExpr {
             let subst2 = unifyType(testType, intType(), subst1);
                 resultType = freshTypeVar()
             in analyzeCondCases(cases, envt, ng, subst2, resultType)
+        })
+    }
+    (E.match_cases(indexExpr, cases), envt, ng, subst) {
+        bind(analyzeExpr(indexExpr, envt, ng, subst), fn (#(indexType, subst1)) {
+            let subst2 = unifyType(indexType, intType(), subst1);
+                resultType = freshTypeVar()
+            in analyzeMatchCases(cases, envt, ng, subst2, resultType)
         })
     }
     (E.let_expr(bindings, body), envt, ng, subst) {

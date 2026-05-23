@@ -105,7 +105,7 @@ namespace
             x;
         }
         (x=tuple_index(size, index, expr)) {
-            puts("(tuple-index ");
+            puts("(tuple_index ");
             putn(size);
             puts(" ");
             putn(index);
@@ -165,7 +165,7 @@ namespace
             x;
         }
         (x=match_cases(exp, cases)) {
-            puts("(match-cases ");
+            puts("(match_cases ");
             print_expr(exp);
             list.for_each (fn {
                 (#(indices, caseExpr)) {
@@ -180,14 +180,14 @@ namespace
             x;
         }
         (x=make_vec(size, elements)) {
-            puts("(make-vec ");
+            puts("(make_vec ");
             putn(size);
             print_sequence(elements);
             puts(")");
             x;
         }
         (x=make_tuple(elements)) {
-            puts("(make-tuple");
+            puts("(make_tuple");
             print_sequence(elements);
             puts(")");
             x;
@@ -221,7 +221,7 @@ namespace
             x;
         }
         (x=constructor_info(name)) {
-            puts("(constructor-info ");
+            puts("(constructor_info ");
             puts(name);
             puts(")");
             x;
