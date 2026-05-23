@@ -281,6 +281,15 @@ fn supports {
     (E.amb_expr(left, right)) {
         supports(left) and supports(right)
     }
+    (E.callcc_expr(expr)) {
+        supports(expr)
+    }
+    (E.print_exp(expr)) {
+        supports(expr)
+    }
+    (E.tag(expr)) {
+        supports(expr)
+    }
     (E.cut_expr(expr)) {
         supports(expr)
     }
@@ -630,6 +639,22 @@ fn analyzeExpr {
                 in #(applySubst(resultType, subst3), subst3)
             })
         })
+    }
+    (E.callcc_expr(called), envt, ng, subst) {
+        bind(analyzeExpr(called, envt, ng, subst), fn (#(calledType, subst1)) {
+            let a = freshTypeVar();
+                b = freshTypeVar();
+                continuationType = funType(a, b);
+                callccType = funType(continuationType, a);
+                subst2 = unifyType(calledType, callccType, subst1)
+            in #(applySubst(a, subst2), subst2)
+        })
+    }
+    (E.print_exp(expr), envt, ng, subst) {
+        analyzeExpr(expr, envt, ng, subst)
+    }
+    (E.tag(expr), envt, ng, subst) {
+        analyzeExpr(expr, envt, ng, subst)
     }
     (E.if_expr(test, consequent, alternative), envt, ng, subst) {
         bind(analyzeExpr(test, envt, ng, subst), fn (#(testType, subst1)) {

@@ -10,7 +10,16 @@ in
     assert(infer_type("(cut 1)") == "Int");
     assert(infer_type("(typeof 42)") == "list(Char)");
     assert(infer_type("(letrec ((f (λ (x) x)) (h (λ (x) (+ x 2)))) (let ((x 1)) (if (= x 1) (typeof (f x)) (typeof (h 2)))))") == "list(Char)");
+    assert(infer_type("(print 42)") == "Int");
+    assert(infer_type("(letrec ((f (λ (x) (+ x 1)))) (let ((x 1)) (print (f x))))") == "Int");
+    assert(infer_type("(typeof (print 42))") == "list(Char)");
     assert(infer_type("(amb 1 2)") == "Int");
+    assert(infer_type("(call/cc (λ (k) (k 5)))") == "Int");
+    assert(infer_type("(call/cc (λ (k) 42))") == "Int");
+    assert(infer_type("(call/cc (λ (k) (+ 10 (k 5))))") == "Int");
+    assert(infer_type("(let ((x 42)) (tag x))") == "Int");
+    assert(infer_type("(letrec ((f (λ (x) (+ x 1)))) (let ((x 1)) (tag (f x))))") == "Int");
+    assert(infer_type("(letrec ((f (λ (x) x)) (g (λ (x) (+ x 10))) (h (λ (x) (+ x 20)))) (let ((x 2)) (cond (tag (f x)) (1 (g 1)) (2 (h 2)))))") == "Int");
     assert(infer_type("(amb ((λ (x) x) 1) ((λ (y) y) 2))") == "Int");
     assert(infer_type("(amb (amb (cut 1) 2) 3)") == "Int");
     assert(infer_type("(cond 2 (1 10) (2 20) (3 30))") == "Int");
