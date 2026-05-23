@@ -37,6 +37,8 @@ fn charType() { operType("Char", []) }
 
 fn nullValueType() { operType("Null", []) }
 
+fn tupleType(parts) { operType("Tuple", parts) }
+
 fn funType(dom, cod) { operType("->", [dom, cod]) }
 
 fn funTypeList {
@@ -188,8 +190,26 @@ fn retrieveBound {
     (name, tcEnv(_, _, tail)) { retrieveBound(name, tail) }
 }
 
+fn freshTupleParts {
+    (0) { [] }
+    (size) { freshTypeVar() @ freshTupleParts(size - 1) }
+}
+
+fn makeTupleTemplate(size) {
+    tupleType(freshTupleParts(size))
+}
+
+fn tupleEntry {
+    (0, entry @ _) { entry }
+    (index, _ @ rest) { tupleEntry(index - 1, rest) }
+    (_, []) { error("infer_expr: tuple index out of bounds") }
+}
+
 fn renderType {
     (varType(name)) { name }
+    (operType("Tuple", args)) {
+        "#(" @@ renderTypeList(args) @@ ")"
+    }
     (operType("->", [dom, cod])) {
         renderDomType(dom) @@ " -> " @@ renderType(cod)
     }
@@ -294,8 +314,14 @@ fn supports {
     (E.letstar_expr(bindings, body)) {
         supportsBindings(bindings) and supports(body)
     }
+    (E.make_tuple(exprs)) {
+        supportsList(exprs)
+    }
     (E.primapp(name, left, right)) {
         supportedPrimitive(name) and supports(left) and supports(right)
+    }
+    (E.tuple_index(_, _, expr)) {
+        supports(expr)
     }
     (E.sequence(exprs)) {
         supportsNonEmptyList(exprs)
@@ -560,8 +586,23 @@ fn analyzeExpr {
     (E.letstar_expr(bindings, body), envt, ng, subst) {
         analyzeLetStar(bindings, body, envt, ng, subst)
     }
+    (E.make_tuple(exprs), envt, ng, subst) {
+        bind(analyzeArgs(exprs, envt, ng, subst), fn (#(partTypes, subst1)) {
+            #(tupleType(partTypes), subst1)
+        })
+    }
     (E.primapp(name, left, right), envt, ng, subst) {
         analyzePrimitive(name, left, right, envt, ng, subst)
+    }
+    (E.tuple_index(size, index, expr), envt, ng, subst) {
+        bind(analyzeExpr(expr, envt, ng, subst), fn (#(exprType, subst1)) {
+            let template = makeTupleTemplate(size);
+                subst2 = unifyType(exprType, template, subst1)
+            in switch (applySubst(template, subst2)) {
+                (operType("Tuple", parts)) { #(tupleEntry(index, parts), subst2) }
+                (_) { error("infer_expr: tuple template mismatch") }
+            }
+        })
     }
     (E.sequence(exprs), envt, ng, subst) {
         analyzeSequence(exprs, envt, ng, subst)

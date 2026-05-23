@@ -20,6 +20,7 @@ More of a wish-list than a hard and fast plan.
 * Continuations.
   * Reinstate `cut` (prunes current back continuation). DONE
   * Implement delimited continuations.
+    * capture/release or record/play instead of reset/shift?
 * Regular Expressions.
   * Enlist the new regex engine to support the core Pratt scanner. DONE
 * Types.
@@ -43,6 +44,8 @@ More of a wish-list than a hard and fast plan.
   * Re-order Type Checking before TPMC.
   * Target LLVM.
 * Generate.
+  * Add a generator for equivalent F♮ `typedef`s to facilitate `fn/rewrite/`.
+    * Will need F♮ support for hashes, symbols arrays etc.
   * Move all signatures into `signature_helper.py`, not just the shared ones.
 * More numbers.
   * Vectors.

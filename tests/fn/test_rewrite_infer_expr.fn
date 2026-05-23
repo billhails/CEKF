@@ -11,3 +11,6 @@ in
     assert(infer_type("(letrec ((i (λ (x) x)) (j (λ (x y) (begin (i x) (i y))))) (j true 1))") == "Int");
     assert(infer_type("(letrec ((f (λ (x) (g x))) (g (λ (n) (+ n 1)))) (f 1))") == "Int");
     assert(infer_type("(letrec ((fact (λ (n) (if (= n 0) 1 (* n (fact (- n 1))))))) (fact 5))") == "Int");
+    assert(infer_type("(make_tuple 1 true 'a')") == "#(Int, Bool, Char)");
+    assert(infer_type("(tuple_index 3 1 (make_tuple 1 true 'a'))") == "Bool");
+    assert(infer_type("(tuple_index 2 0 (letrec ((pair (λ (x) (make_tuple x (+ x 1))))) (pair 4)))") == "Int");
