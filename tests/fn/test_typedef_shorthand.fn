@@ -131,6 +131,83 @@ let
         }
     }
 
+    // tagged shorthand: no generics
+    // typedef point{x: number, y: number}
+    //   => typedef point { point{x: number, y: number} }
+    fn test_tagged_no_generics() {
+        let
+            typedef point{x: number, y: number}
+            p = point{x: 3, y: 4}
+        in
+            switch (p) {
+                (point{x: a, y: b}) {
+                    assert(a == 3);
+                    assert(b == 4);
+                    true
+                }
+            }
+    }
+
+    // tagged shorthand: one lifted generic field
+    // typedef box{value: #t}
+    //   => typedef box(#t) { box{value: #t} }
+    fn test_tagged_one_generic() {
+        let
+            typedef box{value: #t}
+            b1 = box{value: 42}
+            b2 = box{value: "hello"}
+        in {
+            assert(switch (b1) { (box{value: v}) { v } } == 42);
+            assert(switch (b2) { (box{value: v}) { v } } == "hello");
+            true
+        }
+    }
+
+    // tagged shorthand: mixed concrete and generic fields
+    // typedef labelled{meta: #a, tag: char}
+    //   => typedef labelled(#a) { labelled{meta: #a, tag: char} }
+    fn test_tagged_mixed() {
+        let
+            typedef labelled{meta: #a, tag: char}
+            l = labelled{meta: 99, tag: 'z'}
+        in
+            switch (l) {
+                (labelled{meta: m, tag: t}) {
+                    assert(m == 99);
+                    assert(t == 'z');
+                    true
+                }
+            }
+    }
+
+    // tagged shorthand: two generics, distinct fields
+    // typedef pair{first: #a, second: #b}
+    //   => typedef pair(#a, #b) { pair{first: #a, second: #b} }
+    fn test_tagged_two_generics() {
+        let
+            typedef pair{first: #a, second: #b}
+            p = pair{first: "key", second: 100}
+        in
+            switch (p) {
+                (pair{first: f, second: s}) {
+                    assert(f == "key");
+                    assert(s == 100);
+                    true
+                }
+            }
+    }
+
+    // tagged shorthand: no trailing semicolon (mirrors test_shorthand_no_semicolon)
+    fn test_tagged_no_semicolon() {
+        let
+            typedef record{id: number}
+            r = record{id: 7}
+        in
+            switch (r) {
+                (record{id: n}) { n == 7 }
+            }
+    }
+
 in
     test_bare_shorthand();
     test_generic_shorthand();
@@ -140,4 +217,9 @@ in
     test_two_param_shorthand();
     test_duplicate_var_shorthand();
     test_shorthand_no_semicolon();
-    test_shorthand_nested()
+    test_shorthand_nested();
+    test_tagged_no_generics();
+    test_tagged_one_generic();
+    test_tagged_mixed();
+    test_tagged_two_generics();
+    test_tagged_no_semicolon()

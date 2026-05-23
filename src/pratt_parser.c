@@ -4702,9 +4702,61 @@ static AstTypeBody *synthesizeShorthandTypeBody(ParserInfo pi, HashSymbol *name,
 }
 
 /**
+ * @brief Collects distinct type-variable (#var) entries from an AstTypeMap
+ * in first-appearance order, checking only plain field types (shallow scan).
+ * Field types that are not bare type variables are silently skipped.
+ */
+static AstTypeSymbols *liftGenericVarsFromTypeMap(AstTypeMap *map,
+                                                  ParserInfo pi) {
+    HashSymbol *vars[64];
+    int count = 0;
+    for (AstTypeMap *cur = map; cur != NULL; cur = cur->next) {
+        AstType *type = cur->type;
+        if (isSimpleTypeVar(type)) {
+            HashSymbol *sym = type->typeClause->val.var;
+            bool seen = false;
+            for (int i = 0; i < count; i++) {
+                if (vars[i] == sym) {
+                    seen = true;
+                    break;
+                }
+            }
+            if (!seen && count < 64) {
+                vars[count++] = sym;
+            }
+        }
+    }
+    AstTypeSymbols *result = NULL;
+    for (int i = count - 1; i >= 0; i--) {
+        int save = PROTECT(result);
+        result = newAstTypeSymbols(pi, vars[i], result);
+        UNPROTECT(save);
+    }
+    return result;
+}
+
+/**
+ * @brief Synthesises a single-constructor AstTypeBody for the tagged
+ * typedef shorthand form.  The constructor shares the typedef's name and
+ * uses the supplied field map as its record-style arguments.
+ */
+static AstTypeBody *synthesizeShorthandTypeBodyFromMap(ParserInfo pi,
+                                                       HashSymbol *name,
+                                                       AstTypeMap *args) {
+    int save = STARTPROTECT();
+    AstTypeConstructorArgs *ctorArgs = newAstTypeConstructorArgs_Map(pi, args);
+    PROTECT(ctorArgs);
+    AstTypeConstructor *ctor = newAstTypeConstructor(pi, name, ctorArgs);
+    PROTECT(ctor);
+    AstTypeBody *body = newAstTypeBody(pi, ctor, NULL);
+    UNPROTECT(save);
+    return body;
+}
+
+/**
  * @brief parses a typedef
  *
- * Accepts both the full explicit form and three shorthand forms:
+ * Accepts both the full explicit form and four shorthand forms:
  *
  *   typedef name;
  *     => typedef name { name }
@@ -4714,6 +4766,12 @@ static AstTypeBody *synthesizeShorthandTypeBody(ParserInfo pi, HashSymbol *name,
  *        e.g. typedef box(#t);    => typedef box(#t) { box(#t) }
  *             typedef w(char);    => typedef w { w(char) }
  *             typedef m(#a,char); => typedef m(#a) { m(#a, char) }
+ *
+ *   typedef name{field: type, ...};
+ *     => lift distinct #vars from plain field types to head; synthesise
+ *        single tagged constructor sharing the typedef name
+ *        e.g. typedef person{name: string, meta: #a};
+ *             => typedef person(#a) { person{name: string, meta: #a} }
  *
  *   typedef name(types...) { body }
  *     => explicit form; types must all be plain type variables
@@ -4753,15 +4811,45 @@ static AstDefinition *typeDefinition(PrattParser *parser) {
             PROTECT(type_body);
         }
     } else {
-        typeSig = newAstTypeSig(TOKPI(tok), s, NULL);
-        PROTECT(typeSig);
         if (check(parser, TOK_LCURLY())) {
-            // Explicit typedef with no type parameters.
-            consume(parser, TOK_LCURLY());
-            type_body = typeBody(parser);
-            PROTECT(type_body);
-            consume(parser, TOK_RCURLY());
+            // Peek inside '{' to distinguish:
+            //   explicit body:    typedef name { constructor... }
+            //   tagged shorthand: typedef name{field: type, ...}
+            PrattToken *lcurly = next(parser);
+            int save2 = PROTECT(lcurly);
+            PrattToken *firstTok = next(parser);
+            PROTECT(firstTok);
+            if (firstTok->type == TOK_ATOM() && check(parser, TOK_COLON())) {
+                // Tagged shorthand: push back first field name for typeMap().
+                poke(parser, firstTok);
+                UNPROTECT(save2); // firstTok now in queue; lcurly unneeded
+                AstTypeMap *field_map = typeMap(parser);
+                PROTECT(field_map);
+                consume(parser, TOK_RCURLY());
+                AstTypeSymbols *variables =
+                    liftGenericVarsFromTypeMap(field_map, TOKPI(tok));
+                PROTECT(variables);
+                typeSig = newAstTypeSig(TOKPI(tok), s, variables);
+                PROTECT(typeSig);
+                type_body = synthesizeShorthandTypeBodyFromMap(CPI(typeSig), s,
+                                                               field_map);
+                PROTECT(type_body);
+            } else {
+                // Explicit typedef body: push back in reverse order so
+                // next() returns them as: { firstTok ...
+                poke(parser, firstTok);
+                poke(parser, lcurly);
+                UNPROTECT(save2); // both now in queue (GC-safe)
+                typeSig = newAstTypeSig(TOKPI(tok), s, NULL);
+                PROTECT(typeSig);
+                consume(parser, TOK_LCURLY());
+                type_body = typeBody(parser);
+                PROTECT(type_body);
+                consume(parser, TOK_RCURLY());
+            }
         } else {
+            typeSig = newAstTypeSig(TOKPI(tok), s, NULL);
+            PROTECT(typeSig);
             // Shorthand: typedef name;
             type_body = synthesizeShorthandTypeBody(CPI(typeSig), s, NULL);
             PROTECT(type_body);
