@@ -316,6 +316,9 @@ fn supports {
     (E.if_expr(test, consequent, alternative)) {
         supports(test) and supports(consequent) and supports(alternative)
     }
+    (E.cond_expr(test, cases)) {
+        supports(test) and supportsCondCases(cases)
+    }
     (E.let_expr(bindings, body)) {
         supportsBindings(bindings) and supports(body)
     }
@@ -358,6 +361,20 @@ fn supportsBindings {
     (#(_, expr) @ rest) { supports(expr) and supportsBindings(rest) }
 }
 
+fn supportsCondCases {
+    ([]) { false }
+    (#(matchExpr, resultExpr) @ rest) {
+        supports(matchExpr) and supports(resultExpr) and supportsCondCasesTail(rest)
+    }
+}
+
+fn supportsCondCasesTail {
+    ([]) { true }
+    (#(matchExpr, resultExpr) @ rest) {
+        supports(matchExpr) and supports(resultExpr) and supportsCondCasesTail(rest)
+    }
+}
+
 fn analyzeArgs {
     ([], _, _, subst) { #([], subst) }
     (h @ t, envt, ng, subst) {
@@ -366,6 +383,30 @@ fn analyzeArgs {
                 #(headType @ tailTypes, subst2)
             })
         })
+    }
+}
+
+fn analyzeCondCases {
+    (#(matchExpr, resultExpr) @ [], envt, ng, subst, resultType) {
+        bind(analyzeExpr(matchExpr, envt, ng, subst), fn (#(matchType, subst1)) {
+            let subst2 = unifyType(matchType, intType(), subst1)
+            in bind(analyzeExpr(resultExpr, envt, ng, subst2), fn (#(caseType, subst3)) {
+                let subst4 = unifyType(resultType, caseType, subst3)
+                in #(applySubst(resultType, subst4), subst4)
+            })
+        })
+    }
+    (#(matchExpr, resultExpr) @ rest, envt, ng, subst, resultType) {
+        bind(analyzeExpr(matchExpr, envt, ng, subst), fn (#(matchType, subst1)) {
+            let subst2 = unifyType(matchType, intType(), subst1)
+            in bind(analyzeExpr(resultExpr, envt, ng, subst2), fn (#(caseType, subst3)) {
+                let subst4 = unifyType(resultType, caseType, subst3)
+                in analyzeCondCases(rest, envt, ng, subst4, applySubst(resultType, subst4))
+            })
+        })
+    }
+    ([], _, _, _, _) {
+        error("infer_expr: cond requires at least one case")
     }
 }
 
@@ -599,6 +640,13 @@ fn analyzeExpr {
                     in #(applySubst(consequentType, subst5), subst5)
                 })
             })
+        })
+    }
+    (E.cond_expr(test, cases), envt, ng, subst) {
+        bind(analyzeExpr(test, envt, ng, subst), fn (#(testType, subst1)) {
+            let subst2 = unifyType(testType, intType(), subst1);
+                resultType = freshTypeVar()
+            in analyzeCondCases(cases, envt, ng, subst2, resultType)
         })
     }
     (E.let_expr(bindings, body), envt, ng, subst) {

@@ -236,8 +236,8 @@ namespace
         ";73. typeof_expr with complex argument",
         "(letrec ((f (λ (x) (+ x 1)))) (let ((x 1)) (typeof (f x))))",
 
-        ";74. typeof_expr in conditional",
-        "(letrec ((f (λ (x) x)) (g (λ (x) (+ x 1))) (h (λ (x) (+ x 2)))) (let ((x 1)) (if (typeof (f x)) (g 1) (h 2))))",
+        ";74. typeof_expr in conditional branches",
+        "(letrec ((f (λ (x) x)) (g (λ (x) (+ x 1))) (h (λ (x) (+ x 2)))) (let ((x 1)) (if (= x 1) (typeof (f x)) (typeof (h 2)))))",
 
         ";75. curried function application",
         "(letrec ((add (λ (x y) (+ x y)))) ((add 2) 3))",
