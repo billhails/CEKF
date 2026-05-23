@@ -41,6 +41,8 @@ fn nullValueType() { operType("Null", []) }
 
 fn tupleType(parts) { operType("Tuple", parts) }
 
+fn thunkType(type) { operType("Thunk", [type]) }
+
 fn funType(dom, cod) { operType("->", [dom, cod]) }
 
 fn funTypeList {
@@ -212,6 +214,9 @@ fn renderType {
     (operType("Tuple", args)) {
         "#(" @@ renderTypeList(args) @@ ")"
     }
+    (operType("Thunk", [type])) {
+        "#() -> " @@ renderType(type)
+    }
     (operType("->", [dom, cod])) {
         renderDomType(dom) @@ " -> " @@ renderType(cod)
     }
@@ -223,6 +228,7 @@ fn renderType {
 
 fn renderDomType {
     (type = operType("->", _)) { "(" @@ renderType(type) @@ ")" }
+    (type = operType("Thunk", _)) { "(" @@ renderType(type) @@ ")" }
     (type) { renderType(type) }
 }
 
@@ -310,14 +316,14 @@ fn supports {
     (E.constant(_, _)) {
         false
     }
-    (E.lambda([], _)) {
-        false
+    (E.lambda([], body)) {
+        supports(body)
     }
     (E.lambda(_, body)) {
         supports(body)
     }
-    (E.apply(_, [])) {
-        false
+    (E.apply(fun, [])) {
+        supports(fun)
     }
     (E.apply(fun, args)) {
         supports(fun) and supportsList(args)
@@ -618,8 +624,10 @@ fn analyzeExpr {
     (E.constant(name, _), _, _, _) {
         error("infer_expr: unsupported constant " @@ name)
     }
-    (E.lambda([], _), _, _, _) {
-        error("infer_expr: zero-argument lambdas are not supported yet")
+    (E.lambda([], body), envt, ng, subst) {
+        bind(analyzeExpr(body, envt, ng, subst), fn (#(bodyType, subst1)) {
+            #(thunkType(applySubst(bodyType, subst1)), subst1)
+        })
     }
     (E.lambda(params, body), envt, ng, subst) {
         bind(bindParams(params, envt, ng), fn (#(paramTypes, env2, ng2)) {
@@ -628,8 +636,12 @@ fn analyzeExpr {
             })
         })
     }
-    (E.apply(_, []), _, _, _) {
-        error("infer_expr: zero-argument application is not supported yet")
+    (E.apply(fun, []), envt, ng, subst) {
+        bind(analyzeExpr(fun, envt, ng, subst), fn (#(funTypeExp, subst1)) {
+            let resultType = freshTypeVar();
+                subst2 = unifyType(funTypeExp, thunkType(resultType), subst1)
+            in #(applySubst(resultType, subst2), subst2)
+        })
     }
     (E.apply(fun, args), envt, ng, subst) {
         bind(analyzeExpr(fun, envt, ng, subst), fn (#(funTypeExp, subst1)) {
