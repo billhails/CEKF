@@ -35,6 +35,8 @@ fn boolType() { operType("Bool", []) }
 
 fn charType() { operType("Char", []) }
 
+fn stringType() { operType("list", [charType()]) }
+
 fn nullValueType() { operType("Null", []) }
 
 fn tupleType(parts) { operType("Tuple", parts) }
@@ -276,6 +278,15 @@ fn supportedPrimitive {
 }
 
 fn supports {
+    (E.amb_expr(left, right)) {
+        supports(left) and supports(right)
+    }
+    (E.cut_expr(expr)) {
+        supports(expr)
+    }
+    (E.typeof_expr(expr)) {
+        supports(expr)
+    }
     (E.var(_)) |
     (E.bigint(_)) |
     (E.stdint(_)) |
@@ -317,6 +328,7 @@ fn supports {
     (E.make_tuple(exprs)) {
         supportsList(exprs)
     }
+    (E.make_vec(_, _)) { false }
     (E.primapp(name, left, right)) {
         supportedPrimitive(name) and supports(left) and supports(right)
     }
@@ -515,7 +527,27 @@ fn analyzePrimitive(name, left, right, envt, ng, subst) {
     })
 }
 
+fn analyzeConstruct(name, args, envt, ng, subst) {
+    analyzeExpr(E.apply(E.var(name), args), envt, ng, subst)
+}
+
 fn analyzeExpr {
+    (E.amb_expr(left, right), envt, ng, subst) {
+        bind(analyzeExpr(left, envt, ng, subst), fn (#(leftType, subst1)) {
+            bind(analyzeExpr(right, envt, ng, subst1), fn (#(rightType, subst2)) {
+                let subst3 = unifyType(leftType, rightType, subst2)
+                in #(applySubst(leftType, subst3), subst3)
+            })
+        })
+    }
+    (E.cut_expr(expr), envt, ng, subst) {
+        analyzeExpr(expr, envt, ng, subst)
+    }
+    (E.typeof_expr(expr), envt, ng, subst) {
+        bind(analyzeExpr(expr, envt, ng, subst), fn (#(_, subst1)) {
+            #(stringType(), subst1)
+        })
+    }
     (E.var(name), envt, ng, subst) {
         #(retrieve(name, envt, ng, subst), subst)
     }
@@ -586,10 +618,16 @@ fn analyzeExpr {
     (E.letstar_expr(bindings, body), envt, ng, subst) {
         analyzeLetStar(bindings, body, envt, ng, subst)
     }
+    (E.construct(name, _, args), envt, ng, subst) {
+        analyzeConstruct(name, args, envt, ng, subst)
+    }
     (E.make_tuple(exprs), envt, ng, subst) {
         bind(analyzeArgs(exprs, envt, ng, subst), fn (#(partTypes, subst1)) {
             #(tupleType(partTypes), subst1)
         })
+    }
+    (E.make_vec(_, _), _, _, _) {
+        error("infer_expr: make_vec is unsupported before desugaring")
     }
     (E.primapp(name, left, right), envt, ng, subst) {
         analyzePrimitive(name, left, right, envt, ng, subst)
