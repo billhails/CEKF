@@ -38,6 +38,19 @@ typedef typename(#generic) { constructor1(types) | constructor2 }
 - Named fields: `constructor{ fieldName: type }`
 - Typedefs at `namespace` level are global; typedefs inside `let` blocks are scoped to that block
 
+#### Shorthand typedef forms
+
+When a typedef has exactly one constructor that shares the typedef's name, the body can be omitted:
+
+| Shorthand | Equivalent full form |
+|-----------|----------------------|
+| `typedef t;` | `typedef t { t }` |
+| `typedef t(#a);` | `typedef t(#a) { t(#a) }` |
+| `typedef t(char);` | `typedef t { t(char) }` |
+| `typedef t(#a, char);` | `typedef t(#a) { t(#a, char) }` |
+
+The rewrite rule: generic type variables (`#name`) appearing in the argument list are lifted to the typedef head in first-appearance order; non-generic types remain only in the synthesised constructor. Duplicate generic variables in the arg list (`typedef t(#a, #a);`) contribute only one entry on the head.
+
 ### Namespaces
 
 Files start with `namespace` keyword (like `let` without `in` - mutually recursive declarations).

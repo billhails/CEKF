@@ -191,7 +191,6 @@ static AstTypeFunction *typeFunction(PrattParser *);
 static AstTypeList *typeList(PrattParser *);
 static AstTypeList *typeTuple(PrattParser *);
 static AstTypeMap *typeMap(PrattParser *);
-static AstTypeSymbols *typeVariables(PrattParser *);
 static AstType *typeType(PrattParser *);
 static HashSymbol *symbol(PrattParser *);
 static HashSymbol *typeVariable(PrattParser *);
@@ -4614,7 +4613,110 @@ static AstDefinition *multiDefinition(PrattParser *parser) {
 }
 
 /**
+ * @brief Returns true if `type` is a plain type variable with no arrow
+ * continuation (i.e. a bare `#name`).
+ */
+static bool isSimpleTypeVar(AstType *type) {
+    return type->next == NULL &&
+           type->typeClause->type == AST_TYPECLAUSE_TYPE_VAR;
+}
+
+/**
+ * @brief Converts an AstTypeList to AstTypeSymbols for an explicit typedef
+ * head, validating that every entry is a plain type variable.
+ * Emits a parser error for any non-variable entry and substitutes a
+ * wildcard so that parsing can continue.
+ */
+static AstTypeSymbols *typeListToHeadSymbols(PrattParser *parser,
+                                             AstTypeList *list, ParserInfo pi) {
+    if (list == NULL)
+        return NULL;
+    AstType *type = list->type;
+    if (!isSimpleTypeVar(type)) {
+        parserErrorAt(pi, parser,
+                      "typedef head can only contain type variables (#name)");
+    }
+    HashSymbol *typeVar =
+        isSimpleTypeVar(type) ? type->typeClause->val.var : TOK_WILDCARD();
+    AstTypeSymbols *rest = typeListToHeadSymbols(parser, list->next, pi);
+    int save = PROTECT(rest);
+    AstTypeSymbols *result = newAstTypeSymbols(pi, typeVar, rest);
+    UNPROTECT(save);
+    return result;
+}
+
+/**
+ * @brief Collects distinct type-variable (#var) entries from an AstTypeList
+ * in first-appearance order and returns them as an AstTypeSymbols list.
+ * Non-variable entries are silently skipped; they remain only in the
+ * synthesised constructor's argument list.
+ */
+static AstTypeSymbols *liftGenericVarsFromTypeList(AstTypeList *list,
+                                                   ParserInfo pi) {
+    HashSymbol *vars[64];
+    int count = 0;
+    for (AstTypeList *cur = list; cur != NULL; cur = cur->next) {
+        AstType *type = cur->type;
+        if (isSimpleTypeVar(type)) {
+            HashSymbol *sym = type->typeClause->val.var;
+            bool seen = false;
+            for (int i = 0; i < count; i++) {
+                if (vars[i] == sym) {
+                    seen = true;
+                    break;
+                }
+            }
+            if (!seen && count < 64) {
+                vars[count++] = sym;
+            }
+        }
+    }
+    AstTypeSymbols *result = NULL;
+    for (int i = count - 1; i >= 0; i--) {
+        int save = PROTECT(result);
+        result = newAstTypeSymbols(pi, vars[i], result);
+        UNPROTECT(save);
+    }
+    return result;
+}
+
+/**
+ * @brief Synthesises a single-constructor AstTypeBody for the shorthand
+ * typedef forms.  The constructor shares the typedef's name.  When args is
+ * non-NULL it becomes the constructor's argument list; otherwise the
+ * constructor is zero-argument.
+ */
+static AstTypeBody *synthesizeShorthandTypeBody(ParserInfo pi, HashSymbol *name,
+                                                AstTypeList *args) {
+    int save = STARTPROTECT();
+    AstTypeConstructorArgs *ctorArgs = NULL;
+    if (args != NULL) {
+        ctorArgs = newAstTypeConstructorArgs_List(pi, args);
+        PROTECT(ctorArgs);
+    }
+    AstTypeConstructor *ctor = newAstTypeConstructor(pi, name, ctorArgs);
+    PROTECT(ctor);
+    AstTypeBody *body = newAstTypeBody(pi, ctor, NULL);
+    UNPROTECT(save);
+    return body;
+}
+
+/**
  * @brief parses a typedef
+ *
+ * Accepts both the full explicit form and three shorthand forms:
+ *
+ *   typedef name;
+ *     => typedef name { name }
+ *
+ *   typedef name(types...);
+ *     => lift distinct #vars to head; synthesise single constructor
+ *        e.g. typedef box(#t);    => typedef box(#t) { box(#t) }
+ *             typedef w(char);    => typedef w { w(char) }
+ *             typedef m(#a,char); => typedef m(#a) { m(#a, char) }
+ *
+ *   typedef name(types...) { body }
+ *     => explicit form; types must all be plain type variables
  */
 static AstDefinition *typeDefinition(PrattParser *parser) {
     ENTER(typeDefinition);
@@ -4622,21 +4724,49 @@ static AstDefinition *typeDefinition(PrattParser *parser) {
     int save = PROTECT(tok);
     HashSymbol *s = symbol(parser);
     AstTypeSig *typeSig = NULL;
+    AstTypeBody *type_body = NULL;
     if (check(parser, TOK_OPEN())) {
         next(parser);
         validateLastAlloc();
-        AstTypeSymbols *variables = typeVariables(parser);
-        PROTECT(variables);
+        AstTypeList *arg_list = typeList(parser);
+        PROTECT(arg_list);
         consume(parser, TOK_CLOSE());
-        typeSig = newAstTypeSig(TOKPI(tok), s, variables);
+        if (check(parser, TOK_LCURLY())) {
+            // Explicit typedef with body: all args must be type variables.
+            AstTypeSymbols *variables =
+                typeListToHeadSymbols(parser, arg_list, TOKPI(tok));
+            PROTECT(variables);
+            typeSig = newAstTypeSig(TOKPI(tok), s, variables);
+            PROTECT(typeSig);
+            consume(parser, TOK_LCURLY());
+            type_body = typeBody(parser);
+            PROTECT(type_body);
+            consume(parser, TOK_RCURLY());
+        } else {
+            // Shorthand: typedef name(types...);
+            AstTypeSymbols *variables =
+                liftGenericVarsFromTypeList(arg_list, TOKPI(tok));
+            PROTECT(variables);
+            typeSig = newAstTypeSig(TOKPI(tok), s, variables);
+            PROTECT(typeSig);
+            type_body = synthesizeShorthandTypeBody(CPI(typeSig), s, arg_list);
+            PROTECT(type_body);
+        }
     } else {
         typeSig = newAstTypeSig(TOKPI(tok), s, NULL);
+        PROTECT(typeSig);
+        if (check(parser, TOK_LCURLY())) {
+            // Explicit typedef with no type parameters.
+            consume(parser, TOK_LCURLY());
+            type_body = typeBody(parser);
+            PROTECT(type_body);
+            consume(parser, TOK_RCURLY());
+        } else {
+            // Shorthand: typedef name;
+            type_body = synthesizeShorthandTypeBody(CPI(typeSig), s, NULL);
+            PROTECT(type_body);
+        }
     }
-    PROTECT(typeSig);
-    consume(parser, TOK_LCURLY());
-    AstTypeBody *type_body = typeBody(parser);
-    PROTECT(type_body);
-    consume(parser, TOK_RCURLY());
     AstDefinition *res =
         makeAstDefinition_TypeDef(CPI(typeSig), typeSig, type_body);
     LEAVE(typeDefinition);
@@ -4690,34 +4820,6 @@ static AstTypeConstructor *typeConstructor(PrattParser *parser) {
     LEAVE(typeConstructor);
     UNPROTECT(save);
     return res;
-}
-
-/**
- * @brief parses the type variable arguments to the type signature of a
- * typedef
- */
-static AstTypeSymbols *typeVariables(PrattParser *parser) {
-    ENTER(typeVariables);
-    PrattToken *tok = peek(parser);
-    int save = PROTECT(tok);
-    HashSymbol *s = typeVariable(parser);
-    AstTypeSymbols *t = NULL;
-    if (check(parser, TOK_CLOSE())) {
-        t = newAstTypeSymbols(TOKPI(tok), s, NULL);
-    } else {
-        consume(parser, TOK_COMMA());
-        // Allow trailing comma: only continue if not at closing paren
-        if (!check(parser, TOK_CLOSE())) {
-            AstTypeSymbols *rest = typeVariables(parser);
-            PROTECT(rest);
-            t = newAstTypeSymbols(TOKPI(tok), s, rest);
-        } else {
-            t = newAstTypeSymbols(TOKPI(tok), s, NULL);
-        }
-    }
-    LEAVE(typeVariables);
-    UNPROTECT(save);
-    return t;
 }
 
 /**

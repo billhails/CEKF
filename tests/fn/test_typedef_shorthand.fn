@@ -1,0 +1,143 @@
+// Typedef shorthand forms
+// typedef t;             => typedef t { t }
+// typedef t(types...);   => lift #vars to head, single constructor with full arg list
+//   e.g. typedef box(#t);     => typedef box(#t) { box(#t) }
+//        typedef w(char);     => typedef w { w(char) }
+//        typedef m(#a, char); => typedef m(#a) { m(#a, char) }
+
+let
+    // bare shorthand: typedef colour; => typedef colour { colour }
+    fn test_bare_shorthand() {
+        let
+            typedef tag
+            x = tag
+        in
+            switch (x) {
+                (tag) { true }
+            }
+    }
+
+    // all-generic shorthand: typedef box(#t); => typedef box(#t) { box(#t) }
+    fn test_generic_shorthand() {
+        let
+            typedef box(#t)
+            int_box = box(42);
+            str_box = box("hello")
+        in {
+            assert(switch (int_box) { (box(v)) { v } } == 42);
+            assert(switch (str_box) { (box(v)) { v } } == "hello");
+            true
+        }
+    }
+
+    // concrete-type shorthand: typedef wrapper(char); => typedef wrapper { wrapper(char) }
+    fn test_concrete_shorthand() {
+        let
+            typedef wrapped(char)
+            w = wrapped('z')
+        in
+            switch (w) {
+                (wrapped(c)) {
+                    assert(c == 'z');
+                    true
+                }
+            }
+    }
+
+    // number-type shorthand
+    fn test_number_shorthand() {
+        let
+            typedef counted(number)
+            c = counted(99)
+        in
+            switch (c) {
+                (counted(n)) {
+                    assert(n == 99);
+                    true
+                }
+            }
+    }
+
+    // mixed shorthand: typedef pair(#a, char); => typedef pair(#a) { pair(#a, char) }
+    fn test_mixed_shorthand() {
+        let
+            typedef tagged(#a, char)
+            t = tagged(42, 'x')
+        in
+            switch (t) {
+                (tagged(n, c)) {
+                    assert(n == 42);
+                    assert(c == 'x');
+                    true
+                }
+            }
+    }
+
+    // two generic params shorthand: typedef pair(#a, #b); => typedef pair(#a, #b) { pair(#a, #b) }
+    fn test_two_param_shorthand() {
+        let
+            typedef kv(#k, #v)
+            p = kv("name", 42)
+        in
+            switch (p) {
+                (kv(k, v)) {
+                    assert(k == "name");
+                    assert(v == 42);
+                    true
+                }
+            }
+    }
+
+    // duplicate generic var: typedef dup(#a, #a); => typedef dup(#a) { dup(#a, #a) }
+    fn test_duplicate_var_shorthand() {
+        let
+            typedef dup(#a, #a)
+            d = dup(7, 7)
+        in
+            switch (d) {
+                (dup(x, y)) {
+                    assert(x == y);
+                    true
+                }
+            }
+    }
+
+    // no-trailing-semicolon shorthand (same as test_parser_semi_3 style)
+    fn test_shorthand_no_semicolon() {
+        let
+            typedef token(#t)
+            x = token(true)
+        in
+            switch (x) {
+                (token(b)) { b }
+            }
+    }
+
+    // shorthand inside a nested let block
+    fn test_shorthand_nested() {
+        let
+            outer = true
+        in {
+            let
+                typedef inner(char)
+                v = inner('q')
+            in
+                switch (v) {
+                    (inner(c)) {
+                        assert(c == 'q');
+                        true
+                    }
+                }
+        }
+    }
+
+in
+    test_bare_shorthand();
+    test_generic_shorthand();
+    test_concrete_shorthand();
+    test_number_shorthand();
+    test_mixed_shorthand();
+    test_two_param_shorthand();
+    test_duplicate_var_shorthand();
+    test_shorthand_no_semicolon();
+    test_shorthand_nested()
