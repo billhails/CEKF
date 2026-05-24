@@ -62,6 +62,7 @@ static void registerGfxLoadTexture(BuiltIns *registry);
 static void registerGfxUnloadTexture(BuiltIns *registry);
 static void registerGfxDrawTexture(BuiltIns *registry);
 static void registerGfxDrawTextureRec(BuiltIns *registry);
+static void registerGfxDrawTexturePro(BuiltIns *registry);
 static void registerGfxTextureWidth(BuiltIns *registry);
 static void registerGfxTextureHeight(BuiltIns *registry);
 
@@ -97,6 +98,7 @@ void registerGraphics(BuiltIns *registry) {
     registerGfxUnloadTexture(registry);
     registerGfxDrawTexture(registry);
     registerGfxDrawTextureRec(registry);
+    registerGfxDrawTexturePro(registry);
     registerGfxTextureWidth(registry);
     registerGfxTextureHeight(registry);
 }
@@ -210,6 +212,27 @@ static int valueAsInt(Value v) {
         }
     }
     return (int)getValue_Stdint(
+        v); // aborts with a clear message for other types
+}
+
+// Accept STDINT, rational, or irrational as a float (e.g. rotation degrees,
+// pivot coordinates). Rationals are converted to their exact float quotient;
+// irrationals are cast directly.
+static float valueAsFloat(Value v) {
+    if (v.type == VALUE_TYPE_STDINT)
+        return (float)getValue_Stdint(v);
+    if (v.type == VALUE_TYPE_IRRATIONAL)
+        return (float)getValue_Irrational(v);
+    if (v.type == VALUE_TYPE_RATIONAL) {
+        Vec *r = getValue_Rational(v);
+        if (r->entries[0].type == VALUE_TYPE_STDINT &&
+            r->entries[1].type == VALUE_TYPE_STDINT) {
+            float num = (float)getValue_Stdint(r->entries[0]);
+            float den = (float)getValue_Stdint(r->entries[1]);
+            return den != 0.0f ? num / den : 0.0f;
+        }
+    }
+    return (float)getValue_Stdint(
         v); // aborts with a clear message for other types
 }
 
@@ -428,9 +451,9 @@ Value builtin_gfx_draw_text(Vec *args) {
     }
     SCharVec *text = listToUtf8(args->entries[0]);
     int save = PROTECT(text);
-    int x = (int)getValue_Stdint(args->entries[1]);
-    int y = (int)getValue_Stdint(args->entries[2]);
-    int sz = (int)getValue_Stdint(args->entries[3]);
+    int x = valueAsInt(args->entries[1]);
+    int y = valueAsInt(args->entries[2]);
+    int sz = valueAsInt(args->entries[3]);
     int r = extractChannel(args->entries[4]);
     int g = extractChannel(args->entries[5]);
     int b = extractChannel(args->entries[6]);
@@ -727,10 +750,10 @@ Value builtin_gfx_draw_text_font(Vec *args) {
     Font *f = (Font *)wrapper->data;
     SCharVec *buf = listToUtf8(args->entries[1]);
     int save = PROTECT(buf);
-    int x = (int)getValue_Stdint(args->entries[2]);
-    int y = (int)getValue_Stdint(args->entries[3]);
-    int size = (int)getValue_Stdint(args->entries[4]);
-    int spacing = (int)getValue_Stdint(args->entries[5]);
+    int x = valueAsInt(args->entries[2]);
+    int y = valueAsInt(args->entries[3]);
+    int size = valueAsInt(args->entries[4]);
+    int spacing = valueAsInt(args->entries[5]);
     int r = extractChannel(args->entries[6]);
     int g = extractChannel(args->entries[7]);
     int b = extractChannel(args->entries[8]);
@@ -761,8 +784,8 @@ Value builtin_gfx_measure_text_width(Vec *args) {
     Font *f = (Font *)wrapper->data;
     SCharVec *buf = listToUtf8(args->entries[1]);
     int save = PROTECT(buf);
-    int size = (int)getValue_Stdint(args->entries[2]);
-    int spacing = (int)getValue_Stdint(args->entries[3]);
+    int size = valueAsInt(args->entries[2]);
+    int spacing = valueAsInt(args->entries[3]);
     if (size <= 0) {
         UNPROTECT(save);
         return failMsg("gfx_measure_text_width: size must be positive");
@@ -882,6 +905,51 @@ Value builtin_gfx_draw_texture_rec(Vec *args) {
     Color tint = {(unsigned char)r, (unsigned char)g, (unsigned char)b,
                   (unsigned char)a};
     DrawTextureRec(*t, src, dst, tint);
+    return value_Stdint(1);
+#endif
+}
+
+Value builtin_gfx_draw_texture_pro(Vec *args) {
+#ifndef ENABLE_RAYLIB
+    (void)args;
+    return value_Stdint(0);
+#else
+    if (!gfx_state.in_frame)
+        return value_Stdint(0);
+    if (args->entries[0].type != VALUE_TYPE_OPAQUE)
+        return value_Stdint(0);
+    Opaque *wrapper = args->entries[0].val.opaque;
+    if (wrapper->data == NULL)
+        return value_Stdint(0);
+    Texture2D *t = (Texture2D *)wrapper->data;
+    // source rect: src_x, src_y, src_w, src_h
+    float src_x = valueAsFloat(args->entries[1]);
+    float src_y = valueAsFloat(args->entries[2]);
+    float src_w = valueAsFloat(args->entries[3]);
+    float src_h = valueAsFloat(args->entries[4]);
+    // destination rect: dst_x, dst_y, dst_w, dst_h
+    float dst_x = valueAsFloat(args->entries[5]);
+    float dst_y = valueAsFloat(args->entries[6]);
+    float dst_w = valueAsFloat(args->entries[7]);
+    float dst_h = valueAsFloat(args->entries[8]);
+    // origin pivot: ox, oy
+    float ox = valueAsFloat(args->entries[9]);
+    float oy = valueAsFloat(args->entries[10]);
+    // rotation in degrees
+    float rotation = valueAsFloat(args->entries[11]);
+    // tint: r, g, b, a
+    int r = extractChannel(args->entries[12]);
+    int g = extractChannel(args->entries[13]);
+    int b = extractChannel(args->entries[14]);
+    int a = extractChannel(args->entries[15]);
+    if (src_w == 0.0f || src_h == 0.0f || r < 0 || g < 0 || b < 0 || a < 0)
+        return value_Stdint(0);
+    Rectangle src = {src_x, src_y, src_w, src_h};
+    Rectangle dst = {dst_x, dst_y, dst_w, dst_h};
+    Vector2 origin = {ox, oy};
+    Color tint = {(unsigned char)r, (unsigned char)g, (unsigned char)b,
+                  (unsigned char)a};
+    DrawTexturePro(*t, src, dst, origin, rotation, tint);
     return value_Stdint(1);
 #endif
 }
@@ -1356,6 +1424,33 @@ static void registerGfxDrawTextureRec(BuiltIns *registry) {
     pushNewBuiltIn(registry, "gfx_draw_texture_rec", ret, args,
                    (void *)builtin_gfx_draw_texture_rec,
                    "builtin_gfx_draw_texture_rec");
+    UNPROTECT(save);
+}
+
+static void registerGfxDrawTexturePro(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    pushTextureArg(args);
+    pushIntegerArg(args); // src_x
+    pushIntegerArg(args); // src_y
+    pushIntegerArg(args); // src_w
+    pushIntegerArg(args); // src_h
+    pushIntegerArg(args); // dst_x
+    pushIntegerArg(args); // dst_y
+    pushIntegerArg(args); // dst_w
+    pushIntegerArg(args); // dst_h
+    pushIntegerArg(args); // ox
+    pushIntegerArg(args); // oy
+    pushIntegerArg(args); // rotation
+    pushIntegerArg(args); // r
+    pushIntegerArg(args); // g
+    pushIntegerArg(args); // b
+    pushIntegerArg(args); // a
+    TcType *ret = makeBoolean();
+    PROTECT(ret);
+    pushNewBuiltIn(registry, "gfx_draw_texture_pro", ret, args,
+                   (void *)builtin_gfx_draw_texture_pro,
+                   "builtin_gfx_draw_texture_pro");
     UNPROTECT(save);
 }
 

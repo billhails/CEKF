@@ -1,10 +1,11 @@
-// Texture demo: loads a PNG and draws it plain and as a cropped sprite region.
+// Texture demo: loads a PNG and draws it plain, as a cropped sprite region,
+// and as a transformed (scaled/rotated/flipped) sprite via draw_sprite_pro.
 //
 // Run: ./bin/fn --include=fn fn/gfx_texture_demo.fn
 let
     link "graphics.fn" as gfx;
 
-    fn loop(tex) {
+    fn loop(tex, angle) {
         if (gfx.should_close()) { true }
         else if (gfx.key_pressed(gfx.key_escape())) { true }
         else {
@@ -13,6 +14,10 @@ let
                 h = gfx.texture_height(tex);
                 hw = w / 2;
                 hh = h / 2;
+                // second column x offset
+                col2 = w + 40;
+                // third column x offset (scaled sprite)
+                col3 = col2 + hw + 40;
             in
                 gfx.frame(gfx.rgb(30, 30, 60), fn () {
                     // draw full texture at top-left
@@ -22,7 +27,7 @@ let
                     gfx.draw_sprite(
                         tex,
                         gfx.rect(0, 0, hw, hh),
-                        gfx.point(w + 40, 20),
+                        gfx.point(col2, 20),
                         gfx.white()
                     );
 
@@ -30,22 +35,53 @@ let
                     gfx.draw_sprite(
                         tex,
                         gfx.rect(hw, hh, hw, hh),
-                        gfx.point(w + 40, hh + 30),
+                        gfx.point(col2, hh + 30),
                         gfx.rgba(200, 150, 255, 255)
                     );
 
+                    // scaled draw: render the full texture scaled to 75x75 at col3
+                    gfx.draw_sprite_pro(
+                        tex,
+                        gfx.rect(0, 0, w, h),
+                        gfx.rect(col3, 20, 75, 75),
+                        gfx.point(0, 0),
+                        0,
+                        gfx.white()
+                    );
+
+                    // centered rotation: pivot at half the destination size (uses rational arithmetic)
+                    gfx.draw_sprite_pro(
+                        tex,
+                        gfx.rect(0, 0, w, h),
+                        gfx.rect(col3 + 100, 80, 60, 60),
+                        gfx.point(30, 30),
+                        angle,
+                        gfx.rgba(255, 220, 180, 255)
+                    );
+
+                    // horizontal flip: negative source width mirrors the sprite
+                    gfx.draw_sprite_pro(
+                        tex,
+                        gfx.rect(w, 0, (0 - w), h),
+                        gfx.rect(col3, 110, 75, 75),
+                        gfx.point(0, 0),
+                        0,
+                        gfx.rgba(180, 230, 255, 255)
+                    );
+
                     gfx.draw_text_at("Full texture", gfx.point(20, h + 30), 18, gfx.white());
-                    gfx.draw_text_at("Top-left quadrant", gfx.point(w + 40, h + 30), 18, gfx.white());
+                    gfx.draw_text_at("Cropped sprites", gfx.point(col2, h + 30), 18, gfx.white());
+                    gfx.draw_text_at("Transformed (pro)", gfx.point(col3, h + 30), 18, gfx.white());
                     gfx.draw_text_at("Press Esc to exit", gfx.point(20, h + 55), 16, gfx.rgb(180, 180, 180))
                 });
-            loop(tex)
+            loop(tex, angle + 1)
         }
     }
 
 in
-    gfx.with_window(800, 600, "Texture Demo", fn () {
+    gfx.with_window(1200, 800, "Texture Demo", fn () {
         assert(gfx.set_target_fps(60));
         gfx.with_texture("docs/CEKF.png", fn (tex) {
-            loop(tex)
+            loop(tex, 0)
         })
     })

@@ -275,3 +275,7 @@ fn draw_texture_at(tex, point(x, y), rgba(r, g, b, a)) {
 fn draw_sprite(tex, rect(sx, sy, sw, sh), point(dx, dy), rgba(r, g, b, a)) {
     gfx_draw_texture_rec(tex, sx, sy, sw, sh, dx, dy, r, g, b, a)
 }
+
+fn draw_sprite_pro(tex, rect(sx, sy, sw, sh), rect(dx, dy, dw, dh), point(ox, oy), rotation, rgba(r, g, b, a)) {
+    gfx_draw_texture_pro(tex, sx, sy, sw, sh, dx, dy, dw, dh, ox, oy, rotation, r, g, b, a)
+}
