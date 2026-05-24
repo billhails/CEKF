@@ -49,6 +49,12 @@ let
                 next = next_volume(volume);
                 played_ms = gfx.music_time_played_ms(music);
                 length_ms = gfx.music_time_length_ms(music);
+                seek_target = if (gfx.key_pressed(gfx.arrow_left())) { played_ms + (0 - 5000) }
+                              else if (gfx.key_pressed(gfx.arrow_right())) { played_ms + 5000 }
+                              else { 0 - 1 };
+                seek_ms = if (seek_target < 0) { 0 }
+                          else if (seek_target > length_ms) { length_ms }
+                          else { seek_target };
                 progress = gfx.music_progress_width(music, 560);
             in
                 gfx.frame(gfx.rgb(14, 20, 30), fn () {
@@ -57,7 +63,8 @@ let
                     gfx.draw_text_at("Music Demo", gfx.point(20, 20), 30, gfx.white());
                     gfx.draw_text_at("Space: play from start", gfx.point(20, 70), 22, gfx.rgb(210, 230, 255));
                     gfx.draw_text_at("P: pause   R: resume   S: stop", gfx.point(20, 102), 22, gfx.rgb(210, 230, 255));
-                    gfx.draw_text_at("Up/Down: volume", gfx.point(20, 134), 22, gfx.rgb(210, 230, 255));
+                    gfx.draw_text_at("Left/Right: seek -/+5s", gfx.point(20, 134), 22, gfx.rgb(210, 230, 255));
+                    gfx.draw_text_at("Up/Down: volume", gfx.point(20, 166), 22, gfx.rgb(210, 230, 255));
                     gfx.draw_text_at("Current volume band:", gfx.point(20, 180), 20, gfx.rgb(200, 210, 230));
                     gfx.draw_text_at(
                         if (next < 35) { "low" }
@@ -85,6 +92,9 @@ let
                     else if (gfx.key_pressed(gfx.key_p())) { gfx.pause_music(music) }
                     else if (gfx.key_pressed(gfx.key_r())) { gfx.resume_music(music) }
                     else if (gfx.key_pressed(gfx.key_s())) { gfx.stop_music(music) }
+                    else { true };
+
+                    if (seek_target != (0 - 1)) { gfx.seek_music_ms(music, seek_ms) }
                     else { true };
 
                     if (next != volume) { gfx.set_music_volume(music, next) }

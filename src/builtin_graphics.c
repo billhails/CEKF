@@ -89,6 +89,7 @@ static void registerGfxStopMusic(BuiltIns *registry);
 static void registerGfxSetMusicVolume(BuiltIns *registry);
 static void registerGfxIsMusicPlaying(BuiltIns *registry);
 static void registerGfxUpdateMusicStream(BuiltIns *registry);
+static void registerGfxSeekMusicMs(BuiltIns *registry);
 static void registerGfxMusicTimePlayedMs(BuiltIns *registry);
 static void registerGfxMusicTimeLengthMs(BuiltIns *registry);
 static void registerGfxMusicProgressWidth(BuiltIns *registry);
@@ -152,6 +153,7 @@ void registerGraphics(BuiltIns *registry) {
     registerGfxSetMusicVolume(registry);
     registerGfxIsMusicPlaying(registry);
     registerGfxUpdateMusicStream(registry);
+    registerGfxSeekMusicMs(registry);
     registerGfxMusicTimePlayedMs(registry);
     registerGfxMusicTimeLengthMs(registry);
     registerGfxMusicProgressWidth(registry);
@@ -1714,6 +1716,27 @@ Value builtin_gfx_update_music_stream(Vec *args) {
 #endif
 }
 
+Value builtin_gfx_seek_music_ms(Vec *args) {
+#ifndef ENABLE_RAYLIB
+    (void)args;
+    return value_Stdint(0);
+#else
+    if (!gfx_state.audio_initialized)
+        return value_Stdint(0);
+    if (args->entries[0].type != VALUE_TYPE_OPAQUE)
+        return value_Stdint(0);
+    Opaque *wrapper = args->entries[0].val.opaque;
+    if (wrapper->data == NULL)
+        return value_Stdint(0);
+    int ms = valueAsInt(args->entries[1]);
+    if (ms < 0)
+        return value_Stdint(0);
+    Music *music = (Music *)wrapper->data;
+    SeekMusicStream(*music, (float)ms / 1000.0f);
+    return value_Stdint(1);
+#endif
+}
+
 Value builtin_gfx_music_time_played_ms(Vec *args) {
 #ifndef ENABLE_RAYLIB
     (void)args;
@@ -2577,6 +2600,19 @@ static void registerGfxUpdateMusicStream(BuiltIns *registry) {
     pushNewBuiltIn(registry, "gfx_update_music_stream", ret, args,
                    (void *)builtin_gfx_update_music_stream,
                    "builtin_gfx_update_music_stream");
+    UNPROTECT(save);
+}
+
+static void registerGfxSeekMusicMs(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    pushMusicArg(args);
+    pushIntegerArg(args); // position_ms
+    TcType *ret = makeBoolean();
+    PROTECT(ret);
+    pushNewBuiltIn(registry, "gfx_seek_music_ms", ret, args,
+                   (void *)builtin_gfx_seek_music_ms,
+                   "builtin_gfx_seek_music_ms");
     UNPROTECT(save);
 }
 

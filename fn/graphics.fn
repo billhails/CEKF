@@ -433,6 +433,10 @@ fn is_music_playing(music) { gfx_is_music_playing(music) }
 
 fn update_music_stream(music) { gfx_update_music_stream(music) }
 
+fn seek_music_ms(music, position_ms) {
+    gfx_seek_music_ms(music, position_ms)
+}
+
 fn music_time_played_ms(music) { gfx_music_time_played_ms(music) }
 
 fn music_time_length_ms(music) { gfx_music_time_length_ms(music) }
