@@ -1,0 +1,73 @@
+// Render texture demo: render off-screen, then composite onto main frame.
+//
+// Run: ./bin/fn --include=fn fn/gfx_render_texture_demo.fn
+let
+    link "graphics.fn" as gfx;
+
+    fn loop(tex, rt, angle, offset) {
+        if (gfx.should_close()) { true }
+        else if (gfx.key_pressed(gfx.key_escape())) { true }
+        else {
+            let
+              // Keep a base rotation and make left/right very obvious.
+              turn = if (gfx.key_held(gfx.arrow_left())) { 0 - 10 }
+                  else if (gfx.key_held(gfx.arrow_right())) { 14 }
+                  else { 2 };
+                step = if (gfx.key_held(gfx.arrow_left())) { 0 - 6 }
+                       else if (gfx.key_held(gfx.arrow_right())) { 6 }
+                       else { 0 };
+                nextAngle = angle + turn;
+                nextOffset = offset + step;
+            in
+            {
+                // First pass: draw into off-screen render texture.
+                gfx.render_to_texture(rt, gfx.rgba(0, 0, 0, 0), fn () {
+                    let
+                        w = gfx.texture_width(tex);
+                        h = gfx.texture_height(tex);
+                        size = 180;
+                        half = size / 2;
+                        cx = 200;
+                        cy = 150;
+                    in
+                        gfx.draw_sprite_pro(
+                            tex,
+                            gfx.rect(0, 0, w, h),
+                            gfx.rect(cx - half, cy - half, size, size),
+                            gfx.point(half, half),
+                            nextAngle,
+                            gfx.white()
+                        );
+                        gfx.draw_text_at("off-screen pass", gfx.point(20, 20), 24, gfx.rgb(210, 220, 255))
+                });
+
+                // Second pass: draw off-screen result to screen with different tints.
+                gfx.frame(gfx.rgb(20, 26, 44), fn () {
+                    gfx.draw_text_at("Render Texture Demo", gfx.point(20, 20), 28, gfx.white());
+                    gfx.draw_text_at("Hold Left/Right to rotate + pan", gfx.point(20, 56), 20, gfx.rgb(200, 200, 220));
+                    gfx.draw_text_at(
+                        if (turn < 0) { "spin step: reverse (left)" }
+                        else if (turn > 2) { "spin step: fast forward (right)" }
+                        else { "spin step: base" },
+                        gfx.point(20, 82),
+                        18,
+                        gfx.rgb(180, 200, 220)
+                    );
+                    gfx.draw_render_texture_at(rt, gfx.point(80 + nextOffset, 110), gfx.white());
+                    gfx.draw_render_texture_at(rt, gfx.point(440 + nextOffset, 160), gfx.rgba(180, 220, 255, 220));
+                    gfx.draw_text_at("Press Esc to exit", gfx.point(20, 740), 18, gfx.rgb(170, 170, 190))
+                });
+                loop(tex, rt, nextAngle, nextOffset)
+            }
+            }
+    }
+
+in
+    gfx.with_window(1000, 800, "Render Texture Demo", fn () {
+        assert(gfx.set_target_fps(60));
+        gfx.with_texture("docs/CEKF.png", fn (tex) {
+            gfx.with_render_texture(380, 320, fn (rt) {
+                loop(tex, rt, 0, 0)
+            })
+        })
+    })

@@ -279,3 +279,45 @@ fn draw_sprite(tex, rect(sx, sy, sw, sh), point(dx, dy), rgba(r, g, b, a)) {
 fn draw_sprite_pro(tex, rect(sx, sy, sw, sh), rect(dx, dy, dw, dh), point(ox, oy), rotation, rgba(r, g, b, a)) {
     gfx_draw_texture_pro(tex, sx, sy, sw, sh, dx, dy, dw, dh, ox, oy, rotation, r, g, b, a)
 }
+
+fn load_render_texture(width, height) {
+    gfx_load_render_texture(width, height)
+}
+
+fn unload_render_texture(rt) { gfx_unload_render_texture(rt) }
+
+fn with_render_texture(width, height, handler) {
+    switch (gfx_load_render_texture(width, height)) {
+        (success(rt)) {
+            let result = just(handler(rt));
+            in
+                gfx_unload_render_texture(rt);
+                result
+        }
+        (failure(msg)) {
+            puts("render texture error: ");
+            puts(msg);
+            putc('\n');
+            nothing
+        }
+    }
+}
+
+fn render_to_texture(rt, background, draw_fn) {
+    assert(gfx_begin_texture_mode(rt));
+    clear(background);
+    {
+    let result = draw_fn();
+    in
+        assert(gfx_end_texture_mode());
+        result
+    }
+}
+
+fn draw_render_texture(rt, x, y, rgba(r, g, b, a)) {
+    gfx_draw_render_texture(rt, x, y, r, g, b, a)
+}
+
+fn draw_render_texture_at(rt, point(x, y), rgba(r, g, b, a)) {
+    gfx_draw_render_texture(rt, x, y, r, g, b, a)
+}
