@@ -364,3 +364,53 @@ fn with_camera2d(point(target_x, target_y), point(offset_x, offset_y), rotation,
         result
     }
 }
+
+fn audio_open() { gfx_audio_open() }
+
+fn audio_close() { gfx_audio_close() }
+
+fn with_audio(handler) {
+    if (gfx_audio_open()) {
+        let result = just(handler());
+        in
+            gfx_audio_close();
+            result
+    } else {
+        puts("audio error: failed to open audio device");
+        putc('\n');
+        nothing
+    }
+}
+
+fn load_sound(path) {
+    gfx_load_sound(path)
+}
+
+fn unload_sound(sound) { gfx_unload_sound(sound) }
+
+fn play_sound(sound) { gfx_play_sound(sound) }
+
+fn stop_sound(sound) { gfx_stop_sound(sound) }
+
+fn is_sound_playing(sound) { gfx_is_sound_playing(sound) }
+
+fn set_sound_volume(sound, percent) {
+    gfx_set_sound_volume(sound, percent)
+}
+
+fn with_sound(path, handler) {
+    switch (gfx_load_sound(path)) {
+        (success(sound)) {
+            let result = just(handler(sound));
+            in
+                gfx_unload_sound(sound);
+                result
+        }
+        (failure(msg)) {
+            puts("sound load error: ");
+            puts(msg);
+            putc('\n');
+            nothing
+        }
+    }
+}

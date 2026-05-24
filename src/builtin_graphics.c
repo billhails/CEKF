@@ -72,6 +72,14 @@ static void registerGfxEndTextureMode(BuiltIns *registry);
 static void registerGfxDrawRenderTexture(BuiltIns *registry);
 static void registerGfxBeginMode2D(BuiltIns *registry);
 static void registerGfxEndMode2D(BuiltIns *registry);
+static void registerGfxAudioOpen(BuiltIns *registry);
+static void registerGfxAudioClose(BuiltIns *registry);
+static void registerGfxLoadSound(BuiltIns *registry);
+static void registerGfxUnloadSound(BuiltIns *registry);
+static void registerGfxPlaySound(BuiltIns *registry);
+static void registerGfxStopSound(BuiltIns *registry);
+static void registerGfxSetSoundVolume(BuiltIns *registry);
+static void registerGfxIsSoundPlaying(BuiltIns *registry);
 
 void registerGraphics(BuiltIns *registry) {
     registerGfxOpen(registry);
@@ -115,6 +123,14 @@ void registerGraphics(BuiltIns *registry) {
     registerGfxDrawRenderTexture(registry);
     registerGfxBeginMode2D(registry);
     registerGfxEndMode2D(registry);
+    registerGfxAudioOpen(registry);
+    registerGfxAudioClose(registry);
+    registerGfxLoadSound(registry);
+    registerGfxUnloadSound(registry);
+    registerGfxPlaySound(registry);
+    registerGfxStopSound(registry);
+    registerGfxSetSoundVolume(registry);
+    registerGfxIsSoundPlaying(registry);
 }
 
 typedef struct FontNode {
@@ -138,6 +154,13 @@ typedef struct RenderTextureNode {
 
 static RenderTextureNode *renderTextureRegistry = NULL;
 
+typedef struct SoundNode {
+    Opaque *wrapper;
+    struct SoundNode *next;
+} SoundNode;
+
+static SoundNode *soundRegistry = NULL;
+
 static HashSymbol *fontSymbol(void) { return newSymbol("font"); }
 
 static TcType *makeFontType(void) { return newTcType_Opaque(fontSymbol()); }
@@ -158,6 +181,18 @@ static TcType *makeTextureType(void) {
 
 static TcType *pushTextureArg(BuiltInArgs *args) {
     TcType *t = makeTextureType();
+    int save = PROTECT(t);
+    pushBuiltInArgs(args, t);
+    UNPROTECT(save);
+    return t;
+}
+
+static HashSymbol *soundSymbol(void) { return newSymbol("sound"); }
+
+static TcType *makeSoundType(void) { return newTcType_Opaque(soundSymbol()); }
+
+static TcType *pushSoundArg(BuiltInArgs *args) {
+    TcType *t = makeSoundType();
     int save = PROTECT(t);
     pushBuiltInArgs(args, t);
     UNPROTECT(save);
@@ -190,6 +225,19 @@ static void textureRegistryRemove(Opaque *wrapper) {
         prev = &(*prev)->next;
     }
 }
+
+static void soundRegistryRemove(Opaque *wrapper) {
+    SoundNode **prev = &soundRegistry;
+    while (*prev != NULL) {
+        if ((*prev)->wrapper == wrapper) {
+            SoundNode *dead = *prev;
+            *prev = dead->next;
+            FREE_ARRAY(SoundNode, dead, 1);
+            return;
+        }
+        prev = &(*prev)->next;
+    }
+}
 #endif
 
 void markGraphicsGlobals(void) {
@@ -208,6 +256,11 @@ void markGraphicsGlobals(void) {
         markOpaque(rtnode->wrapper);
         rtnode = rtnode->next;
     }
+    SoundNode *snode = soundRegistry;
+    while (snode != NULL) {
+        markOpaque(snode->wrapper);
+        snode = snode->next;
+    }
 }
 
 #ifdef ENABLE_RAYLIB
@@ -216,7 +269,8 @@ static struct {
     bool in_frame;
     bool in_texture_mode;
     bool in_camera_mode;
-} gfx_state = {false, false, false, false};
+    bool audio_initialized;
+} gfx_state = {false, false, false, false, false};
 
 static bool canDrawTarget(void) {
     return gfx_state.in_frame || gfx_state.in_texture_mode;
@@ -346,6 +400,28 @@ static void renderTextureRegistryDrain(void) {
     }
     renderTextureRegistry = NULL;
 }
+
+static void opaque_gfx_sound_unload(void *data) {
+    if (data == NULL)
+        return;
+    Sound *snd = (Sound *)data;
+    UnloadSound(*snd);
+    FREE_ARRAY(Sound, snd, 1);
+}
+
+static void soundRegistryDrain(void) {
+    SoundNode *node = soundRegistry;
+    while (node != NULL) {
+        SoundNode *next = node->next;
+        if (node->wrapper->data != NULL) {
+            opaque_gfx_sound_unload(node->wrapper->data);
+            node->wrapper->data = NULL;
+        }
+        FREE_ARRAY(SoundNode, node, 1);
+        node = next;
+    }
+    soundRegistry = NULL;
+}
 #endif
 
 static Value failMsg(const char *text) {
@@ -390,26 +466,33 @@ Value builtin_gfx_close(Vec *args) {
 #ifndef ENABLE_RAYLIB
     return value_Stdint(0);
 #else
-    if (!gfx_state.initialized) {
+    if (!gfx_state.initialized && !gfx_state.audio_initialized) {
         return value_Stdint(0);
     }
-    if (gfx_state.in_camera_mode) {
-        EndMode2D();
-        gfx_state.in_camera_mode = false;
+    if (gfx_state.initialized) {
+        if (gfx_state.in_camera_mode) {
+            EndMode2D();
+            gfx_state.in_camera_mode = false;
+        }
+        if (gfx_state.in_frame) {
+            EndDrawing();
+            gfx_state.in_frame = false;
+        }
+        if (gfx_state.in_texture_mode) {
+            EndTextureMode();
+            gfx_state.in_texture_mode = false;
+        }
+        renderTextureRegistryDrain();
+        textureRegistryDrain();
+        fontRegistryDrain();
+        CloseWindow();
+        gfx_state.initialized = false;
     }
-    if (gfx_state.in_frame) {
-        EndDrawing();
-        gfx_state.in_frame = false;
+    if (gfx_state.audio_initialized) {
+        soundRegistryDrain();
+        CloseAudioDevice();
+        gfx_state.audio_initialized = false;
     }
-    if (gfx_state.in_texture_mode) {
-        EndTextureMode();
-        gfx_state.in_texture_mode = false;
-    }
-    renderTextureRegistryDrain();
-    textureRegistryDrain();
-    fontRegistryDrain();
-    CloseWindow();
-    gfx_state.initialized = false;
     return value_Stdint(1);
 #endif
 }
@@ -1230,6 +1313,152 @@ Value builtin_gfx_end_mode_2d(Vec *args) {
 #endif
 }
 
+Value builtin_gfx_audio_open(Vec *args) {
+    (void)args;
+#ifndef ENABLE_RAYLIB
+    return value_Stdint(0);
+#else
+    if (gfx_state.audio_initialized)
+        return value_Stdint(0);
+    InitAudioDevice();
+    if (!IsAudioDeviceReady())
+        return value_Stdint(0);
+    gfx_state.audio_initialized = true;
+    return value_Stdint(1);
+#endif
+}
+
+Value builtin_gfx_audio_close(Vec *args) {
+    (void)args;
+#ifndef ENABLE_RAYLIB
+    return value_Stdint(0);
+#else
+    if (!gfx_state.audio_initialized)
+        return value_Stdint(0);
+    soundRegistryDrain();
+    CloseAudioDevice();
+    gfx_state.audio_initialized = false;
+    return value_Stdint(1);
+#endif
+}
+
+Value builtin_gfx_load_sound(Vec *args) {
+#ifndef ENABLE_RAYLIB
+    (void)args;
+    return failMsg("graphics not available (built without ENABLE_RAYLIB)");
+#else
+    if (!gfx_state.audio_initialized)
+        return failMsg("gfx_load_sound: audio device not open");
+    SCharVec *path = listToUtf8(args->entries[0]);
+    int save = PROTECT(path);
+    Sound loaded = LoadSound(path->entries);
+    UNPROTECT(save);
+    if (loaded.frameCount == 0) {
+        return failMsg("gfx_load_sound: failed to load sound");
+    }
+    Sound *snd = NEW_ARRAY(Sound, 1);
+    *snd = loaded;
+    Opaque *wrapper = newOpaque(snd, opaque_gfx_sound_unload, NULL, NULL);
+    int wSave = PROTECT(wrapper);
+    SoundNode *node = NEW_ARRAY(SoundNode, 1);
+    node->wrapper = wrapper;
+    node->next = soundRegistry;
+    soundRegistry = node;
+    Value result = makeTryResult(1, value_Opaque(wrapper));
+    UNPROTECT(wSave);
+    return result;
+#endif
+}
+
+Value builtin_gfx_unload_sound(Vec *args) {
+#ifndef ENABLE_RAYLIB
+    (void)args;
+    return value_Stdint(0);
+#else
+    if (args->entries[0].type != VALUE_TYPE_OPAQUE)
+        return value_Stdint(0);
+    Opaque *wrapper = args->entries[0].val.opaque;
+    soundRegistryRemove(wrapper);
+    opaque_gfx_sound_unload(wrapper->data);
+    wrapper->data = NULL;
+    return value_Stdint(1);
+#endif
+}
+
+Value builtin_gfx_play_sound(Vec *args) {
+#ifndef ENABLE_RAYLIB
+    (void)args;
+    return value_Stdint(0);
+#else
+    if (!gfx_state.audio_initialized)
+        return value_Stdint(0);
+    if (args->entries[0].type != VALUE_TYPE_OPAQUE)
+        return value_Stdint(0);
+    Opaque *wrapper = args->entries[0].val.opaque;
+    if (wrapper->data == NULL)
+        return value_Stdint(0);
+    Sound *snd = (Sound *)wrapper->data;
+    PlaySound(*snd);
+    return value_Stdint(1);
+#endif
+}
+
+Value builtin_gfx_stop_sound(Vec *args) {
+#ifndef ENABLE_RAYLIB
+    (void)args;
+    return value_Stdint(0);
+#else
+    if (!gfx_state.audio_initialized)
+        return value_Stdint(0);
+    if (args->entries[0].type != VALUE_TYPE_OPAQUE)
+        return value_Stdint(0);
+    Opaque *wrapper = args->entries[0].val.opaque;
+    if (wrapper->data == NULL)
+        return value_Stdint(0);
+    Sound *snd = (Sound *)wrapper->data;
+    StopSound(*snd);
+    return value_Stdint(1);
+#endif
+}
+
+Value builtin_gfx_set_sound_volume(Vec *args) {
+#ifndef ENABLE_RAYLIB
+    (void)args;
+    return value_Stdint(0);
+#else
+    if (!gfx_state.audio_initialized)
+        return value_Stdint(0);
+    if (args->entries[0].type != VALUE_TYPE_OPAQUE)
+        return value_Stdint(0);
+    Opaque *wrapper = args->entries[0].val.opaque;
+    if (wrapper->data == NULL)
+        return value_Stdint(0);
+    int percent = valueAsInt(args->entries[1]);
+    if (percent < 0 || percent > 100)
+        return value_Stdint(0);
+    Sound *snd = (Sound *)wrapper->data;
+    SetSoundVolume(*snd, (float)percent / 100.0f);
+    return value_Stdint(1);
+#endif
+}
+
+Value builtin_gfx_is_sound_playing(Vec *args) {
+#ifndef ENABLE_RAYLIB
+    (void)args;
+    return value_Stdint(0);
+#else
+    if (!gfx_state.audio_initialized)
+        return value_Stdint(0);
+    if (args->entries[0].type != VALUE_TYPE_OPAQUE)
+        return value_Stdint(0);
+    Opaque *wrapper = args->entries[0].val.opaque;
+    if (wrapper->data == NULL)
+        return value_Stdint(0);
+    Sound *snd = (Sound *)wrapper->data;
+    return value_Stdint(IsSoundPlaying(*snd) ? 1 : 0);
+#endif
+}
+
 // registration helpers
 
 static void registerGfxOpen(BuiltIns *registry) {
@@ -1818,5 +2047,99 @@ static void registerGfxEndMode2D(BuiltIns *registry) {
     PROTECT(ret);
     pushNewBuiltIn(registry, "gfx_end_mode_2d", ret, args,
                    (void *)builtin_gfx_end_mode_2d, "builtin_gfx_end_mode_2d");
+    UNPROTECT(save);
+}
+
+static void registerGfxAudioOpen(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    TcType *ret = makeBoolean();
+    PROTECT(ret);
+    pushNewBuiltIn(registry, "gfx_audio_open", ret, args,
+                   (void *)builtin_gfx_audio_open, "builtin_gfx_audio_open");
+    UNPROTECT(save);
+}
+
+static void registerGfxAudioClose(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    TcType *ret = makeBoolean();
+    PROTECT(ret);
+    pushNewBuiltIn(registry, "gfx_audio_close", ret, args,
+                   (void *)builtin_gfx_audio_close, "builtin_gfx_audio_close");
+    UNPROTECT(save);
+}
+
+static void registerGfxLoadSound(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    pushStringArg(args);
+    TcType *errType = makeStringType();
+    PROTECT(errType);
+    TcType *sndType = makeSoundType();
+    PROTECT(sndType);
+    TcType *retType = makeTryType(errType, sndType);
+    PROTECT(retType);
+    pushNewBuiltIn(registry, "gfx_load_sound", retType, args,
+                   (void *)builtin_gfx_load_sound, "builtin_gfx_load_sound");
+    UNPROTECT(save);
+}
+
+static void registerGfxUnloadSound(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    pushSoundArg(args);
+    TcType *ret = makeBoolean();
+    PROTECT(ret);
+    pushNewBuiltIn(registry, "gfx_unload_sound", ret, args,
+                   (void *)builtin_gfx_unload_sound,
+                   "builtin_gfx_unload_sound");
+    UNPROTECT(save);
+}
+
+static void registerGfxPlaySound(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    pushSoundArg(args);
+    TcType *ret = makeBoolean();
+    PROTECT(ret);
+    pushNewBuiltIn(registry, "gfx_play_sound", ret, args,
+                   (void *)builtin_gfx_play_sound, "builtin_gfx_play_sound");
+    UNPROTECT(save);
+}
+
+static void registerGfxStopSound(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    pushSoundArg(args);
+    TcType *ret = makeBoolean();
+    PROTECT(ret);
+    pushNewBuiltIn(registry, "gfx_stop_sound", ret, args,
+                   (void *)builtin_gfx_stop_sound, "builtin_gfx_stop_sound");
+    UNPROTECT(save);
+}
+
+static void registerGfxSetSoundVolume(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    pushSoundArg(args);
+    pushIntegerArg(args); // volume_percent 0..100
+    TcType *ret = makeBoolean();
+    PROTECT(ret);
+    pushNewBuiltIn(registry, "gfx_set_sound_volume", ret, args,
+                   (void *)builtin_gfx_set_sound_volume,
+                   "builtin_gfx_set_sound_volume");
+    UNPROTECT(save);
+}
+
+static void registerGfxIsSoundPlaying(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    pushSoundArg(args);
+    TcType *ret = makeBoolean();
+    PROTECT(ret);
+    pushNewBuiltIn(registry, "gfx_is_sound_playing", ret, args,
+                   (void *)builtin_gfx_is_sound_playing,
+                   "builtin_gfx_is_sound_playing");
     UNPROTECT(save);
 }
