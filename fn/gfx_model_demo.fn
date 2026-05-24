@@ -4,7 +4,7 @@
 let
     link "graphics.fn" as gfx;
 
-    model_path = "assets/AdultMale.obj";
+    model_path = "assets/TeaPot.obj";
 
     fn move_speed() {
         let dt = gfx.frame_time_ms();
