@@ -599,7 +599,6 @@ Value builtin_gfx_load_font(Vec *args) {
     node->next = fontRegistry;
     fontRegistry = node;
     Value opaque = value_Opaque(wrapper);
-    protectValue(opaque);
     Value result = makeTryResult(1, opaque);
     UNPROTECT(wSave);
     return result;

@@ -31,30 +31,35 @@ let
                     20, 580);
                 mx = gfx.mouse_x();
                 my = gfx.mouse_y();
+                player = gfx.point(nx, ny);
+                cursor = gfx.point(mx, my);
                 clicking = gfx.mouse_held(gfx.btn_left());
             in
                 gfx.frame(gfx.black(), fn () {
                     // play area border
-                    gfx.draw_rect(5, 5, 790, 590, gfx.rgb(80, 80, 80));
+                    gfx.draw_rect_at(gfx.point(5, 5), gfx.extent(790, 590),
+                                     gfx.rgb(80, 80, 80));
                     // line from player to mouse
-                    gfx.draw_line(nx, ny, mx, my, gfx.rgb(255, 200, 0));
+                    gfx.draw_line_between(player, cursor,
+                                          gfx.rgb(255, 200, 0));
                     // player: filled circle, turns red when left mouse held
                     if (clicking) {
-                        gfx.fill_circle(nx, ny, 20, gfx.red())
+                        gfx.fill_circle_at(player, 20, gfx.red())
                     } else {
-                        gfx.fill_circle(nx, ny, 20, gfx.green())
+                        gfx.fill_circle_at(player, 20, gfx.green())
                     };
                     // mouse cursor: outline circle
-                    gfx.draw_circle(mx, my, 14, gfx.rgb(100, 180, 255));
+                    gfx.draw_circle_at(cursor, 14, gfx.rgb(100, 180, 255));
                     // hud
-                    gfx.draw_text("Arrows: move   LMB: flash red   ESC: quit",
-                                  16, 566, 16, gfx.rgb(160, 160, 160))
+                    gfx.draw_text_at("Arrows: move   LMB: flash red   ESC: quit",
+                                     gfx.point(16, 566), 16,
+                                     gfx.rgb(160, 160, 160))
                 });
                 loop(nx, ny)
         }
     }
 in
-    gfx.with_window(800, 600, "Input + Shapes Demo", fn () {
+    gfx.with_window_size(gfx.extent(800, 600), "Input + Shapes Demo", fn () {
         assert(gfx.set_target_fps(60));
         loop(400, 300)
     })

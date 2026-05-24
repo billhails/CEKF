@@ -1,6 +1,8 @@
 namespace
 
 typedef Color { rgba(number, number, number, number) }
+typedef Point { point(number, number) }
+typedef Size { extent(number, number) }
 
 fn rgb(r, g, b) {
     rgba(r, g, b, 255)
@@ -11,6 +13,14 @@ fn white() { rgba(255, 255, 255, 255) }
 fn red() { rgba(255, 0, 0, 255) }
 fn green() { rgba(0, 255, 0, 255) }
 fn blue() { rgba(0, 0, 255, 255) }
+
+fn with_window_size(extent(width, height), title, handler) {
+    with_window(width, height, title, handler)
+}
+
+fn point_x(point(x, _)) { x }
+fn point_y(point(_, y)) { y }
+fn translate(point(x, y), dx, dy) { point(x + dx, y + dy) }
 
 fn with_window(width, height, title, handler) {
     switch (gfx_open(width, height, title)) {
@@ -152,16 +162,36 @@ fn draw_line(x1, y1, x2, y2, rgba(r, g, b, a)) {
     gfx_draw_line(x1, y1, x2, y2, r, g, b, a)
 }
 
+fn draw_line_between(point(x1, y1), point(x2, y2), rgba(r, g, b, a)) {
+    draw_line(x1, y1, x2, y2, rgba(r, g, b, a))
+}
+
 fn draw_circle(cx, cy, radius, rgba(r, g, b, a)) {
     gfx_draw_circle(cx, cy, radius, r, g, b, a)
+}
+
+fn draw_circle_at(point(cx, cy), radius, rgba(r, g, b, a)) {
+    draw_circle(cx, cy, radius, rgba(r, g, b, a))
 }
 
 fn fill_circle(cx, cy, radius, rgba(r, g, b, a)) {
     gfx_fill_circle(cx, cy, radius, r, g, b, a)
 }
 
+fn fill_circle_at(point(cx, cy), radius, rgba(r, g, b, a)) {
+    fill_circle(cx, cy, radius, rgba(r, g, b, a))
+}
+
 fn draw_rect(x, y, w, h, rgba(r, g, b, a)) {
     gfx_draw_rect(x, y, w, h, r, g, b, a)
+}
+
+fn draw_rect_at(point(x, y), extent(w, h), rgba(r, g, b, a)) {
+    draw_rect(x, y, w, h, rgba(r, g, b, a))
+}
+
+fn fill_rect_at(point(x, y), extent(w, h), rgba(r, g, b, a)) {
+    fill_rect(x, y, w, h, rgba(r, g, b, a))
 }
 
 // --- font resources ---
@@ -191,6 +221,14 @@ fn unload_font(font) { gfx_unload_font(font) }
 
 fn draw_text_font(font, text, x, y, size, spacing, rgba(r, g, b, a)) {
     gfx_draw_text_font(font, text, x, y, size, spacing, r, g, b, a)
+}
+
+fn draw_text_at(text, point(x, y), size, rgba(r, g, b, a)) {
+    draw_text(text, x, y, size, rgba(r, g, b, a))
+}
+
+fn draw_text_font_at(font, text, point(x, y), size, spacing, rgba(r, g, b, a)) {
+    draw_text_font(font, text, x, y, size, spacing, rgba(r, g, b, a))
 }
 
 fn measure_text_width(font, text, size, spacing) {

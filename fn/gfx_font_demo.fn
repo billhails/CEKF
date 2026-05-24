@@ -6,6 +6,20 @@ let
     link "graphics.fn" as gfx;
     link "listutils.fn" as list;
 
+    fn font_count() { 3 }
+
+    fn font_path(index) {
+        if (index == 0) { "/usr/share/fonts/truetype/ubuntu/UbuntuMono-R.ttf" }
+        else if (index == 1) { "/usr/share/fonts/truetype/ubuntu/Ubuntu-L.ttf" }
+        else { "/usr/share/fonts/truetype/dejavu/DejaVuSansMono-Bold.ttf" }
+    }
+
+    fn wrap_font_index(index) {
+        if (index < 0) { font_count() - 1 }
+        else if (index >= font_count()) { 0 }
+        else { index }
+    }
+
     fn textAfter(c, txt) {
         let
             fn helper {
@@ -29,46 +43,95 @@ let
         list.reverse(textAfter('.', list.reverse(txt)))
     }
 
-    fn loop(font, name) {
-        if (gfx.should_close()) { true }
-        else if (gfx.key_pressed(gfx.key_escape())) { true }
+    fn loop(font, index, name) {
+        if (gfx.should_close()) { -1 }
         else {
             let
+                next_index = if (gfx.key_pressed(gfx.key_escape())) {
+                    -1
+                } else if (gfx.key_pressed(gfx.arrow_left())) {
+                    wrap_font_index(index - 1)
+                } else if (gfx.key_pressed(gfx.arrow_right())) {
+                    wrap_font_index(index + 1)
+                } else {
+                    index
+                };
                 label = "Hello from " @@ name;
-                size = 64;
+                size = 48;
+                title_pos = gfx.point(40, 30);
+                small_pos = gfx.point(40, 80);
+                medium_pos = gfx.point(40, 110);
+                hero_pos = gfx.point(40, 160);
+                bar_label_pos = gfx.point(40, 220);
+                bar_pos = gfx.point(40, 250);
+                help_pos = gfx.point(40, 520);
+                current_pos = gfx.point(40, 548);
+                name_pos = gfx.point(160, 542);
+                footer_pos = gfx.point(40, 560);
                 mw = switch (gfx.measure_text_width(font, label, size, 1)) {
                     (success(w)) { w }
                     (failure(_)) { 0 }
                 };
             in
                 gfx.frame(gfx.black(), fn () {
-                    gfx.draw_text("Built-in font (draw_text, size 20)",
-                                  40, 30, 20, gfx.rgb(160, 160, 160));
+                    gfx.draw_text_at("Built-in font (draw_text, size 20)",
+                                     title_pos, 20, gfx.rgb(160, 160, 160));
 
-                    gfx.draw_text_font(font, "Custom font: size 14",
-                                       40, 80, 14, 1, gfx.rgb(150, 200, 150));
-                    gfx.draw_text_font(font, "Custom font: size 24",
-                                       40, 110, 24, 1, gfx.rgb(100, 180, 255));
-                    gfx.draw_text_font(font, label,
-                                       40, 160, size, 1, gfx.white());
+                    gfx.draw_text_font_at(font, "Custom font: size 14",
+                                          small_pos, 14, 1,
+                                          gfx.rgb(150, 200, 150));
+                    gfx.draw_text_font_at(font, "Custom font: size 24",
+                                          medium_pos, 24, 1,
+                                          gfx.rgb(100, 180, 255));
+                    gfx.draw_text_font_at(font, label,
+                                          hero_pos, size, 1, gfx.white());
 
                     // width indicator bar
-                    gfx.draw_text_font(font, "Measured width bar:",
-                                       40, 220, 18, 1, gfx.rgb(200, 180, 80));
-                    gfx.fill_rect(40, 250, mw, 12, gfx.rgb(255, 180, 0));
+                    gfx.draw_text_font_at(font, "Measured width bar:",
+                                          bar_label_pos, 18, 1,
+                                          gfx.rgb(200, 180, 80));
+                    gfx.fill_rect_at(bar_pos, gfx.extent(mw, 12),
+                                     gfx.rgb(255, 180, 0));
 
-                    gfx.draw_text("ESC or close to quit",
-                                  40, 560, 16, gfx.rgb(100, 100, 100))
+                    gfx.draw_text_at("Left/Right: switch font",
+                                     help_pos, 16, gfx.rgb(140, 140, 140));
+                    gfx.draw_text_at("Current font:",
+                                     current_pos, 16, gfx.rgb(120, 120, 120));
+                    gfx.draw_text_font_at(font, name,
+                                          name_pos, 18, 1,
+                                          gfx.rgb(220, 220, 220));
+
+                    gfx.draw_text_at("ESC or close to quit",
+                                     footer_pos, 16, gfx.rgb(100, 100, 100))
                 });
-                loop(font, name)
+                if (next_index == index) {
+                    loop(font, index, name)
+                } else {
+                    next_index
+                }
         }
     }
 
-    fontName = "/usr/share/fonts/truetype/lato/Lato-Italic.ttf";
+    fn run_font(index) {
+        if (index < 0) { true }
+        else {
+            let
+                path = font_path(index);
+                name = baseName(fileName(path));
+            in
+                switch (gfx.with_font(path, 64, fn (font) {
+                    loop(font, index, name)
+                })) {
+                    (just(next_index)) {
+                        if (next_index < 0) { true }
+                        else { run_font(next_index) }
+                    }
+                    (nothing) { true }
+                }
+        }
+    }
 in
-    gfx.with_window(800, 600, "Font Demo", fn () {
+    gfx.with_window_size(gfx.extent(800, 600), "Font Demo", fn () {
         assert(gfx.set_target_fps(60));
-        gfx.with_font(fontName, 64, fn (font) {
-            loop(font, baseName(fileName(fontName)))
-        })
+        run_font(0)
     })
