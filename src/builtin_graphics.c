@@ -20,6 +20,8 @@
 #include "builtins_helper.h"
 #include "cekf.h"
 #include "cekfs.h"
+#include "common.h"
+#include "opaque.h"
 #include "symbol.h"
 #include "tc_analyze.h"
 #include "value.h"
@@ -52,6 +54,10 @@ static void registerGfxDrawLine(BuiltIns *registry);
 static void registerGfxDrawCircle(BuiltIns *registry);
 static void registerGfxFillCircle(BuiltIns *registry);
 static void registerGfxDrawRect(BuiltIns *registry);
+static void registerGfxLoadFont(BuiltIns *registry);
+static void registerGfxUnloadFont(BuiltIns *registry);
+static void registerGfxDrawTextFont(BuiltIns *registry);
+static void registerGfxMeasureTextWidth(BuiltIns *registry);
 
 void registerGraphics(BuiltIns *registry) {
     registerGfxOpen(registry);
@@ -77,6 +83,52 @@ void registerGraphics(BuiltIns *registry) {
     registerGfxDrawCircle(registry);
     registerGfxFillCircle(registry);
     registerGfxDrawRect(registry);
+    registerGfxLoadFont(registry);
+    registerGfxUnloadFont(registry);
+    registerGfxDrawTextFont(registry);
+    registerGfxMeasureTextWidth(registry);
+}
+
+typedef struct FontNode {
+    Opaque *wrapper;
+    struct FontNode *next;
+} FontNode;
+
+static FontNode *fontRegistry = NULL;
+
+static HashSymbol *fontSymbol(void) { return newSymbol("font"); }
+
+static TcType *makeFontType(void) { return newTcType_Opaque(fontSymbol()); }
+
+static TcType *pushFontArg(BuiltInArgs *args) {
+    TcType *t = makeFontType();
+    int save = PROTECT(t);
+    pushBuiltInArgs(args, t);
+    UNPROTECT(save);
+    return t;
+}
+
+#ifdef ENABLE_RAYLIB
+static void fontRegistryRemove(Opaque *wrapper) {
+    FontNode **prev = &fontRegistry;
+    while (*prev != NULL) {
+        if ((*prev)->wrapper == wrapper) {
+            FontNode *dead = *prev;
+            *prev = dead->next;
+            FREE_ARRAY(FontNode, dead, 1);
+            return;
+        }
+        prev = &(*prev)->next;
+    }
+}
+#endif
+
+void markGraphicsGlobals(void) {
+    FontNode *node = fontRegistry;
+    while (node != NULL) {
+        markOpaque(node->wrapper);
+        node = node->next;
+    }
 }
 
 #ifdef ENABLE_RAYLIB
@@ -90,6 +142,28 @@ static int extractChannel(Value v) {
     if (n < 0 || n > 255)
         return -1;
     return n;
+}
+
+static void opaque_gfx_font_unload(void *data) {
+    if (data == NULL)
+        return;
+    Font *f = (Font *)data;
+    UnloadFont(*f);
+    FREE_ARRAY(Font, f, 1);
+}
+
+static void fontRegistryDrain(void) {
+    FontNode *node = fontRegistry;
+    while (node != NULL) {
+        FontNode *next = node->next;
+        if (node->wrapper->data != NULL) {
+            opaque_gfx_font_unload(node->wrapper->data);
+            node->wrapper->data = NULL;
+        }
+        FREE_ARRAY(FontNode, node, 1);
+        node = next;
+    }
+    fontRegistry = NULL;
 }
 #endif
 
@@ -140,6 +214,7 @@ Value builtin_gfx_close(Vec *args) {
         EndDrawing();
         gfx_state.in_frame = false;
     }
+    fontRegistryDrain();
     CloseWindow();
     gfx_state.initialized = false;
     return value_Stdint(1);
@@ -495,6 +570,122 @@ Value builtin_gfx_draw_rect(Vec *args) {
 #endif
 }
 
+Value builtin_gfx_load_font(Vec *args) {
+#ifndef ENABLE_RAYLIB
+    (void)args;
+    return failMsg("graphics not available (built without ENABLE_RAYLIB)");
+#else
+    if (!gfx_state.initialized)
+        return failMsg("gfx_load_font: no graphics context");
+    SCharVec *buf = listToUtf8(args->entries[0]);
+    int save = PROTECT(buf);
+    int baseSize = (int)getValue_Stdint(args->entries[1]);
+    if (baseSize <= 0) {
+        UNPROTECT(save);
+        return failMsg("gfx_load_font: base_size must be positive");
+    }
+    Font loaded = LoadFontEx(buf->entries, baseSize, NULL, 0);
+    UNPROTECT(save);
+    if (!IsFontValid(loaded)) {
+        UnloadFont(loaded);
+        return failMsg("gfx_load_font: failed to load font");
+    }
+    Font *f = NEW_ARRAY(Font, 1);
+    *f = loaded;
+    Opaque *wrapper = newOpaque(f, opaque_gfx_font_unload, NULL, NULL);
+    int wSave = PROTECT(wrapper);
+    FontNode *node = NEW_ARRAY(FontNode, 1);
+    node->wrapper = wrapper;
+    node->next = fontRegistry;
+    fontRegistry = node;
+    Value opaque = value_Opaque(wrapper);
+    protectValue(opaque);
+    Value result = makeTryResult(1, opaque);
+    UNPROTECT(wSave);
+    return result;
+#endif
+}
+
+Value builtin_gfx_unload_font(Vec *args) {
+#ifndef ENABLE_RAYLIB
+    (void)args;
+    return value_Stdint(0);
+#else
+    if (args->entries[0].type != VALUE_TYPE_OPAQUE)
+        return value_Stdint(0);
+    Opaque *wrapper = args->entries[0].val.opaque;
+    fontRegistryRemove(wrapper);
+    opaque_gfx_font_unload(wrapper->data);
+    wrapper->data = NULL;
+    return value_Stdint(1);
+#endif
+}
+
+Value builtin_gfx_draw_text_font(Vec *args) {
+#ifndef ENABLE_RAYLIB
+    (void)args;
+    return value_Stdint(0);
+#else
+    if (!gfx_state.in_frame)
+        return value_Stdint(0);
+    if (args->entries[0].type != VALUE_TYPE_OPAQUE)
+        return value_Stdint(0);
+    Opaque *wrapper = args->entries[0].val.opaque;
+    if (wrapper->data == NULL)
+        return value_Stdint(0);
+    Font *f = (Font *)wrapper->data;
+    SCharVec *buf = listToUtf8(args->entries[1]);
+    int save = PROTECT(buf);
+    int x = (int)getValue_Stdint(args->entries[2]);
+    int y = (int)getValue_Stdint(args->entries[3]);
+    int size = (int)getValue_Stdint(args->entries[4]);
+    int spacing = (int)getValue_Stdint(args->entries[5]);
+    int r = extractChannel(args->entries[6]);
+    int g = extractChannel(args->entries[7]);
+    int b = extractChannel(args->entries[8]);
+    int a = extractChannel(args->entries[9]);
+    if (size <= 0 || r < 0 || g < 0 || b < 0 || a < 0) {
+        UNPROTECT(save);
+        return value_Stdint(0);
+    }
+    Color color = {(unsigned char)r, (unsigned char)g, (unsigned char)b,
+                   (unsigned char)a};
+    Vector2 pos = {(float)x, (float)y};
+    DrawTextEx(*f, buf->entries, pos, (float)size, (float)spacing, color);
+    UNPROTECT(save);
+    return value_Stdint(1);
+#endif
+}
+
+Value builtin_gfx_measure_text_width(Vec *args) {
+#ifndef ENABLE_RAYLIB
+    (void)args;
+    return failMsg("graphics not available (built without ENABLE_RAYLIB)");
+#else
+    if (args->entries[0].type != VALUE_TYPE_OPAQUE)
+        return failMsg("gfx_measure_text_width: invalid font handle");
+    Opaque *wrapper = args->entries[0].val.opaque;
+    if (wrapper->data == NULL)
+        return failMsg("gfx_measure_text_width: font has been unloaded");
+    Font *f = (Font *)wrapper->data;
+    SCharVec *buf = listToUtf8(args->entries[1]);
+    int save = PROTECT(buf);
+    int size = (int)getValue_Stdint(args->entries[2]);
+    int spacing = (int)getValue_Stdint(args->entries[3]);
+    if (size <= 0) {
+        UNPROTECT(save);
+        return failMsg("gfx_measure_text_width: size must be positive");
+    }
+    Vector2 v = MeasureTextEx(*f, buf->entries, (float)size, (float)spacing);
+    UNPROTECT(save);
+    Value w = value_Stdint((int)v.x);
+    int wSave = protectValue(w);
+    Value result = makeTryResult(1, w);
+    UNPROTECT(wSave);
+    return result;
+#endif
+}
+
 // registration helpers
 
 static void registerGfxOpen(BuiltIns *registry) {
@@ -800,5 +991,72 @@ static void registerGfxDrawRect(BuiltIns *registry) {
     PROTECT(ret);
     pushNewBuiltIn(registry, "gfx_draw_rect", ret, args,
                    (void *)builtin_gfx_draw_rect, "builtin_gfx_draw_rect");
+    UNPROTECT(save);
+}
+
+static void registerGfxLoadFont(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    pushStringArg(args);
+    pushIntegerArg(args);
+    TcType *errType = makeStringType();
+    PROTECT(errType);
+    TcType *fontType = makeFontType();
+    PROTECT(fontType);
+    TcType *retType = makeTryType(errType, fontType);
+    PROTECT(retType);
+    pushNewBuiltIn(registry, "gfx_load_font", retType, args,
+                   (void *)builtin_gfx_load_font, "builtin_gfx_load_font");
+    UNPROTECT(save);
+}
+
+static void registerGfxUnloadFont(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    pushFontArg(args);
+    TcType *b = makeBoolean();
+    PROTECT(b);
+    pushNewBuiltIn(registry, "gfx_unload_font", b, args,
+                   (void *)builtin_gfx_unload_font, "builtin_gfx_unload_font");
+    UNPROTECT(save);
+}
+
+static void registerGfxDrawTextFont(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    pushFontArg(args);
+    pushStringArg(args);
+    pushIntegerArg(args); // x
+    pushIntegerArg(args); // y
+    pushIntegerArg(args); // size
+    pushIntegerArg(args); // spacing
+    pushIntegerArg(args); // r
+    pushIntegerArg(args); // g
+    pushIntegerArg(args); // b
+    pushIntegerArg(args); // a
+    TcType *b = makeBoolean();
+    PROTECT(b);
+    pushNewBuiltIn(registry, "gfx_draw_text_font", b, args,
+                   (void *)builtin_gfx_draw_text_font,
+                   "builtin_gfx_draw_text_font");
+    UNPROTECT(save);
+}
+
+static void registerGfxMeasureTextWidth(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    pushFontArg(args);
+    pushStringArg(args);
+    pushIntegerArg(args); // size
+    pushIntegerArg(args); // spacing
+    TcType *errType = makeStringType();
+    PROTECT(errType);
+    TcType *numType = newTcType_BigInteger();
+    PROTECT(numType);
+    TcType *retType = makeTryType(errType, numType);
+    PROTECT(retType);
+    pushNewBuiltIn(registry, "gfx_measure_text_width", retType, args,
+                   (void *)builtin_gfx_measure_text_width,
+                   "builtin_gfx_measure_text_width");
     UNPROTECT(save);
 }

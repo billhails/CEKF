@@ -1,0 +1,74 @@
+// Font demo: loads UbuntuMono-R and draws text at several sizes.
+// Also demonstrates measure_text_width by drawing a bar of the measured width.
+//
+// Run: ./bin/fn --include=fn fn/gfx_font_demo.fn
+let
+    link "graphics.fn" as gfx;
+    link "listutils.fn" as list;
+
+    fn textAfter(c, txt) {
+        let
+            fn helper {
+                ([], acc) { acc }
+                (x @ rest, acc) { if (x == c) {
+                        helper(rest, rest)
+                    } else {
+                        helper(rest, acc)
+                    }
+                }
+            }
+        in
+            helper(txt, txt)
+    }
+
+    fn fileName (txt) {
+        textAfter('/', txt)
+    }
+
+    fn baseName (txt) {
+        list.reverse(textAfter('.', list.reverse(txt)))
+    }
+
+    fn loop(font, name) {
+        if (gfx.should_close()) { true }
+        else if (gfx.key_pressed(gfx.key_escape())) { true }
+        else {
+            let
+                label = "Hello from " @@ name;
+                size = 64;
+                mw = switch (gfx.measure_text_width(font, label, size, 1)) {
+                    (success(w)) { w }
+                    (failure(_)) { 0 }
+                };
+            in
+                gfx.frame(gfx.black(), fn () {
+                    gfx.draw_text("Built-in font (draw_text, size 20)",
+                                  40, 30, 20, gfx.rgb(160, 160, 160));
+
+                    gfx.draw_text_font(font, "Custom font: size 14",
+                                       40, 80, 14, 1, gfx.rgb(150, 200, 150));
+                    gfx.draw_text_font(font, "Custom font: size 24",
+                                       40, 110, 24, 1, gfx.rgb(100, 180, 255));
+                    gfx.draw_text_font(font, label,
+                                       40, 160, size, 1, gfx.white());
+
+                    // width indicator bar
+                    gfx.draw_text_font(font, "Measured width bar:",
+                                       40, 220, 18, 1, gfx.rgb(200, 180, 80));
+                    gfx.fill_rect(40, 250, mw, 12, gfx.rgb(255, 180, 0));
+
+                    gfx.draw_text("ESC or close to quit",
+                                  40, 560, 16, gfx.rgb(100, 100, 100))
+                });
+                loop(font, name)
+        }
+    }
+
+    fontName = "/usr/share/fonts/truetype/lato/Lato-Italic.ttf";
+in
+    gfx.with_window(800, 600, "Font Demo", fn () {
+        assert(gfx.set_target_fps(60));
+        gfx.with_font(fontName, 64, fn (font) {
+            loop(font, baseName(fileName(fontName)))
+        })
+    })

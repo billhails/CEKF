@@ -163,3 +163,36 @@ fn fill_circle(cx, cy, radius, rgba(r, g, b, a)) {
 fn draw_rect(x, y, w, h, rgba(r, g, b, a)) {
     gfx_draw_rect(x, y, w, h, r, g, b, a)
 }
+
+// --- font resources ---
+
+fn load_font(path, base_size) {
+    gfx_load_font(path, base_size)
+}
+
+fn with_font(path, base_size, handler) {
+    switch (gfx_load_font(path, base_size)) {
+        (success(font)) {
+            let result = just(handler(font));
+            in
+                gfx_unload_font(font);
+                result
+        }
+        (failure(msg)) {
+            puts("font load error: ");
+            puts(msg);
+            putc('\n');
+            nothing
+        }
+    }
+}
+
+fn unload_font(font) { gfx_unload_font(font) }
+
+fn draw_text_font(font, text, x, y, size, spacing, rgba(r, g, b, a)) {
+    gfx_draw_text_font(font, text, x, y, size, spacing, r, g, b, a)
+}
+
+fn measure_text_width(font, text, size, spacing) {
+    gfx_measure_text_width(font, text, size, spacing)
+}

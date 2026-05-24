@@ -22,5 +22,6 @@
 #include "builtins.h"
 
 void registerGraphics(BuiltIns *registry);
+void markGraphicsGlobals(void);
 
 #endif
