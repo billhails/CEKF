@@ -70,6 +70,8 @@ static void registerGfxUnloadRenderTexture(BuiltIns *registry);
 static void registerGfxBeginTextureMode(BuiltIns *registry);
 static void registerGfxEndTextureMode(BuiltIns *registry);
 static void registerGfxDrawRenderTexture(BuiltIns *registry);
+static void registerGfxBeginMode2D(BuiltIns *registry);
+static void registerGfxEndMode2D(BuiltIns *registry);
 
 void registerGraphics(BuiltIns *registry) {
     registerGfxOpen(registry);
@@ -111,6 +113,8 @@ void registerGraphics(BuiltIns *registry) {
     registerGfxBeginTextureMode(registry);
     registerGfxEndTextureMode(registry);
     registerGfxDrawRenderTexture(registry);
+    registerGfxBeginMode2D(registry);
+    registerGfxEndMode2D(registry);
 }
 
 typedef struct FontNode {
@@ -211,7 +215,8 @@ static struct {
     bool initialized;
     bool in_frame;
     bool in_texture_mode;
-} gfx_state = {false, false, false};
+    bool in_camera_mode;
+} gfx_state = {false, false, false, false};
 
 static bool canDrawTarget(void) {
     return gfx_state.in_frame || gfx_state.in_texture_mode;
@@ -374,6 +379,8 @@ Value builtin_gfx_open(Vec *args) {
     }
     gfx_state.initialized = true;
     gfx_state.in_frame = false;
+    gfx_state.in_texture_mode = false;
+    gfx_state.in_camera_mode = false;
     return makeTryResult(1, value_Stdint(1));
 #endif
 }
@@ -385,6 +392,10 @@ Value builtin_gfx_close(Vec *args) {
 #else
     if (!gfx_state.initialized) {
         return value_Stdint(0);
+    }
+    if (gfx_state.in_camera_mode) {
+        EndMode2D();
+        gfx_state.in_camera_mode = false;
     }
     if (gfx_state.in_frame) {
         EndDrawing();
@@ -1184,6 +1195,41 @@ Value builtin_gfx_draw_render_texture(Vec *args) {
 #endif
 }
 
+Value builtin_gfx_begin_mode_2d(Vec *args) {
+#ifndef ENABLE_RAYLIB
+    (void)args;
+    return value_Stdint(0);
+#else
+    if (!gfx_state.initialized || gfx_state.in_camera_mode || !canDrawTarget())
+        return value_Stdint(0);
+    float targetX = valueAsFloat(args->entries[0]);
+    float targetY = valueAsFloat(args->entries[1]);
+    float offsetX = valueAsFloat(args->entries[2]);
+    float offsetY = valueAsFloat(args->entries[3]);
+    float rotation = valueAsFloat(args->entries[4]);
+    float zoom = valueAsFloat(args->entries[5]);
+    if (zoom <= 0.0f)
+        return value_Stdint(0);
+    Camera2D camera = {{offsetX, offsetY}, {targetX, targetY}, rotation, zoom};
+    BeginMode2D(camera);
+    gfx_state.in_camera_mode = true;
+    return value_Stdint(1);
+#endif
+}
+
+Value builtin_gfx_end_mode_2d(Vec *args) {
+    (void)args;
+#ifndef ENABLE_RAYLIB
+    return value_Stdint(0);
+#else
+    if (!gfx_state.in_camera_mode)
+        return value_Stdint(0);
+    EndMode2D();
+    gfx_state.in_camera_mode = false;
+    return value_Stdint(1);
+#endif
+}
+
 // registration helpers
 
 static void registerGfxOpen(BuiltIns *registry) {
@@ -1745,5 +1791,32 @@ static void registerGfxDrawRenderTexture(BuiltIns *registry) {
     pushNewBuiltIn(registry, "gfx_draw_render_texture", ret, args,
                    (void *)builtin_gfx_draw_render_texture,
                    "builtin_gfx_draw_render_texture");
+    UNPROTECT(save);
+}
+
+static void registerGfxBeginMode2D(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    pushIntegerArg(args); // target_x
+    pushIntegerArg(args); // target_y
+    pushIntegerArg(args); // offset_x
+    pushIntegerArg(args); // offset_y
+    pushIntegerArg(args); // rotation
+    pushIntegerArg(args); // zoom
+    TcType *ret = makeBoolean();
+    PROTECT(ret);
+    pushNewBuiltIn(registry, "gfx_begin_mode_2d", ret, args,
+                   (void *)builtin_gfx_begin_mode_2d,
+                   "builtin_gfx_begin_mode_2d");
+    UNPROTECT(save);
+}
+
+static void registerGfxEndMode2D(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    TcType *ret = makeBoolean();
+    PROTECT(ret);
+    pushNewBuiltIn(registry, "gfx_end_mode_2d", ret, args,
+                   (void *)builtin_gfx_end_mode_2d, "builtin_gfx_end_mode_2d");
     UNPROTECT(save);
 }

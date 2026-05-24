@@ -40,30 +40,33 @@ let
                     );
 
                     // scaled draw: render the full texture scaled to 75x75 at col3
-                    gfx.draw_sprite_pro(
+                    gfx.draw_sprite_pro_at(
                         tex,
                         gfx.rect(0, 0, w, h),
-                        gfx.rect(col3, 20, 75, 75),
+                        gfx.point(col3, 20),
+                        gfx.extent(75, 75),
                         gfx.point(0, 0),
                         0,
                         gfx.white()
                     );
 
                     // centered rotation: pivot at half the destination size (uses rational arithmetic)
-                    gfx.draw_sprite_pro(
+                    gfx.draw_sprite_pro_at(
                         tex,
                         gfx.rect(0, 0, w, h),
-                        gfx.rect(col3 + 100, 80, 60, 60),
+                        gfx.point(col3 + 100, 80),
+                        gfx.extent(60, 60),
                         gfx.point(30, 30),
                         angle,
                         gfx.rgba(255, 220, 180, 255)
                     );
 
                     // horizontal flip: negative source width mirrors the sprite
-                    gfx.draw_sprite_pro(
+                    gfx.draw_sprite_pro_at(
                         tex,
                         gfx.rect(w, 0, (0 - w), h),
-                        gfx.rect(col3, 110, 75, 75),
+                        gfx.point(col3, 110),
+                        gfx.extent(75, 75),
                         gfx.point(0, 0),
                         0,
                         gfx.rgba(180, 230, 255, 255)

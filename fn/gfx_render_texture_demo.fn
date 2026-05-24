@@ -27,13 +27,13 @@ let
                         h = gfx.texture_height(tex);
                         size = 180;
                         half = size / 2;
-                        cx = 200;
-                        cy = 150;
+                        center = gfx.point(200, 150);
                     in
-                        gfx.draw_sprite_pro(
+                        gfx.draw_sprite_pro_at(
                             tex,
                             gfx.rect(0, 0, w, h),
-                            gfx.rect(cx - half, cy - half, size, size),
+                            gfx.point(gfx.point_x(center) - half, gfx.point_y(center) - half),
+                            gfx.extent(size, size),
                             gfx.point(half, half),
                             nextAngle,
                             gfx.white()
@@ -63,10 +63,10 @@ let
     }
 
 in
-    gfx.with_window(1000, 800, "Render Texture Demo", fn () {
+    gfx.with_window_size(gfx.extent(1000, 800), "Render Texture Demo", fn () {
         assert(gfx.set_target_fps(60));
         gfx.with_texture("docs/CEKF.png", fn (tex) {
-            gfx.with_render_texture(380, 320, fn (rt) {
+            gfx.with_render_texture_size(gfx.extent(380, 320), fn (rt) {
                 loop(tex, rt, 0, 0)
             })
         })

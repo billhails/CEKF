@@ -19,6 +19,14 @@ fn with_window_size(extent(width, height), title, handler) {
     with_window(width, height, title, handler)
 }
 
+fn load_render_texture_size(extent(width, height)) {
+    load_render_texture(width, height)
+}
+
+fn with_render_texture_size(extent(width, height), handler) {
+    with_render_texture(width, height, handler)
+}
+
 fn point_x(point(x, _)) { x }
 fn point_y(point(_, y)) { y }
 fn translate(point(x, y), dx, dy) { point(x + dx, y + dy) }
@@ -191,7 +199,15 @@ fn draw_rect_at(point(x, y), extent(w, h), rgba(r, g, b, a)) {
     draw_rect(x, y, w, h, rgba(r, g, b, a))
 }
 
+fn draw_rect_from(rect(x, y, w, h), rgba(r, g, b, a)) {
+    draw_rect(x, y, w, h, rgba(r, g, b, a))
+}
+
 fn fill_rect_at(point(x, y), extent(w, h), rgba(r, g, b, a)) {
+    fill_rect(x, y, w, h, rgba(r, g, b, a))
+}
+
+fn fill_rect_from(rect(x, y, w, h), rgba(r, g, b, a)) {
     fill_rect(x, y, w, h, rgba(r, g, b, a))
 }
 
@@ -280,6 +296,17 @@ fn draw_sprite_pro(tex, rect(sx, sy, sw, sh), rect(dx, dy, dw, dh), point(ox, oy
     gfx_draw_texture_pro(tex, sx, sy, sw, sh, dx, dy, dw, dh, ox, oy, rotation, r, g, b, a)
 }
 
+fn draw_sprite_pro_at(tex, rect(sx, sy, sw, sh), point(dx, dy), extent(dw, dh), point(ox, oy), rotation, rgba(r, g, b, a)) {
+    draw_sprite_pro(
+        tex,
+        rect(sx, sy, sw, sh),
+        rect(dx, dy, dw, dh),
+        point(ox, oy),
+        rotation,
+        rgba(r, g, b, a)
+    )
+}
+
 fn load_render_texture(width, height) {
     gfx_load_render_texture(width, height)
 }
@@ -320,4 +347,20 @@ fn draw_render_texture(rt, x, y, rgba(r, g, b, a)) {
 
 fn draw_render_texture_at(rt, point(x, y), rgba(r, g, b, a)) {
     gfx_draw_render_texture(rt, x, y, r, g, b, a)
+}
+
+fn begin_mode_2d(point(target_x, target_y), point(offset_x, offset_y), rotation, zoom) {
+    gfx_begin_mode_2d(target_x, target_y, offset_x, offset_y, rotation, zoom)
+}
+
+fn end_mode_2d() { gfx_end_mode_2d() }
+
+fn with_camera2d(point(target_x, target_y), point(offset_x, offset_y), rotation, zoom, draw_fn) {
+    assert(gfx_begin_mode_2d(target_x, target_y, offset_x, offset_y, rotation, zoom));
+    {
+    let result = draw_fn();
+    in
+        assert(gfx_end_mode_2d());
+        result
+    }
 }
