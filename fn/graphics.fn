@@ -414,3 +414,42 @@ fn with_sound(path, handler) {
         }
     }
 }
+
+fn load_music(path) {
+    gfx_load_music(path)
+}
+
+fn unload_music(music) { gfx_unload_music(music) }
+
+fn play_music(music) { gfx_play_music(music) }
+
+fn pause_music(music) { gfx_pause_music(music) }
+
+fn resume_music(music) { gfx_resume_music(music) }
+
+fn stop_music(music) { gfx_stop_music(music) }
+
+fn is_music_playing(music) { gfx_is_music_playing(music) }
+
+fn update_music_stream(music) { gfx_update_music_stream(music) }
+
+fn set_music_volume(music, percent) {
+    gfx_set_music_volume(music, percent)
+}
+
+fn with_music(path, handler) {
+    switch (gfx_load_music(path)) {
+        (success(music)) {
+            let result = just(handler(music));
+            in
+                gfx_unload_music(music);
+                result
+        }
+        (failure(msg)) {
+            puts("music load error: ");
+            puts(msg);
+            putc('\n');
+            nothing
+        }
+    }
+}
