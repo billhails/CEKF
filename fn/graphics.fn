@@ -3,6 +3,7 @@ namespace
 typedef Color { rgba(number, number, number, number) }
 typedef Point { point(number, number) }
 typedef Size { extent(number, number) }
+typedef Rect { rect(number, number, number, number) }
 
 fn rgb(r, g, b) {
     rgba(r, g, b, 255)
@@ -233,4 +234,44 @@ fn draw_text_font_at(font, text, point(x, y), size, spacing, rgba(r, g, b, a)) {
 
 fn measure_text_width(font, text, size, spacing) {
     gfx_measure_text_width(font, text, size, spacing)
+}
+
+// --- texture resources ---
+
+fn load_texture(path) {
+    gfx_load_texture(path)
+}
+
+fn unload_texture(tex) { gfx_unload_texture(tex) }
+
+fn with_texture(path, handler) {
+    switch (gfx_load_texture(path)) {
+        (success(tex)) {
+            let result = just(handler(tex));
+            in
+                gfx_unload_texture(tex);
+                result
+        }
+        (failure(msg)) {
+            puts("texture load error: ");
+            puts(msg);
+            putc('\n');
+            nothing
+        }
+    }
+}
+
+fn texture_width(tex) { gfx_texture_width(tex) }
+fn texture_height(tex) { gfx_texture_height(tex) }
+
+fn draw_texture(tex, x, y, rgba(r, g, b, a)) {
+    gfx_draw_texture(tex, x, y, r, g, b, a)
+}
+
+fn draw_texture_at(tex, point(x, y), rgba(r, g, b, a)) {
+    gfx_draw_texture(tex, x, y, r, g, b, a)
+}
+
+fn draw_sprite(tex, rect(sx, sy, sw, sh), point(dx, dy), rgba(r, g, b, a)) {
+    gfx_draw_texture_rec(tex, sx, sy, sw, sh, dx, dy, r, g, b, a)
 }

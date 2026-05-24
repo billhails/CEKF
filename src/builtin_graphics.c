@@ -58,6 +58,12 @@ static void registerGfxLoadFont(BuiltIns *registry);
 static void registerGfxUnloadFont(BuiltIns *registry);
 static void registerGfxDrawTextFont(BuiltIns *registry);
 static void registerGfxMeasureTextWidth(BuiltIns *registry);
+static void registerGfxLoadTexture(BuiltIns *registry);
+static void registerGfxUnloadTexture(BuiltIns *registry);
+static void registerGfxDrawTexture(BuiltIns *registry);
+static void registerGfxDrawTextureRec(BuiltIns *registry);
+static void registerGfxTextureWidth(BuiltIns *registry);
+static void registerGfxTextureHeight(BuiltIns *registry);
 
 void registerGraphics(BuiltIns *registry) {
     registerGfxOpen(registry);
@@ -87,6 +93,12 @@ void registerGraphics(BuiltIns *registry) {
     registerGfxUnloadFont(registry);
     registerGfxDrawTextFont(registry);
     registerGfxMeasureTextWidth(registry);
+    registerGfxLoadTexture(registry);
+    registerGfxUnloadTexture(registry);
+    registerGfxDrawTexture(registry);
+    registerGfxDrawTextureRec(registry);
+    registerGfxTextureWidth(registry);
+    registerGfxTextureHeight(registry);
 }
 
 typedef struct FontNode {
@@ -96,12 +108,33 @@ typedef struct FontNode {
 
 static FontNode *fontRegistry = NULL;
 
+typedef struct TextureNode {
+    Opaque *wrapper;
+    struct TextureNode *next;
+} TextureNode;
+
+static TextureNode *textureRegistry = NULL;
+
 static HashSymbol *fontSymbol(void) { return newSymbol("font"); }
 
 static TcType *makeFontType(void) { return newTcType_Opaque(fontSymbol()); }
 
 static TcType *pushFontArg(BuiltInArgs *args) {
     TcType *t = makeFontType();
+    int save = PROTECT(t);
+    pushBuiltInArgs(args, t);
+    UNPROTECT(save);
+    return t;
+}
+
+static HashSymbol *textureSymbol(void) { return newSymbol("texture"); }
+
+static TcType *makeTextureType(void) {
+    return newTcType_Opaque(textureSymbol());
+}
+
+static TcType *pushTextureArg(BuiltInArgs *args) {
+    TcType *t = makeTextureType();
     int save = PROTECT(t);
     pushBuiltInArgs(args, t);
     UNPROTECT(save);
@@ -121,6 +154,19 @@ static void fontRegistryRemove(Opaque *wrapper) {
         prev = &(*prev)->next;
     }
 }
+
+static void textureRegistryRemove(Opaque *wrapper) {
+    TextureNode **prev = &textureRegistry;
+    while (*prev != NULL) {
+        if ((*prev)->wrapper == wrapper) {
+            TextureNode *dead = *prev;
+            *prev = dead->next;
+            FREE_ARRAY(TextureNode, dead, 1);
+            return;
+        }
+        prev = &(*prev)->next;
+    }
+}
 #endif
 
 void markGraphicsGlobals(void) {
@@ -128,6 +174,11 @@ void markGraphicsGlobals(void) {
     while (node != NULL) {
         markOpaque(node->wrapper);
         node = node->next;
+    }
+    TextureNode *tnode = textureRegistry;
+    while (tnode != NULL) {
+        markOpaque(tnode->wrapper);
+        tnode = tnode->next;
     }
 }
 
@@ -142,6 +193,24 @@ static int extractChannel(Value v) {
     if (n < 0 || n > 255)
         return -1;
     return n;
+}
+
+// Accept STDINT or rational (e.g. result of w/2) as a pixel coordinate.
+// Rationals are truncated toward zero.
+static int valueAsInt(Value v) {
+    if (v.type == VALUE_TYPE_STDINT)
+        return (int)getValue_Stdint(v);
+    if (v.type == VALUE_TYPE_RATIONAL) {
+        Vec *r = getValue_Rational(v);
+        if (r->entries[0].type == VALUE_TYPE_STDINT &&
+            r->entries[1].type == VALUE_TYPE_STDINT) {
+            int num = (int)getValue_Stdint(r->entries[0]);
+            int den = (int)getValue_Stdint(r->entries[1]);
+            return den != 0 ? num / den : 0;
+        }
+    }
+    return (int)getValue_Stdint(
+        v); // aborts with a clear message for other types
 }
 
 static void opaque_gfx_font_unload(void *data) {
@@ -164,6 +233,28 @@ static void fontRegistryDrain(void) {
         node = next;
     }
     fontRegistry = NULL;
+}
+
+static void opaque_gfx_texture_unload(void *data) {
+    if (data == NULL)
+        return;
+    Texture2D *t = (Texture2D *)data;
+    UnloadTexture(*t);
+    FREE_ARRAY(Texture2D, t, 1);
+}
+
+static void textureRegistryDrain(void) {
+    TextureNode *node = textureRegistry;
+    while (node != NULL) {
+        TextureNode *next = node->next;
+        if (node->wrapper->data != NULL) {
+            opaque_gfx_texture_unload(node->wrapper->data);
+            node->wrapper->data = NULL;
+        }
+        FREE_ARRAY(TextureNode, node, 1);
+        node = next;
+    }
+    textureRegistry = NULL;
 }
 #endif
 
@@ -214,6 +305,7 @@ Value builtin_gfx_close(Vec *args) {
         EndDrawing();
         gfx_state.in_frame = false;
     }
+    textureRegistryDrain();
     fontRegistryDrain();
     CloseWindow();
     gfx_state.initialized = false;
@@ -685,6 +777,145 @@ Value builtin_gfx_measure_text_width(Vec *args) {
 #endif
 }
 
+// --- Phase D: textures ---
+
+Value builtin_gfx_load_texture(Vec *args) {
+#ifndef ENABLE_RAYLIB
+    (void)args;
+    return failMsg("graphics not available (built without ENABLE_RAYLIB)");
+#else
+    if (!gfx_state.initialized)
+        return failMsg("gfx_load_texture: no graphics context");
+    SCharVec *buf = listToUtf8(args->entries[0]);
+    int save = PROTECT(buf);
+    Texture2D loaded = LoadTexture(buf->entries);
+    UNPROTECT(save);
+    if (!IsTextureValid(loaded)) {
+        UnloadTexture(loaded);
+        return failMsg("gfx_load_texture: failed to load texture");
+    }
+    Texture2D *t = NEW_ARRAY(Texture2D, 1);
+    *t = loaded;
+    Opaque *wrapper = newOpaque(t, opaque_gfx_texture_unload, NULL, NULL);
+    int wSave = PROTECT(wrapper);
+    TextureNode *node = NEW_ARRAY(TextureNode, 1);
+    node->wrapper = wrapper;
+    node->next = textureRegistry;
+    textureRegistry = node;
+    Value opaque = value_Opaque(wrapper);
+    Value result = makeTryResult(1, opaque);
+    UNPROTECT(wSave);
+    return result;
+#endif
+}
+
+Value builtin_gfx_unload_texture(Vec *args) {
+#ifndef ENABLE_RAYLIB
+    (void)args;
+    return value_Stdint(0);
+#else
+    if (args->entries[0].type != VALUE_TYPE_OPAQUE)
+        return value_Stdint(0);
+    Opaque *wrapper = args->entries[0].val.opaque;
+    textureRegistryRemove(wrapper);
+    opaque_gfx_texture_unload(wrapper->data);
+    wrapper->data = NULL;
+    return value_Stdint(1);
+#endif
+}
+
+Value builtin_gfx_draw_texture(Vec *args) {
+#ifndef ENABLE_RAYLIB
+    (void)args;
+    return value_Stdint(0);
+#else
+    if (!gfx_state.in_frame)
+        return value_Stdint(0);
+    if (args->entries[0].type != VALUE_TYPE_OPAQUE)
+        return value_Stdint(0);
+    Opaque *wrapper = args->entries[0].val.opaque;
+    if (wrapper->data == NULL)
+        return value_Stdint(0);
+    Texture2D *t = (Texture2D *)wrapper->data;
+    int x = valueAsInt(args->entries[1]);
+    int y = valueAsInt(args->entries[2]);
+    int r = extractChannel(args->entries[3]);
+    int g = extractChannel(args->entries[4]);
+    int b = extractChannel(args->entries[5]);
+    int a = extractChannel(args->entries[6]);
+    if (r < 0 || g < 0 || b < 0 || a < 0)
+        return value_Stdint(0);
+    Color tint = {(unsigned char)r, (unsigned char)g, (unsigned char)b,
+                  (unsigned char)a};
+    DrawTexture(*t, x, y, tint);
+    return value_Stdint(1);
+#endif
+}
+
+Value builtin_gfx_draw_texture_rec(Vec *args) {
+#ifndef ENABLE_RAYLIB
+    (void)args;
+    return value_Stdint(0);
+#else
+    if (!gfx_state.in_frame)
+        return value_Stdint(0);
+    if (args->entries[0].type != VALUE_TYPE_OPAQUE)
+        return value_Stdint(0);
+    Opaque *wrapper = args->entries[0].val.opaque;
+    if (wrapper->data == NULL)
+        return value_Stdint(0);
+    Texture2D *t = (Texture2D *)wrapper->data;
+    float sx = (float)valueAsInt(args->entries[1]);
+    float sy = (float)valueAsInt(args->entries[2]);
+    float sw = (float)valueAsInt(args->entries[3]);
+    float sh = (float)valueAsInt(args->entries[4]);
+    float dx = (float)valueAsInt(args->entries[5]);
+    float dy = (float)valueAsInt(args->entries[6]);
+    int r = extractChannel(args->entries[7]);
+    int g = extractChannel(args->entries[8]);
+    int b = extractChannel(args->entries[9]);
+    int a = extractChannel(args->entries[10]);
+    if (sw <= 0 || sh <= 0 || r < 0 || g < 0 || b < 0 || a < 0)
+        return value_Stdint(0);
+    Rectangle src = {sx, sy, sw, sh};
+    Vector2 dst = {dx, dy};
+    Color tint = {(unsigned char)r, (unsigned char)g, (unsigned char)b,
+                  (unsigned char)a};
+    DrawTextureRec(*t, src, dst, tint);
+    return value_Stdint(1);
+#endif
+}
+
+Value builtin_gfx_texture_width(Vec *args) {
+#ifndef ENABLE_RAYLIB
+    (void)args;
+    return value_Stdint(0);
+#else
+    if (args->entries[0].type != VALUE_TYPE_OPAQUE)
+        return value_Stdint(0);
+    Opaque *wrapper = args->entries[0].val.opaque;
+    if (wrapper->data == NULL)
+        return value_Stdint(0);
+    Texture2D *t = (Texture2D *)wrapper->data;
+    return value_Stdint(t->width);
+#endif
+}
+
+Value builtin_gfx_texture_height(Vec *args) {
+#ifndef ENABLE_RAYLIB
+    (void)args;
+    return value_Stdint(0);
+#else
+    if (args->entries[0].type != VALUE_TYPE_OPAQUE)
+        return value_Stdint(0);
+    Opaque *wrapper = args->entries[0].val.opaque;
+    if (wrapper->data == NULL)
+        return value_Stdint(0);
+    Texture2D *t = (Texture2D *)wrapper->data;
+    return value_Stdint(t->height);
+#endif
+}
+
 // registration helpers
 
 static void registerGfxOpen(BuiltIns *registry) {
@@ -1057,5 +1288,97 @@ static void registerGfxMeasureTextWidth(BuiltIns *registry) {
     pushNewBuiltIn(registry, "gfx_measure_text_width", retType, args,
                    (void *)builtin_gfx_measure_text_width,
                    "builtin_gfx_measure_text_width");
+    UNPROTECT(save);
+}
+
+static void registerGfxLoadTexture(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    pushStringArg(args);
+    TcType *errType = makeStringType();
+    PROTECT(errType);
+    TcType *texType = makeTextureType();
+    PROTECT(texType);
+    TcType *retType = makeTryType(errType, texType);
+    PROTECT(retType);
+    pushNewBuiltIn(registry, "gfx_load_texture", retType, args,
+                   (void *)builtin_gfx_load_texture,
+                   "builtin_gfx_load_texture");
+    UNPROTECT(save);
+}
+
+static void registerGfxUnloadTexture(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    pushTextureArg(args);
+    TcType *b = makeBoolean();
+    PROTECT(b);
+    pushNewBuiltIn(registry, "gfx_unload_texture", b, args,
+                   (void *)builtin_gfx_unload_texture,
+                   "builtin_gfx_unload_texture");
+    UNPROTECT(save);
+}
+
+static void registerGfxDrawTexture(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    pushTextureArg(args);
+    pushIntegerArg(args); // x
+    pushIntegerArg(args); // y
+    pushIntegerArg(args); // r
+    pushIntegerArg(args); // g
+    pushIntegerArg(args); // b
+    pushIntegerArg(args); // a
+    TcType *ret = makeBoolean();
+    PROTECT(ret);
+    pushNewBuiltIn(registry, "gfx_draw_texture", ret, args,
+                   (void *)builtin_gfx_draw_texture,
+                   "builtin_gfx_draw_texture");
+    UNPROTECT(save);
+}
+
+static void registerGfxDrawTextureRec(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    pushTextureArg(args);
+    pushIntegerArg(args); // src_x
+    pushIntegerArg(args); // src_y
+    pushIntegerArg(args); // src_w
+    pushIntegerArg(args); // src_h
+    pushIntegerArg(args); // dst_x
+    pushIntegerArg(args); // dst_y
+    pushIntegerArg(args); // r
+    pushIntegerArg(args); // g
+    pushIntegerArg(args); // b
+    pushIntegerArg(args); // a
+    TcType *ret = makeBoolean();
+    PROTECT(ret);
+    pushNewBuiltIn(registry, "gfx_draw_texture_rec", ret, args,
+                   (void *)builtin_gfx_draw_texture_rec,
+                   "builtin_gfx_draw_texture_rec");
+    UNPROTECT(save);
+}
+
+static void registerGfxTextureWidth(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    pushTextureArg(args);
+    TcType *n = newTcType_BigInteger();
+    PROTECT(n);
+    pushNewBuiltIn(registry, "gfx_texture_width", n, args,
+                   (void *)builtin_gfx_texture_width,
+                   "builtin_gfx_texture_width");
+    UNPROTECT(save);
+}
+
+static void registerGfxTextureHeight(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    pushTextureArg(args);
+    TcType *n = newTcType_BigInteger();
+    PROTECT(n);
+    pushNewBuiltIn(registry, "gfx_texture_height", n, args,
+                   (void *)builtin_gfx_texture_height,
+                   "builtin_gfx_texture_height");
     UNPROTECT(save);
 }

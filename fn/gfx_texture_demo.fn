@@ -1,0 +1,51 @@
+// Texture demo: loads a PNG and draws it plain and as a cropped sprite region.
+//
+// Run: ./bin/fn --include=fn fn/gfx_texture_demo.fn
+let
+    link "graphics.fn" as gfx;
+
+    fn loop(tex) {
+        if (gfx.should_close()) { true }
+        else if (gfx.key_pressed(gfx.key_escape())) { true }
+        else {
+            let
+                w = gfx.texture_width(tex);
+                h = gfx.texture_height(tex);
+                hw = w / 2;
+                hh = h / 2;
+            in
+                gfx.frame(gfx.rgb(30, 30, 60), fn () {
+                    // draw full texture at top-left
+                    gfx.draw_texture_at(tex, gfx.point(20, 20), gfx.white());
+
+                    // draw top-left quadrant as a sprite at a different position
+                    gfx.draw_sprite(
+                        tex,
+                        gfx.rect(0, 0, hw, hh),
+                        gfx.point(w + 40, 20),
+                        gfx.white()
+                    );
+
+                    // draw bottom-right quadrant with a tint
+                    gfx.draw_sprite(
+                        tex,
+                        gfx.rect(hw, hh, hw, hh),
+                        gfx.point(w + 40, hh + 30),
+                        gfx.rgba(200, 150, 255, 255)
+                    );
+
+                    gfx.draw_text_at("Full texture", gfx.point(20, h + 30), 18, gfx.white());
+                    gfx.draw_text_at("Top-left quadrant", gfx.point(w + 40, h + 30), 18, gfx.white());
+                    gfx.draw_text_at("Press Esc to exit", gfx.point(20, h + 55), 16, gfx.rgb(180, 180, 180))
+                });
+            loop(tex)
+        }
+    }
+
+in
+    gfx.with_window(800, 600, "Texture Demo", fn () {
+        assert(gfx.set_target_fps(60));
+        gfx.with_texture("docs/CEKF.png", fn (tex) {
+            loop(tex)
+        })
+    })
