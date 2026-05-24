@@ -433,6 +433,14 @@ fn is_music_playing(music) { gfx_is_music_playing(music) }
 
 fn update_music_stream(music) { gfx_update_music_stream(music) }
 
+fn music_time_played_ms(music) { gfx_music_time_played_ms(music) }
+
+fn music_time_length_ms(music) { gfx_music_time_length_ms(music) }
+
+fn music_progress_width(music, max_width) {
+    gfx_music_progress_width(music, max_width)
+}
+
 fn set_music_volume(music, percent) {
     gfx_set_music_volume(music, percent)
 }

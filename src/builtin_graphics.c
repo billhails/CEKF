@@ -89,6 +89,9 @@ static void registerGfxStopMusic(BuiltIns *registry);
 static void registerGfxSetMusicVolume(BuiltIns *registry);
 static void registerGfxIsMusicPlaying(BuiltIns *registry);
 static void registerGfxUpdateMusicStream(BuiltIns *registry);
+static void registerGfxMusicTimePlayedMs(BuiltIns *registry);
+static void registerGfxMusicTimeLengthMs(BuiltIns *registry);
+static void registerGfxMusicProgressWidth(BuiltIns *registry);
 
 void registerGraphics(BuiltIns *registry) {
     registerGfxOpen(registry);
@@ -149,6 +152,9 @@ void registerGraphics(BuiltIns *registry) {
     registerGfxSetMusicVolume(registry);
     registerGfxIsMusicPlaying(registry);
     registerGfxUpdateMusicStream(registry);
+    registerGfxMusicTimePlayedMs(registry);
+    registerGfxMusicTimeLengthMs(registry);
+    registerGfxMusicProgressWidth(registry);
 }
 
 typedef struct FontNode {
@@ -1708,6 +1714,78 @@ Value builtin_gfx_update_music_stream(Vec *args) {
 #endif
 }
 
+Value builtin_gfx_music_time_played_ms(Vec *args) {
+#ifndef ENABLE_RAYLIB
+    (void)args;
+    return value_Stdint(0);
+#else
+    if (!gfx_state.audio_initialized)
+        return value_Stdint(0);
+    if (args->entries[0].type != VALUE_TYPE_OPAQUE)
+        return value_Stdint(0);
+    Opaque *wrapper = args->entries[0].val.opaque;
+    if (wrapper->data == NULL)
+        return value_Stdint(0);
+    Music *music = (Music *)wrapper->data;
+    float played = GetMusicTimePlayed(*music);
+    int ms = (int)(played * 1000.0f);
+    if (ms < 0)
+        ms = 0;
+    return value_Stdint(ms);
+#endif
+}
+
+Value builtin_gfx_music_time_length_ms(Vec *args) {
+#ifndef ENABLE_RAYLIB
+    (void)args;
+    return value_Stdint(0);
+#else
+    if (!gfx_state.audio_initialized)
+        return value_Stdint(0);
+    if (args->entries[0].type != VALUE_TYPE_OPAQUE)
+        return value_Stdint(0);
+    Opaque *wrapper = args->entries[0].val.opaque;
+    if (wrapper->data == NULL)
+        return value_Stdint(0);
+    Music *music = (Music *)wrapper->data;
+    float length = GetMusicTimeLength(*music);
+    int ms = (int)(length * 1000.0f);
+    if (ms < 0)
+        ms = 0;
+    return value_Stdint(ms);
+#endif
+}
+
+Value builtin_gfx_music_progress_width(Vec *args) {
+#ifndef ENABLE_RAYLIB
+    (void)args;
+    return value_Stdint(0);
+#else
+    if (!gfx_state.audio_initialized)
+        return value_Stdint(0);
+    if (args->entries[0].type != VALUE_TYPE_OPAQUE)
+        return value_Stdint(0);
+    Opaque *wrapper = args->entries[0].val.opaque;
+    if (wrapper->data == NULL)
+        return value_Stdint(0);
+    int maxWidth = valueAsInt(args->entries[1]);
+    if (maxWidth <= 0)
+        return value_Stdint(0);
+    Music *music = (Music *)wrapper->data;
+    float length = GetMusicTimeLength(*music);
+    if (length <= 0.0f)
+        return value_Stdint(0);
+    float played = GetMusicTimePlayed(*music);
+    float ratio = played / length;
+    if (ratio < 0.0f)
+        ratio = 0.0f;
+    if (ratio > 1.0f)
+        ratio = 1.0f;
+    int width = (int)(ratio * (float)maxWidth);
+    return value_Stdint(width);
+#endif
+}
+
 // registration helpers
 
 static void registerGfxOpen(BuiltIns *registry) {
@@ -2499,5 +2577,42 @@ static void registerGfxUpdateMusicStream(BuiltIns *registry) {
     pushNewBuiltIn(registry, "gfx_update_music_stream", ret, args,
                    (void *)builtin_gfx_update_music_stream,
                    "builtin_gfx_update_music_stream");
+    UNPROTECT(save);
+}
+
+static void registerGfxMusicTimePlayedMs(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    pushMusicArg(args);
+    TcType *ret = newTcType_BigInteger();
+    PROTECT(ret);
+    pushNewBuiltIn(registry, "gfx_music_time_played_ms", ret, args,
+                   (void *)builtin_gfx_music_time_played_ms,
+                   "builtin_gfx_music_time_played_ms");
+    UNPROTECT(save);
+}
+
+static void registerGfxMusicTimeLengthMs(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    pushMusicArg(args);
+    TcType *ret = newTcType_BigInteger();
+    PROTECT(ret);
+    pushNewBuiltIn(registry, "gfx_music_time_length_ms", ret, args,
+                   (void *)builtin_gfx_music_time_length_ms,
+                   "builtin_gfx_music_time_length_ms");
+    UNPROTECT(save);
+}
+
+static void registerGfxMusicProgressWidth(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    pushMusicArg(args);
+    pushIntegerArg(args);
+    TcType *ret = newTcType_BigInteger();
+    PROTECT(ret);
+    pushNewBuiltIn(registry, "gfx_music_progress_width", ret, args,
+                   (void *)builtin_gfx_music_progress_width,
+                   "builtin_gfx_music_progress_width");
     UNPROTECT(save);
 }

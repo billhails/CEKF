@@ -47,6 +47,9 @@ let
         else {
             let
                 next = next_volume(volume);
+                played_ms = gfx.music_time_played_ms(music);
+                length_ms = gfx.music_time_length_ms(music);
+                progress = gfx.music_progress_width(music, 560);
             in
                 gfx.frame(gfx.rgb(14, 20, 30), fn () {
                     assert(gfx.update_music_stream(music));
@@ -73,6 +76,9 @@ let
                         if (gfx.is_music_playing(music)) { gfx.rgb(160, 240, 180) }
                         else { gfx.rgb(230, 180, 170) }
                     );
+                    gfx.draw_text_at("Progress:", gfx.point(20, 244), 20, gfx.rgb(200, 210, 230));
+                    gfx.draw_rect_from(gfx.rect(130, 246, 560, 18), gfx.rgb(120, 130, 160));
+                    gfx.fill_rect_from(gfx.rect(130, 246, progress, 18), gfx.rgb(160, 220, 255));
                     gfx.draw_text_at("Press Esc to exit", gfx.point(20, 740), 18, gfx.rgb(170, 170, 190));
 
                     if (gfx.key_pressed(gfx.key_space())) { gfx.play_music(music) }
