@@ -45,6 +45,8 @@ static void registerGfxIsKeyPressed(BuiltIns *registry);
 static void registerGfxIsKeyReleased(BuiltIns *registry);
 static void registerGfxMouseX(BuiltIns *registry);
 static void registerGfxMouseY(BuiltIns *registry);
+static void registerGfxMouseDeltaX(BuiltIns *registry);
+static void registerGfxMouseDeltaY(BuiltIns *registry);
 static void registerGfxIsMouseDown(BuiltIns *registry);
 static void registerGfxIsMousePressed(BuiltIns *registry);
 static void registerGfxScreenWidth(BuiltIns *registry);
@@ -77,6 +79,10 @@ static void registerGfxEndMode3D(BuiltIns *registry);
 static void registerGfxDrawCube(BuiltIns *registry);
 static void registerGfxDrawCubeWires(BuiltIns *registry);
 static void registerGfxDrawGrid(BuiltIns *registry);
+static void registerGfxLoadModel(BuiltIns *registry);
+static void registerGfxUnloadModel(BuiltIns *registry);
+static void registerGfxDrawModel(BuiltIns *registry);
+static void registerGfxDrawModelWires(BuiltIns *registry);
 static void registerGfxAudioOpen(BuiltIns *registry);
 static void registerGfxAudioClose(BuiltIns *registry);
 static void registerGfxLoadSound(BuiltIns *registry);
@@ -114,6 +120,8 @@ void registerGraphics(BuiltIns *registry) {
     registerGfxIsKeyReleased(registry);
     registerGfxMouseX(registry);
     registerGfxMouseY(registry);
+    registerGfxMouseDeltaX(registry);
+    registerGfxMouseDeltaY(registry);
     registerGfxIsMouseDown(registry);
     registerGfxIsMousePressed(registry);
     registerGfxScreenWidth(registry);
@@ -146,6 +154,10 @@ void registerGraphics(BuiltIns *registry) {
     registerGfxDrawCube(registry);
     registerGfxDrawCubeWires(registry);
     registerGfxDrawGrid(registry);
+    registerGfxLoadModel(registry);
+    registerGfxUnloadModel(registry);
+    registerGfxDrawModel(registry);
+    registerGfxDrawModelWires(registry);
     registerGfxAudioOpen(registry);
     registerGfxAudioClose(registry);
     registerGfxLoadSound(registry);
@@ -204,6 +216,13 @@ typedef struct MusicNode {
 
 static MusicNode *musicRegistry = NULL;
 
+typedef struct ModelNode {
+    Opaque *wrapper;
+    struct ModelNode *next;
+} ModelNode;
+
+static ModelNode *modelRegistry = NULL;
+
 static HashSymbol *fontSymbol(void) { return newSymbol("font"); }
 
 static TcType *makeFontType(void) { return newTcType_Opaque(fontSymbol()); }
@@ -248,6 +267,18 @@ static TcType *makeMusicType(void) { return newTcType_Opaque(musicSymbol()); }
 
 static TcType *pushMusicArg(BuiltInArgs *args) {
     TcType *t = makeMusicType();
+    int save = PROTECT(t);
+    pushBuiltInArgs(args, t);
+    UNPROTECT(save);
+    return t;
+}
+
+static HashSymbol *modelSymbol(void) { return newSymbol("model"); }
+
+static TcType *makeModelType(void) { return newTcType_Opaque(modelSymbol()); }
+
+static TcType *pushModelArg(BuiltInArgs *args) {
+    TcType *t = makeModelType();
     int save = PROTECT(t);
     pushBuiltInArgs(args, t);
     UNPROTECT(save);
@@ -306,6 +337,19 @@ static void musicRegistryRemove(Opaque *wrapper) {
         prev = &(*prev)->next;
     }
 }
+
+static void modelRegistryRemove(Opaque *wrapper) {
+    ModelNode **prev = &modelRegistry;
+    while (*prev != NULL) {
+        if ((*prev)->wrapper == wrapper) {
+            ModelNode *dead = *prev;
+            *prev = dead->next;
+            FREE_ARRAY(ModelNode, dead, 1);
+            return;
+        }
+        prev = &(*prev)->next;
+    }
+}
 #endif
 
 void markGraphicsGlobals(void) {
@@ -333,6 +377,11 @@ void markGraphicsGlobals(void) {
     while (mnode != NULL) {
         markOpaque(mnode->wrapper);
         mnode = mnode->next;
+    }
+    ModelNode *modelNode = modelRegistry;
+    while (modelNode != NULL) {
+        markOpaque(modelNode->wrapper);
+        modelNode = modelNode->next;
     }
 }
 
@@ -518,6 +567,28 @@ static void musicRegistryDrain(void) {
     }
     musicRegistry = NULL;
 }
+
+static void opaque_gfx_model_unload(void *data) {
+    if (data == NULL)
+        return;
+    Model *model = (Model *)data;
+    UnloadModel(*model);
+    FREE_ARRAY(Model, model, 1);
+}
+
+static void modelRegistryDrain(void) {
+    ModelNode *node = modelRegistry;
+    while (node != NULL) {
+        ModelNode *next = node->next;
+        if (node->wrapper->data != NULL) {
+            opaque_gfx_model_unload(node->wrapper->data);
+            node->wrapper->data = NULL;
+        }
+        FREE_ARRAY(ModelNode, node, 1);
+        node = next;
+    }
+    modelRegistry = NULL;
+}
 #endif
 
 static Value failMsg(const char *text) {
@@ -585,6 +656,7 @@ Value builtin_gfx_close(Vec *args) {
         }
         renderTextureRegistryDrain();
         textureRegistryDrain();
+        modelRegistryDrain();
         fontRegistryDrain();
         CloseWindow();
         gfx_state.initialized = false;
@@ -792,6 +864,30 @@ Value builtin_gfx_mouse_y(Vec *args) {
     if (!gfx_state.initialized)
         return value_Stdint(0);
     return value_Stdint(GetMouseY());
+#endif
+}
+
+Value builtin_gfx_mouse_delta_x(Vec *args) {
+    (void)args;
+#ifndef ENABLE_RAYLIB
+    return value_Stdint(0);
+#else
+    if (!gfx_state.initialized)
+        return value_Stdint(0);
+    Vector2 delta = GetMouseDelta();
+    return value_Stdint((int)delta.x);
+#endif
+}
+
+Value builtin_gfx_mouse_delta_y(Vec *args) {
+    (void)args;
+#ifndef ENABLE_RAYLIB
+    return value_Stdint(0);
+#else
+    if (!gfx_state.initialized)
+        return value_Stdint(0);
+    Vector2 delta = GetMouseDelta();
+    return value_Stdint((int)delta.y);
 #endif
 }
 
@@ -1548,6 +1644,115 @@ Value builtin_gfx_draw_grid(Vec *args) {
 #endif
 }
 
+Value builtin_gfx_load_model(Vec *args) {
+#ifndef ENABLE_RAYLIB
+    (void)args;
+    return failMsg("graphics not available (built without ENABLE_RAYLIB)");
+#else
+    if (!gfx_state.initialized)
+        return failMsg("gfx_load_model: no graphics context");
+    SCharVec *path = listToUtf8(args->entries[0]);
+    int save = PROTECT(path);
+    Model loaded = LoadModel(path->entries);
+    UNPROTECT(save);
+    if (loaded.meshCount <= 0)
+        return failMsg("gfx_load_model: failed to load model");
+
+    Model *model = NEW_ARRAY(Model, 1);
+    *model = loaded;
+    Opaque *wrapper = newOpaque(model, opaque_gfx_model_unload, NULL, NULL);
+    int wSave = PROTECT(wrapper);
+    ModelNode *node = NEW_ARRAY(ModelNode, 1);
+    node->wrapper = wrapper;
+    node->next = modelRegistry;
+    modelRegistry = node;
+    Value result = makeTryResult(1, value_Opaque(wrapper));
+    UNPROTECT(wSave);
+    return result;
+#endif
+}
+
+Value builtin_gfx_unload_model(Vec *args) {
+#ifndef ENABLE_RAYLIB
+    (void)args;
+    return value_Stdint(0);
+#else
+    if (args->entries[0].type != VALUE_TYPE_OPAQUE)
+        return value_Stdint(0);
+    Opaque *wrapper = args->entries[0].val.opaque;
+    modelRegistryRemove(wrapper);
+    opaque_gfx_model_unload(wrapper->data);
+    wrapper->data = NULL;
+    return value_Stdint(1);
+#endif
+}
+
+Value builtin_gfx_draw_model(Vec *args) {
+#ifndef ENABLE_RAYLIB
+    (void)args;
+    return value_Stdint(0);
+#else
+    if (!gfx_state.in_3d_mode)
+        return value_Stdint(0);
+    if (args->entries[0].type != VALUE_TYPE_OPAQUE)
+        return value_Stdint(0);
+    Opaque *wrapper = args->entries[0].val.opaque;
+    if (wrapper->data == NULL)
+        return value_Stdint(0);
+
+    Model *model = (Model *)wrapper->data;
+    float posX = valueAsFloat(args->entries[1]);
+    float posY = valueAsFloat(args->entries[2]);
+    float posZ = valueAsFloat(args->entries[3]);
+    float scale = valueAsFloat(args->entries[4]);
+    int r = extractChannel(args->entries[5]);
+    int g = extractChannel(args->entries[6]);
+    int b = extractChannel(args->entries[7]);
+    int a = extractChannel(args->entries[8]);
+
+    if (scale <= 0.0f || r < 0 || g < 0 || b < 0 || a < 0)
+        return value_Stdint(0);
+
+    Color tint = {(unsigned char)r, (unsigned char)g, (unsigned char)b,
+                  (unsigned char)a};
+    DrawModel(*model, (Vector3){posX, posY, posZ}, scale, tint);
+    return value_Stdint(1);
+#endif
+}
+
+Value builtin_gfx_draw_model_wires(Vec *args) {
+#ifndef ENABLE_RAYLIB
+    (void)args;
+    return value_Stdint(0);
+#else
+    if (!gfx_state.in_3d_mode)
+        return value_Stdint(0);
+    if (args->entries[0].type != VALUE_TYPE_OPAQUE)
+        return value_Stdint(0);
+    Opaque *wrapper = args->entries[0].val.opaque;
+    if (wrapper->data == NULL)
+        return value_Stdint(0);
+
+    Model *model = (Model *)wrapper->data;
+    float posX = valueAsFloat(args->entries[1]);
+    float posY = valueAsFloat(args->entries[2]);
+    float posZ = valueAsFloat(args->entries[3]);
+    float scale = valueAsFloat(args->entries[4]);
+    int r = extractChannel(args->entries[5]);
+    int g = extractChannel(args->entries[6]);
+    int b = extractChannel(args->entries[7]);
+    int a = extractChannel(args->entries[8]);
+
+    if (scale <= 0.0f || r < 0 || g < 0 || b < 0 || a < 0)
+        return value_Stdint(0);
+
+    Color tint = {(unsigned char)r, (unsigned char)g, (unsigned char)b,
+                  (unsigned char)a};
+    DrawModelWires(*model, (Vector3){posX, posY, posZ}, scale, tint);
+    return value_Stdint(1);
+#endif
+}
+
 Value builtin_gfx_audio_open(Vec *args) {
     (void)args;
 #ifndef ENABLE_RAYLIB
@@ -2137,6 +2342,28 @@ static void registerGfxMouseY(BuiltIns *registry) {
     UNPROTECT(save);
 }
 
+static void registerGfxMouseDeltaX(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    TcType *n = newTcType_BigInteger();
+    PROTECT(n);
+    pushNewBuiltIn(registry, "gfx_mouse_delta_x", n, args,
+                   (void *)builtin_gfx_mouse_delta_x,
+                   "builtin_gfx_mouse_delta_x");
+    UNPROTECT(save);
+}
+
+static void registerGfxMouseDeltaY(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    TcType *n = newTcType_BigInteger();
+    PROTECT(n);
+    pushNewBuiltIn(registry, "gfx_mouse_delta_y", n, args,
+                   (void *)builtin_gfx_mouse_delta_y,
+                   "builtin_gfx_mouse_delta_y");
+    UNPROTECT(save);
+}
+
 static void registerGfxIsMouseDown(BuiltIns *registry) {
     BuiltInArgs *args = newBuiltInArgs();
     int save = PROTECT(args);
@@ -2631,6 +2858,72 @@ static void registerGfxDrawGrid(BuiltIns *registry) {
     PROTECT(ret);
     pushNewBuiltIn(registry, "gfx_draw_grid", ret, args,
                    (void *)builtin_gfx_draw_grid, "builtin_gfx_draw_grid");
+    UNPROTECT(save);
+}
+
+static void registerGfxLoadModel(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    pushStringArg(args);
+    TcType *errType = makeStringType();
+    PROTECT(errType);
+    TcType *modelType = makeModelType();
+    PROTECT(modelType);
+    TcType *retType = makeTryType(errType, modelType);
+    PROTECT(retType);
+    pushNewBuiltIn(registry, "gfx_load_model", retType, args,
+                   (void *)builtin_gfx_load_model, "builtin_gfx_load_model");
+    UNPROTECT(save);
+}
+
+static void registerGfxUnloadModel(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    pushModelArg(args);
+    TcType *ret = makeBoolean();
+    PROTECT(ret);
+    pushNewBuiltIn(registry, "gfx_unload_model", ret, args,
+                   (void *)builtin_gfx_unload_model,
+                   "builtin_gfx_unload_model");
+    UNPROTECT(save);
+}
+
+static void registerGfxDrawModel(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    pushModelArg(args);
+    pushIntegerArg(args); // pos_x
+    pushIntegerArg(args); // pos_y
+    pushIntegerArg(args); // pos_z
+    pushIntegerArg(args); // scale
+    pushIntegerArg(args); // r
+    pushIntegerArg(args); // g
+    pushIntegerArg(args); // b
+    pushIntegerArg(args); // a
+    TcType *ret = makeBoolean();
+    PROTECT(ret);
+    pushNewBuiltIn(registry, "gfx_draw_model", ret, args,
+                   (void *)builtin_gfx_draw_model, "builtin_gfx_draw_model");
+    UNPROTECT(save);
+}
+
+static void registerGfxDrawModelWires(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    pushModelArg(args);
+    pushIntegerArg(args); // pos_x
+    pushIntegerArg(args); // pos_y
+    pushIntegerArg(args); // pos_z
+    pushIntegerArg(args); // scale
+    pushIntegerArg(args); // r
+    pushIntegerArg(args); // g
+    pushIntegerArg(args); // b
+    pushIntegerArg(args); // a
+    TcType *ret = makeBoolean();
+    PROTECT(ret);
+    pushNewBuiltIn(registry, "gfx_draw_model_wires", ret, args,
+                   (void *)builtin_gfx_draw_model_wires,
+                   "builtin_gfx_draw_model_wires");
     UNPROTECT(save);
 }
 

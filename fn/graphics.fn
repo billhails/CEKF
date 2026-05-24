@@ -108,6 +108,8 @@ fn mouse_held(btn) { gfx_is_mouse_down(btn) }
 fn mouse_pressed(btn) { gfx_is_mouse_pressed(btn) }
 fn mouse_x() { gfx_mouse_x() }
 fn mouse_y() { gfx_mouse_y() }
+fn mouse_delta_x() { gfx_mouse_delta_x() }
+fn mouse_delta_y() { gfx_mouse_delta_y() }
 fn screen_width() { gfx_screen_width() }
 fn screen_height() { gfx_screen_height() }
 fn frame_time_ms() { gfx_frame_time_ms() }
@@ -416,6 +418,37 @@ fn draw_cube_wires(vec3(center_x, center_y, center_z), vec3(size_x, size_y, size
 
 fn draw_grid(slices, spacing) {
     gfx_draw_grid(slices, spacing)
+}
+
+fn load_model(path) {
+    gfx_load_model(path)
+}
+
+fn unload_model(model) { gfx_unload_model(model) }
+
+fn draw_model_at(model, vec3(pos_x, pos_y, pos_z), scale, rgba(r, g, b, a)) {
+    gfx_draw_model(model, pos_x, pos_y, pos_z, scale, r, g, b, a)
+}
+
+fn draw_model_wires_at(model, vec3(pos_x, pos_y, pos_z), scale, rgba(r, g, b, a)) {
+    gfx_draw_model_wires(model, pos_x, pos_y, pos_z, scale, r, g, b, a)
+}
+
+fn with_model(path, handler) {
+    switch (gfx_load_model(path)) {
+        (success(model)) {
+            let result = just(handler(model));
+            in
+                gfx_unload_model(model);
+                result
+        }
+        (failure(msg)) {
+            puts("model load error: ");
+            puts(msg);
+            putc('\n');
+            nothing
+        }
+    }
 }
 
 fn audio_open() { gfx_audio_open() }

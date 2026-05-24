@@ -1,0 +1,31 @@
+# MakeHuman exported MTL
+# www.makehuman.org
+
+
+newmtl young_african_male
+Kd 0.5 0.5 0.5
+Ks 0.02745 0.02745 0.02745
+d 0
+map_Kd textures/young_darkskinned_male_diffuse.png
+map_D textures/young_darkskinned_male_diffuse.png
+
+newmtl short02
+Kd 1 1 1
+Ks 0.05098 0.05098 0.05098
+d 0
+map_Kd textures/short02_diffuse.png
+map_D textures/short02_diffuse.png
+
+newmtl Eye_brown
+Kd 1 1 1
+Ks 1 1 1
+d 0
+map_Kd textures/brown_eye.png
+map_D textures/brown_eye.png
+
+newmtl eyebrow008
+Kd 1 1 1
+Ks 0 0 0
+d 0
+map_Kd textures/eyebrow008.png
+map_D textures/eyebrow008.png
