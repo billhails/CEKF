@@ -1,6 +1,6 @@
 .PHONY: all clean realclean deps profile leak-check check-grammar \
 list-cores test indent indent-src indent-generated docs \
-install-sqlite3 coverage extracov view-coverage \
+install-sqlite3 install-raylib coverage extracov view-coverage \
 coverage-target test-a test-fail test-sh test-c test-unit test-b test-big-c help \
 establish-baseline test-refactoring update-baseline clean-baseline \
 scratch bench-regex-cache
@@ -45,6 +45,11 @@ CCC:=clang
 WEXTRA=-Werror=implicit-fallthrough
 endif
 
+ENABLE_RAYLIB ?= 0
+ifeq ($(ENABLE_RAYLIB),1)
+EXTRA_DEFINES += -DENABLE_RAYLIB
+endif
+
 CC:=$(CCC) -Wall -Wextra -Werror $(WEXTRA) $(CCMODE) $(EXTRA_DEFINES)
 LAXCC:=$(CCC) -Werror $(CCMODE) $(EXTRA_DEFINES)
 
@@ -54,6 +59,9 @@ MAKE_AST=$(PYTHON) $(GENERATE)
 GENDEPS=$(GENERATE) $(wildcard ./tools/generate/*.py)
 
 LIBS=-lm -lsqlite3
+ifeq ($(ENABLE_RAYLIB),1)
+LIBS += $(shell pkg-config --libs raylib)
+endif
 
 PREAMBLE_SRC=$(SRCDIR)/preamble.fn
 EXTRA_YAML=$(filter-out $(SRCDIR)/primitives.yaml, $(wildcard $(SRCDIR)/*.yaml))
@@ -117,6 +125,9 @@ ALL_OBJ=$(OBJ) $(EXTRA_OBJ) $(PREAMBLE_OBJ)
 ALL_DEP=$(DEP) $(EXTRA_DEP) $(TEST_DEP) $(MAIN_DEP) $(PREAMBLE_DEP)
 
 INCLUDE_PATHS=-I $(GENDIR)/ -I $(SRCDIR)/
+ifeq ($(ENABLE_RAYLIB),1)
+INCLUDE_PATHS += $(shell pkg-config --cflags raylib)
+endif
 
 all: $(TARGET) docs
 
@@ -345,6 +356,9 @@ $(DEPDIR) $(OBJDIR) $(BINDIR) $(GENDIR) $(DOCDIR) $(UNIDIR) $(TMPDIR) :
 
 install-sqlite3:
 	sudo apt-get --yes install sqlite3 libsqlite3-dev
+
+install-raylib:
+	sudo apt-get --yes install libraylib-dev
 
 $(UNIDIR)/unicode.db: $(UNIDIR)/UnicodeData.csv ./tools/create_table.sql
 	rm -f $@

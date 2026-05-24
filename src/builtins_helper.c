@@ -17,6 +17,7 @@
  */
 
 #include "builtins_helper.h"
+#include "builtin_graphics.h"
 #include "builtin_io.h"
 #include "builtin_regex.h"
 #include "builtin_sqlite.h"
@@ -195,6 +196,7 @@ BuiltIns *registerBuiltIns(int argc, int cargc, char *argv[]) {
     registerIO(res);
     registerRegex(res);
     registerSQLite(res);
+    registerGraphics(res);
     registerArgv(res, argc, cargc, argv);
     registerGetEnv(res);
     registerRealPart(res);

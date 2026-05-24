@@ -1,0 +1,21 @@
+let
+    link "graphics.fn" as gfx;
+
+    fn animate(x) {
+        if (gfx.should_close()) {
+            true
+        } else {
+            let
+                next = if (x > 800) { 0 } else { x + 2 };
+            in
+                gfx.frame(gfx.black(), fn () {
+                    gfx.draw_text("Hello!", x, 200, 24, gfx.white())
+                });
+                animate(next)
+        }
+    }
+in
+    gfx.with_window(800, 600, "Moving Text", fn () {
+        assert(gfx.set_target_fps(60));
+        animate(0)
+    })

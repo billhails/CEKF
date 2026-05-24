@@ -1,0 +1,165 @@
+namespace
+
+typedef Color { rgba(number, number, number, number) }
+
+fn rgb(r, g, b) {
+    rgba(r, g, b, 255)
+}
+
+fn black() { rgba(0, 0, 0, 255) }
+fn white() { rgba(255, 255, 255, 255) }
+fn red() { rgba(255, 0, 0, 255) }
+fn green() { rgba(0, 255, 0, 255) }
+fn blue() { rgba(0, 0, 255, 255) }
+
+fn with_window(width, height, title, handler) {
+    switch (gfx_open(width, height, title)) {
+        (success(_)) {
+            let data = just(handler());
+            in
+                gfx_close();
+                data
+        }
+        (failure(errmsg)) {
+            puts("graphics error: ");
+            puts(errmsg);
+            putc('\n');
+            nothing
+        }
+    }
+}
+
+fn set_target_fps(fps) {
+    gfx_set_target_fps(fps)
+}
+
+fn should_close() {
+    gfx_should_close()
+}
+
+fn clear(rgba(r, g, b, a)) {
+    gfx_clear(r, g, b, a)
+}
+
+fn fill_rect(x, y, w, h, rgba(r, g, b, a)) {
+    gfx_fill_rect(x, y, w, h, r, g, b, a)
+}
+
+fn draw_text(text, x, y, size, rgba(r, g, b, a)) {
+    gfx_draw_text(text, x, y, size, r, g, b, a)
+}
+
+fn frame(background, draw) {
+    assert(gfx_begin_frame());
+    clear(background);
+    {
+    let result = draw();
+    in
+        assert(gfx_end_frame());
+        result
+    }
+}
+
+fn loop(background, draw) {
+    if (should_close()) {
+        true
+    } else {
+        frame(background, draw);
+        loop(background, draw)
+    }
+}
+
+fn run(width, height, title, fps, background, draw) {
+    with_window(width, height, title, fn () {
+        assert(set_target_fps(fps));
+        loop(background, draw)
+    })
+}
+
+// --- input queries ---
+
+fn key_held(k) { gfx_is_key_down(k) }
+fn key_pressed(k) { gfx_is_key_pressed(k) }
+fn key_released(k) { gfx_is_key_released(k) }
+fn mouse_held(btn) { gfx_is_mouse_down(btn) }
+fn mouse_pressed(btn) { gfx_is_mouse_pressed(btn) }
+fn mouse_x() { gfx_mouse_x() }
+fn mouse_y() { gfx_mouse_y() }
+fn screen_width() { gfx_screen_width() }
+fn screen_height() { gfx_screen_height() }
+fn frame_time_ms() { gfx_frame_time_ms() }
+
+// --- key codes (raylib KeyboardKey values) ---
+
+fn key_space() { 32 }
+fn key_escape() { 256 }
+fn key_enter() { 257 }
+fn key_tab() { 258 }
+fn key_backspace() { 259 }
+fn arrow_right() { 262 }
+fn arrow_left() { 263 }
+fn arrow_down() { 264 }
+fn arrow_up() { 265 }
+fn key_left_shift() { 340 }
+fn key_left_ctrl() { 341 }
+fn key_left_alt() { 342 }
+fn key_a() { 65 }
+fn key_b() { 66 }
+fn key_c() { 67 }
+fn key_d() { 68 }
+fn key_e() { 69 }
+fn key_f() { 70 }
+fn key_g() { 71 }
+fn key_h() { 72 }
+fn key_i() { 73 }
+fn key_j() { 74 }
+fn key_k() { 75 }
+fn key_l() { 76 }
+fn key_m() { 77 }
+fn key_n() { 78 }
+fn key_o() { 79 }
+fn key_p() { 80 }
+fn key_q() { 81 }
+fn key_r() { 82 }
+fn key_s() { 83 }
+fn key_t() { 84 }
+fn key_u() { 85 }
+fn key_v() { 86 }
+fn key_w() { 87 }
+fn key_x() { 88 }
+fn key_y() { 89 }
+fn key_z() { 90 }
+fn key_zero() { 48 }
+fn key_one() { 49 }
+fn key_two() { 50 }
+fn key_three() { 51 }
+fn key_four() { 52 }
+fn key_five() { 53 }
+fn key_six() { 54 }
+fn key_seven() { 55 }
+fn key_eight() { 56 }
+fn key_nine() { 57 }
+
+// --- mouse button codes ---
+
+fn btn_left() { 0 }
+fn btn_right() { 1 }
+fn btn_middle() { 2 }
+
+// --- additional primitives ---
+
+fn draw_line(x1, y1, x2, y2, rgba(r, g, b, a)) {
+    gfx_draw_line(x1, y1, x2, y2, r, g, b, a)
+}
+
+fn draw_circle(cx, cy, radius, rgba(r, g, b, a)) {
+    gfx_draw_circle(cx, cy, radius, r, g, b, a)
+}
+
+fn fill_circle(cx, cy, radius, rgba(r, g, b, a)) {
+    gfx_fill_circle(cx, cy, radius, r, g, b, a)
+}
+
+fn draw_rect(x, y, w, h, rgba(r, g, b, a)) {
+    gfx_draw_rect(x, y, w, h, r, g, b, a)
+}
