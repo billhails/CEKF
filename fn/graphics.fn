@@ -2,6 +2,7 @@ namespace
 
 typedef Color { rgba(number, number, number, number) }
 typedef Point { point(number, number) }
+typedef Vec3 { vec3(number, number, number) }
 typedef Size { extent(number, number) }
 typedef Rect { rect(number, number, number, number) }
 
@@ -30,6 +31,9 @@ fn with_render_texture_size(extent(width, height), handler) {
 fn point_x(point(x, _)) { x }
 fn point_y(point(_, y)) { y }
 fn translate(point(x, y), dx, dy) { point(x + dx, y + dy) }
+fn vec3_x(vec3(x, _, _)) { x }
+fn vec3_y(vec3(_, y, _)) { y }
+fn vec3_z(vec3(_, _, z)) { z }
 
 fn with_window(width, height, title, handler) {
     switch (gfx_open(width, height, title)) {
@@ -363,6 +367,55 @@ fn with_camera2d(point(target_x, target_y), point(offset_x, offset_y), rotation,
         assert(gfx_end_mode_2d());
         result
     }
+}
+
+fn projection_perspective() { 0 }
+fn projection_orthographic() { 1 }
+
+fn begin_mode_3d(
+    vec3(pos_x, pos_y, pos_z),
+    vec3(target_x, target_y, target_z),
+    vec3(up_x, up_y, up_z),
+    fovy,
+    projection
+) {
+    gfx_begin_mode_3d(
+        pos_x,
+        pos_y,
+        pos_z,
+        target_x,
+        target_y,
+        target_z,
+        up_x,
+        up_y,
+        up_z,
+        fovy,
+        projection
+    )
+}
+
+fn end_mode_3d() { gfx_end_mode_3d() }
+
+fn with_camera3d(position, target, up, fovy, projection, draw_fn) {
+    assert(begin_mode_3d(position, target, up, fovy, projection));
+    {
+    let result = draw_fn();
+    in
+        assert(end_mode_3d());
+        result
+    }
+}
+
+fn draw_cube(vec3(center_x, center_y, center_z), vec3(size_x, size_y, size_z), rgba(r, g, b, a)) {
+    gfx_draw_cube(center_x, center_y, center_z, size_x, size_y, size_z, r, g, b, a)
+}
+
+fn draw_cube_wires(vec3(center_x, center_y, center_z), vec3(size_x, size_y, size_z), rgba(r, g, b, a)) {
+    gfx_draw_cube_wires(center_x, center_y, center_z, size_x, size_y, size_z, r, g, b, a)
+}
+
+fn draw_grid(slices, spacing) {
+    gfx_draw_grid(slices, spacing)
 }
 
 fn audio_open() { gfx_audio_open() }

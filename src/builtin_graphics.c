@@ -72,6 +72,11 @@ static void registerGfxEndTextureMode(BuiltIns *registry);
 static void registerGfxDrawRenderTexture(BuiltIns *registry);
 static void registerGfxBeginMode2D(BuiltIns *registry);
 static void registerGfxEndMode2D(BuiltIns *registry);
+static void registerGfxBeginMode3D(BuiltIns *registry);
+static void registerGfxEndMode3D(BuiltIns *registry);
+static void registerGfxDrawCube(BuiltIns *registry);
+static void registerGfxDrawCubeWires(BuiltIns *registry);
+static void registerGfxDrawGrid(BuiltIns *registry);
 static void registerGfxAudioOpen(BuiltIns *registry);
 static void registerGfxAudioClose(BuiltIns *registry);
 static void registerGfxLoadSound(BuiltIns *registry);
@@ -136,6 +141,11 @@ void registerGraphics(BuiltIns *registry) {
     registerGfxDrawRenderTexture(registry);
     registerGfxBeginMode2D(registry);
     registerGfxEndMode2D(registry);
+    registerGfxBeginMode3D(registry);
+    registerGfxEndMode3D(registry);
+    registerGfxDrawCube(registry);
+    registerGfxDrawCubeWires(registry);
+    registerGfxDrawGrid(registry);
     registerGfxAudioOpen(registry);
     registerGfxAudioClose(registry);
     registerGfxLoadSound(registry);
@@ -332,8 +342,9 @@ static struct {
     bool in_frame;
     bool in_texture_mode;
     bool in_camera_mode;
+    bool in_3d_mode;
     bool audio_initialized;
-} gfx_state = {false, false, false, false, false};
+} gfx_state = {false, false, false, false, false, false};
 
 static bool canDrawTarget(void) {
     return gfx_state.in_frame || gfx_state.in_texture_mode;
@@ -542,6 +553,7 @@ Value builtin_gfx_open(Vec *args) {
     gfx_state.in_frame = false;
     gfx_state.in_texture_mode = false;
     gfx_state.in_camera_mode = false;
+    gfx_state.in_3d_mode = false;
     return makeTryResult(1, value_Stdint(1));
 #endif
 }
@@ -555,6 +567,10 @@ Value builtin_gfx_close(Vec *args) {
         return value_Stdint(0);
     }
     if (gfx_state.initialized) {
+        if (gfx_state.in_3d_mode) {
+            EndMode3D();
+            gfx_state.in_3d_mode = false;
+        }
         if (gfx_state.in_camera_mode) {
             EndMode2D();
             gfx_state.in_camera_mode = false;
@@ -1369,7 +1385,8 @@ Value builtin_gfx_begin_mode_2d(Vec *args) {
     (void)args;
     return value_Stdint(0);
 #else
-    if (!gfx_state.initialized || gfx_state.in_camera_mode || !canDrawTarget())
+    if (!gfx_state.initialized || gfx_state.in_camera_mode ||
+        gfx_state.in_3d_mode || !canDrawTarget())
         return value_Stdint(0);
     float targetX = valueAsFloat(args->entries[0]);
     float targetY = valueAsFloat(args->entries[1]);
@@ -1395,6 +1412,138 @@ Value builtin_gfx_end_mode_2d(Vec *args) {
         return value_Stdint(0);
     EndMode2D();
     gfx_state.in_camera_mode = false;
+    return value_Stdint(1);
+#endif
+}
+
+Value builtin_gfx_begin_mode_3d(Vec *args) {
+#ifndef ENABLE_RAYLIB
+    (void)args;
+    return value_Stdint(0);
+#else
+    if (!gfx_state.initialized || gfx_state.in_camera_mode ||
+        gfx_state.in_3d_mode || !canDrawTarget())
+        return value_Stdint(0);
+
+    float posX = valueAsFloat(args->entries[0]);
+    float posY = valueAsFloat(args->entries[1]);
+    float posZ = valueAsFloat(args->entries[2]);
+    float targetX = valueAsFloat(args->entries[3]);
+    float targetY = valueAsFloat(args->entries[4]);
+    float targetZ = valueAsFloat(args->entries[5]);
+    float upX = valueAsFloat(args->entries[6]);
+    float upY = valueAsFloat(args->entries[7]);
+    float upZ = valueAsFloat(args->entries[8]);
+    float fovy = valueAsFloat(args->entries[9]);
+    int projection = valueAsInt(args->entries[10]);
+
+    if (fovy <= 0.0f)
+        return value_Stdint(0);
+    if (projection != CAMERA_PERSPECTIVE && projection != CAMERA_ORTHOGRAPHIC)
+        return value_Stdint(0);
+
+    Camera3D camera = {
+        .position = {posX, posY, posZ},
+        .target = {targetX, targetY, targetZ},
+        .up = {upX, upY, upZ},
+        .fovy = fovy,
+        .projection = projection,
+    };
+
+    BeginMode3D(camera);
+    gfx_state.in_3d_mode = true;
+    return value_Stdint(1);
+#endif
+}
+
+Value builtin_gfx_end_mode_3d(Vec *args) {
+    (void)args;
+#ifndef ENABLE_RAYLIB
+    return value_Stdint(0);
+#else
+    if (!gfx_state.in_3d_mode)
+        return value_Stdint(0);
+    EndMode3D();
+    gfx_state.in_3d_mode = false;
+    return value_Stdint(1);
+#endif
+}
+
+Value builtin_gfx_draw_cube(Vec *args) {
+#ifndef ENABLE_RAYLIB
+    (void)args;
+    return value_Stdint(0);
+#else
+    if (!gfx_state.in_3d_mode)
+        return value_Stdint(0);
+
+    float centerX = valueAsFloat(args->entries[0]);
+    float centerY = valueAsFloat(args->entries[1]);
+    float centerZ = valueAsFloat(args->entries[2]);
+    float sizeX = valueAsFloat(args->entries[3]);
+    float sizeY = valueAsFloat(args->entries[4]);
+    float sizeZ = valueAsFloat(args->entries[5]);
+    int r = extractChannel(args->entries[6]);
+    int g = extractChannel(args->entries[7]);
+    int b = extractChannel(args->entries[8]);
+    int a = extractChannel(args->entries[9]);
+
+    if (sizeX <= 0.0f || sizeY <= 0.0f || sizeZ <= 0.0f || r < 0 || g < 0 ||
+        b < 0 || a < 0)
+        return value_Stdint(0);
+
+    Color color = {(unsigned char)r, (unsigned char)g, (unsigned char)b,
+                   (unsigned char)a};
+    DrawCube((Vector3){centerX, centerY, centerZ}, sizeX, sizeY, sizeZ, color);
+    return value_Stdint(1);
+#endif
+}
+
+Value builtin_gfx_draw_cube_wires(Vec *args) {
+#ifndef ENABLE_RAYLIB
+    (void)args;
+    return value_Stdint(0);
+#else
+    if (!gfx_state.in_3d_mode)
+        return value_Stdint(0);
+
+    float centerX = valueAsFloat(args->entries[0]);
+    float centerY = valueAsFloat(args->entries[1]);
+    float centerZ = valueAsFloat(args->entries[2]);
+    float sizeX = valueAsFloat(args->entries[3]);
+    float sizeY = valueAsFloat(args->entries[4]);
+    float sizeZ = valueAsFloat(args->entries[5]);
+    int r = extractChannel(args->entries[6]);
+    int g = extractChannel(args->entries[7]);
+    int b = extractChannel(args->entries[8]);
+    int a = extractChannel(args->entries[9]);
+
+    if (sizeX <= 0.0f || sizeY <= 0.0f || sizeZ <= 0.0f || r < 0 || g < 0 ||
+        b < 0 || a < 0)
+        return value_Stdint(0);
+
+    Color color = {(unsigned char)r, (unsigned char)g, (unsigned char)b,
+                   (unsigned char)a};
+    DrawCubeWires((Vector3){centerX, centerY, centerZ}, sizeX, sizeY, sizeZ,
+                  color);
+    return value_Stdint(1);
+#endif
+}
+
+Value builtin_gfx_draw_grid(Vec *args) {
+#ifndef ENABLE_RAYLIB
+    (void)args;
+    return value_Stdint(0);
+#else
+    if (!gfx_state.in_3d_mode)
+        return value_Stdint(0);
+
+    int slices = valueAsInt(args->entries[0]);
+    float spacing = valueAsFloat(args->entries[1]);
+    if (slices <= 0 || spacing <= 0.0f)
+        return value_Stdint(0);
+
+    DrawGrid(slices, spacing);
     return value_Stdint(1);
 #endif
 }
@@ -2397,6 +2546,91 @@ static void registerGfxEndMode2D(BuiltIns *registry) {
     PROTECT(ret);
     pushNewBuiltIn(registry, "gfx_end_mode_2d", ret, args,
                    (void *)builtin_gfx_end_mode_2d, "builtin_gfx_end_mode_2d");
+    UNPROTECT(save);
+}
+
+static void registerGfxBeginMode3D(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    pushIntegerArg(args); // pos_x
+    pushIntegerArg(args); // pos_y
+    pushIntegerArg(args); // pos_z
+    pushIntegerArg(args); // target_x
+    pushIntegerArg(args); // target_y
+    pushIntegerArg(args); // target_z
+    pushIntegerArg(args); // up_x
+    pushIntegerArg(args); // up_y
+    pushIntegerArg(args); // up_z
+    pushIntegerArg(args); // fovy
+    pushIntegerArg(args); // projection
+    TcType *ret = makeBoolean();
+    PROTECT(ret);
+    pushNewBuiltIn(registry, "gfx_begin_mode_3d", ret, args,
+                   (void *)builtin_gfx_begin_mode_3d,
+                   "builtin_gfx_begin_mode_3d");
+    UNPROTECT(save);
+}
+
+static void registerGfxEndMode3D(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    TcType *ret = makeBoolean();
+    PROTECT(ret);
+    pushNewBuiltIn(registry, "gfx_end_mode_3d", ret, args,
+                   (void *)builtin_gfx_end_mode_3d, "builtin_gfx_end_mode_3d");
+    UNPROTECT(save);
+}
+
+static void registerGfxDrawCube(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    pushIntegerArg(args); // center_x
+    pushIntegerArg(args); // center_y
+    pushIntegerArg(args); // center_z
+    pushIntegerArg(args); // size_x
+    pushIntegerArg(args); // size_y
+    pushIntegerArg(args); // size_z
+    pushIntegerArg(args); // r
+    pushIntegerArg(args); // g
+    pushIntegerArg(args); // b
+    pushIntegerArg(args); // a
+    TcType *ret = makeBoolean();
+    PROTECT(ret);
+    pushNewBuiltIn(registry, "gfx_draw_cube", ret, args,
+                   (void *)builtin_gfx_draw_cube, "builtin_gfx_draw_cube");
+    UNPROTECT(save);
+}
+
+static void registerGfxDrawCubeWires(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    pushIntegerArg(args); // center_x
+    pushIntegerArg(args); // center_y
+    pushIntegerArg(args); // center_z
+    pushIntegerArg(args); // size_x
+    pushIntegerArg(args); // size_y
+    pushIntegerArg(args); // size_z
+    pushIntegerArg(args); // r
+    pushIntegerArg(args); // g
+    pushIntegerArg(args); // b
+    pushIntegerArg(args); // a
+    TcType *ret = makeBoolean();
+    PROTECT(ret);
+    pushNewBuiltIn(registry, "gfx_draw_cube_wires", ret, args,
+                   (void *)builtin_gfx_draw_cube_wires,
+                   "builtin_gfx_draw_cube_wires");
+    UNPROTECT(save);
+}
+
+static void registerGfxDrawGrid(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    pushIntegerArg(args); // slices
+    pushIntegerArg(args); // spacing
+    TcType *ret = makeBoolean();
+    PROTECT(ret);
+    pushNewBuiltIn(registry, "gfx_draw_grid", ret, args,
+                   (void *)builtin_gfx_draw_grid, "builtin_gfx_draw_grid");
     UNPROTECT(save);
 }
 
