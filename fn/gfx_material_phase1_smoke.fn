@@ -1,0 +1,53 @@
+// Phase 1 material control smoke: per-material shader/map binding and invalid-index safety.
+//
+// Run: ./bin/fn --include=fn fn/gfx_material_phase1_smoke.fn
+let
+    link "graphics.fn" as gfx;
+in
+    gfx.with_window_size(gfx.extent(640, 420), "Material Phase1 Smoke", fn () {
+        assert(gfx.set_target_fps(60));
+
+        gfx.with_model("assets/TeaSpoon.obj", fn (model) {
+            gfx.with_shader("assets/shaders/lit_model.vs", "assets/shaders/lit_model.fs", fn (shader) {
+                gfx.with_texture("docs/CEKF.png", fn (tex) {
+                    let
+                        mat_count = gfx.material_count(model);
+                        invalid_material = gfx.set_material_shader(model, mat_count + 5, shader);
+                        invalid_map_kind = gfx.set_material_map(model, 0, 99, tex);
+                    in
+                        assert(mat_count > 1);
+                        assert(gfx.set_material_shader(model, 0, shader));
+                        assert(gfx.set_material_map(model, 0, gfx.material_map_albedo(), tex));
+
+                        if (mat_count > 1) {
+                            assert(gfx.set_material_shader(model, 1, shader));
+                            assert(gfx.set_material_map(model, 1, gfx.material_map_normal(), tex))
+                        } else {
+                            true
+                        };
+
+                        assert(invalid_material == false);
+                        assert(invalid_map_kind == false);
+
+                        assert(gfx.set_shader_vec3(shader, "uViewPos", gfx.vec3(6, 5, 8)));
+                        assert(gfx.set_shader_vec3(shader, "uLightPos", gfx.vec3(4, 6, 3)));
+                        assert(gfx.set_shader_vec3(shader, "uLightColor", gfx.vec3(1, 1, 1)));
+                        assert(gfx.set_shader_vec3(shader, "uAmbientColor", gfx.vec3(0.20, 0.22, 0.26)));
+                        assert(gfx.set_shader_float(shader, "uSpecStrength", 0.80));
+                        assert(gfx.set_shader_float(shader, "uShininess", 72));
+
+                        gfx.frame(gfx.rgb(22, 24, 32), fn () {
+                            gfx.with_camera3d(gfx.vec3(6, 5, 8), gfx.vec3(0, 1, 0), gfx.vec3(0, 1, 0), 60, gfx.projection_perspective(), fn () {
+                                assert(gfx.draw_grid(20, 1));
+                                assert(gfx.draw_plane(gfx.vec3(0, 0, 0), gfx.vec3(20, 0, 20), gfx.rgb(48, 64, 84)));
+                                assert(gfx.draw_model_at(model, gfx.vec3(0, 0, 0), 1, gfx.white()))
+                            });
+
+                            gfx.draw_text_at("Material Phase1 Smoke", gfx.point(16, 14), 30, gfx.white());
+                            gfx.draw_text_at("TeaSpoon two-material validation", gfx.point(16, 48), 20, gfx.rgb(190, 220, 255));
+                            gfx.draw_text_at("invalid index/map return false", gfx.point(16, 74), 20, gfx.rgb(190, 220, 255))
+                        })
+                })
+            })
+        })
+    })

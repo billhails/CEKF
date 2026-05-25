@@ -1,0 +1,104 @@
+// Two-material demo using TeaSpoon.obj with explicit per-material lit assignment.
+//
+// Run: ./bin/fn --include=fn fn/gfx_material_teaspoon_demo.fn
+let
+    link "graphics.fn" as gfx;
+
+    model_path = "assets/TeaSpoon.obj";
+
+    fn move_speed() {
+        let dt = gfx.frame_time_ms();
+        in if (dt < 1) { 0.12 }
+           else { dt / 120 }
+    }
+
+    fn update_camera(pos, target) {
+        let
+            speed = move_speed();
+            dz = if (gfx.key_held(gfx.key_w())) { 0 - speed }
+                else if (gfx.key_held(gfx.key_s())) { speed }
+                else { 0 };
+            dx = if (gfx.key_held(gfx.key_a())) { 0 - speed }
+                else if (gfx.key_held(gfx.key_d())) { speed }
+                else { 0 };
+            dy = if (gfx.key_held(gfx.arrow_up())) { speed }
+                else if (gfx.key_held(gfx.arrow_down())) { 0 - speed }
+                else { 0 };
+            pos2 = gfx.vec3(gfx.vec3_x(pos) + dx, gfx.vec3_y(pos) + dy, gfx.vec3_z(pos) + dz);
+            target2 = gfx.vec3(gfx.vec3_x(target) + dx, gfx.vec3_y(target) + dy, gfx.vec3_z(target) + dz);
+        in
+            #(pos2, target2)
+    }
+
+    fn loop(model, lit_shader, mat_count, pos, target) {
+        if (gfx.should_close()) { true }
+        else if (gfx.key_pressed(gfx.key_escape())) { true }
+        else {
+            let
+                #(pos2, target2) = update_camera(pos, target);
+                light_pos = gfx.vec3(4.5, 6.5, 4.0);
+            in
+            {
+                assert(gfx.set_shader_vec3(lit_shader, "uViewPos", pos2));
+                assert(gfx.set_shader_vec3(lit_shader, "uLightPos", light_pos));
+                assert(gfx.set_shader_vec3(lit_shader, "uLightColor", gfx.vec3(1.0, 0.95, 0.88)));
+                assert(gfx.set_shader_vec3(lit_shader, "uAmbientColor", gfx.vec3(0.08, 0.09, 0.11)));
+                assert(gfx.set_shader_float(lit_shader, "uSpecStrength", 0.90));
+                assert(gfx.set_shader_float(lit_shader, "uShininess", 96));
+
+                gfx.frame(gfx.rgb(22, 24, 32), fn () {
+                    gfx.with_camera3d(pos2, target2, gfx.vec3(0, 1, 0), 60, gfx.projection_perspective(), fn () {
+                        assert(gfx.draw_grid(24, 1));
+                        assert(gfx.draw_plane(gfx.vec3(0, 0, 0), gfx.vec3(22, 0, 22), gfx.rgb(45, 60, 84)));
+                        assert(gfx.draw_model_at(model, gfx.vec3(0, 0, 0), 1, gfx.white()))
+                    });
+
+                    gfx.draw_text_at("TeaSpoon Material Demo", gfx.point(20, 20), 30, gfx.white());
+                    gfx.draw_text_at("expected material_count >= 2", gfx.point(20, 58), 20, gfx.rgb(190, 220, 255));
+                    gfx.draw_text_at("mat0 + mat1 both use lit shader", gfx.point(20, 86), 20, gfx.rgb(190, 220, 255));
+                    gfx.draw_text_at("W/S/A/D + Up/Down move camera; Esc exit", gfx.point(20, 114), 20, gfx.rgb(210, 230, 255))
+                });
+
+                loop(model, lit_shader, mat_count, pos2, target2)
+            }
+        }
+    }
+in
+    gfx.with_window_size(gfx.extent(980, 760), "TeaSpoon Material Demo", fn () {
+        assert(gfx.set_target_fps(60));
+
+        gfx.with_model(model_path, fn (model) {
+            gfx.with_shader("assets/shaders/lit_model.vs", "assets/shaders/lit_model.fs", fn (lit_shader) {
+                gfx.with_texture("docs/CEKF.png", fn (tex0) {
+                    gfx.with_texture("docs/CEKF2.png", fn (tex1) {
+                        let
+                            mat_count = gfx.material_count(model);
+                            invalid_set = gfx.set_material_shader(model, mat_count + 3, lit_shader);
+                            configured = if (mat_count > 1) {
+                                {
+                                    assert(gfx.set_material_shader(model, 0, lit_shader));
+                                    assert(gfx.set_material_shader(model, 1, lit_shader));
+                                    assert(gfx.set_material_map(model, 0, gfx.material_map_albedo(), tex0));
+                                    assert(gfx.set_material_map(model, 1, gfx.material_map_albedo(), tex1));
+                                    true
+                                }
+                            } else {
+                                assert(gfx.set_model_shader(model, lit_shader));
+                                assert(gfx.set_material_map(model, 0, gfx.material_map_albedo(), tex0));
+                                false
+                            };
+                        in
+                            assert(invalid_set == false);
+                            if (configured) {
+                                loop(model, lit_shader, mat_count, gfx.vec3(6, 5, 9), gfx.vec3(0, 1, 0))
+                            } else {
+                                {
+                                    puts("warning: expected 2 materials in assets/TeaSpoon.obj; running single-material fallback\n");
+                                    loop(model, lit_shader, mat_count, gfx.vec3(6, 5, 9), gfx.vec3(0, 1, 0))
+                                }
+                            }
+                    })
+                })
+            })
+        })
+    })

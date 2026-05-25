@@ -129,6 +129,9 @@ static void registerGfxDrawLine3D(BuiltIns *registry);
 static void registerGfxLoadModel(BuiltIns *registry);
 static void registerGfxUnloadModel(BuiltIns *registry);
 static void registerGfxSetModelShader(BuiltIns *registry);
+static void registerGfxModelMaterialCount(BuiltIns *registry);
+static void registerGfxSetMaterialShader(BuiltIns *registry);
+static void registerGfxSetMaterialMap(BuiltIns *registry);
 static void registerGfxDrawModel(BuiltIns *registry);
 static void registerGfxDrawModelWires(BuiltIns *registry);
 static void registerGfxAudioOpen(BuiltIns *registry);
@@ -251,6 +254,9 @@ void registerGraphics(BuiltIns *registry) {
     registerGfxLoadModel(registry);
     registerGfxUnloadModel(registry);
     registerGfxSetModelShader(registry);
+    registerGfxModelMaterialCount(registry);
+    registerGfxSetMaterialShader(registry);
+    registerGfxSetMaterialMap(registry);
     registerGfxDrawModel(registry);
     registerGfxDrawModelWires(registry);
     registerGfxAudioOpen(registry);
@@ -2801,6 +2807,82 @@ Value builtin_gfx_set_model_shader(Vec *args) {
 #endif
 }
 
+Value builtin_gfx_model_material_count(Vec *args) {
+#ifndef ENABLE_RAYLIB
+    (void)args;
+    return value_Stdint(0);
+#else
+    if (args->entries[0].type != VALUE_TYPE_OPAQUE)
+        return value_Stdint(0);
+
+    Opaque *modelWrapper = args->entries[0].val.opaque;
+    if (modelWrapper->data == NULL)
+        return value_Stdint(0);
+
+    Model *model = (Model *)modelWrapper->data;
+    return value_Stdint(model->materialCount);
+#endif
+}
+
+Value builtin_gfx_set_material_shader(Vec *args) {
+#ifndef ENABLE_RAYLIB
+    (void)args;
+    return value_Stdint(0);
+#else
+    if (args->entries[0].type != VALUE_TYPE_OPAQUE)
+        return value_Stdint(0);
+    if (args->entries[2].type != VALUE_TYPE_OPAQUE)
+        return value_Stdint(0);
+
+    Opaque *modelWrapper = args->entries[0].val.opaque;
+    Opaque *shaderWrapper = args->entries[2].val.opaque;
+    if (modelWrapper->data == NULL || shaderWrapper->data == NULL)
+        return value_Stdint(0);
+
+    Model *model = (Model *)modelWrapper->data;
+    int materialIndex = valueAsInt(args->entries[1]);
+    if (model->materials == NULL || model->materialCount <= 0)
+        return value_Stdint(0);
+    if (materialIndex < 0 || materialIndex >= model->materialCount)
+        return value_Stdint(0);
+
+    Shader *shader = (Shader *)shaderWrapper->data;
+    model->materials[materialIndex].shader = *shader;
+    return value_Stdint(1);
+#endif
+}
+
+Value builtin_gfx_set_material_map(Vec *args) {
+#ifndef ENABLE_RAYLIB
+    (void)args;
+    return value_Stdint(0);
+#else
+    if (args->entries[0].type != VALUE_TYPE_OPAQUE)
+        return value_Stdint(0);
+    if (args->entries[3].type != VALUE_TYPE_OPAQUE)
+        return value_Stdint(0);
+
+    Opaque *modelWrapper = args->entries[0].val.opaque;
+    Opaque *textureWrapper = args->entries[3].val.opaque;
+    if (modelWrapper->data == NULL || textureWrapper->data == NULL)
+        return value_Stdint(0);
+
+    Model *model = (Model *)modelWrapper->data;
+    int materialIndex = valueAsInt(args->entries[1]);
+    int mapKind = valueAsInt(args->entries[2]);
+    if (model->materials == NULL || model->materialCount <= 0)
+        return value_Stdint(0);
+    if (materialIndex < 0 || materialIndex >= model->materialCount)
+        return value_Stdint(0);
+    if (mapKind < 0 || mapKind > 3)
+        return value_Stdint(0);
+
+    Texture2D *texture = (Texture2D *)textureWrapper->data;
+    model->materials[materialIndex].maps[mapKind].texture = *texture;
+    return value_Stdint(1);
+#endif
+}
+
 Value builtin_gfx_draw_model(Vec *args) {
 #ifndef ENABLE_RAYLIB
     (void)args;
@@ -4708,6 +4790,47 @@ static void registerGfxSetModelShader(BuiltIns *registry) {
     pushNewBuiltIn(registry, "gfx_set_model_shader", ret, args,
                    (void *)builtin_gfx_set_model_shader,
                    "builtin_gfx_set_model_shader");
+    UNPROTECT(save);
+}
+
+static void registerGfxModelMaterialCount(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    pushModelArg(args);
+    TcType *ret = newTcType_BigInteger();
+    PROTECT(ret);
+    pushNewBuiltIn(registry, "gfx_model_material_count", ret, args,
+                   (void *)builtin_gfx_model_material_count,
+                   "builtin_gfx_model_material_count");
+    UNPROTECT(save);
+}
+
+static void registerGfxSetMaterialShader(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    pushModelArg(args);
+    pushIntegerArg(args); // material_index
+    pushShaderArg(args);
+    TcType *ret = makeBoolean();
+    PROTECT(ret);
+    pushNewBuiltIn(registry, "gfx_set_material_shader", ret, args,
+                   (void *)builtin_gfx_set_material_shader,
+                   "builtin_gfx_set_material_shader");
+    UNPROTECT(save);
+}
+
+static void registerGfxSetMaterialMap(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    pushModelArg(args);
+    pushIntegerArg(args); // material_index
+    pushIntegerArg(args); // map_kind
+    pushTextureArg(args);
+    TcType *ret = makeBoolean();
+    PROTECT(ret);
+    pushNewBuiltIn(registry, "gfx_set_material_map", ret, args,
+                   (void *)builtin_gfx_set_material_map,
+                   "builtin_gfx_set_material_map");
     UNPROTECT(save);
 }
 

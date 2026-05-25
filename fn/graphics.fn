@@ -17,6 +17,12 @@ fn red() { rgba(255, 0, 0, 255) }
 fn green() { rgba(0, 255, 0, 255) }
 fn blue() { rgba(0, 0, 255, 255) }
 
+fn material_map_albedo() { 0 }
+fn material_map_normal() { 1 }
+fn material_map_specular() { 2 }
+fn material_map_metalness() { 2 }
+fn material_map_roughness() { 3 }
+
 fn enabled() { gfx_enabled() }
 
 fn with_window_size(extent(width, height), title, handler) {
@@ -626,6 +632,18 @@ fn unload_model(model) { gfx_unload_model(model) }
 
 fn set_model_shader(model, shader) {
     gfx_set_model_shader(model, shader)
+}
+
+fn material_count(model) {
+    gfx_model_material_count(model)
+}
+
+fn set_material_shader(model, material_index, shader) {
+    gfx_set_material_shader(model, material_index, shader)
+}
+
+fn set_material_map(model, material_index, map_kind, texture) {
+    gfx_set_material_map(model, material_index, map_kind, texture)
 }
 
 fn draw_model_at(model, vec3(pos_x, pos_y, pos_z), scale, rgba(r, g, b, a)) {
