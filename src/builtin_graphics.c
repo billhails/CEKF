@@ -108,6 +108,8 @@ static void registerGfxUnloadShader(BuiltIns *registry);
 static void registerGfxBeginShaderMode(BuiltIns *registry);
 static void registerGfxEndShaderMode(BuiltIns *registry);
 static void registerGfxSetShaderInt(BuiltIns *registry);
+static void registerGfxSetShaderSampler(BuiltIns *registry);
+static void registerGfxSetShaderRenderTextureSampler(BuiltIns *registry);
 static void registerGfxSetShaderFloat(BuiltIns *registry);
 static void registerGfxSetShaderVec2(BuiltIns *registry);
 static void registerGfxSetShaderVec3(BuiltIns *registry);
@@ -233,6 +235,8 @@ void registerGraphics(BuiltIns *registry) {
     registerGfxBeginShaderMode(registry);
     registerGfxEndShaderMode(registry);
     registerGfxSetShaderInt(registry);
+    registerGfxSetShaderSampler(registry);
+    registerGfxSetShaderRenderTextureSampler(registry);
     registerGfxSetShaderFloat(registry);
     registerGfxSetShaderVec2(registry);
     registerGfxSetShaderVec3(registry);
@@ -2216,6 +2220,86 @@ Value builtin_gfx_set_shader_int(Vec *args) {
         return value_Stdint(0);
     int value = valueAsInt(args->entries[2]);
     SetShaderValue(*shader, location, &value, SHADER_UNIFORM_INT);
+    return value_Stdint(1);
+#endif
+}
+
+Value builtin_gfx_set_shader_sampler(Vec *args) {
+#ifndef ENABLE_RAYLIB
+    (void)args;
+    return value_Stdint(0);
+#else
+    if (!gfx_state.initialized)
+        return value_Stdint(0);
+    if (args->entries[0].type != VALUE_TYPE_OPAQUE)
+        return value_Stdint(0);
+    if (args->entries[2].type != VALUE_TYPE_OPAQUE)
+        return value_Stdint(0);
+
+    Opaque *shaderWrapper = args->entries[0].val.opaque;
+    Opaque *textureWrapper = args->entries[2].val.opaque;
+    if (shaderWrapper->data == NULL || textureWrapper->data == NULL)
+        return value_Stdint(0);
+
+    int unit = valueAsInt(args->entries[3]);
+    if (unit < 0 || unit > 7)
+        return value_Stdint(0);
+
+    Shader *shader = (Shader *)shaderWrapper->data;
+    Texture2D *texture = (Texture2D *)textureWrapper->data;
+    SCharVec *uniformName = listToUtf8(args->entries[1]);
+    int save = PROTECT(uniformName);
+    int location = GetShaderLocation(*shader, uniformName->entries);
+    UNPROTECT(save);
+    if (location < 0)
+        return value_Stdint(0);
+
+    // Keep unit validated for API compatibility; Raylib manages slots internally.
+    (void)unit;
+    SetShaderValueTexture(*shader, location, *texture);
+    return value_Stdint(1);
+#endif
+}
+
+Value builtin_gfx_set_shader_render_texture_sampler(Vec *args) {
+#ifndef ENABLE_RAYLIB
+    (void)args;
+    return value_Stdint(0);
+#else
+    if (!gfx_state.initialized)
+        return value_Stdint(0);
+    if (args->entries[0].type != VALUE_TYPE_OPAQUE)
+        return value_Stdint(0);
+    if (args->entries[2].type != VALUE_TYPE_OPAQUE)
+        return value_Stdint(0);
+
+    Opaque *shaderWrapper = args->entries[0].val.opaque;
+    Opaque *renderTextureWrapper = args->entries[2].val.opaque;
+    if (shaderWrapper->data == NULL || renderTextureWrapper->data == NULL)
+        return value_Stdint(0);
+
+    int unit = valueAsInt(args->entries[3]);
+    if (unit < 0 || unit > 7)
+        return value_Stdint(0);
+
+    bool useDepthAttachment = valueAsInt(args->entries[4]) != 0;
+    Shader *shader = (Shader *)shaderWrapper->data;
+    RenderTexture2D *rt = (RenderTexture2D *)renderTextureWrapper->data;
+    unsigned int texId = useDepthAttachment ? rt->depth.id : rt->texture.id;
+    if (texId == 0)
+        return value_Stdint(0);
+
+    SCharVec *uniformName = listToUtf8(args->entries[1]);
+    int save = PROTECT(uniformName);
+    int location = GetShaderLocation(*shader, uniformName->entries);
+    UNPROTECT(save);
+    if (location < 0)
+        return value_Stdint(0);
+
+    // Keep unit validated for API compatibility; Raylib manages slots internally.
+    (void)unit;
+    Texture2D samplerTexture = useDepthAttachment ? rt->depth : rt->texture;
+    SetShaderValueTexture(*shader, location, samplerTexture);
     return value_Stdint(1);
 #endif
 }
@@ -4424,6 +4508,38 @@ static void registerGfxSetShaderInt(BuiltIns *registry) {
     pushNewBuiltIn(registry, "gfx_set_shader_int", ret, args,
                    (void *)builtin_gfx_set_shader_int,
                    "builtin_gfx_set_shader_int");
+    UNPROTECT(save);
+}
+
+static void registerGfxSetShaderSampler(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    pushShaderArg(args);
+    pushStringArg(args);  // uniform name
+    pushTextureArg(args); // texture
+    pushIntegerArg(args); // sampler unit
+    TcType *ret = makeBoolean();
+    PROTECT(ret);
+    pushNewBuiltIn(registry, "gfx_set_shader_sampler", ret, args,
+                   (void *)builtin_gfx_set_shader_sampler,
+                   "builtin_gfx_set_shader_sampler");
+    UNPROTECT(save);
+}
+
+static void registerGfxSetShaderRenderTextureSampler(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    pushShaderArg(args);
+    pushStringArg(args);        // uniform name
+    pushRenderTextureArg(args); // render texture
+    pushIntegerArg(args);       // sampler unit
+    pushIntegerArg(args);       // use_depth_attachment (0 or 1)
+    TcType *ret = makeBoolean();
+    PROTECT(ret);
+    pushNewBuiltIn(registry, "gfx_set_shader_render_texture_sampler", ret,
+                   args,
+                   (void *)builtin_gfx_set_shader_render_texture_sampler,
+                   "builtin_gfx_set_shader_render_texture_sampler");
     UNPROTECT(save);
 }
 

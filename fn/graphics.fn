@@ -24,6 +24,12 @@ fn material_map_normal() { 1 }
 fn material_map_specular() { 2 }
 fn material_map_metalness() { 2 }
 fn material_map_roughness() { 3 }
+fn sampler_unit0() { 0 }
+fn sampler_unit1() { 1 }
+fn sampler_unit2() { 2 }
+fn sampler_unit3() { 3 }
+fn sampler_attachment_color() { 0 }
+fn sampler_attachment_depth() { 1 }
 
 fn enabled() { gfx_enabled() }
 
@@ -552,6 +558,20 @@ fn end_shader_mode() { gfx_end_shader_mode() }
 
 fn set_shader_int(shader, name, value) {
     gfx_set_shader_int(shader, name, value)
+}
+
+fn set_shader_sampler(shader, name, texture, unit) {
+    gfx_set_shader_sampler(shader, name, texture, unit)
+}
+
+fn set_shader_render_texture_sampler(shader, name, render_texture, unit, attachment_selector) {
+    gfx_set_shader_render_texture_sampler(
+        shader,
+        name,
+        render_texture,
+        unit,
+        attachment_selector
+    )
 }
 
 fn set_shader_float(shader, name, value) {
