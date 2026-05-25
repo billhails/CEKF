@@ -110,6 +110,8 @@ static void registerGfxSetShaderInt(BuiltIns *registry);
 static void registerGfxSetShaderFloat(BuiltIns *registry);
 static void registerGfxSetShaderVec2(BuiltIns *registry);
 static void registerGfxSetShaderVec3(BuiltIns *registry);
+static void registerGfxSetShaderVec4(BuiltIns *registry);
+static void registerGfxSetShaderMat4(BuiltIns *registry);
 static void registerGfxBeginMode2D(BuiltIns *registry);
 static void registerGfxEndMode2D(BuiltIns *registry);
 static void registerGfxBeginMode3D(BuiltIns *registry);
@@ -228,6 +230,8 @@ void registerGraphics(BuiltIns *registry) {
     registerGfxSetShaderFloat(registry);
     registerGfxSetShaderVec2(registry);
     registerGfxSetShaderVec3(registry);
+    registerGfxSetShaderVec4(registry);
+    registerGfxSetShaderMat4(registry);
     registerGfxBeginMode2D(registry);
     registerGfxEndMode2D(registry);
     registerGfxBeginMode3D(registry);
@@ -2278,6 +2282,94 @@ Value builtin_gfx_set_shader_vec3(Vec *args) {
 #endif
 }
 
+Value builtin_gfx_set_shader_vec4(Vec *args) {
+#ifndef ENABLE_RAYLIB
+    (void)args;
+    return value_Stdint(0);
+#else
+    if (!gfx_state.initialized)
+        return value_Stdint(0);
+    if (args->entries[0].type != VALUE_TYPE_OPAQUE)
+        return value_Stdint(0);
+    Opaque *wrapper = args->entries[0].val.opaque;
+    if (wrapper->data == NULL)
+        return value_Stdint(0);
+    Shader *shader = (Shader *)wrapper->data;
+    SCharVec *uniformName = listToUtf8(args->entries[1]);
+    int save = PROTECT(uniformName);
+    int location = GetShaderLocation(*shader, uniformName->entries);
+    UNPROTECT(save);
+    if (location < 0)
+        return value_Stdint(0);
+    float values[4] = {
+        valueAsFloat(args->entries[2]), valueAsFloat(args->entries[3]),
+        valueAsFloat(args->entries[4]), valueAsFloat(args->entries[5])};
+    SetShaderValue(*shader, location, values, SHADER_UNIFORM_VEC4);
+    return value_Stdint(1);
+#endif
+}
+
+Value builtin_gfx_set_shader_mat4(Vec *args) {
+#ifndef ENABLE_RAYLIB
+    (void)args;
+    return value_Stdint(0);
+#else
+    if (!gfx_state.initialized)
+        return value_Stdint(0);
+    if (args->entries[0].type != VALUE_TYPE_OPAQUE)
+        return value_Stdint(0);
+    Opaque *wrapper = args->entries[0].val.opaque;
+    if (wrapper->data == NULL)
+        return value_Stdint(0);
+    Shader *shader = (Shader *)wrapper->data;
+    SCharVec *uniformName = listToUtf8(args->entries[1]);
+    int save = PROTECT(uniformName);
+    int location = GetShaderLocation(*shader, uniformName->entries);
+    UNPROTECT(save);
+    if (location < 0)
+        return value_Stdint(0);
+
+    float m00 = valueAsFloat(args->entries[2]);
+    float m01 = valueAsFloat(args->entries[3]);
+    float m02 = valueAsFloat(args->entries[4]);
+    float m03 = valueAsFloat(args->entries[5]);
+    float m10 = valueAsFloat(args->entries[6]);
+    float m11 = valueAsFloat(args->entries[7]);
+    float m12 = valueAsFloat(args->entries[8]);
+    float m13 = valueAsFloat(args->entries[9]);
+    float m20 = valueAsFloat(args->entries[10]);
+    float m21 = valueAsFloat(args->entries[11]);
+    float m22 = valueAsFloat(args->entries[12]);
+    float m23 = valueAsFloat(args->entries[13]);
+    float m30 = valueAsFloat(args->entries[14]);
+    float m31 = valueAsFloat(args->entries[15]);
+    float m32 = valueAsFloat(args->entries[16]);
+    float m33 = valueAsFloat(args->entries[17]);
+
+    Matrix matrix = {0};
+    // Input order is row-major; map to raylib's matrix field layout.
+    matrix.m0 = m00;
+    matrix.m4 = m01;
+    matrix.m8 = m02;
+    matrix.m12 = m03;
+    matrix.m1 = m10;
+    matrix.m5 = m11;
+    matrix.m9 = m12;
+    matrix.m13 = m13;
+    matrix.m2 = m20;
+    matrix.m6 = m21;
+    matrix.m10 = m22;
+    matrix.m14 = m23;
+    matrix.m3 = m30;
+    matrix.m7 = m31;
+    matrix.m11 = m32;
+    matrix.m15 = m33;
+
+    SetShaderValueMatrix(*shader, location, matrix);
+    return value_Stdint(1);
+#endif
+}
+
 Value builtin_gfx_begin_mode_2d(Vec *args) {
 #ifndef ENABLE_RAYLIB
     (void)args;
@@ -4248,6 +4340,52 @@ static void registerGfxSetShaderVec3(BuiltIns *registry) {
     pushNewBuiltIn(registry, "gfx_set_shader_vec3", ret, args,
                    (void *)builtin_gfx_set_shader_vec3,
                    "builtin_gfx_set_shader_vec3");
+    UNPROTECT(save);
+}
+
+static void registerGfxSetShaderVec4(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    pushShaderArg(args);
+    pushStringArg(args); // uniform name
+    pushAnyArg(args);    // x
+    pushAnyArg(args);    // y
+    pushAnyArg(args);    // z
+    pushAnyArg(args);    // w
+    TcType *ret = makeBoolean();
+    PROTECT(ret);
+    pushNewBuiltIn(registry, "gfx_set_shader_vec4", ret, args,
+                   (void *)builtin_gfx_set_shader_vec4,
+                   "builtin_gfx_set_shader_vec4");
+    UNPROTECT(save);
+}
+
+static void registerGfxSetShaderMat4(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    pushShaderArg(args);
+    pushStringArg(args); // uniform name
+    pushAnyArg(args);    // m00
+    pushAnyArg(args);    // m01
+    pushAnyArg(args);    // m02
+    pushAnyArg(args);    // m03
+    pushAnyArg(args);    // m10
+    pushAnyArg(args);    // m11
+    pushAnyArg(args);    // m12
+    pushAnyArg(args);    // m13
+    pushAnyArg(args);    // m20
+    pushAnyArg(args);    // m21
+    pushAnyArg(args);    // m22
+    pushAnyArg(args);    // m23
+    pushAnyArg(args);    // m30
+    pushAnyArg(args);    // m31
+    pushAnyArg(args);    // m32
+    pushAnyArg(args);    // m33
+    TcType *ret = makeBoolean();
+    PROTECT(ret);
+    pushNewBuiltIn(registry, "gfx_set_shader_mat4", ret, args,
+                   (void *)builtin_gfx_set_shader_mat4,
+                   "builtin_gfx_set_shader_mat4");
     UNPROTECT(save);
 }
 

@@ -3,6 +3,7 @@ namespace
 typedef Color { rgba(number, number, number, number) }
 typedef Point { point(number, number) }
 typedef Vec3 { vec3(number, number, number) }
+typedef Vec4 { vec4(number, number, number, number) }
 typedef Size { extent(number, number) }
 typedef Rect { rect(number, number, number, number) }
 
@@ -492,6 +493,28 @@ fn set_shader_vec2(shader, name, point(x, y)) {
 
 fn set_shader_vec3(shader, name, vec3(x, y, z)) {
     gfx_set_shader_vec3(shader, name, x, y, z)
+}
+
+fn set_shader_vec4(shader, name, vec4(x, y, z, w)) {
+    gfx_set_shader_vec4(shader, name, x, y, z, w)
+}
+
+fn set_shader_mat4(
+    shader,
+    name,
+    m00, m01, m02, m03,
+    m10, m11, m12, m13,
+    m20, m21, m22, m23,
+    m30, m31, m32, m33
+) {
+    gfx_set_shader_mat4(
+        shader,
+        name,
+        m00, m01, m02, m03,
+        m10, m11, m12, m13,
+        m20, m21, m22, m23,
+        m30, m31, m32, m33
+    )
 }
 
 fn with_shader_mode(shader, draw_fn) {
