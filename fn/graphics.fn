@@ -17,6 +17,8 @@ fn red() { rgba(255, 0, 0, 255) }
 fn green() { rgba(0, 255, 0, 255) }
 fn blue() { rgba(0, 0, 255, 255) }
 
+fn enabled() { gfx_enabled() }
+
 fn with_window_size(extent(width, height), title, handler) {
     with_window(width, height, title, handler)
 }
