@@ -680,6 +680,40 @@ fn set_shader_light_vp_ortho_vp(
     )
 }
 
+fn set_shader_light_vp_ortho_pv(
+    shader,
+    name,
+    vec3(light_pos_x, light_pos_y, light_pos_z),
+    vec3(target_x, target_y, target_z),
+    vec3(up_x, up_y, up_z),
+    left,
+    right,
+    bottom,
+    top,
+    near,
+    far
+) {
+    gfx_set_shader_light_vp_ortho_pv(
+        shader,
+        name,
+        light_pos_x,
+        light_pos_y,
+        light_pos_z,
+        target_x,
+        target_y,
+        target_z,
+        up_x,
+        up_y,
+        up_z,
+        left,
+        right,
+        bottom,
+        top,
+        near,
+        far
+    )
+}
+
 fn with_shader_mode(shader, draw_fn) {
     assert(gfx_begin_shader_mode(shader));
     {

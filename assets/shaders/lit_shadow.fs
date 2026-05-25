@@ -27,6 +27,10 @@ const float SHADOW_DEBUG_W = 1.0;
 const float SHADOW_DEBUG_UV = 2.0;
 const float SHADOW_DEBUG_DEPTH = 3.0;
 
+float unpackDepth24(vec3 enc) {
+    return dot(enc, vec3(1.0, 1.0 / 255.0, 1.0 / 65025.0));
+}
+
 bool sampleShadowDepth(out float depth, out float sampledDepth, out vec2 uvOut,
                        out float failureReason) {
     float w = fragLightClip.w;
@@ -56,7 +60,7 @@ bool sampleShadowDepth(out float depth, out float sampledDepth, out vec2 uvOut,
     }
 
     vec2 uvSample = (uShadowFlipY > 0.5) ? uvFlipped : uv;
-    sampledDepth = texture(uShadowMap, uvSample).r;
+    sampledDepth = unpackDepth24(texture(uShadowMap, uvSample).rgb);
     return true;
 }
 
@@ -68,8 +72,25 @@ float shadowFactor(vec3 normal, vec3 lightDir) {
     if (!sampleShadowDepth(depth, sampledDepth, uv, failureReason)) {
         return 0.0;
     }
-    float slopeBias = max(uShadowBias * (1.0 - max(dot(normal, lightDir), 0.0)), uShadowBias * 0.25);
-    return (depth + slopeBias < sampledDepth) ? 1.0 : 0.0;
+
+    float slopeBias = max(uShadowBias * (1.0 - max(dot(normal, lightDir), 0.0)),
+                          uShadowBias * 0.05);
+    vec2 uvSample = (uShadowFlipY > 0.5) ? vec2(uv.x, 1.0 - uv.y) : uv;
+    vec2 texel = 1.0 / vec2(textureSize(uShadowMap, 0));
+
+    float shadowSum = 0.0;
+    float taps = 0.0;
+    for (int y = -1; y <= 1; y++) {
+        for (int x = -1; x <= 1; x++) {
+            vec2 tapUv = clamp(uvSample + vec2(float(x), float(y)) * texel * 1.25,
+                               vec2(0.001), vec2(0.999));
+            float tapDepth = unpackDepth24(texture(uShadowMap, tapUv).rgb);
+            shadowSum += (depth - slopeBias > tapDepth) ? 1.0 : 0.0;
+            taps += 1.0;
+        }
+    }
+
+    return shadowSum / taps;
 }
 
 void main(void) {

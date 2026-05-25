@@ -119,6 +119,7 @@ static void registerGfxSetShaderVec4(BuiltIns *registry);
 static void registerGfxSetShaderMat4(BuiltIns *registry);
 static void registerGfxSetShaderLightVpOrtho(BuiltIns *registry);
 static void registerGfxSetShaderLightVpOrthoVp(BuiltIns *registry);
+static void registerGfxSetShaderLightVpOrthoPv(BuiltIns *registry);
 static void registerGfxBeginMode2D(BuiltIns *registry);
 static void registerGfxEndMode2D(BuiltIns *registry);
 static void registerGfxBeginMode3D(BuiltIns *registry);
@@ -249,6 +250,7 @@ void registerGraphics(BuiltIns *registry) {
     registerGfxSetShaderMat4(registry);
     registerGfxSetShaderLightVpOrtho(registry);
     registerGfxSetShaderLightVpOrthoVp(registry);
+    registerGfxSetShaderLightVpOrthoPv(registry);
     registerGfxBeginMode2D(registry);
     registerGfxEndMode2D(registry);
     registerGfxBeginMode3D(registry);
@@ -2494,11 +2496,11 @@ Value builtin_gfx_set_shader_mat4(Vec *args) {
 #endif
 }
 
-static Value builtin_gfx_set_shader_light_vp_ortho_impl(Vec *args,
-                                                        bool viewFirst) {
+static Value
+builtin_gfx_set_shader_light_vp_ortho_impl(Vec *args, bool useViewProjection) {
 #ifndef ENABLE_RAYLIB
     (void)args;
-    (void)viewFirst;
+    (void)useViewProjection;
     return value_Stdint(0);
 #else
     if (!gfx_state.initialized)
@@ -2542,8 +2544,8 @@ static Value builtin_gfx_set_shader_light_vp_ortho_impl(Vec *args,
     Matrix view = MatrixLookAt(lightPos, target, up);
     Matrix projection =
         MatrixOrtho(left, right, bottom, top, nearPlane, farPlane);
-    Matrix lightVp = viewFirst ? MatrixMultiply(view, projection)
-                               : MatrixMultiply(projection, view);
+    Matrix lightVp = useViewProjection ? MatrixMultiply(view, projection)
+                                       : MatrixMultiply(projection, view);
 
     SetShaderValueMatrix(*shader, location, lightVp);
     return value_Stdint(1);
@@ -2551,11 +2553,16 @@ static Value builtin_gfx_set_shader_light_vp_ortho_impl(Vec *args,
 }
 
 Value builtin_gfx_set_shader_light_vp_ortho(Vec *args) {
-    return builtin_gfx_set_shader_light_vp_ortho_impl(args, false);
+    return builtin_gfx_set_shader_light_vp_ortho_impl(args, true);
 }
 
 Value builtin_gfx_set_shader_light_vp_ortho_vp(Vec *args) {
+    // Compatibility alias: preserve old API name while using canonical order.
     return builtin_gfx_set_shader_light_vp_ortho_impl(args, true);
+}
+
+Value builtin_gfx_set_shader_light_vp_ortho_pv(Vec *args) {
+    return builtin_gfx_set_shader_light_vp_ortho_impl(args, false);
 }
 
 Value builtin_gfx_begin_mode_2d(Vec *args) {
@@ -4786,6 +4793,34 @@ static void registerGfxSetShaderLightVpOrthoVp(BuiltIns *registry) {
     pushNewBuiltIn(registry, "gfx_set_shader_light_vp_ortho_vp", ret, args,
                    (void *)builtin_gfx_set_shader_light_vp_ortho_vp,
                    "builtin_gfx_set_shader_light_vp_ortho_vp");
+    UNPROTECT(save);
+}
+
+static void registerGfxSetShaderLightVpOrthoPv(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    pushShaderArg(args);
+    pushStringArg(args); // uniform name
+    pushAnyArg(args);    // light_pos_x
+    pushAnyArg(args);    // light_pos_y
+    pushAnyArg(args);    // light_pos_z
+    pushAnyArg(args);    // target_x
+    pushAnyArg(args);    // target_y
+    pushAnyArg(args);    // target_z
+    pushAnyArg(args);    // up_x
+    pushAnyArg(args);    // up_y
+    pushAnyArg(args);    // up_z
+    pushAnyArg(args);    // left
+    pushAnyArg(args);    // right
+    pushAnyArg(args);    // bottom
+    pushAnyArg(args);    // top
+    pushAnyArg(args);    // near
+    pushAnyArg(args);    // far
+    TcType *ret = makeBoolean();
+    PROTECT(ret);
+    pushNewBuiltIn(registry, "gfx_set_shader_light_vp_ortho_pv", ret, args,
+                   (void *)builtin_gfx_set_shader_light_vp_ortho_pv,
+                   "builtin_gfx_set_shader_light_vp_ortho_pv");
     UNPROTECT(save);
 }
 

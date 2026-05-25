@@ -69,52 +69,34 @@ let
         else { mode + 1 }
     }
 
-    fn set_light_vp(shader, light_pos, light_target, up, shadow_left, shadow_right, shadow_bottom, shadow_top, shadow_near, shadow_far, use_legacy_light_vp) {
-        if (use_legacy_light_vp) {
-            gfx.set_shader_light_vp_ortho_vp(
-                shader,
-                "uLightVP",
-                light_pos,
-                light_target,
-                up,
-                shadow_left,
-                shadow_right,
-                shadow_bottom,
-                shadow_top,
-                shadow_near,
-                shadow_far
-            )
-        } else {
-            gfx.set_shader_light_vp_ortho(
-                shader,
-                "uLightVP",
-                light_pos,
-                light_target,
-                up,
-                shadow_left,
-                shadow_right,
-                shadow_bottom,
-                shadow_top,
-                shadow_near,
-                shadow_far
-            )
-        }
+    fn set_light_vp(shader, light_pos, light_target, up, shadow_left, shadow_right, shadow_bottom, shadow_top, shadow_near, shadow_far) {
+        gfx.set_shader_light_vp_ortho(
+            shader,
+            "uLightVP",
+            light_pos,
+            light_target,
+            up,
+            shadow_left,
+            shadow_right,
+            shadow_bottom,
+            shadow_top,
+            shadow_near,
+            shadow_far
+        )
     }
 
-    fn capture_path(use_legacy_light_vp, debug_mode, flip_shadow_y) {
+    fn capture_path(debug_mode, flip_shadow_y) {
         "/tmp/cekf-shadow-ss"
-            @@ "v" @@ io.to_string(if (use_legacy_light_vp) { 1 } else { 0 })
             @@ "n" @@ io.to_string(debug_mode)
             @@ "b" @@ io.to_string(if (flip_shadow_y) { 1 } else { 0 })
             @@ ".png"
     }
 
-    fn maybe_capture_frame(debug_mode, debug_mode2, flip_shadow_y, flip_shadow_y2, use_legacy_light_vp, use_legacy_light_vp2) {
+    fn maybe_capture_frame(debug_mode, debug_mode2, flip_shadow_y, flip_shadow_y2) {
         if (debug_mode != debug_mode2
-            or flip_shadow_y != flip_shadow_y2
-            or use_legacy_light_vp != use_legacy_light_vp2) {
+            or flip_shadow_y != flip_shadow_y2) {
             let
-                path = capture_path(use_legacy_light_vp2, debug_mode2, flip_shadow_y2);
+                path = capture_path(debug_mode2, flip_shadow_y2);
             in
                 assert(gfx.take_screenshot(path));
                 gfx.draw_text_at(
@@ -128,33 +110,20 @@ let
         }
     }
 
-    fn loop_shadow(model, depth_shader, lit_shader, shadow_rt, camera_pos, camera_target, light_pos, show_map, debug_mode, flip_shadow_y, use_legacy_light_vp) {
+    fn loop_shadow(model, depth_shader, lit_shader, shadow_rt, camera_pos, camera_target, light_pos, debug_mode, flip_shadow_y) {
         if (gfx.should_close()) { true }
         else if (gfx.key_pressed(gfx.key_escape())) { true }
         else {
             let
                 #(camera_pos2, camera_target2) = update_camera(camera_pos, camera_target);
                 light_pos2 = update_light(light_pos);
-                show_map2 = if (gfx.key_pressed(gfx.key_m())) {
-                    if (show_map) { false } else { true }
-                } else {
-                    show_map
-                };
                 debug_mode2 = if (gfx.key_pressed(gfx.key_n())) {
                     next_debug_mode(debug_mode)
                 } else {
                     debug_mode
                 };
-                flip_shadow_y2 = if (gfx.key_pressed(gfx.key_b())) {
-                    if (flip_shadow_y) { false } else { true }
-                } else {
-                    flip_shadow_y
-                };
-                use_legacy_light_vp2 = if (gfx.key_pressed(gfx.key_v())) {
-                    if (use_legacy_light_vp) { false } else { true }
-                } else {
-                    use_legacy_light_vp
-                };
+                // Lock to the preferred b0 path (flip-y disabled).
+                flip_shadow_y2 = false;
                 light_target = gfx.vec3(0, 0.8, 0);
                 up = gfx.vec3(0, 1, 0);
                 shadow_left = -20.0;
@@ -163,7 +132,7 @@ let
                 shadow_top = 20.0;
                 shadow_near = 0.1;
                 shadow_far = 80.0;
-                bias = 0.00005;
+                bias = 0.00008;
                 light = gfx.point_light(light_pos2, gfx.vec3(1.0, 0.98, 0.93), 1.0);
                 lighting = gfx.lighting_config(gfx.vec3(0.04, 0.04, 0.05), 0.48, 72);
             in
@@ -178,8 +147,7 @@ let
                     shadow_bottom,
                     shadow_top,
                     shadow_near,
-                    shadow_far,
-                    use_legacy_light_vp2
+                    shadow_far
                 ));
 
                 // Pass A: depth map from light point of view.
@@ -209,8 +177,7 @@ let
                     shadow_bottom,
                     shadow_top,
                     shadow_near,
-                    shadow_far,
-                    use_legacy_light_vp2
+                    shadow_far
                 ));
                 assert(gfx.set_shader_float(lit_shader, "uShadowBias", bias));
                 assert(gfx.set_shader_float(
@@ -251,35 +218,20 @@ let
                     gfx.draw_text_at("Shadow Mapping Demo", gfx.point(20, 20), 30, gfx.white());
                     gfx.draw_text_at("W/S/A/D + Up/Down move camera", gfx.point(20, 58), 20, gfx.rgb(210, 230, 255));
                     gfx.draw_text_at("I/K/J/L move light", gfx.point(20, 86), 20, gfx.rgb(210, 230, 255));
-                    gfx.draw_text_at("M toggle: show shadow map", gfx.point(20, 114), 20, gfx.rgb(210, 230, 255));
+                    gfx.draw_text_at("shadow-map preview: removed", gfx.point(20, 114), 20, gfx.rgb(210, 230, 255));
                     gfx.draw_text_at("N cycle: 0=lit 1=mask 2=projDepth 3=sampleDepth 4=sampleReason 5=projUv", gfx.point(20, 142), 20, gfx.rgb(210, 230, 255));
-                    gfx.draw_text_at("B toggle: shadow-map flip-y", gfx.point(20, 170), 20, gfx.rgb(210, 230, 255));
-                    gfx.draw_text_at("V toggle: legacy light VP order", gfx.point(20, 198), 20, gfx.rgb(210, 230, 255));
-                    gfx.draw_text_at(
-                        if (use_legacy_light_vp2) { "light VP: view * projection (legacy)" }
-                        else { "light VP: projection * view" },
-                        gfx.point(20, 226),
-                        20,
-                        gfx.rgb(255, 220, 170)
-                    );
-                    gfx.draw_text_at("Esc exit", gfx.point(20, 254), 20, gfx.rgb(210, 230, 255));
-                    if (show_map2) {
-                        assert(gfx.draw_render_texture_at(shadow_rt, gfx.point(20, 176), gfx.white()));
-                        gfx.draw_text_at("color target preview (debug)", gfx.point(22, 178), 18, gfx.rgb(240, 240, 240))
-                    } else {
-                        true
-                    };
+                    gfx.draw_text_at("shadow-map flip-y: locked OFF (b0)", gfx.point(20, 170), 20, gfx.rgb(210, 230, 255));
+                    gfx.draw_text_at("light VP: view * projection (canonical)", gfx.point(20, 198), 20, gfx.rgb(255, 220, 170));
+                    gfx.draw_text_at("Esc exit", gfx.point(20, 226), 20, gfx.rgb(210, 230, 255));
                     maybe_capture_frame(
                         debug_mode,
                         debug_mode2,
                         flip_shadow_y,
-                        flip_shadow_y2,
-                        use_legacy_light_vp,
-                        use_legacy_light_vp2
+                        flip_shadow_y2
                     )
                 });
 
-                loop_shadow(model, depth_shader, lit_shader, shadow_rt, camera_pos2, camera_target2, light_pos2, show_map2, debug_mode2, flip_shadow_y2, use_legacy_light_vp2)
+                loop_shadow(model, depth_shader, lit_shader, shadow_rt, camera_pos2, camera_target2, light_pos2, debug_mode2, flip_shadow_y2)
             }
         }
     }
@@ -290,7 +242,7 @@ in
         gfx.with_model(model_path, fn (model) {
             gfx.with_shader(depth_vs, depth_fs, fn (depth_shader) {
                 gfx.with_shader(lit_vs, lit_fs, fn (lit_shader) {
-                    gfx.with_render_texture_size(gfx.extent(1024, 1024), fn (shadow_rt) {
+                    gfx.with_render_texture_size(gfx.extent(2048, 2048), fn (shadow_rt) {
                         loop_shadow(
                             model,
                             depth_shader,
@@ -299,9 +251,7 @@ in
                             gfx.vec3(6, 6, 10),
                             gfx.vec3(0, 1, 0),
                             gfx.vec3(11, 4, 1),
-                            false,
                             0,
-                            true,
                             true
                         )
                     })
