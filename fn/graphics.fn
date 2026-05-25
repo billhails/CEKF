@@ -35,6 +35,70 @@ fn vec3_x(vec3(x, _, _)) { x }
 fn vec3_y(vec3(_, y, _)) { y }
 fn vec3_z(vec3(_, _, z)) { z }
 
+fn mat2d_identity() {
+    gfx_mat2d_identity()
+}
+
+fn mat2d_translate(mat, dx, dy) {
+    gfx_mat2d_translate(mat, dx, dy)
+}
+
+fn mat2d_rotate(mat, degrees) {
+    gfx_mat2d_rotate(mat, degrees)
+}
+
+fn mat2d_scale(mat, sx, sy) {
+    gfx_mat2d_scale(mat, sx, sy)
+}
+
+fn mat2d_compose(left, right) {
+    gfx_mat2d_compose(left, right)
+}
+
+fn mat2d_apply_x(mat, x, y) {
+    gfx_mat2d_apply_x(mat, x, y)
+}
+
+fn mat2d_apply_y(mat, x, y) {
+    gfx_mat2d_apply_y(mat, x, y)
+}
+
+fn mat2d_apply_point(mat, point(x, y)) {
+    point(mat2d_apply_x(mat, x, y), mat2d_apply_y(mat, x, y))
+}
+
+fn make_transform3d(pos, rot, scale) {
+    gfx_transform3d(
+        vec3_x(pos), vec3_y(pos), vec3_z(pos),
+        vec3_x(rot), vec3_y(rot), vec3_z(rot),
+        vec3_x(scale), vec3_y(scale), vec3_z(scale)
+    )
+}
+
+fn transform3d_position(raw) {
+    vec3(
+        gfx_transform3d_position_x(raw),
+        gfx_transform3d_position_y(raw),
+        gfx_transform3d_position_z(raw)
+    )
+}
+
+fn transform3d_rotation(raw) {
+    vec3(
+        gfx_transform3d_rotation_x(raw),
+        gfx_transform3d_rotation_y(raw),
+        gfx_transform3d_rotation_z(raw)
+    )
+}
+
+fn transform3d_scale(raw) {
+    vec3(
+        gfx_transform3d_scale_x(raw),
+        gfx_transform3d_scale_y(raw),
+        gfx_transform3d_scale_z(raw)
+    )
+}
+
 fn with_window(width, height, title, handler) {
     switch (gfx_open(width, height, title)) {
         (success(_)) {

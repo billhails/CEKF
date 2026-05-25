@@ -25,6 +25,7 @@
 #include "symbol.h"
 #include "tc_analyze.h"
 #include "value.h"
+#include <math.h>
 #include <stdbool.h>
 
 #ifdef ENABLE_RAYLIB
@@ -68,6 +69,23 @@ static void registerGfxDrawPolygon(BuiltIns *registry);
 static void registerGfxFillPolygon(BuiltIns *registry);
 static void registerGfxDrawArc(BuiltIns *registry);
 static void registerGfxDrawRectRounded(BuiltIns *registry);
+static void registerGfxMat2DIdentity(BuiltIns *registry);
+static void registerGfxMat2DTranslate(BuiltIns *registry);
+static void registerGfxMat2DRotate(BuiltIns *registry);
+static void registerGfxMat2DScale(BuiltIns *registry);
+static void registerGfxMat2DCompose(BuiltIns *registry);
+static void registerGfxMat2DApplyX(BuiltIns *registry);
+static void registerGfxMat2DApplyY(BuiltIns *registry);
+static void registerGfxTransform3D(BuiltIns *registry);
+static void registerGfxTransform3DPositionX(BuiltIns *registry);
+static void registerGfxTransform3DPositionY(BuiltIns *registry);
+static void registerGfxTransform3DPositionZ(BuiltIns *registry);
+static void registerGfxTransform3DRotationX(BuiltIns *registry);
+static void registerGfxTransform3DRotationY(BuiltIns *registry);
+static void registerGfxTransform3DRotationZ(BuiltIns *registry);
+static void registerGfxTransform3DScaleX(BuiltIns *registry);
+static void registerGfxTransform3DScaleY(BuiltIns *registry);
+static void registerGfxTransform3DScaleZ(BuiltIns *registry);
 static void registerGfxLoadFont(BuiltIns *registry);
 static void registerGfxUnloadFont(BuiltIns *registry);
 static void registerGfxDrawTextFont(BuiltIns *registry);
@@ -161,6 +179,23 @@ void registerGraphics(BuiltIns *registry) {
     registerGfxFillPolygon(registry);
     registerGfxDrawArc(registry);
     registerGfxDrawRectRounded(registry);
+    registerGfxMat2DIdentity(registry);
+    registerGfxMat2DTranslate(registry);
+    registerGfxMat2DRotate(registry);
+    registerGfxMat2DScale(registry);
+    registerGfxMat2DCompose(registry);
+    registerGfxMat2DApplyX(registry);
+    registerGfxMat2DApplyY(registry);
+    registerGfxTransform3D(registry);
+    registerGfxTransform3DPositionX(registry);
+    registerGfxTransform3DPositionY(registry);
+    registerGfxTransform3DPositionZ(registry);
+    registerGfxTransform3DRotationX(registry);
+    registerGfxTransform3DRotationY(registry);
+    registerGfxTransform3DRotationZ(registry);
+    registerGfxTransform3DScaleX(registry);
+    registerGfxTransform3DScaleY(registry);
+    registerGfxTransform3DScaleZ(registry);
     registerGfxLoadFont(registry);
     registerGfxUnloadFont(registry);
     registerGfxDrawTextFont(registry);
@@ -321,6 +356,108 @@ static TcType *pushModelArg(BuiltInArgs *args) {
     return t;
 }
 
+static HashSymbol *mat2DSymbol(void) { return newSymbol("mat2d"); }
+
+static TcType *makeMat2DType(void) { return newTcType_Opaque(mat2DSymbol()); }
+
+static TcType *pushMat2DArg(BuiltInArgs *args) {
+    TcType *t = makeMat2DType();
+    int save = PROTECT(t);
+    pushBuiltInArgs(args, t);
+    UNPROTECT(save);
+    return t;
+}
+
+static HashSymbol *transform3DSymbol(void) { return newSymbol("transform3d"); }
+
+static TcType *makeTransform3DType(void) {
+    return newTcType_Opaque(transform3DSymbol());
+}
+
+static TcType *pushTransform3DArg(BuiltInArgs *args) {
+    TcType *t = makeTransform3DType();
+    int save = PROTECT(t);
+    pushBuiltInArgs(args, t);
+    UNPROTECT(save);
+    return t;
+}
+
+typedef struct Mat2DData {
+    float m00;
+    float m01;
+    float m02;
+    float m10;
+    float m11;
+    float m12;
+} Mat2DData;
+
+typedef struct Transform3DData {
+    float px;
+    float py;
+    float pz;
+    float rx;
+    float ry;
+    float rz;
+    float sx;
+    float sy;
+    float sz;
+} Transform3DData;
+
+static void opaque_gfx_mat2d_free(void *data) {
+    if (data == NULL)
+        return;
+    Mat2DData *mat = (Mat2DData *)data;
+    FREE_ARRAY(Mat2DData, mat, 1);
+}
+
+static void opaque_gfx_transform3d_free(void *data) {
+    if (data == NULL)
+        return;
+    Transform3DData *t = (Transform3DData *)data;
+    FREE_ARRAY(Transform3DData, t, 1);
+}
+
+static Mat2DData mat2dIdentityData(void) {
+    return (Mat2DData){1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f};
+}
+
+static Mat2DData mat2dMul(Mat2DData a, Mat2DData b) {
+    Mat2DData out;
+    out.m00 = a.m00 * b.m00 + a.m01 * b.m10;
+    out.m01 = a.m00 * b.m01 + a.m01 * b.m11;
+    out.m02 = a.m00 * b.m02 + a.m01 * b.m12 + a.m02;
+    out.m10 = a.m10 * b.m00 + a.m11 * b.m10;
+    out.m11 = a.m10 * b.m01 + a.m11 * b.m11;
+    out.m12 = a.m10 * b.m02 + a.m11 * b.m12 + a.m12;
+    return out;
+}
+
+static Opaque *newMat2DOpaque(Mat2DData data) {
+    Mat2DData *storage = NEW_ARRAY(Mat2DData, 1);
+    *storage = data;
+    return newOpaque(storage, opaque_gfx_mat2d_free, NULL, NULL);
+}
+
+static Opaque *newTransform3DOpaque(Transform3DData data) {
+    Transform3DData *storage = NEW_ARRAY(Transform3DData, 1);
+    *storage = data;
+    return newOpaque(storage, opaque_gfx_transform3d_free, NULL, NULL);
+}
+
+static Mat2DData *asMat2D(Value v) {
+    if (v.type != VALUE_TYPE_OPAQUE || v.val.opaque == NULL ||
+        v.val.opaque->data == NULL)
+        return NULL;
+    return (Mat2DData *)v.val.opaque->data;
+}
+
+static Transform3DData *asTransform3D(Value v) {
+    if (v.type != VALUE_TYPE_OPAQUE || v.val.opaque == NULL ||
+        v.val.opaque->data == NULL)
+        return NULL;
+    return (Transform3DData *)v.val.opaque->data;
+}
+
 #ifdef ENABLE_RAYLIB
 static void fontRegistryRemove(Opaque *wrapper) {
     FontNode **prev = &fontRegistry;
@@ -447,6 +584,8 @@ static int extractChannel(Value v) {
 static int valueAsInt(Value v) {
     if (v.type == VALUE_TYPE_STDINT)
         return (int)getValue_Stdint(v);
+    if (v.type == VALUE_TYPE_IRRATIONAL)
+        return (int)getValue_Irrational(v);
     if (v.type == VALUE_TYPE_RATIONAL) {
         Vec *r = getValue_Rational(v);
         if (r->entries[0].type == VALUE_TYPE_STDINT &&
@@ -1064,10 +1203,10 @@ Value builtin_gfx_draw_line(Vec *args) {
 #else
     if (!canDrawTarget())
         return value_Stdint(0);
-    int x1 = (int)getValue_Stdint(args->entries[0]);
-    int y1 = (int)getValue_Stdint(args->entries[1]);
-    int x2 = (int)getValue_Stdint(args->entries[2]);
-    int y2 = (int)getValue_Stdint(args->entries[3]);
+    int x1 = valueAsInt(args->entries[0]);
+    int y1 = valueAsInt(args->entries[1]);
+    int x2 = valueAsInt(args->entries[2]);
+    int y2 = valueAsInt(args->entries[3]);
     int r = extractChannel(args->entries[4]);
     int g = extractChannel(args->entries[5]);
     int b = extractChannel(args->entries[6]);
@@ -1088,9 +1227,9 @@ Value builtin_gfx_draw_circle(Vec *args) {
 #else
     if (!canDrawTarget())
         return value_Stdint(0);
-    int cx = (int)getValue_Stdint(args->entries[0]);
-    int cy = (int)getValue_Stdint(args->entries[1]);
-    int radius = (int)getValue_Stdint(args->entries[2]);
+    int cx = valueAsInt(args->entries[0]);
+    int cy = valueAsInt(args->entries[1]);
+    int radius = valueAsInt(args->entries[2]);
     int r = extractChannel(args->entries[3]);
     int g = extractChannel(args->entries[4]);
     int b = extractChannel(args->entries[5]);
@@ -1111,9 +1250,9 @@ Value builtin_gfx_fill_circle(Vec *args) {
 #else
     if (!canDrawTarget())
         return value_Stdint(0);
-    int cx = (int)getValue_Stdint(args->entries[0]);
-    int cy = (int)getValue_Stdint(args->entries[1]);
-    int radius = (int)getValue_Stdint(args->entries[2]);
+    int cx = valueAsInt(args->entries[0]);
+    int cy = valueAsInt(args->entries[1]);
+    int radius = valueAsInt(args->entries[2]);
     int r = extractChannel(args->entries[3]);
     int g = extractChannel(args->entries[4]);
     int b = extractChannel(args->entries[5]);
@@ -1134,10 +1273,10 @@ Value builtin_gfx_draw_rect(Vec *args) {
 #else
     if (!canDrawTarget())
         return value_Stdint(0);
-    int x = (int)getValue_Stdint(args->entries[0]);
-    int y = (int)getValue_Stdint(args->entries[1]);
-    int w = (int)getValue_Stdint(args->entries[2]);
-    int h = (int)getValue_Stdint(args->entries[3]);
+    int x = valueAsInt(args->entries[0]);
+    int y = valueAsInt(args->entries[1]);
+    int w = valueAsInt(args->entries[2]);
+    int h = valueAsInt(args->entries[3]);
     int r = extractChannel(args->entries[4]);
     int g = extractChannel(args->entries[5]);
     int b = extractChannel(args->entries[6]);
@@ -1309,6 +1448,133 @@ Value builtin_gfx_draw_rect_rounded(Vec *args) {
                                 lineThick, color);
     return value_Stdint(1);
 #endif
+}
+
+Value builtin_gfx_mat2d_identity(Vec *args) {
+    (void)args;
+    Opaque *mat = newMat2DOpaque(mat2dIdentityData());
+    return value_Opaque(mat);
+}
+
+Value builtin_gfx_mat2d_translate(Vec *args) {
+    Mat2DData *base = asMat2D(args->entries[0]);
+    Mat2DData current = base != NULL ? *base : mat2dIdentityData();
+    float dx = valueAsFloat(args->entries[1]);
+    float dy = valueAsFloat(args->entries[2]);
+    Mat2DData t = {1.0f, 0.0f, dx, 0.0f, 1.0f, dy};
+    Opaque *mat = newMat2DOpaque(mat2dMul(current, t));
+    return value_Opaque(mat);
+}
+
+Value builtin_gfx_mat2d_rotate(Vec *args) {
+    Mat2DData *base = asMat2D(args->entries[0]);
+    Mat2DData current = base != NULL ? *base : mat2dIdentityData();
+    float degrees = valueAsFloat(args->entries[1]);
+    float radians = degrees * ((float)M_PI / 180.0f);
+    float c = cosf(radians);
+    float s = sinf(radians);
+    Mat2DData r = {c, -s, 0.0f, s, c, 0.0f};
+    Opaque *mat = newMat2DOpaque(mat2dMul(current, r));
+    return value_Opaque(mat);
+}
+
+Value builtin_gfx_mat2d_scale(Vec *args) {
+    Mat2DData *base = asMat2D(args->entries[0]);
+    Mat2DData current = base != NULL ? *base : mat2dIdentityData();
+    float sx = valueAsFloat(args->entries[1]);
+    float sy = valueAsFloat(args->entries[2]);
+    Mat2DData s = {sx, 0.0f, 0.0f, 0.0f, sy, 0.0f};
+    Opaque *mat = newMat2DOpaque(mat2dMul(current, s));
+    return value_Opaque(mat);
+}
+
+Value builtin_gfx_mat2d_compose(Vec *args) {
+    Mat2DData *a = asMat2D(args->entries[0]);
+    Mat2DData *b = asMat2D(args->entries[1]);
+    Mat2DData left = a != NULL ? *a : mat2dIdentityData();
+    Mat2DData right = b != NULL ? *b : mat2dIdentityData();
+    Opaque *mat = newMat2DOpaque(mat2dMul(left, right));
+    return value_Opaque(mat);
+}
+
+Value builtin_gfx_mat2d_apply_x(Vec *args) {
+    Mat2DData *mat = asMat2D(args->entries[0]);
+    if (mat == NULL)
+        return value_Irrational(0.0);
+    float x = valueAsFloat(args->entries[1]);
+    float y = valueAsFloat(args->entries[2]);
+    float out = mat->m00 * x + mat->m01 * y + mat->m02;
+    return value_Irrational((double)out);
+}
+
+Value builtin_gfx_mat2d_apply_y(Vec *args) {
+    Mat2DData *mat = asMat2D(args->entries[0]);
+    if (mat == NULL)
+        return value_Irrational(0.0);
+    float x = valueAsFloat(args->entries[1]);
+    float y = valueAsFloat(args->entries[2]);
+    float out = mat->m10 * x + mat->m11 * y + mat->m12;
+    return value_Irrational((double)out);
+}
+
+Value builtin_gfx_transform3d(Vec *args) {
+    Transform3DData t;
+    t.px = valueAsFloat(args->entries[0]);
+    t.py = valueAsFloat(args->entries[1]);
+    t.pz = valueAsFloat(args->entries[2]);
+    t.rx = valueAsFloat(args->entries[3]);
+    t.ry = valueAsFloat(args->entries[4]);
+    t.rz = valueAsFloat(args->entries[5]);
+    t.sx = valueAsFloat(args->entries[6]);
+    t.sy = valueAsFloat(args->entries[7]);
+    t.sz = valueAsFloat(args->entries[8]);
+    Opaque *wrapped = newTransform3DOpaque(t);
+    return value_Opaque(wrapped);
+}
+
+Value builtin_gfx_transform3d_position_x(Vec *args) {
+    Transform3DData *t = asTransform3D(args->entries[0]);
+    return value_Irrational((double)(t != NULL ? t->px : 0.0f));
+}
+
+Value builtin_gfx_transform3d_position_y(Vec *args) {
+    Transform3DData *t = asTransform3D(args->entries[0]);
+    return value_Irrational((double)(t != NULL ? t->py : 0.0f));
+}
+
+Value builtin_gfx_transform3d_position_z(Vec *args) {
+    Transform3DData *t = asTransform3D(args->entries[0]);
+    return value_Irrational((double)(t != NULL ? t->pz : 0.0f));
+}
+
+Value builtin_gfx_transform3d_rotation_x(Vec *args) {
+    Transform3DData *t = asTransform3D(args->entries[0]);
+    return value_Irrational((double)(t != NULL ? t->rx : 0.0f));
+}
+
+Value builtin_gfx_transform3d_rotation_y(Vec *args) {
+    Transform3DData *t = asTransform3D(args->entries[0]);
+    return value_Irrational((double)(t != NULL ? t->ry : 0.0f));
+}
+
+Value builtin_gfx_transform3d_rotation_z(Vec *args) {
+    Transform3DData *t = asTransform3D(args->entries[0]);
+    return value_Irrational((double)(t != NULL ? t->rz : 0.0f));
+}
+
+Value builtin_gfx_transform3d_scale_x(Vec *args) {
+    Transform3DData *t = asTransform3D(args->entries[0]);
+    return value_Irrational((double)(t != NULL ? t->sx : 0.0f));
+}
+
+Value builtin_gfx_transform3d_scale_y(Vec *args) {
+    Transform3DData *t = asTransform3D(args->entries[0]);
+    return value_Irrational((double)(t != NULL ? t->sy : 0.0f));
+}
+
+Value builtin_gfx_transform3d_scale_z(Vec *args) {
+    Transform3DData *t = asTransform3D(args->entries[0]);
+    return value_Irrational((double)(t != NULL ? t->sz : 0.0f));
 }
 
 Value builtin_gfx_load_font(Vec *args) {
@@ -2940,10 +3206,10 @@ static void registerGfxFrameTimeMs(BuiltIns *registry) {
 static void registerGfxDrawLine(BuiltIns *registry) {
     BuiltInArgs *args = newBuiltInArgs();
     int save = PROTECT(args);
-    pushIntegerArg(args); // x1
-    pushIntegerArg(args); // y1
-    pushIntegerArg(args); // x2
-    pushIntegerArg(args); // y2
+    pushAnyArg(args);     // x1
+    pushAnyArg(args);     // y1
+    pushAnyArg(args);     // x2
+    pushAnyArg(args);     // y2
     pushIntegerArg(args); // r
     pushIntegerArg(args); // g
     pushIntegerArg(args); // b
@@ -3010,12 +3276,12 @@ static void registerGfxDrawRect(BuiltIns *registry) {
 static void registerGfxDrawTriangle(BuiltIns *registry) {
     BuiltInArgs *args = newBuiltInArgs();
     int save = PROTECT(args);
-    pushIntegerArg(args); // x1
-    pushIntegerArg(args); // y1
-    pushIntegerArg(args); // x2
-    pushIntegerArg(args); // y2
-    pushIntegerArg(args); // x3
-    pushIntegerArg(args); // y3
+    pushAnyArg(args);     // x1
+    pushAnyArg(args);     // y1
+    pushAnyArg(args);     // x2
+    pushAnyArg(args);     // y2
+    pushAnyArg(args);     // x3
+    pushAnyArg(args);     // y3
     pushIntegerArg(args); // r
     pushIntegerArg(args); // g
     pushIntegerArg(args); // b
@@ -3031,12 +3297,12 @@ static void registerGfxDrawTriangle(BuiltIns *registry) {
 static void registerGfxFillTriangle(BuiltIns *registry) {
     BuiltInArgs *args = newBuiltInArgs();
     int save = PROTECT(args);
-    pushIntegerArg(args); // x1
-    pushIntegerArg(args); // y1
-    pushIntegerArg(args); // x2
-    pushIntegerArg(args); // y2
-    pushIntegerArg(args); // x3
-    pushIntegerArg(args); // y3
+    pushAnyArg(args);     // x1
+    pushAnyArg(args);     // y1
+    pushAnyArg(args);     // x2
+    pushAnyArg(args);     // y2
+    pushAnyArg(args);     // x3
+    pushAnyArg(args);     // y3
     pushIntegerArg(args); // r
     pushIntegerArg(args); // g
     pushIntegerArg(args); // b
@@ -3128,6 +3394,225 @@ static void registerGfxDrawRectRounded(BuiltIns *registry) {
     pushNewBuiltIn(registry, "gfx_draw_rect_rounded", ret, args,
                    (void *)builtin_gfx_draw_rect_rounded,
                    "builtin_gfx_draw_rect_rounded");
+    UNPROTECT(save);
+}
+
+static void registerGfxMat2DIdentity(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    TcType *ret = makeMat2DType();
+    PROTECT(ret);
+    pushNewBuiltIn(registry, "gfx_mat2d_identity", ret, args,
+                   (void *)builtin_gfx_mat2d_identity,
+                   "builtin_gfx_mat2d_identity");
+    UNPROTECT(save);
+}
+
+static void registerGfxMat2DTranslate(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    pushMat2DArg(args);
+    pushAnyArg(args); // dx
+    pushAnyArg(args); // dy
+    TcType *ret = makeMat2DType();
+    PROTECT(ret);
+    pushNewBuiltIn(registry, "gfx_mat2d_translate", ret, args,
+                   (void *)builtin_gfx_mat2d_translate,
+                   "builtin_gfx_mat2d_translate");
+    UNPROTECT(save);
+}
+
+static void registerGfxMat2DRotate(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    pushMat2DArg(args);
+    pushAnyArg(args); // degrees
+    TcType *ret = makeMat2DType();
+    PROTECT(ret);
+    pushNewBuiltIn(registry, "gfx_mat2d_rotate", ret, args,
+                   (void *)builtin_gfx_mat2d_rotate,
+                   "builtin_gfx_mat2d_rotate");
+    UNPROTECT(save);
+}
+
+static void registerGfxMat2DScale(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    pushMat2DArg(args);
+    pushAnyArg(args); // sx
+    pushAnyArg(args); // sy
+    TcType *ret = makeMat2DType();
+    PROTECT(ret);
+    pushNewBuiltIn(registry, "gfx_mat2d_scale", ret, args,
+                   (void *)builtin_gfx_mat2d_scale, "builtin_gfx_mat2d_scale");
+    UNPROTECT(save);
+}
+
+static void registerGfxMat2DCompose(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    pushMat2DArg(args);
+    pushMat2DArg(args);
+    TcType *ret = makeMat2DType();
+    PROTECT(ret);
+    pushNewBuiltIn(registry, "gfx_mat2d_compose", ret, args,
+                   (void *)builtin_gfx_mat2d_compose,
+                   "builtin_gfx_mat2d_compose");
+    UNPROTECT(save);
+}
+
+static void registerGfxMat2DApplyX(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    pushMat2DArg(args);
+    pushAnyArg(args); // x
+    pushAnyArg(args); // y
+    TcType *ret = newTcType_BigInteger();
+    PROTECT(ret);
+    pushNewBuiltIn(registry, "gfx_mat2d_apply_x", ret, args,
+                   (void *)builtin_gfx_mat2d_apply_x,
+                   "builtin_gfx_mat2d_apply_x");
+    UNPROTECT(save);
+}
+
+static void registerGfxMat2DApplyY(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    pushMat2DArg(args);
+    pushAnyArg(args); // x
+    pushAnyArg(args); // y
+    TcType *ret = newTcType_BigInteger();
+    PROTECT(ret);
+    pushNewBuiltIn(registry, "gfx_mat2d_apply_y", ret, args,
+                   (void *)builtin_gfx_mat2d_apply_y,
+                   "builtin_gfx_mat2d_apply_y");
+    UNPROTECT(save);
+}
+
+static void registerGfxTransform3D(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    pushAnyArg(args); // px
+    pushAnyArg(args); // py
+    pushAnyArg(args); // pz
+    pushAnyArg(args); // rx
+    pushAnyArg(args); // ry
+    pushAnyArg(args); // rz
+    pushAnyArg(args); // sx
+    pushAnyArg(args); // sy
+    pushAnyArg(args); // sz
+    TcType *ret = makeTransform3DType();
+    PROTECT(ret);
+    pushNewBuiltIn(registry, "gfx_transform3d", ret, args,
+                   (void *)builtin_gfx_transform3d, "builtin_gfx_transform3d");
+    UNPROTECT(save);
+}
+
+static void registerGfxTransform3DPositionX(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    pushTransform3DArg(args);
+    TcType *ret = newTcType_BigInteger();
+    PROTECT(ret);
+    pushNewBuiltIn(registry, "gfx_transform3d_position_x", ret, args,
+                   (void *)builtin_gfx_transform3d_position_x,
+                   "builtin_gfx_transform3d_position_x");
+    UNPROTECT(save);
+}
+
+static void registerGfxTransform3DPositionY(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    pushTransform3DArg(args);
+    TcType *ret = newTcType_BigInteger();
+    PROTECT(ret);
+    pushNewBuiltIn(registry, "gfx_transform3d_position_y", ret, args,
+                   (void *)builtin_gfx_transform3d_position_y,
+                   "builtin_gfx_transform3d_position_y");
+    UNPROTECT(save);
+}
+
+static void registerGfxTransform3DPositionZ(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    pushTransform3DArg(args);
+    TcType *ret = newTcType_BigInteger();
+    PROTECT(ret);
+    pushNewBuiltIn(registry, "gfx_transform3d_position_z", ret, args,
+                   (void *)builtin_gfx_transform3d_position_z,
+                   "builtin_gfx_transform3d_position_z");
+    UNPROTECT(save);
+}
+
+static void registerGfxTransform3DRotationX(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    pushTransform3DArg(args);
+    TcType *ret = newTcType_BigInteger();
+    PROTECT(ret);
+    pushNewBuiltIn(registry, "gfx_transform3d_rotation_x", ret, args,
+                   (void *)builtin_gfx_transform3d_rotation_x,
+                   "builtin_gfx_transform3d_rotation_x");
+    UNPROTECT(save);
+}
+
+static void registerGfxTransform3DRotationY(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    pushTransform3DArg(args);
+    TcType *ret = newTcType_BigInteger();
+    PROTECT(ret);
+    pushNewBuiltIn(registry, "gfx_transform3d_rotation_y", ret, args,
+                   (void *)builtin_gfx_transform3d_rotation_y,
+                   "builtin_gfx_transform3d_rotation_y");
+    UNPROTECT(save);
+}
+
+static void registerGfxTransform3DRotationZ(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    pushTransform3DArg(args);
+    TcType *ret = newTcType_BigInteger();
+    PROTECT(ret);
+    pushNewBuiltIn(registry, "gfx_transform3d_rotation_z", ret, args,
+                   (void *)builtin_gfx_transform3d_rotation_z,
+                   "builtin_gfx_transform3d_rotation_z");
+    UNPROTECT(save);
+}
+
+static void registerGfxTransform3DScaleX(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    pushTransform3DArg(args);
+    TcType *ret = newTcType_BigInteger();
+    PROTECT(ret);
+    pushNewBuiltIn(registry, "gfx_transform3d_scale_x", ret, args,
+                   (void *)builtin_gfx_transform3d_scale_x,
+                   "builtin_gfx_transform3d_scale_x");
+    UNPROTECT(save);
+}
+
+static void registerGfxTransform3DScaleY(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    pushTransform3DArg(args);
+    TcType *ret = newTcType_BigInteger();
+    PROTECT(ret);
+    pushNewBuiltIn(registry, "gfx_transform3d_scale_y", ret, args,
+                   (void *)builtin_gfx_transform3d_scale_y,
+                   "builtin_gfx_transform3d_scale_y");
+    UNPROTECT(save);
+}
+
+static void registerGfxTransform3DScaleZ(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    pushTransform3DArg(args);
+    TcType *ret = newTcType_BigInteger();
+    PROTECT(ret);
+    pushNewBuiltIn(registry, "gfx_transform3d_scale_z", ret, args,
+                   (void *)builtin_gfx_transform3d_scale_z,
+                   "builtin_gfx_transform3d_scale_z");
     UNPROTECT(save);
 }
 
@@ -3390,12 +3875,12 @@ static void registerGfxDrawRenderTexture(BuiltIns *registry) {
 static void registerGfxBeginMode2D(BuiltIns *registry) {
     BuiltInArgs *args = newBuiltInArgs();
     int save = PROTECT(args);
-    pushIntegerArg(args); // target_x
-    pushIntegerArg(args); // target_y
-    pushIntegerArg(args); // offset_x
-    pushIntegerArg(args); // offset_y
-    pushIntegerArg(args); // rotation
-    pushIntegerArg(args); // zoom
+    pushAnyArg(args); // target_x
+    pushAnyArg(args); // target_y
+    pushAnyArg(args); // offset_x
+    pushAnyArg(args); // offset_y
+    pushAnyArg(args); // rotation
+    pushAnyArg(args); // zoom
     TcType *ret = makeBoolean();
     PROTECT(ret);
     pushNewBuiltIn(registry, "gfx_begin_mode_2d", ret, args,
@@ -3417,16 +3902,16 @@ static void registerGfxEndMode2D(BuiltIns *registry) {
 static void registerGfxBeginMode3D(BuiltIns *registry) {
     BuiltInArgs *args = newBuiltInArgs();
     int save = PROTECT(args);
-    pushIntegerArg(args); // pos_x
-    pushIntegerArg(args); // pos_y
-    pushIntegerArg(args); // pos_z
-    pushIntegerArg(args); // target_x
-    pushIntegerArg(args); // target_y
-    pushIntegerArg(args); // target_z
-    pushIntegerArg(args); // up_x
-    pushIntegerArg(args); // up_y
-    pushIntegerArg(args); // up_z
-    pushIntegerArg(args); // fovy
+    pushAnyArg(args);     // pos_x
+    pushAnyArg(args);     // pos_y
+    pushAnyArg(args);     // pos_z
+    pushAnyArg(args);     // target_x
+    pushAnyArg(args);     // target_y
+    pushAnyArg(args);     // target_z
+    pushAnyArg(args);     // up_x
+    pushAnyArg(args);     // up_y
+    pushAnyArg(args);     // up_z
+    pushAnyArg(args);     // fovy
     pushIntegerArg(args); // projection
     TcType *ret = makeBoolean();
     PROTECT(ret);
@@ -3449,12 +3934,12 @@ static void registerGfxEndMode3D(BuiltIns *registry) {
 static void registerGfxDrawCube(BuiltIns *registry) {
     BuiltInArgs *args = newBuiltInArgs();
     int save = PROTECT(args);
-    pushIntegerArg(args); // center_x
-    pushIntegerArg(args); // center_y
-    pushIntegerArg(args); // center_z
-    pushIntegerArg(args); // size_x
-    pushIntegerArg(args); // size_y
-    pushIntegerArg(args); // size_z
+    pushAnyArg(args);     // center_x
+    pushAnyArg(args);     // center_y
+    pushAnyArg(args);     // center_z
+    pushAnyArg(args);     // size_x
+    pushAnyArg(args);     // size_y
+    pushAnyArg(args);     // size_z
     pushIntegerArg(args); // r
     pushIntegerArg(args); // g
     pushIntegerArg(args); // b
@@ -3469,12 +3954,12 @@ static void registerGfxDrawCube(BuiltIns *registry) {
 static void registerGfxDrawCubeWires(BuiltIns *registry) {
     BuiltInArgs *args = newBuiltInArgs();
     int save = PROTECT(args);
-    pushIntegerArg(args); // center_x
-    pushIntegerArg(args); // center_y
-    pushIntegerArg(args); // center_z
-    pushIntegerArg(args); // size_x
-    pushIntegerArg(args); // size_y
-    pushIntegerArg(args); // size_z
+    pushAnyArg(args);     // center_x
+    pushAnyArg(args);     // center_y
+    pushAnyArg(args);     // center_z
+    pushAnyArg(args);     // size_x
+    pushAnyArg(args);     // size_y
+    pushAnyArg(args);     // size_z
     pushIntegerArg(args); // r
     pushIntegerArg(args); // g
     pushIntegerArg(args); // b
