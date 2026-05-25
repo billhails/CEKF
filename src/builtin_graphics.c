@@ -33,6 +33,7 @@
 #endif
 
 static void registerGfxOpen(BuiltIns *registry);
+static void registerGfxEnabled(BuiltIns *registry);
 static void registerGfxClose(BuiltIns *registry);
 static void registerGfxShouldClose(BuiltIns *registry);
 static void registerGfxSetTargetFps(BuiltIns *registry);
@@ -154,6 +155,7 @@ static void registerGfxMusicProgressWidth(BuiltIns *registry);
 
 void registerGraphics(BuiltIns *registry) {
     registerGfxOpen(registry);
+    registerGfxEnabled(registry);
     registerGfxClose(registry);
     registerGfxShouldClose(registry);
     registerGfxSetTargetFps(registry);
@@ -604,6 +606,25 @@ void markGraphicsGlobals(void) {
     }
 }
 
+// Accept STDINT, rational, or irrational as a float.
+// Rationals are converted to float quotient.
+static float valueAsFloat(Value v) {
+    if (v.type == VALUE_TYPE_STDINT)
+        return (float)getValue_Stdint(v);
+    if (v.type == VALUE_TYPE_IRRATIONAL)
+        return (float)getValue_Irrational(v);
+    if (v.type == VALUE_TYPE_RATIONAL) {
+        Vec *r = getValue_Rational(v);
+        if (r->entries[0].type == VALUE_TYPE_STDINT &&
+            r->entries[1].type == VALUE_TYPE_STDINT) {
+            float num = (float)getValue_Stdint(r->entries[0]);
+            float den = (float)getValue_Stdint(r->entries[1]);
+            return den != 0.0f ? num / den : 0.0f;
+        }
+    }
+    return (float)getValue_Stdint(v);
+}
+
 #ifdef ENABLE_RAYLIB
 static struct {
     bool initialized;
@@ -626,7 +647,7 @@ static int extractChannel(Value v) {
     return n;
 }
 
-// Accept STDINT or rational (e.g. result of w/2) as a pixel coordinate.
+// Accept STDINT or rational as an integer coordinate/value.
 // Rationals are truncated toward zero.
 static int valueAsInt(Value v) {
     if (v.type == VALUE_TYPE_STDINT)
@@ -642,29 +663,7 @@ static int valueAsInt(Value v) {
             return den != 0 ? num / den : 0;
         }
     }
-    return (int)getValue_Stdint(
-        v); // aborts with a clear message for other types
-}
-
-// Accept STDINT, rational, or irrational as a float (e.g. rotation degrees,
-// pivot coordinates). Rationals are converted to their exact float quotient;
-// irrationals are cast directly.
-static float valueAsFloat(Value v) {
-    if (v.type == VALUE_TYPE_STDINT)
-        return (float)getValue_Stdint(v);
-    if (v.type == VALUE_TYPE_IRRATIONAL)
-        return (float)getValue_Irrational(v);
-    if (v.type == VALUE_TYPE_RATIONAL) {
-        Vec *r = getValue_Rational(v);
-        if (r->entries[0].type == VALUE_TYPE_STDINT &&
-            r->entries[1].type == VALUE_TYPE_STDINT) {
-            float num = (float)getValue_Stdint(r->entries[0]);
-            float den = (float)getValue_Stdint(r->entries[1]);
-            return den != 0.0f ? num / den : 0.0f;
-        }
-    }
-    return (float)getValue_Stdint(
-        v); // aborts with a clear message for other types
+    return (int)getValue_Stdint(v);
 }
 
 static void opaque_gfx_font_unload(void *data) {
@@ -854,6 +853,15 @@ static Value failMsg(const char *text) {
     Value result = makeTryResult(0, msg);
     UNPROTECT(save);
     return result;
+}
+
+Value builtin_gfx_enabled(Vec *args) {
+    (void)args;
+#ifdef ENABLE_RAYLIB
+    return value_Stdint(1);
+#else
+    return value_Stdint(0);
+#endif
 }
 
 Value builtin_gfx_open(Vec *args) {
@@ -3285,6 +3293,16 @@ static void registerGfxOpen(BuiltIns *registry) {
     PROTECT(retType);
     pushNewBuiltIn(registry, "gfx_open", retType, args,
                    (void *)builtin_gfx_open, "builtin_gfx_open");
+    UNPROTECT(save);
+}
+
+static void registerGfxEnabled(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    TcType *b = makeBoolean();
+    PROTECT(b);
+    pushNewBuiltIn(registry, "gfx_enabled", b, args,
+                   (void *)builtin_gfx_enabled, "builtin_gfx_enabled");
     UNPROTECT(save);
 }
 
