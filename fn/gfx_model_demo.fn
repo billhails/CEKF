@@ -70,6 +70,7 @@ let
                 gfx.frame(gfx.rgb(24, 26, 34), fn () {
                     gfx.with_camera3d(pos2, target2, gfx.vec3(0, 1, 0), 60, gfx.projection_perspective(), fn () {
                         assert(gfx.draw_grid(20, 1));
+                        assert(gfx.draw_plane(gfx.vec3(0, 0, 0), gfx.vec3(20, 0, 20), gfx.rgb(50, 70, 95)));
                         assert(gfx.draw_model_at(model, gfx.vec3(0, 0, 0), 1, gfx.white()));
                         assert(gfx.draw_model_wires_at(model, gfx.vec3(0, 0, 0), 1, gfx.rgb(30, 30, 30)))
                     });

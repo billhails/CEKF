@@ -49,6 +49,12 @@ static void registerGfxMouseDeltaX(BuiltIns *registry);
 static void registerGfxMouseDeltaY(BuiltIns *registry);
 static void registerGfxIsMouseDown(BuiltIns *registry);
 static void registerGfxIsMousePressed(BuiltIns *registry);
+static void registerGfxIsMouseReleased(BuiltIns *registry);
+static void registerGfxMouseWheel(BuiltIns *registry);
+static void registerGfxDisableCursor(BuiltIns *registry);
+static void registerGfxEnableCursor(BuiltIns *registry);
+static void registerGfxHideCursor(BuiltIns *registry);
+static void registerGfxShowCursor(BuiltIns *registry);
 static void registerGfxScreenWidth(BuiltIns *registry);
 static void registerGfxScreenHeight(BuiltIns *registry);
 static void registerGfxFrameTimeMs(BuiltIns *registry);
@@ -79,6 +85,12 @@ static void registerGfxEndMode3D(BuiltIns *registry);
 static void registerGfxDrawCube(BuiltIns *registry);
 static void registerGfxDrawCubeWires(BuiltIns *registry);
 static void registerGfxDrawGrid(BuiltIns *registry);
+static void registerGfxDrawSphere(BuiltIns *registry);
+static void registerGfxDrawSphereWires(BuiltIns *registry);
+static void registerGfxDrawCylinder(BuiltIns *registry);
+static void registerGfxDrawCylinderWires(BuiltIns *registry);
+static void registerGfxDrawPlane(BuiltIns *registry);
+static void registerGfxDrawLine3D(BuiltIns *registry);
 static void registerGfxLoadModel(BuiltIns *registry);
 static void registerGfxUnloadModel(BuiltIns *registry);
 static void registerGfxDrawModel(BuiltIns *registry);
@@ -124,6 +136,12 @@ void registerGraphics(BuiltIns *registry) {
     registerGfxMouseDeltaY(registry);
     registerGfxIsMouseDown(registry);
     registerGfxIsMousePressed(registry);
+    registerGfxIsMouseReleased(registry);
+    registerGfxMouseWheel(registry);
+    registerGfxDisableCursor(registry);
+    registerGfxEnableCursor(registry);
+    registerGfxHideCursor(registry);
+    registerGfxShowCursor(registry);
     registerGfxScreenWidth(registry);
     registerGfxScreenHeight(registry);
     registerGfxFrameTimeMs(registry);
@@ -154,6 +172,12 @@ void registerGraphics(BuiltIns *registry) {
     registerGfxDrawCube(registry);
     registerGfxDrawCubeWires(registry);
     registerGfxDrawGrid(registry);
+    registerGfxDrawSphere(registry);
+    registerGfxDrawSphereWires(registry);
+    registerGfxDrawCylinder(registry);
+    registerGfxDrawCylinderWires(registry);
+    registerGfxDrawPlane(registry);
+    registerGfxDrawLine3D(registry);
     registerGfxLoadModel(registry);
     registerGfxUnloadModel(registry);
     registerGfxDrawModel(registry);
@@ -915,6 +939,77 @@ Value builtin_gfx_is_mouse_pressed(Vec *args) {
 #endif
 }
 
+Value builtin_gfx_is_mouse_released(Vec *args) {
+#ifndef ENABLE_RAYLIB
+    (void)args;
+    return value_Stdint(0);
+#else
+    if (!gfx_state.initialized)
+        return value_Stdint(0);
+    return value_Stdint(
+        IsMouseButtonReleased((int)getValue_Stdint(args->entries[0])) ? 1 : 0);
+#endif
+}
+
+Value builtin_gfx_mouse_wheel(Vec *args) {
+    (void)args;
+#ifndef ENABLE_RAYLIB
+    return value_Stdint(0);
+#else
+    if (!gfx_state.initialized)
+        return value_Stdint(0);
+    return value_Stdint((int)GetMouseWheelMove());
+#endif
+}
+
+Value builtin_gfx_disable_cursor(Vec *args) {
+    (void)args;
+#ifndef ENABLE_RAYLIB
+    return value_Stdint(0);
+#else
+    if (!gfx_state.initialized)
+        return value_Stdint(0);
+    DisableCursor();
+    return value_Stdint(1);
+#endif
+}
+
+Value builtin_gfx_enable_cursor(Vec *args) {
+    (void)args;
+#ifndef ENABLE_RAYLIB
+    return value_Stdint(0);
+#else
+    if (!gfx_state.initialized)
+        return value_Stdint(0);
+    EnableCursor();
+    return value_Stdint(1);
+#endif
+}
+
+Value builtin_gfx_hide_cursor(Vec *args) {
+    (void)args;
+#ifndef ENABLE_RAYLIB
+    return value_Stdint(0);
+#else
+    if (!gfx_state.initialized)
+        return value_Stdint(0);
+    HideCursor();
+    return value_Stdint(1);
+#endif
+}
+
+Value builtin_gfx_show_cursor(Vec *args) {
+    (void)args;
+#ifndef ENABLE_RAYLIB
+    return value_Stdint(0);
+#else
+    if (!gfx_state.initialized)
+        return value_Stdint(0);
+    ShowCursor();
+    return value_Stdint(1);
+#endif
+}
+
 Value builtin_gfx_screen_width(Vec *args) {
     (void)args;
 #ifndef ENABLE_RAYLIB
@@ -1640,6 +1735,189 @@ Value builtin_gfx_draw_grid(Vec *args) {
         return value_Stdint(0);
 
     DrawGrid(slices, spacing);
+    return value_Stdint(1);
+#endif
+}
+
+Value builtin_gfx_draw_sphere(Vec *args) {
+#ifndef ENABLE_RAYLIB
+    (void)args;
+    return value_Stdint(0);
+#else
+    if (!gfx_state.in_3d_mode)
+        return value_Stdint(0);
+
+    float centerX = valueAsFloat(args->entries[0]);
+    float centerY = valueAsFloat(args->entries[1]);
+    float centerZ = valueAsFloat(args->entries[2]);
+    float radius = valueAsFloat(args->entries[3]);
+    int r = extractChannel(args->entries[4]);
+    int g = extractChannel(args->entries[5]);
+    int b = extractChannel(args->entries[6]);
+    int a = extractChannel(args->entries[7]);
+
+    if (radius <= 0.0f || r < 0 || g < 0 || b < 0 || a < 0)
+        return value_Stdint(0);
+
+    Color color = {(unsigned char)r, (unsigned char)g, (unsigned char)b,
+                   (unsigned char)a};
+    DrawSphere((Vector3){centerX, centerY, centerZ}, radius, color);
+    return value_Stdint(1);
+#endif
+}
+
+Value builtin_gfx_draw_sphere_wires(Vec *args) {
+#ifndef ENABLE_RAYLIB
+    (void)args;
+    return value_Stdint(0);
+#else
+    if (!gfx_state.in_3d_mode)
+        return value_Stdint(0);
+
+    float centerX = valueAsFloat(args->entries[0]);
+    float centerY = valueAsFloat(args->entries[1]);
+    float centerZ = valueAsFloat(args->entries[2]);
+    float radius = valueAsFloat(args->entries[3]);
+    int rings = valueAsInt(args->entries[4]);
+    int slices = valueAsInt(args->entries[5]);
+    int r = extractChannel(args->entries[6]);
+    int g = extractChannel(args->entries[7]);
+    int b = extractChannel(args->entries[8]);
+    int a = extractChannel(args->entries[9]);
+
+    if (radius <= 0.0f || rings <= 0 || slices <= 0 || r < 0 || g < 0 ||
+        b < 0 || a < 0)
+        return value_Stdint(0);
+
+    Color color = {(unsigned char)r, (unsigned char)g, (unsigned char)b,
+                   (unsigned char)a};
+    DrawSphereWires((Vector3){centerX, centerY, centerZ}, radius, rings, slices,
+                    color);
+    return value_Stdint(1);
+#endif
+}
+
+Value builtin_gfx_draw_cylinder(Vec *args) {
+#ifndef ENABLE_RAYLIB
+    (void)args;
+    return value_Stdint(0);
+#else
+    if (!gfx_state.in_3d_mode)
+        return value_Stdint(0);
+
+    float posX = valueAsFloat(args->entries[0]);
+    float posY = valueAsFloat(args->entries[1]);
+    float posZ = valueAsFloat(args->entries[2]);
+    float radiusTop = valueAsFloat(args->entries[3]);
+    float radiusBottom = valueAsFloat(args->entries[4]);
+    float height = valueAsFloat(args->entries[5]);
+    int slices = valueAsInt(args->entries[6]);
+    int r = extractChannel(args->entries[7]);
+    int g = extractChannel(args->entries[8]);
+    int b = extractChannel(args->entries[9]);
+    int a = extractChannel(args->entries[10]);
+
+    if (radiusTop < 0.0f || radiusBottom < 0.0f ||
+        (radiusTop == 0.0f && radiusBottom == 0.0f) || height <= 0.0f ||
+        slices < 3 || r < 0 || g < 0 || b < 0 || a < 0)
+        return value_Stdint(0);
+
+    Color color = {(unsigned char)r, (unsigned char)g, (unsigned char)b,
+                   (unsigned char)a};
+    DrawCylinder((Vector3){posX, posY, posZ}, radiusTop, radiusBottom, height,
+                 slices, color);
+    return value_Stdint(1);
+#endif
+}
+
+Value builtin_gfx_draw_cylinder_wires(Vec *args) {
+#ifndef ENABLE_RAYLIB
+    (void)args;
+    return value_Stdint(0);
+#else
+    if (!gfx_state.in_3d_mode)
+        return value_Stdint(0);
+
+    float posX = valueAsFloat(args->entries[0]);
+    float posY = valueAsFloat(args->entries[1]);
+    float posZ = valueAsFloat(args->entries[2]);
+    float radiusTop = valueAsFloat(args->entries[3]);
+    float radiusBottom = valueAsFloat(args->entries[4]);
+    float height = valueAsFloat(args->entries[5]);
+    int slices = valueAsInt(args->entries[6]);
+    int r = extractChannel(args->entries[7]);
+    int g = extractChannel(args->entries[8]);
+    int b = extractChannel(args->entries[9]);
+    int a = extractChannel(args->entries[10]);
+
+    if (radiusTop < 0.0f || radiusBottom < 0.0f ||
+        (radiusTop == 0.0f && radiusBottom == 0.0f) || height <= 0.0f ||
+        slices < 3 || r < 0 || g < 0 || b < 0 || a < 0)
+        return value_Stdint(0);
+
+    Color color = {(unsigned char)r, (unsigned char)g, (unsigned char)b,
+                   (unsigned char)a};
+    DrawCylinderWires((Vector3){posX, posY, posZ}, radiusTop, radiusBottom,
+                      height, slices, color);
+    return value_Stdint(1);
+#endif
+}
+
+Value builtin_gfx_draw_plane(Vec *args) {
+#ifndef ENABLE_RAYLIB
+    (void)args;
+    return value_Stdint(0);
+#else
+    if (!gfx_state.in_3d_mode)
+        return value_Stdint(0);
+
+    float centerX = valueAsFloat(args->entries[0]);
+    float centerY = valueAsFloat(args->entries[1]);
+    float centerZ = valueAsFloat(args->entries[2]);
+    float sizeX = valueAsFloat(args->entries[3]);
+    float sizeZ = valueAsFloat(args->entries[4]);
+    int r = extractChannel(args->entries[5]);
+    int g = extractChannel(args->entries[6]);
+    int b = extractChannel(args->entries[7]);
+    int a = extractChannel(args->entries[8]);
+
+    if (sizeX <= 0.0f || sizeZ <= 0.0f || r < 0 || g < 0 || b < 0 || a < 0)
+        return value_Stdint(0);
+
+    Color color = {(unsigned char)r, (unsigned char)g, (unsigned char)b,
+                   (unsigned char)a};
+    DrawPlane((Vector3){centerX, centerY, centerZ}, (Vector2){sizeX, sizeZ},
+              color);
+    return value_Stdint(1);
+#endif
+}
+
+Value builtin_gfx_draw_line_3d(Vec *args) {
+#ifndef ENABLE_RAYLIB
+    (void)args;
+    return value_Stdint(0);
+#else
+    if (!gfx_state.in_3d_mode)
+        return value_Stdint(0);
+
+    float startX = valueAsFloat(args->entries[0]);
+    float startY = valueAsFloat(args->entries[1]);
+    float startZ = valueAsFloat(args->entries[2]);
+    float endX = valueAsFloat(args->entries[3]);
+    float endY = valueAsFloat(args->entries[4]);
+    float endZ = valueAsFloat(args->entries[5]);
+    int r = extractChannel(args->entries[6]);
+    int g = extractChannel(args->entries[7]);
+    int b = extractChannel(args->entries[8]);
+    int a = extractChannel(args->entries[9]);
+
+    if (r < 0 || g < 0 || b < 0 || a < 0)
+        return value_Stdint(0);
+
+    Color color = {(unsigned char)r, (unsigned char)g, (unsigned char)b,
+                   (unsigned char)a};
+    DrawLine3D((Vector3){startX, startY, startZ}, (Vector3){endX, endY, endZ},
+               color);
     return value_Stdint(1);
 #endif
 }
@@ -2388,6 +2666,70 @@ static void registerGfxIsMousePressed(BuiltIns *registry) {
     UNPROTECT(save);
 }
 
+static void registerGfxIsMouseReleased(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    pushIntegerArg(args);
+    TcType *b = makeBoolean();
+    PROTECT(b);
+    pushNewBuiltIn(registry, "gfx_is_mouse_released", b, args,
+                   (void *)builtin_gfx_is_mouse_released,
+                   "builtin_gfx_is_mouse_released");
+    UNPROTECT(save);
+}
+
+static void registerGfxMouseWheel(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    TcType *n = newTcType_BigInteger();
+    PROTECT(n);
+    pushNewBuiltIn(registry, "gfx_mouse_wheel", n, args,
+                   (void *)builtin_gfx_mouse_wheel, "builtin_gfx_mouse_wheel");
+    UNPROTECT(save);
+}
+
+static void registerGfxDisableCursor(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    TcType *b = makeBoolean();
+    PROTECT(b);
+    pushNewBuiltIn(registry, "gfx_disable_cursor", b, args,
+                   (void *)builtin_gfx_disable_cursor,
+                   "builtin_gfx_disable_cursor");
+    UNPROTECT(save);
+}
+
+static void registerGfxEnableCursor(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    TcType *b = makeBoolean();
+    PROTECT(b);
+    pushNewBuiltIn(registry, "gfx_enable_cursor", b, args,
+                   (void *)builtin_gfx_enable_cursor,
+                   "builtin_gfx_enable_cursor");
+    UNPROTECT(save);
+}
+
+static void registerGfxHideCursor(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    TcType *b = makeBoolean();
+    PROTECT(b);
+    pushNewBuiltIn(registry, "gfx_hide_cursor", b, args,
+                   (void *)builtin_gfx_hide_cursor, "builtin_gfx_hide_cursor");
+    UNPROTECT(save);
+}
+
+static void registerGfxShowCursor(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    TcType *b = makeBoolean();
+    PROTECT(b);
+    pushNewBuiltIn(registry, "gfx_show_cursor", b, args,
+                   (void *)builtin_gfx_show_cursor, "builtin_gfx_show_cursor");
+    UNPROTECT(save);
+}
+
 static void registerGfxScreenWidth(BuiltIns *registry) {
     BuiltInArgs *args = newBuiltInArgs();
     int save = PROTECT(args);
@@ -2858,6 +3200,129 @@ static void registerGfxDrawGrid(BuiltIns *registry) {
     PROTECT(ret);
     pushNewBuiltIn(registry, "gfx_draw_grid", ret, args,
                    (void *)builtin_gfx_draw_grid, "builtin_gfx_draw_grid");
+    UNPROTECT(save);
+}
+
+static void registerGfxDrawSphere(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    pushIntegerArg(args); // center_x
+    pushIntegerArg(args); // center_y
+    pushIntegerArg(args); // center_z
+    pushIntegerArg(args); // radius
+    pushIntegerArg(args); // r
+    pushIntegerArg(args); // g
+    pushIntegerArg(args); // b
+    pushIntegerArg(args); // a
+    TcType *ret = makeBoolean();
+    PROTECT(ret);
+    pushNewBuiltIn(registry, "gfx_draw_sphere", ret, args,
+                   (void *)builtin_gfx_draw_sphere, "builtin_gfx_draw_sphere");
+    UNPROTECT(save);
+}
+
+static void registerGfxDrawSphereWires(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    pushIntegerArg(args); // center_x
+    pushIntegerArg(args); // center_y
+    pushIntegerArg(args); // center_z
+    pushIntegerArg(args); // radius
+    pushIntegerArg(args); // rings
+    pushIntegerArg(args); // slices
+    pushIntegerArg(args); // r
+    pushIntegerArg(args); // g
+    pushIntegerArg(args); // b
+    pushIntegerArg(args); // a
+    TcType *ret = makeBoolean();
+    PROTECT(ret);
+    pushNewBuiltIn(registry, "gfx_draw_sphere_wires", ret, args,
+                   (void *)builtin_gfx_draw_sphere_wires,
+                   "builtin_gfx_draw_sphere_wires");
+    UNPROTECT(save);
+}
+
+static void registerGfxDrawCylinder(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    pushIntegerArg(args); // pos_x
+    pushIntegerArg(args); // pos_y
+    pushIntegerArg(args); // pos_z
+    pushIntegerArg(args); // radius_top
+    pushIntegerArg(args); // radius_bottom
+    pushIntegerArg(args); // height
+    pushIntegerArg(args); // slices
+    pushIntegerArg(args); // r
+    pushIntegerArg(args); // g
+    pushIntegerArg(args); // b
+    pushIntegerArg(args); // a
+    TcType *ret = makeBoolean();
+    PROTECT(ret);
+    pushNewBuiltIn(registry, "gfx_draw_cylinder", ret, args,
+                   (void *)builtin_gfx_draw_cylinder,
+                   "builtin_gfx_draw_cylinder");
+    UNPROTECT(save);
+}
+
+static void registerGfxDrawCylinderWires(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    pushIntegerArg(args); // pos_x
+    pushIntegerArg(args); // pos_y
+    pushIntegerArg(args); // pos_z
+    pushIntegerArg(args); // radius_top
+    pushIntegerArg(args); // radius_bottom
+    pushIntegerArg(args); // height
+    pushIntegerArg(args); // slices
+    pushIntegerArg(args); // r
+    pushIntegerArg(args); // g
+    pushIntegerArg(args); // b
+    pushIntegerArg(args); // a
+    TcType *ret = makeBoolean();
+    PROTECT(ret);
+    pushNewBuiltIn(registry, "gfx_draw_cylinder_wires", ret, args,
+                   (void *)builtin_gfx_draw_cylinder_wires,
+                   "builtin_gfx_draw_cylinder_wires");
+    UNPROTECT(save);
+}
+
+static void registerGfxDrawPlane(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    pushIntegerArg(args); // center_x
+    pushIntegerArg(args); // center_y
+    pushIntegerArg(args); // center_z
+    pushIntegerArg(args); // size_x
+    pushIntegerArg(args); // size_z
+    pushIntegerArg(args); // r
+    pushIntegerArg(args); // g
+    pushIntegerArg(args); // b
+    pushIntegerArg(args); // a
+    TcType *ret = makeBoolean();
+    PROTECT(ret);
+    pushNewBuiltIn(registry, "gfx_draw_plane", ret, args,
+                   (void *)builtin_gfx_draw_plane, "builtin_gfx_draw_plane");
+    UNPROTECT(save);
+}
+
+static void registerGfxDrawLine3D(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    pushIntegerArg(args); // start_x
+    pushIntegerArg(args); // start_y
+    pushIntegerArg(args); // start_z
+    pushIntegerArg(args); // end_x
+    pushIntegerArg(args); // end_y
+    pushIntegerArg(args); // end_z
+    pushIntegerArg(args); // r
+    pushIntegerArg(args); // g
+    pushIntegerArg(args); // b
+    pushIntegerArg(args); // a
+    TcType *ret = makeBoolean();
+    PROTECT(ret);
+    pushNewBuiltIn(registry, "gfx_draw_line_3d", ret, args,
+                   (void *)builtin_gfx_draw_line_3d,
+                   "builtin_gfx_draw_line_3d");
     UNPROTECT(save);
 }
 

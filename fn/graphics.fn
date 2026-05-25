@@ -106,10 +106,16 @@ fn key_pressed(k) { gfx_is_key_pressed(k) }
 fn key_released(k) { gfx_is_key_released(k) }
 fn mouse_held(btn) { gfx_is_mouse_down(btn) }
 fn mouse_pressed(btn) { gfx_is_mouse_pressed(btn) }
+fn mouse_released(btn) { gfx_is_mouse_released(btn) }
 fn mouse_x() { gfx_mouse_x() }
 fn mouse_y() { gfx_mouse_y() }
 fn mouse_delta_x() { gfx_mouse_delta_x() }
 fn mouse_delta_y() { gfx_mouse_delta_y() }
+fn mouse_wheel() { gfx_mouse_wheel() }
+fn disable_cursor() { gfx_disable_cursor() }
+fn enable_cursor() { gfx_enable_cursor() }
+fn hide_cursor() { gfx_hide_cursor() }
+fn show_cursor() { gfx_show_cursor() }
 fn screen_width() { gfx_screen_width() }
 fn screen_height() { gfx_screen_height() }
 fn frame_time_ms() { gfx_frame_time_ms() }
@@ -418,6 +424,30 @@ fn draw_cube_wires(vec3(center_x, center_y, center_z), vec3(size_x, size_y, size
 
 fn draw_grid(slices, spacing) {
     gfx_draw_grid(slices, spacing)
+}
+
+fn draw_sphere(vec3(center_x, center_y, center_z), radius, rgba(r, g, b, a)) {
+    gfx_draw_sphere(center_x, center_y, center_z, radius, r, g, b, a)
+}
+
+fn draw_sphere_wires(vec3(center_x, center_y, center_z), radius, rings, slices, rgba(r, g, b, a)) {
+    gfx_draw_sphere_wires(center_x, center_y, center_z, radius, rings, slices, r, g, b, a)
+}
+
+fn draw_cylinder(vec3(pos_x, pos_y, pos_z), radius_top, radius_bottom, height, slices, rgba(r, g, b, a)) {
+    gfx_draw_cylinder(pos_x, pos_y, pos_z, radius_top, radius_bottom, height, slices, r, g, b, a)
+}
+
+fn draw_cylinder_wires(vec3(pos_x, pos_y, pos_z), radius_top, radius_bottom, height, slices, rgba(r, g, b, a)) {
+    gfx_draw_cylinder_wires(pos_x, pos_y, pos_z, radius_top, radius_bottom, height, slices, r, g, b, a)
+}
+
+fn draw_plane(vec3(center_x, center_y, center_z), vec3(size_x, _, size_z), rgba(r, g, b, a)) {
+    gfx_draw_plane(center_x, center_y, center_z, size_x, size_z, r, g, b, a)
+}
+
+fn draw_line_3d(vec3(start_x, start_y, start_z), vec3(end_x, end_y, end_z), rgba(r, g, b, a)) {
+    gfx_draw_line_3d(start_x, start_y, start_z, end_x, end_y, end_z, r, g, b, a)
 }
 
 fn load_model(path) {
