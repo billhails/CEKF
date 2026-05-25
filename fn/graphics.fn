@@ -223,6 +223,30 @@ fn fill_rect_from(rect(x, y, w, h), rgba(r, g, b, a)) {
     fill_rect(x, y, w, h, rgba(r, g, b, a))
 }
 
+fn draw_triangle(point(x1, y1), point(x2, y2), point(x3, y3), rgba(r, g, b, a)) {
+    gfx_draw_triangle(x1, y1, x2, y2, x3, y3, r, g, b, a)
+}
+
+fn fill_triangle(point(x1, y1), point(x2, y2), point(x3, y3), rgba(r, g, b, a)) {
+    gfx_fill_triangle(x1, y1, x2, y2, x3, y3, r, g, b, a)
+}
+
+fn draw_polygon(point(cx, cy), sides, radius, rotation, rgba(r, g, b, a)) {
+    gfx_draw_polygon(cx, cy, sides, radius, rotation, r, g, b, a)
+}
+
+fn fill_polygon(point(cx, cy), sides, radius, rotation, rgba(r, g, b, a)) {
+    gfx_fill_polygon(cx, cy, sides, radius, rotation, r, g, b, a)
+}
+
+fn draw_arc(point(cx, cy), radius, start_deg, end_deg, segments, rgba(r, g, b, a)) {
+    gfx_draw_arc(cx, cy, radius, start_deg, end_deg, segments, r, g, b, a)
+}
+
+fn draw_rect_rounded(rect(x, y, w, h), roundness, segments, line_thickness, rgba(r, g, b, a)) {
+    gfx_draw_rect_rounded(x, y, w, h, roundness, segments, line_thickness, r, g, b, a)
+}
+
 // --- font resources ---
 
 fn load_font(path, base_size) {

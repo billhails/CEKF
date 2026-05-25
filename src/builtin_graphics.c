@@ -62,6 +62,12 @@ static void registerGfxDrawLine(BuiltIns *registry);
 static void registerGfxDrawCircle(BuiltIns *registry);
 static void registerGfxFillCircle(BuiltIns *registry);
 static void registerGfxDrawRect(BuiltIns *registry);
+static void registerGfxDrawTriangle(BuiltIns *registry);
+static void registerGfxFillTriangle(BuiltIns *registry);
+static void registerGfxDrawPolygon(BuiltIns *registry);
+static void registerGfxFillPolygon(BuiltIns *registry);
+static void registerGfxDrawArc(BuiltIns *registry);
+static void registerGfxDrawRectRounded(BuiltIns *registry);
 static void registerGfxLoadFont(BuiltIns *registry);
 static void registerGfxUnloadFont(BuiltIns *registry);
 static void registerGfxDrawTextFont(BuiltIns *registry);
@@ -149,6 +155,12 @@ void registerGraphics(BuiltIns *registry) {
     registerGfxDrawCircle(registry);
     registerGfxFillCircle(registry);
     registerGfxDrawRect(registry);
+    registerGfxDrawTriangle(registry);
+    registerGfxFillTriangle(registry);
+    registerGfxDrawPolygon(registry);
+    registerGfxFillPolygon(registry);
+    registerGfxDrawArc(registry);
+    registerGfxDrawRectRounded(registry);
     registerGfxLoadFont(registry);
     registerGfxUnloadFont(registry);
     registerGfxDrawTextFont(registry);
@@ -1135,6 +1147,166 @@ Value builtin_gfx_draw_rect(Vec *args) {
     Color color = {(unsigned char)r, (unsigned char)g, (unsigned char)b,
                    (unsigned char)a};
     DrawRectangleLines(x, y, w, h, color);
+    return value_Stdint(1);
+#endif
+}
+
+Value builtin_gfx_draw_triangle(Vec *args) {
+#ifndef ENABLE_RAYLIB
+    (void)args;
+    return value_Stdint(0);
+#else
+    if (!canDrawTarget())
+        return value_Stdint(0);
+    float x1 = valueAsFloat(args->entries[0]);
+    float y1 = valueAsFloat(args->entries[1]);
+    float x2 = valueAsFloat(args->entries[2]);
+    float y2 = valueAsFloat(args->entries[3]);
+    float x3 = valueAsFloat(args->entries[4]);
+    float y3 = valueAsFloat(args->entries[5]);
+    int r = extractChannel(args->entries[6]);
+    int g = extractChannel(args->entries[7]);
+    int b = extractChannel(args->entries[8]);
+    int a = extractChannel(args->entries[9]);
+    if (r < 0 || g < 0 || b < 0 || a < 0)
+        return value_Stdint(0);
+    Color color = {(unsigned char)r, (unsigned char)g, (unsigned char)b,
+                   (unsigned char)a};
+    DrawTriangleLines((Vector2){x1, y1}, (Vector2){x2, y2}, (Vector2){x3, y3},
+                      color);
+    return value_Stdint(1);
+#endif
+}
+
+Value builtin_gfx_fill_triangle(Vec *args) {
+#ifndef ENABLE_RAYLIB
+    (void)args;
+    return value_Stdint(0);
+#else
+    if (!canDrawTarget())
+        return value_Stdint(0);
+    float x1 = valueAsFloat(args->entries[0]);
+    float y1 = valueAsFloat(args->entries[1]);
+    float x2 = valueAsFloat(args->entries[2]);
+    float y2 = valueAsFloat(args->entries[3]);
+    float x3 = valueAsFloat(args->entries[4]);
+    float y3 = valueAsFloat(args->entries[5]);
+    int r = extractChannel(args->entries[6]);
+    int g = extractChannel(args->entries[7]);
+    int b = extractChannel(args->entries[8]);
+    int a = extractChannel(args->entries[9]);
+    if (r < 0 || g < 0 || b < 0 || a < 0)
+        return value_Stdint(0);
+    Color color = {(unsigned char)r, (unsigned char)g, (unsigned char)b,
+                   (unsigned char)a};
+    DrawTriangle((Vector2){x1, y1}, (Vector2){x2, y2}, (Vector2){x3, y3},
+                 color);
+    return value_Stdint(1);
+#endif
+}
+
+Value builtin_gfx_draw_polygon(Vec *args) {
+#ifndef ENABLE_RAYLIB
+    (void)args;
+    return value_Stdint(0);
+#else
+    if (!canDrawTarget())
+        return value_Stdint(0);
+    float cx = valueAsFloat(args->entries[0]);
+    float cy = valueAsFloat(args->entries[1]);
+    int sides = valueAsInt(args->entries[2]);
+    float radius = valueAsFloat(args->entries[3]);
+    float rotation = valueAsFloat(args->entries[4]);
+    int r = extractChannel(args->entries[5]);
+    int g = extractChannel(args->entries[6]);
+    int b = extractChannel(args->entries[7]);
+    int a = extractChannel(args->entries[8]);
+    if (sides < 3 || radius <= 0.0f || r < 0 || g < 0 || b < 0 || a < 0)
+        return value_Stdint(0);
+    Color color = {(unsigned char)r, (unsigned char)g, (unsigned char)b,
+                   (unsigned char)a};
+    DrawPolyLines((Vector2){cx, cy}, sides, radius, rotation, color);
+    return value_Stdint(1);
+#endif
+}
+
+Value builtin_gfx_fill_polygon(Vec *args) {
+#ifndef ENABLE_RAYLIB
+    (void)args;
+    return value_Stdint(0);
+#else
+    if (!canDrawTarget())
+        return value_Stdint(0);
+    float cx = valueAsFloat(args->entries[0]);
+    float cy = valueAsFloat(args->entries[1]);
+    int sides = valueAsInt(args->entries[2]);
+    float radius = valueAsFloat(args->entries[3]);
+    float rotation = valueAsFloat(args->entries[4]);
+    int r = extractChannel(args->entries[5]);
+    int g = extractChannel(args->entries[6]);
+    int b = extractChannel(args->entries[7]);
+    int a = extractChannel(args->entries[8]);
+    if (sides < 3 || radius <= 0.0f || r < 0 || g < 0 || b < 0 || a < 0)
+        return value_Stdint(0);
+    Color color = {(unsigned char)r, (unsigned char)g, (unsigned char)b,
+                   (unsigned char)a};
+    DrawPoly((Vector2){cx, cy}, sides, radius, rotation, color);
+    return value_Stdint(1);
+#endif
+}
+
+Value builtin_gfx_draw_arc(Vec *args) {
+#ifndef ENABLE_RAYLIB
+    (void)args;
+    return value_Stdint(0);
+#else
+    if (!canDrawTarget())
+        return value_Stdint(0);
+    float cx = valueAsFloat(args->entries[0]);
+    float cy = valueAsFloat(args->entries[1]);
+    float radius = valueAsFloat(args->entries[2]);
+    float startDeg = valueAsFloat(args->entries[3]);
+    float endDeg = valueAsFloat(args->entries[4]);
+    int segments = valueAsInt(args->entries[5]);
+    int r = extractChannel(args->entries[6]);
+    int g = extractChannel(args->entries[7]);
+    int b = extractChannel(args->entries[8]);
+    int a = extractChannel(args->entries[9]);
+    if (radius <= 0.0f || segments <= 0 || r < 0 || g < 0 || b < 0 || a < 0)
+        return value_Stdint(0);
+    Color color = {(unsigned char)r, (unsigned char)g, (unsigned char)b,
+                   (unsigned char)a};
+    DrawCircleSectorLines((Vector2){cx, cy}, radius, startDeg, endDeg, segments,
+                          color);
+    return value_Stdint(1);
+#endif
+}
+
+Value builtin_gfx_draw_rect_rounded(Vec *args) {
+#ifndef ENABLE_RAYLIB
+    (void)args;
+    return value_Stdint(0);
+#else
+    if (!canDrawTarget())
+        return value_Stdint(0);
+    float x = valueAsFloat(args->entries[0]);
+    float y = valueAsFloat(args->entries[1]);
+    float w = valueAsFloat(args->entries[2]);
+    float h = valueAsFloat(args->entries[3]);
+    float roundness = valueAsFloat(args->entries[4]);
+    int segments = valueAsInt(args->entries[5]);
+    float lineThick = valueAsFloat(args->entries[6]);
+    int r = extractChannel(args->entries[7]);
+    int g = extractChannel(args->entries[8]);
+    int b = extractChannel(args->entries[9]);
+    int a = extractChannel(args->entries[10]);
+    if (w <= 0.0f || h <= 0.0f || roundness < 0.0f || roundness > 1.0f ||
+        segments <= 0 || lineThick <= 0.0f || r < 0 || g < 0 || b < 0 || a < 0)
+        return value_Stdint(0);
+    Color color = {(unsigned char)r, (unsigned char)g, (unsigned char)b,
+                   (unsigned char)a};
+    DrawRectangleRoundedLinesEx((Rectangle){x, y, w, h}, roundness, segments,
+                                lineThick, color);
     return value_Stdint(1);
 #endif
 }
@@ -2832,6 +3004,130 @@ static void registerGfxDrawRect(BuiltIns *registry) {
     PROTECT(ret);
     pushNewBuiltIn(registry, "gfx_draw_rect", ret, args,
                    (void *)builtin_gfx_draw_rect, "builtin_gfx_draw_rect");
+    UNPROTECT(save);
+}
+
+static void registerGfxDrawTriangle(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    pushIntegerArg(args); // x1
+    pushIntegerArg(args); // y1
+    pushIntegerArg(args); // x2
+    pushIntegerArg(args); // y2
+    pushIntegerArg(args); // x3
+    pushIntegerArg(args); // y3
+    pushIntegerArg(args); // r
+    pushIntegerArg(args); // g
+    pushIntegerArg(args); // b
+    pushIntegerArg(args); // a
+    TcType *ret = makeBoolean();
+    PROTECT(ret);
+    pushNewBuiltIn(registry, "gfx_draw_triangle", ret, args,
+                   (void *)builtin_gfx_draw_triangle,
+                   "builtin_gfx_draw_triangle");
+    UNPROTECT(save);
+}
+
+static void registerGfxFillTriangle(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    pushIntegerArg(args); // x1
+    pushIntegerArg(args); // y1
+    pushIntegerArg(args); // x2
+    pushIntegerArg(args); // y2
+    pushIntegerArg(args); // x3
+    pushIntegerArg(args); // y3
+    pushIntegerArg(args); // r
+    pushIntegerArg(args); // g
+    pushIntegerArg(args); // b
+    pushIntegerArg(args); // a
+    TcType *ret = makeBoolean();
+    PROTECT(ret);
+    pushNewBuiltIn(registry, "gfx_fill_triangle", ret, args,
+                   (void *)builtin_gfx_fill_triangle,
+                   "builtin_gfx_fill_triangle");
+    UNPROTECT(save);
+}
+
+static void registerGfxDrawPolygon(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    pushIntegerArg(args); // center_x
+    pushIntegerArg(args); // center_y
+    pushIntegerArg(args); // sides
+    pushIntegerArg(args); // radius
+    pushIntegerArg(args); // rotation
+    pushIntegerArg(args); // r
+    pushIntegerArg(args); // g
+    pushIntegerArg(args); // b
+    pushIntegerArg(args); // a
+    TcType *ret = makeBoolean();
+    PROTECT(ret);
+    pushNewBuiltIn(registry, "gfx_draw_polygon", ret, args,
+                   (void *)builtin_gfx_draw_polygon,
+                   "builtin_gfx_draw_polygon");
+    UNPROTECT(save);
+}
+
+static void registerGfxFillPolygon(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    pushIntegerArg(args); // center_x
+    pushIntegerArg(args); // center_y
+    pushIntegerArg(args); // sides
+    pushIntegerArg(args); // radius
+    pushIntegerArg(args); // rotation
+    pushIntegerArg(args); // r
+    pushIntegerArg(args); // g
+    pushIntegerArg(args); // b
+    pushIntegerArg(args); // a
+    TcType *ret = makeBoolean();
+    PROTECT(ret);
+    pushNewBuiltIn(registry, "gfx_fill_polygon", ret, args,
+                   (void *)builtin_gfx_fill_polygon,
+                   "builtin_gfx_fill_polygon");
+    UNPROTECT(save);
+}
+
+static void registerGfxDrawArc(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    pushIntegerArg(args); // center_x
+    pushIntegerArg(args); // center_y
+    pushIntegerArg(args); // radius
+    pushIntegerArg(args); // start_deg
+    pushIntegerArg(args); // end_deg
+    pushIntegerArg(args); // segments
+    pushIntegerArg(args); // r
+    pushIntegerArg(args); // g
+    pushIntegerArg(args); // b
+    pushIntegerArg(args); // a
+    TcType *ret = makeBoolean();
+    PROTECT(ret);
+    pushNewBuiltIn(registry, "gfx_draw_arc", ret, args,
+                   (void *)builtin_gfx_draw_arc, "builtin_gfx_draw_arc");
+    UNPROTECT(save);
+}
+
+static void registerGfxDrawRectRounded(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    pushIntegerArg(args); // x
+    pushIntegerArg(args); // y
+    pushIntegerArg(args); // w
+    pushIntegerArg(args); // h
+    pushIntegerArg(args); // roundness
+    pushIntegerArg(args); // segments
+    pushIntegerArg(args); // line_thickness
+    pushIntegerArg(args); // r
+    pushIntegerArg(args); // g
+    pushIntegerArg(args); // b
+    pushIntegerArg(args); // a
+    TcType *ret = makeBoolean();
+    PROTECT(ret);
+    pushNewBuiltIn(registry, "gfx_draw_rect_rounded", ret, args,
+                   (void *)builtin_gfx_draw_rect_rounded,
+                   "builtin_gfx_draw_rect_rounded");
     UNPROTECT(save);
 }
 
