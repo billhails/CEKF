@@ -449,6 +449,61 @@ fn draw_render_texture_at(rt, point(x, y), rgba(r, g, b, a)) {
     gfx_draw_render_texture(rt, x, y, r, g, b, a)
 }
 
+fn load_shader(vertex_path, fragment_path) {
+    gfx_load_shader(vertex_path, fragment_path)
+}
+
+fn unload_shader(shader) { gfx_unload_shader(shader) }
+
+fn with_shader(vertex_path, fragment_path, handler) {
+    switch (gfx_load_shader(vertex_path, fragment_path)) {
+        (success(shader)) {
+            let result = just(handler(shader));
+            in
+                gfx_unload_shader(shader);
+                result
+        }
+        (failure(msg)) {
+            puts("shader load error: ");
+            puts(msg);
+            putc('\n');
+            nothing
+        }
+    }
+}
+
+fn begin_shader_mode(shader) {
+    gfx_begin_shader_mode(shader)
+}
+
+fn end_shader_mode() { gfx_end_shader_mode() }
+
+fn set_shader_int(shader, name, value) {
+    gfx_set_shader_int(shader, name, value)
+}
+
+fn set_shader_float(shader, name, value) {
+    gfx_set_shader_float(shader, name, value)
+}
+
+fn set_shader_vec2(shader, name, point(x, y)) {
+    gfx_set_shader_vec2(shader, name, x, y)
+}
+
+fn set_shader_vec3(shader, name, vec3(x, y, z)) {
+    gfx_set_shader_vec3(shader, name, x, y, z)
+}
+
+fn with_shader_mode(shader, draw_fn) {
+    assert(gfx_begin_shader_mode(shader));
+    {
+    let result = draw_fn();
+    in
+        assert(gfx_end_shader_mode());
+        result
+    }
+}
+
 fn begin_mode_2d(point(target_x, target_y), point(offset_x, offset_y), rotation, zoom) {
     gfx_begin_mode_2d(target_x, target_y, offset_x, offset_y, rotation, zoom)
 }

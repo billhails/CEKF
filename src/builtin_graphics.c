@@ -102,6 +102,14 @@ static void registerGfxUnloadRenderTexture(BuiltIns *registry);
 static void registerGfxBeginTextureMode(BuiltIns *registry);
 static void registerGfxEndTextureMode(BuiltIns *registry);
 static void registerGfxDrawRenderTexture(BuiltIns *registry);
+static void registerGfxLoadShader(BuiltIns *registry);
+static void registerGfxUnloadShader(BuiltIns *registry);
+static void registerGfxBeginShaderMode(BuiltIns *registry);
+static void registerGfxEndShaderMode(BuiltIns *registry);
+static void registerGfxSetShaderInt(BuiltIns *registry);
+static void registerGfxSetShaderFloat(BuiltIns *registry);
+static void registerGfxSetShaderVec2(BuiltIns *registry);
+static void registerGfxSetShaderVec3(BuiltIns *registry);
 static void registerGfxBeginMode2D(BuiltIns *registry);
 static void registerGfxEndMode2D(BuiltIns *registry);
 static void registerGfxBeginMode3D(BuiltIns *registry);
@@ -212,6 +220,14 @@ void registerGraphics(BuiltIns *registry) {
     registerGfxBeginTextureMode(registry);
     registerGfxEndTextureMode(registry);
     registerGfxDrawRenderTexture(registry);
+    registerGfxLoadShader(registry);
+    registerGfxUnloadShader(registry);
+    registerGfxBeginShaderMode(registry);
+    registerGfxEndShaderMode(registry);
+    registerGfxSetShaderInt(registry);
+    registerGfxSetShaderFloat(registry);
+    registerGfxSetShaderVec2(registry);
+    registerGfxSetShaderVec3(registry);
     registerGfxBeginMode2D(registry);
     registerGfxEndMode2D(registry);
     registerGfxBeginMode3D(registry);
@@ -272,6 +288,13 @@ typedef struct RenderTextureNode {
 } RenderTextureNode;
 
 static RenderTextureNode *renderTextureRegistry = NULL;
+
+typedef struct ShaderNode {
+    Opaque *wrapper;
+    struct ShaderNode *next;
+} ShaderNode;
+
+static ShaderNode *shaderRegistry = NULL;
 
 typedef struct SoundNode {
     Opaque *wrapper;
@@ -376,6 +399,18 @@ static TcType *makeTransform3DType(void) {
 
 static TcType *pushTransform3DArg(BuiltInArgs *args) {
     TcType *t = makeTransform3DType();
+    int save = PROTECT(t);
+    pushBuiltInArgs(args, t);
+    UNPROTECT(save);
+    return t;
+}
+
+static HashSymbol *shaderSymbol(void) { return newSymbol("shader"); }
+
+static TcType *makeShaderType(void) { return newTcType_Opaque(shaderSymbol()); }
+
+static TcType *pushShaderArg(BuiltInArgs *args) {
+    TcType *t = makeShaderType();
     int save = PROTECT(t);
     pushBuiltInArgs(args, t);
     UNPROTECT(save);
@@ -541,6 +576,11 @@ void markGraphicsGlobals(void) {
         markOpaque(rtnode->wrapper);
         rtnode = rtnode->next;
     }
+    ShaderNode *shaderNode = shaderRegistry;
+    while (shaderNode != NULL) {
+        markOpaque(shaderNode->wrapper);
+        shaderNode = shaderNode->next;
+    }
     SoundNode *snode = soundRegistry;
     while (snode != NULL) {
         markOpaque(snode->wrapper);
@@ -563,10 +603,11 @@ static struct {
     bool initialized;
     bool in_frame;
     bool in_texture_mode;
+    bool in_shader_mode;
     bool in_camera_mode;
     bool in_3d_mode;
     bool audio_initialized;
-} gfx_state = {false, false, false, false, false, false};
+} gfx_state = {false, false, false, false, false, false, false};
 
 static bool canDrawTarget(void) {
     return gfx_state.in_frame || gfx_state.in_texture_mode;
@@ -677,6 +718,19 @@ static void renderTextureRegistryRemove(Opaque *wrapper) {
     }
 }
 
+static void shaderRegistryRemove(Opaque *wrapper) {
+    ShaderNode **prev = &shaderRegistry;
+    while (*prev != NULL) {
+        if ((*prev)->wrapper == wrapper) {
+            ShaderNode *dead = *prev;
+            *prev = dead->next;
+            FREE_ARRAY(ShaderNode, dead, 1);
+            return;
+        }
+        prev = &(*prev)->next;
+    }
+}
+
 static void opaque_gfx_render_texture_unload(void *data) {
     if (data == NULL)
         return;
@@ -697,6 +751,28 @@ static void renderTextureRegistryDrain(void) {
         node = next;
     }
     renderTextureRegistry = NULL;
+}
+
+static void opaque_gfx_shader_unload(void *data) {
+    if (data == NULL)
+        return;
+    Shader *shader = (Shader *)data;
+    UnloadShader(*shader);
+    FREE_ARRAY(Shader, shader, 1);
+}
+
+static void shaderRegistryDrain(void) {
+    ShaderNode *node = shaderRegistry;
+    while (node != NULL) {
+        ShaderNode *next = node->next;
+        if (node->wrapper->data != NULL) {
+            opaque_gfx_shader_unload(node->wrapper->data);
+            node->wrapper->data = NULL;
+        }
+        FREE_ARRAY(ShaderNode, node, 1);
+        node = next;
+    }
+    shaderRegistry = NULL;
 }
 
 static void opaque_gfx_sound_unload(void *data) {
@@ -798,6 +874,7 @@ Value builtin_gfx_open(Vec *args) {
     gfx_state.initialized = true;
     gfx_state.in_frame = false;
     gfx_state.in_texture_mode = false;
+    gfx_state.in_shader_mode = false;
     gfx_state.in_camera_mode = false;
     gfx_state.in_3d_mode = false;
     return makeTryResult(1, value_Stdint(1));
@@ -813,6 +890,10 @@ Value builtin_gfx_close(Vec *args) {
         return value_Stdint(0);
     }
     if (gfx_state.initialized) {
+        if (gfx_state.in_shader_mode) {
+            EndShaderMode();
+            gfx_state.in_shader_mode = false;
+        }
         if (gfx_state.in_3d_mode) {
             EndMode3D();
             gfx_state.in_3d_mode = false;
@@ -829,6 +910,7 @@ Value builtin_gfx_close(Vec *args) {
             EndTextureMode();
             gfx_state.in_texture_mode = false;
         }
+        shaderRegistryDrain();
         renderTextureRegistryDrain();
         textureRegistryDrain();
         modelRegistryDrain();
@@ -2005,6 +2087,193 @@ Value builtin_gfx_draw_render_texture(Vec *args) {
     Color tint = {(unsigned char)r, (unsigned char)g, (unsigned char)b,
                   (unsigned char)a};
     DrawTextureRec(rt->texture, src, dst, tint);
+    return value_Stdint(1);
+#endif
+}
+
+Value builtin_gfx_load_shader(Vec *args) {
+#ifndef ENABLE_RAYLIB
+    (void)args;
+    return failMsg("graphics not available (built without ENABLE_RAYLIB)");
+#else
+    if (!gfx_state.initialized)
+        return failMsg("gfx_load_shader: no graphics context");
+
+    SCharVec *vertexPath = listToUtf8(args->entries[0]);
+    int save = PROTECT(vertexPath);
+    SCharVec *fragmentPath = listToUtf8(args->entries[1]);
+    PROTECT(fragmentPath);
+
+    Shader loaded = LoadShader(vertexPath->entries, fragmentPath->entries);
+    if (!IsShaderValid(loaded)) {
+        UNPROTECT(save);
+        return failMsg("gfx_load_shader: failed to load shader");
+    }
+
+    Shader *shader = NEW_ARRAY(Shader, 1);
+    *shader = loaded;
+    Opaque *wrapper = newOpaque(shader, opaque_gfx_shader_unload, NULL, NULL);
+    int wSave = PROTECT(wrapper);
+
+    ShaderNode *node = NEW_ARRAY(ShaderNode, 1);
+    node->wrapper = wrapper;
+    node->next = shaderRegistry;
+    shaderRegistry = node;
+
+    Value opaque = value_Opaque(wrapper);
+    Value result = makeTryResult(1, opaque);
+    UNPROTECT(wSave);
+    UNPROTECT(save);
+    return result;
+#endif
+}
+
+Value builtin_gfx_unload_shader(Vec *args) {
+#ifndef ENABLE_RAYLIB
+    (void)args;
+    return value_Stdint(0);
+#else
+    if (args->entries[0].type != VALUE_TYPE_OPAQUE)
+        return value_Stdint(0);
+    Opaque *wrapper = args->entries[0].val.opaque;
+    shaderRegistryRemove(wrapper);
+    opaque_gfx_shader_unload(wrapper->data);
+    wrapper->data = NULL;
+    return value_Stdint(1);
+#endif
+}
+
+Value builtin_gfx_begin_shader_mode(Vec *args) {
+#ifndef ENABLE_RAYLIB
+    (void)args;
+    return value_Stdint(0);
+#else
+    if (!gfx_state.initialized || gfx_state.in_shader_mode || !canDrawTarget())
+        return value_Stdint(0);
+    if (args->entries[0].type != VALUE_TYPE_OPAQUE)
+        return value_Stdint(0);
+    Opaque *wrapper = args->entries[0].val.opaque;
+    if (wrapper->data == NULL)
+        return value_Stdint(0);
+    Shader *shader = (Shader *)wrapper->data;
+    BeginShaderMode(*shader);
+    gfx_state.in_shader_mode = true;
+    return value_Stdint(1);
+#endif
+}
+
+Value builtin_gfx_end_shader_mode(Vec *args) {
+    (void)args;
+#ifndef ENABLE_RAYLIB
+    return value_Stdint(0);
+#else
+    if (!gfx_state.in_shader_mode)
+        return value_Stdint(0);
+    EndShaderMode();
+    gfx_state.in_shader_mode = false;
+    return value_Stdint(1);
+#endif
+}
+
+Value builtin_gfx_set_shader_int(Vec *args) {
+#ifndef ENABLE_RAYLIB
+    (void)args;
+    return value_Stdint(0);
+#else
+    if (!gfx_state.initialized)
+        return value_Stdint(0);
+    if (args->entries[0].type != VALUE_TYPE_OPAQUE)
+        return value_Stdint(0);
+    Opaque *wrapper = args->entries[0].val.opaque;
+    if (wrapper->data == NULL)
+        return value_Stdint(0);
+    Shader *shader = (Shader *)wrapper->data;
+    SCharVec *uniformName = listToUtf8(args->entries[1]);
+    int save = PROTECT(uniformName);
+    int location = GetShaderLocation(*shader, uniformName->entries);
+    UNPROTECT(save);
+    if (location < 0)
+        return value_Stdint(0);
+    int value = valueAsInt(args->entries[2]);
+    SetShaderValue(*shader, location, &value, SHADER_UNIFORM_INT);
+    return value_Stdint(1);
+#endif
+}
+
+Value builtin_gfx_set_shader_float(Vec *args) {
+#ifndef ENABLE_RAYLIB
+    (void)args;
+    return value_Stdint(0);
+#else
+    if (!gfx_state.initialized)
+        return value_Stdint(0);
+    if (args->entries[0].type != VALUE_TYPE_OPAQUE)
+        return value_Stdint(0);
+    Opaque *wrapper = args->entries[0].val.opaque;
+    if (wrapper->data == NULL)
+        return value_Stdint(0);
+    Shader *shader = (Shader *)wrapper->data;
+    SCharVec *uniformName = listToUtf8(args->entries[1]);
+    int save = PROTECT(uniformName);
+    int location = GetShaderLocation(*shader, uniformName->entries);
+    UNPROTECT(save);
+    if (location < 0)
+        return value_Stdint(0);
+    float value = valueAsFloat(args->entries[2]);
+    SetShaderValue(*shader, location, &value, SHADER_UNIFORM_FLOAT);
+    return value_Stdint(1);
+#endif
+}
+
+Value builtin_gfx_set_shader_vec2(Vec *args) {
+#ifndef ENABLE_RAYLIB
+    (void)args;
+    return value_Stdint(0);
+#else
+    if (!gfx_state.initialized)
+        return value_Stdint(0);
+    if (args->entries[0].type != VALUE_TYPE_OPAQUE)
+        return value_Stdint(0);
+    Opaque *wrapper = args->entries[0].val.opaque;
+    if (wrapper->data == NULL)
+        return value_Stdint(0);
+    Shader *shader = (Shader *)wrapper->data;
+    SCharVec *uniformName = listToUtf8(args->entries[1]);
+    int save = PROTECT(uniformName);
+    int location = GetShaderLocation(*shader, uniformName->entries);
+    UNPROTECT(save);
+    if (location < 0)
+        return value_Stdint(0);
+    float values[2] = {valueAsFloat(args->entries[2]),
+                       valueAsFloat(args->entries[3])};
+    SetShaderValue(*shader, location, values, SHADER_UNIFORM_VEC2);
+    return value_Stdint(1);
+#endif
+}
+
+Value builtin_gfx_set_shader_vec3(Vec *args) {
+#ifndef ENABLE_RAYLIB
+    (void)args;
+    return value_Stdint(0);
+#else
+    if (!gfx_state.initialized)
+        return value_Stdint(0);
+    if (args->entries[0].type != VALUE_TYPE_OPAQUE)
+        return value_Stdint(0);
+    Opaque *wrapper = args->entries[0].val.opaque;
+    if (wrapper->data == NULL)
+        return value_Stdint(0);
+    Shader *shader = (Shader *)wrapper->data;
+    SCharVec *uniformName = listToUtf8(args->entries[1]);
+    int save = PROTECT(uniformName);
+    int location = GetShaderLocation(*shader, uniformName->entries);
+    UNPROTECT(save);
+    if (location < 0)
+        return value_Stdint(0);
+    float values[3] = {valueAsFloat(args->entries[2]),
+                       valueAsFloat(args->entries[3]),
+                       valueAsFloat(args->entries[4])};
+    SetShaderValue(*shader, location, values, SHADER_UNIFORM_VEC3);
     return value_Stdint(1);
 #endif
 }
@@ -3869,6 +4138,116 @@ static void registerGfxDrawRenderTexture(BuiltIns *registry) {
     pushNewBuiltIn(registry, "gfx_draw_render_texture", ret, args,
                    (void *)builtin_gfx_draw_render_texture,
                    "builtin_gfx_draw_render_texture");
+    UNPROTECT(save);
+}
+
+static void registerGfxLoadShader(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    pushStringArg(args); // vertex_path
+    pushStringArg(args); // fragment_path
+    TcType *errType = makeStringType();
+    PROTECT(errType);
+    TcType *shaderType = makeShaderType();
+    PROTECT(shaderType);
+    TcType *retType = makeTryType(errType, shaderType);
+    PROTECT(retType);
+    pushNewBuiltIn(registry, "gfx_load_shader", retType, args,
+                   (void *)builtin_gfx_load_shader, "builtin_gfx_load_shader");
+    UNPROTECT(save);
+}
+
+static void registerGfxUnloadShader(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    pushShaderArg(args);
+    TcType *ret = makeBoolean();
+    PROTECT(ret);
+    pushNewBuiltIn(registry, "gfx_unload_shader", ret, args,
+                   (void *)builtin_gfx_unload_shader,
+                   "builtin_gfx_unload_shader");
+    UNPROTECT(save);
+}
+
+static void registerGfxBeginShaderMode(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    pushShaderArg(args);
+    TcType *ret = makeBoolean();
+    PROTECT(ret);
+    pushNewBuiltIn(registry, "gfx_begin_shader_mode", ret, args,
+                   (void *)builtin_gfx_begin_shader_mode,
+                   "builtin_gfx_begin_shader_mode");
+    UNPROTECT(save);
+}
+
+static void registerGfxEndShaderMode(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    TcType *ret = makeBoolean();
+    PROTECT(ret);
+    pushNewBuiltIn(registry, "gfx_end_shader_mode", ret, args,
+                   (void *)builtin_gfx_end_shader_mode,
+                   "builtin_gfx_end_shader_mode");
+    UNPROTECT(save);
+}
+
+static void registerGfxSetShaderInt(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    pushShaderArg(args);
+    pushStringArg(args);  // uniform name
+    pushIntegerArg(args); // value
+    TcType *ret = makeBoolean();
+    PROTECT(ret);
+    pushNewBuiltIn(registry, "gfx_set_shader_int", ret, args,
+                   (void *)builtin_gfx_set_shader_int,
+                   "builtin_gfx_set_shader_int");
+    UNPROTECT(save);
+}
+
+static void registerGfxSetShaderFloat(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    pushShaderArg(args);
+    pushStringArg(args); // uniform name
+    pushAnyArg(args);    // value
+    TcType *ret = makeBoolean();
+    PROTECT(ret);
+    pushNewBuiltIn(registry, "gfx_set_shader_float", ret, args,
+                   (void *)builtin_gfx_set_shader_float,
+                   "builtin_gfx_set_shader_float");
+    UNPROTECT(save);
+}
+
+static void registerGfxSetShaderVec2(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    pushShaderArg(args);
+    pushStringArg(args); // uniform name
+    pushAnyArg(args);    // x
+    pushAnyArg(args);    // y
+    TcType *ret = makeBoolean();
+    PROTECT(ret);
+    pushNewBuiltIn(registry, "gfx_set_shader_vec2", ret, args,
+                   (void *)builtin_gfx_set_shader_vec2,
+                   "builtin_gfx_set_shader_vec2");
+    UNPROTECT(save);
+}
+
+static void registerGfxSetShaderVec3(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    pushShaderArg(args);
+    pushStringArg(args); // uniform name
+    pushAnyArg(args);    // x
+    pushAnyArg(args);    // y
+    pushAnyArg(args);    // z
+    TcType *ret = makeBoolean();
+    PROTECT(ret);
+    pushNewBuiltIn(registry, "gfx_set_shader_vec3", ret, args,
+                   (void *)builtin_gfx_set_shader_vec3,
+                   "builtin_gfx_set_shader_vec3");
     UNPROTECT(save);
 }
 
