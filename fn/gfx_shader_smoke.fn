@@ -1,0 +1,35 @@
+// One-shot shader smoke test intended for CI/stress-gc validation.
+//
+// Run: ./bin/fn --include=fn fn/gfx_shader_smoke.fn
+let
+    link "graphics.fn" as gfx;
+in
+    gfx.with_window_size(gfx.extent(320, 240), "Shader Smoke", fn () {
+        gfx.with_shader("assets/shaders/postprocess.vs", "assets/shaders/postprocess.fs", fn (shader) {
+            gfx.with_texture("docs/CEKF.png", fn (tex) {
+                gfx.with_render_texture_size(gfx.extent(140, 100), fn (rt) {
+                    gfx.render_to_texture(rt, gfx.rgb(10, 12, 18), fn () {
+                        assert(gfx.draw_texture_at(tex, gfx.point(8, 8), gfx.white()));
+                        assert(gfx.fill_rect_from(gfx.rect(16, 64, 80, 24), gfx.rgb(220, 170, 120)))
+                    });
+
+                    assert(gfx.set_shader_float(shader, "uAmount", 0.35));
+                    assert(gfx.set_shader_vec4(shader, "uTint4", gfx.vec4(1, 0.8, 0.6, 1)));
+                    assert(gfx.set_shader_mat4(
+                        shader,
+                        "uPostMatrix",
+                        1, 0, 0, 0,
+                        0, 1, 0, 0,
+                        0, 0, 1, 0,
+                        0, 0, 0, 1
+                    ));
+
+                    gfx.frame(gfx.rgb(20, 24, 36), fn () {
+                        gfx.with_shader_mode(shader, fn () {
+                            assert(gfx.draw_render_texture_at(rt, gfx.point(20, 20), gfx.white()))
+                        })
+                    })
+                })
+            })
+        })
+    })

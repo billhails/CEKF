@@ -622,6 +622,10 @@ fn load_model(path) {
 
 fn unload_model(model) { gfx_unload_model(model) }
 
+fn set_model_shader(model, shader) {
+    gfx_set_model_shader(model, shader)
+}
+
 fn draw_model_at(model, vec3(pos_x, pos_y, pos_z), scale, rgba(r, g, b, a)) {
     gfx_draw_model(model, pos_x, pos_y, pos_z, scale, r, g, b, a)
 }

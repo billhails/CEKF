@@ -127,6 +127,7 @@ static void registerGfxDrawPlane(BuiltIns *registry);
 static void registerGfxDrawLine3D(BuiltIns *registry);
 static void registerGfxLoadModel(BuiltIns *registry);
 static void registerGfxUnloadModel(BuiltIns *registry);
+static void registerGfxSetModelShader(BuiltIns *registry);
 static void registerGfxDrawModel(BuiltIns *registry);
 static void registerGfxDrawModelWires(BuiltIns *registry);
 static void registerGfxAudioOpen(BuiltIns *registry);
@@ -247,6 +248,7 @@ void registerGraphics(BuiltIns *registry) {
     registerGfxDrawLine3D(registry);
     registerGfxLoadModel(registry);
     registerGfxUnloadModel(registry);
+    registerGfxSetModelShader(registry);
     registerGfxDrawModel(registry);
     registerGfxDrawModelWires(registry);
     registerGfxAudioOpen(registry);
@@ -2764,6 +2766,33 @@ Value builtin_gfx_unload_model(Vec *args) {
 #endif
 }
 
+Value builtin_gfx_set_model_shader(Vec *args) {
+#ifndef ENABLE_RAYLIB
+    (void)args;
+    return value_Stdint(0);
+#else
+    if (args->entries[0].type != VALUE_TYPE_OPAQUE)
+        return value_Stdint(0);
+    if (args->entries[1].type != VALUE_TYPE_OPAQUE)
+        return value_Stdint(0);
+
+    Opaque *modelWrapper = args->entries[0].val.opaque;
+    Opaque *shaderWrapper = args->entries[1].val.opaque;
+    if (modelWrapper->data == NULL || shaderWrapper->data == NULL)
+        return value_Stdint(0);
+
+    Model *model = (Model *)modelWrapper->data;
+    Shader *shader = (Shader *)shaderWrapper->data;
+    if (model->materials == NULL || model->materialCount <= 0)
+        return value_Stdint(0);
+
+    for (int i = 0; i < model->materialCount; i++) {
+        model->materials[i].shader = *shader;
+    }
+    return value_Stdint(1);
+#endif
+}
+
 Value builtin_gfx_draw_model(Vec *args) {
 #ifndef ENABLE_RAYLIB
     (void)args;
@@ -4648,6 +4677,19 @@ static void registerGfxUnloadModel(BuiltIns *registry) {
     pushNewBuiltIn(registry, "gfx_unload_model", ret, args,
                    (void *)builtin_gfx_unload_model,
                    "builtin_gfx_unload_model");
+    UNPROTECT(save);
+}
+
+static void registerGfxSetModelShader(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    pushModelArg(args);
+    pushShaderArg(args);
+    TcType *ret = makeBoolean();
+    PROTECT(ret);
+    pushNewBuiltIn(registry, "gfx_set_model_shader", ret, args,
+                   (void *)builtin_gfx_set_model_shader,
+                   "builtin_gfx_set_model_shader");
     UNPROTECT(save);
 }
 
