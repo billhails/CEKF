@@ -1,0 +1,311 @@
+// Directional shadow mapping demo (depth pass + lit pass).
+//
+// Run: ./bin/fn --include=fn fn/gfx_shadow_demo.fn
+let
+    link "graphics.fn" as gfx;
+    link "ioutils.fn" as io;
+    link "listutils.fn" as list;
+
+    model_path = "assets/TeaPot.obj";
+    depth_vs = "assets/shaders/shadow_depth.vs";
+    depth_fs = "assets/shaders/shadow_depth.fs";
+    lit_vs = "assets/shaders/lit_shadow.vs";
+    lit_fs = "assets/shaders/lit_shadow.fs";
+
+    fn move_speed() {
+        let dt = gfx.frame_time_ms();
+        in if (dt < 1) { 0.12 }
+           else { dt / 120 }
+    }
+
+    fn update_camera(pos, target) {
+        let
+            speed = move_speed();
+            dz = if (gfx.key_held(gfx.key_w())) { 0 - speed }
+                else if (gfx.key_held(gfx.key_s())) { speed }
+                else { 0 };
+            dx = if (gfx.key_held(gfx.key_a())) { 0 - speed }
+                else if (gfx.key_held(gfx.key_d())) { speed }
+                else { 0 };
+            dy = if (gfx.key_held(gfx.arrow_up())) { speed }
+                else if (gfx.key_held(gfx.arrow_down())) { 0 - speed }
+                else { 0 };
+            pos2 = gfx.vec3(gfx.vec3_x(pos) + dx, gfx.vec3_y(pos) + dy, gfx.vec3_z(pos) + dz);
+            target2 = gfx.vec3(gfx.vec3_x(target) + dx, gfx.vec3_y(target) + dy, gfx.vec3_z(target) + dz);
+        in
+            #(pos2, target2)
+    }
+
+    fn update_light(light_pos) {
+        let
+            speed = move_speed();
+            lx = gfx.vec3_x(light_pos)
+               + if (gfx.key_held(gfx.key_j())) { 0 - speed }
+                 else if (gfx.key_held(gfx.key_l())) { speed }
+                 else { 0 };
+            lz = gfx.vec3_z(light_pos)
+               + if (gfx.key_held(gfx.key_i())) { 0 - speed }
+                 else if (gfx.key_held(gfx.key_k())) { speed }
+                 else { 0 };
+        in
+            gfx.vec3(lx, gfx.vec3_y(light_pos), lz)
+    }
+
+    fn draw_scene_model(model) {
+        assert(gfx.draw_model_at(model, gfx.vec3(0, 0, 0), 1, gfx.white()));
+        assert(gfx.draw_model_wires_at(model, gfx.vec3(0, 0, 0), 1, gfx.rgba(25, 25, 25, 120)))
+    }
+
+    fn draw_scene_ground() {
+        assert(gfx.draw_plane(gfx.vec3(0, 0, 0), gfx.vec3(22, 0, 22), gfx.rgb(185, 195, 210)));
+        assert(gfx.draw_cube(gfx.vec3(2.4, 0.8, -2.0), gfx.vec3(1.4, 1.6, 1.4), gfx.rgb(210, 205, 195)));
+        assert(gfx.draw_cube_wires(gfx.vec3(2.4, 0.8, -2.0), gfx.vec3(1.4, 1.6, 1.4), gfx.rgb(36, 36, 36)));
+        assert(gfx.draw_cube(gfx.vec3(-2.8, 1.2, 1.6), gfx.vec3(1.2, 2.4, 1.2), gfx.rgb(220, 214, 205)));
+        assert(gfx.draw_cube_wires(gfx.vec3(-2.8, 1.2, 1.6), gfx.vec3(1.2, 2.4, 1.2), gfx.rgb(36, 36, 36)))
+    }
+
+    fn next_debug_mode(mode) {
+        if (mode >= 5) { 0 }
+        else { mode + 1 }
+    }
+
+    fn set_light_vp(shader, light_pos, light_target, up, shadow_left, shadow_right, shadow_bottom, shadow_top, shadow_near, shadow_far, use_legacy_light_vp) {
+        if (use_legacy_light_vp) {
+            gfx.set_shader_light_vp_ortho_vp(
+                shader,
+                "uLightVP",
+                light_pos,
+                light_target,
+                up,
+                shadow_left,
+                shadow_right,
+                shadow_bottom,
+                shadow_top,
+                shadow_near,
+                shadow_far
+            )
+        } else {
+            gfx.set_shader_light_vp_ortho(
+                shader,
+                "uLightVP",
+                light_pos,
+                light_target,
+                up,
+                shadow_left,
+                shadow_right,
+                shadow_bottom,
+                shadow_top,
+                shadow_near,
+                shadow_far
+            )
+        }
+    }
+
+    fn capture_path(use_legacy_light_vp, debug_mode, flip_shadow_y) {
+        "/tmp/cekf-shadow-ss"
+            @@ "v" @@ io.to_string(if (use_legacy_light_vp) { 1 } else { 0 })
+            @@ "n" @@ io.to_string(debug_mode)
+            @@ "b" @@ io.to_string(if (flip_shadow_y) { 1 } else { 0 })
+            @@ ".png"
+    }
+
+    fn maybe_capture_frame(debug_mode, debug_mode2, flip_shadow_y, flip_shadow_y2, use_legacy_light_vp, use_legacy_light_vp2) {
+        if (debug_mode != debug_mode2
+            or flip_shadow_y != flip_shadow_y2
+            or use_legacy_light_vp != use_legacy_light_vp2) {
+            let
+                path = capture_path(use_legacy_light_vp2, debug_mode2, flip_shadow_y2);
+            in
+                assert(gfx.take_screenshot(path));
+                gfx.draw_text_at(
+                    "saved " @@ path,
+                    gfx.point(20, 282),
+                    18,
+                    gfx.rgb(170, 255, 170)
+                )
+        } else {
+            true
+        }
+    }
+
+    fn loop_shadow(model, depth_shader, lit_shader, shadow_rt, camera_pos, camera_target, light_pos, show_map, debug_mode, flip_shadow_y, use_legacy_light_vp) {
+        if (gfx.should_close()) { true }
+        else if (gfx.key_pressed(gfx.key_escape())) { true }
+        else {
+            let
+                #(camera_pos2, camera_target2) = update_camera(camera_pos, camera_target);
+                light_pos2 = update_light(light_pos);
+                show_map2 = if (gfx.key_pressed(gfx.key_m())) {
+                    if (show_map) { false } else { true }
+                } else {
+                    show_map
+                };
+                debug_mode2 = if (gfx.key_pressed(gfx.key_n())) {
+                    next_debug_mode(debug_mode)
+                } else {
+                    debug_mode
+                };
+                flip_shadow_y2 = if (gfx.key_pressed(gfx.key_b())) {
+                    if (flip_shadow_y) { false } else { true }
+                } else {
+                    flip_shadow_y
+                };
+                use_legacy_light_vp2 = if (gfx.key_pressed(gfx.key_v())) {
+                    if (use_legacy_light_vp) { false } else { true }
+                } else {
+                    use_legacy_light_vp
+                };
+                light_target = gfx.vec3(0, 0.8, 0);
+                up = gfx.vec3(0, 1, 0);
+                shadow_left = -20.0;
+                shadow_right = 20.0;
+                shadow_bottom = -20.0;
+                shadow_top = 20.0;
+                shadow_near = 0.1;
+                shadow_far = 80.0;
+                bias = 0.00005;
+                light = gfx.point_light(light_pos2, gfx.vec3(1.0, 0.98, 0.93), 1.0);
+                lighting = gfx.lighting_config(gfx.vec3(0.04, 0.04, 0.05), 0.48, 72);
+            in
+            {
+                assert(set_light_vp(
+                    depth_shader,
+                    light_pos2,
+                    light_target,
+                    up,
+                    shadow_left,
+                    shadow_right,
+                    shadow_bottom,
+                    shadow_top,
+                    shadow_near,
+                    shadow_far,
+                    use_legacy_light_vp2
+                ));
+
+                // Pass A: depth map from light point of view.
+                gfx.render_to_texture(shadow_rt, gfx.white(), fn () {
+                    gfx.with_camera3d(
+                        light_pos2,
+                        light_target,
+                        up,
+                        24.0,
+                        gfx.projection_orthographic(),
+                        fn () {
+                            assert(gfx.set_model_shader(model, depth_shader));
+                            draw_scene_model(model)
+                        }
+                    )
+                });
+
+                // Pass B: lit camera pass with shadow-map sampling.
+                assert(gfx.set_model_shader(model, lit_shader));
+                assert(set_light_vp(
+                    lit_shader,
+                    light_pos2,
+                    light_target,
+                    up,
+                    shadow_left,
+                    shadow_right,
+                    shadow_bottom,
+                    shadow_top,
+                    shadow_near,
+                    shadow_far,
+                    use_legacy_light_vp2
+                ));
+                assert(gfx.set_shader_float(lit_shader, "uShadowBias", bias));
+                assert(gfx.set_shader_float(
+                    lit_shader,
+                    "uDebugShadowMode",
+                    debug_mode2
+                ));
+                assert(gfx.set_shader_float(
+                    lit_shader,
+                    "uShadowFlipY",
+                    if (flip_shadow_y2) { 1.0 } else { 0.0 }
+                ));
+                assert(gfx.upload_lighting(lit_shader, camera_pos2, light, lighting));
+
+                gfx.frame(gfx.rgb(22, 24, 32), fn () {
+                    gfx.with_camera3d(camera_pos2, camera_target2, up, 60, gfx.projection_perspective(), fn () {
+                        gfx.with_shader_mode(lit_shader, fn () {
+                            assert(gfx.set_shader_render_texture_sampler(
+                                lit_shader,
+                                "uShadowMap",
+                                shadow_rt,
+                                gfx.sampler_unit0(),
+                                gfx.sampler_attachment_color()
+                            ));
+                            assert(gfx.draw_grid(24, 1));
+                            draw_scene_ground()
+                        });
+                        assert(gfx.set_shader_render_texture_sampler(
+                            lit_shader,
+                            "uShadowMap",
+                            shadow_rt,
+                            gfx.sampler_unit0(),
+                            gfx.sampler_attachment_color()
+                        ));
+                        draw_scene_model(model)
+                    });
+
+                    gfx.draw_text_at("Shadow Mapping Demo", gfx.point(20, 20), 30, gfx.white());
+                    gfx.draw_text_at("W/S/A/D + Up/Down move camera", gfx.point(20, 58), 20, gfx.rgb(210, 230, 255));
+                    gfx.draw_text_at("I/K/J/L move light", gfx.point(20, 86), 20, gfx.rgb(210, 230, 255));
+                    gfx.draw_text_at("M toggle: show shadow map", gfx.point(20, 114), 20, gfx.rgb(210, 230, 255));
+                    gfx.draw_text_at("N cycle: 0=lit 1=mask 2=projDepth 3=sampleDepth 4=sampleReason 5=projUv", gfx.point(20, 142), 20, gfx.rgb(210, 230, 255));
+                    gfx.draw_text_at("B toggle: shadow-map flip-y", gfx.point(20, 170), 20, gfx.rgb(210, 230, 255));
+                    gfx.draw_text_at("V toggle: legacy light VP order", gfx.point(20, 198), 20, gfx.rgb(210, 230, 255));
+                    gfx.draw_text_at(
+                        if (use_legacy_light_vp2) { "light VP: view * projection (legacy)" }
+                        else { "light VP: projection * view" },
+                        gfx.point(20, 226),
+                        20,
+                        gfx.rgb(255, 220, 170)
+                    );
+                    gfx.draw_text_at("Esc exit", gfx.point(20, 254), 20, gfx.rgb(210, 230, 255));
+                    if (show_map2) {
+                        assert(gfx.draw_render_texture_at(shadow_rt, gfx.point(20, 176), gfx.white()));
+                        gfx.draw_text_at("color target preview (debug)", gfx.point(22, 178), 18, gfx.rgb(240, 240, 240))
+                    } else {
+                        true
+                    };
+                    maybe_capture_frame(
+                        debug_mode,
+                        debug_mode2,
+                        flip_shadow_y,
+                        flip_shadow_y2,
+                        use_legacy_light_vp,
+                        use_legacy_light_vp2
+                    )
+                });
+
+                loop_shadow(model, depth_shader, lit_shader, shadow_rt, camera_pos2, camera_target2, light_pos2, show_map2, debug_mode2, flip_shadow_y2, use_legacy_light_vp2)
+            }
+        }
+    }
+
+in
+    gfx.with_window_size(gfx.extent(1080, 760), "Shadow Mapping Demo", fn () {
+        assert(gfx.set_target_fps(60));
+        gfx.with_model(model_path, fn (model) {
+            gfx.with_shader(depth_vs, depth_fs, fn (depth_shader) {
+                gfx.with_shader(lit_vs, lit_fs, fn (lit_shader) {
+                    gfx.with_render_texture_size(gfx.extent(1024, 1024), fn (shadow_rt) {
+                        loop_shadow(
+                            model,
+                            depth_shader,
+                            lit_shader,
+                            shadow_rt,
+                            gfx.vec3(6, 6, 10),
+                            gfx.vec3(0, 1, 0),
+                            gfx.vec3(11, 4, 1),
+                            false,
+                            0,
+                            true,
+                            true
+                        )
+                    })
+                })
+            })
+        })
+    })

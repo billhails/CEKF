@@ -214,6 +214,10 @@ fn draw_text(text, x, y, size, rgba(r, g, b, a)) {
     gfx_draw_text(text, x, y, size, r, g, b, a)
 }
 
+fn take_screenshot(path) {
+    gfx_take_screenshot(path)
+}
+
 fn frame(background, draw) {
     assert(gfx_begin_frame());
     clear(background);
@@ -605,6 +609,74 @@ fn set_shader_mat4(
         m10, m11, m12, m13,
         m20, m21, m22, m23,
         m30, m31, m32, m33
+    )
+}
+
+fn set_shader_light_vp_ortho(
+    shader,
+    name,
+    vec3(light_pos_x, light_pos_y, light_pos_z),
+    vec3(target_x, target_y, target_z),
+    vec3(up_x, up_y, up_z),
+    left,
+    right,
+    bottom,
+    top,
+    near,
+    far
+) {
+    gfx_set_shader_light_vp_ortho(
+        shader,
+        name,
+        light_pos_x,
+        light_pos_y,
+        light_pos_z,
+        target_x,
+        target_y,
+        target_z,
+        up_x,
+        up_y,
+        up_z,
+        left,
+        right,
+        bottom,
+        top,
+        near,
+        far
+    )
+}
+
+fn set_shader_light_vp_ortho_vp(
+    shader,
+    name,
+    vec3(light_pos_x, light_pos_y, light_pos_z),
+    vec3(target_x, target_y, target_z),
+    vec3(up_x, up_y, up_z),
+    left,
+    right,
+    bottom,
+    top,
+    near,
+    far
+) {
+    gfx_set_shader_light_vp_ortho_vp(
+        shader,
+        name,
+        light_pos_x,
+        light_pos_y,
+        light_pos_z,
+        target_x,
+        target_y,
+        target_z,
+        up_x,
+        up_y,
+        up_z,
+        left,
+        right,
+        bottom,
+        top,
+        near,
+        far
     )
 }
 

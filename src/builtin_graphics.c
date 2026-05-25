@@ -30,6 +30,7 @@
 
 #ifdef ENABLE_RAYLIB
 #include <raylib.h>
+#include <raymath.h>
 #endif
 
 static void registerGfxOpen(BuiltIns *registry);
@@ -42,6 +43,7 @@ static void registerGfxEndFrame(BuiltIns *registry);
 static void registerGfxClear(BuiltIns *registry);
 static void registerGfxFillRect(BuiltIns *registry);
 static void registerGfxDrawText(BuiltIns *registry);
+static void registerGfxTakeScreenshot(BuiltIns *registry);
 static void registerGfxIsKeyDown(BuiltIns *registry);
 static void registerGfxIsKeyPressed(BuiltIns *registry);
 static void registerGfxIsKeyReleased(BuiltIns *registry);
@@ -115,6 +117,8 @@ static void registerGfxSetShaderVec2(BuiltIns *registry);
 static void registerGfxSetShaderVec3(BuiltIns *registry);
 static void registerGfxSetShaderVec4(BuiltIns *registry);
 static void registerGfxSetShaderMat4(BuiltIns *registry);
+static void registerGfxSetShaderLightVpOrtho(BuiltIns *registry);
+static void registerGfxSetShaderLightVpOrthoVp(BuiltIns *registry);
 static void registerGfxBeginMode2D(BuiltIns *registry);
 static void registerGfxEndMode2D(BuiltIns *registry);
 static void registerGfxBeginMode3D(BuiltIns *registry);
@@ -169,6 +173,7 @@ void registerGraphics(BuiltIns *registry) {
     registerGfxClear(registry);
     registerGfxFillRect(registry);
     registerGfxDrawText(registry);
+    registerGfxTakeScreenshot(registry);
     registerGfxIsKeyDown(registry);
     registerGfxIsKeyPressed(registry);
     registerGfxIsKeyReleased(registry);
@@ -242,6 +247,8 @@ void registerGraphics(BuiltIns *registry) {
     registerGfxSetShaderVec3(registry);
     registerGfxSetShaderVec4(registry);
     registerGfxSetShaderMat4(registry);
+    registerGfxSetShaderLightVpOrtho(registry);
+    registerGfxSetShaderLightVpOrthoVp(registry);
     registerGfxBeginMode2D(registry);
     registerGfxEndMode2D(registry);
     registerGfxBeginMode3D(registry);
@@ -1085,6 +1092,21 @@ Value builtin_gfx_draw_text(Vec *args) {
     }
     UNPROTECT(save);
     return value_Stdint(ok);
+#endif
+}
+
+Value builtin_gfx_take_screenshot(Vec *args) {
+#ifndef ENABLE_RAYLIB
+    (void)args;
+    return value_Stdint(0);
+#else
+    if (!gfx_state.initialized)
+        return value_Stdint(0);
+    SCharVec *path = listToUtf8(args->entries[0]);
+    int save = PROTECT(path);
+    TakeScreenshot(path->entries);
+    UNPROTECT(save);
+    return value_Stdint(1);
 #endif
 }
 
@@ -2254,7 +2276,8 @@ Value builtin_gfx_set_shader_sampler(Vec *args) {
     if (location < 0)
         return value_Stdint(0);
 
-    // Keep unit validated for API compatibility; Raylib manages slots internally.
+    // Keep unit validated for API compatibility; Raylib manages slots
+    // internally.
     (void)unit;
     SetShaderValueTexture(*shader, location, *texture);
     return value_Stdint(1);
@@ -2296,7 +2319,8 @@ Value builtin_gfx_set_shader_render_texture_sampler(Vec *args) {
     if (location < 0)
         return value_Stdint(0);
 
-    // Keep unit validated for API compatibility; Raylib manages slots internally.
+    // Keep unit validated for API compatibility; Raylib manages slots
+    // internally.
     (void)unit;
     Texture2D samplerTexture = useDepthAttachment ? rt->depth : rt->texture;
     SetShaderValueTexture(*shader, location, samplerTexture);
@@ -2468,6 +2492,70 @@ Value builtin_gfx_set_shader_mat4(Vec *args) {
     SetShaderValueMatrix(*shader, location, matrix);
     return value_Stdint(1);
 #endif
+}
+
+static Value builtin_gfx_set_shader_light_vp_ortho_impl(Vec *args,
+                                                        bool viewFirst) {
+#ifndef ENABLE_RAYLIB
+    (void)args;
+    (void)viewFirst;
+    return value_Stdint(0);
+#else
+    if (!gfx_state.initialized)
+        return value_Stdint(0);
+    if (args->entries[0].type != VALUE_TYPE_OPAQUE)
+        return value_Stdint(0);
+
+    Opaque *wrapper = args->entries[0].val.opaque;
+    if (wrapper->data == NULL)
+        return value_Stdint(0);
+    Shader *shader = (Shader *)wrapper->data;
+
+    SCharVec *uniformName = listToUtf8(args->entries[1]);
+    int save = PROTECT(uniformName);
+    int location = GetShaderLocation(*shader, uniformName->entries);
+    UNPROTECT(save);
+    if (location < 0)
+        return value_Stdint(0);
+
+    Vector3 lightPos = {valueAsFloat(args->entries[2]),
+                        valueAsFloat(args->entries[3]),
+                        valueAsFloat(args->entries[4])};
+    Vector3 target = {valueAsFloat(args->entries[5]),
+                      valueAsFloat(args->entries[6]),
+                      valueAsFloat(args->entries[7])};
+    Vector3 up = {valueAsFloat(args->entries[8]),
+                  valueAsFloat(args->entries[9]),
+                  valueAsFloat(args->entries[10])};
+
+    float left = valueAsFloat(args->entries[11]);
+    float right = valueAsFloat(args->entries[12]);
+    float bottom = valueAsFloat(args->entries[13]);
+    float top = valueAsFloat(args->entries[14]);
+    float nearPlane = valueAsFloat(args->entries[15]);
+    float farPlane = valueAsFloat(args->entries[16]);
+
+    if (!(left < right) || !(bottom < top) || !(nearPlane > 0.0f) ||
+        !(farPlane > nearPlane))
+        return value_Stdint(0);
+
+    Matrix view = MatrixLookAt(lightPos, target, up);
+    Matrix projection =
+        MatrixOrtho(left, right, bottom, top, nearPlane, farPlane);
+    Matrix lightVp = viewFirst ? MatrixMultiply(view, projection)
+                               : MatrixMultiply(projection, view);
+
+    SetShaderValueMatrix(*shader, location, lightVp);
+    return value_Stdint(1);
+#endif
+}
+
+Value builtin_gfx_set_shader_light_vp_ortho(Vec *args) {
+    return builtin_gfx_set_shader_light_vp_ortho_impl(args, false);
+}
+
+Value builtin_gfx_set_shader_light_vp_ortho_vp(Vec *args) {
+    return builtin_gfx_set_shader_light_vp_ortho_impl(args, true);
 }
 
 Value builtin_gfx_begin_mode_2d(Vec *args) {
@@ -3575,6 +3663,18 @@ static void registerGfxDrawText(BuiltIns *registry) {
     UNPROTECT(save);
 }
 
+static void registerGfxTakeScreenshot(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    pushStringArg(args);
+    TcType *b = makeBoolean();
+    PROTECT(b);
+    pushNewBuiltIn(registry, "gfx_take_screenshot", b, args,
+                   (void *)builtin_gfx_take_screenshot,
+                   "builtin_gfx_take_screenshot");
+    UNPROTECT(save);
+}
+
 // input registration helpers
 
 static void registerGfxIsKeyDown(BuiltIns *registry) {
@@ -4536,8 +4636,7 @@ static void registerGfxSetShaderRenderTextureSampler(BuiltIns *registry) {
     pushIntegerArg(args);       // use_depth_attachment (0 or 1)
     TcType *ret = makeBoolean();
     PROTECT(ret);
-    pushNewBuiltIn(registry, "gfx_set_shader_render_texture_sampler", ret,
-                   args,
+    pushNewBuiltIn(registry, "gfx_set_shader_render_texture_sampler", ret, args,
                    (void *)builtin_gfx_set_shader_render_texture_sampler,
                    "builtin_gfx_set_shader_render_texture_sampler");
     UNPROTECT(save);
@@ -4631,6 +4730,62 @@ static void registerGfxSetShaderMat4(BuiltIns *registry) {
     pushNewBuiltIn(registry, "gfx_set_shader_mat4", ret, args,
                    (void *)builtin_gfx_set_shader_mat4,
                    "builtin_gfx_set_shader_mat4");
+    UNPROTECT(save);
+}
+
+static void registerGfxSetShaderLightVpOrtho(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    pushShaderArg(args);
+    pushStringArg(args); // uniform name
+    pushAnyArg(args);    // light_pos_x
+    pushAnyArg(args);    // light_pos_y
+    pushAnyArg(args);    // light_pos_z
+    pushAnyArg(args);    // target_x
+    pushAnyArg(args);    // target_y
+    pushAnyArg(args);    // target_z
+    pushAnyArg(args);    // up_x
+    pushAnyArg(args);    // up_y
+    pushAnyArg(args);    // up_z
+    pushAnyArg(args);    // left
+    pushAnyArg(args);    // right
+    pushAnyArg(args);    // bottom
+    pushAnyArg(args);    // top
+    pushAnyArg(args);    // near
+    pushAnyArg(args);    // far
+    TcType *ret = makeBoolean();
+    PROTECT(ret);
+    pushNewBuiltIn(registry, "gfx_set_shader_light_vp_ortho", ret, args,
+                   (void *)builtin_gfx_set_shader_light_vp_ortho,
+                   "builtin_gfx_set_shader_light_vp_ortho");
+    UNPROTECT(save);
+}
+
+static void registerGfxSetShaderLightVpOrthoVp(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    pushShaderArg(args);
+    pushStringArg(args); // uniform name
+    pushAnyArg(args);    // light_pos_x
+    pushAnyArg(args);    // light_pos_y
+    pushAnyArg(args);    // light_pos_z
+    pushAnyArg(args);    // target_x
+    pushAnyArg(args);    // target_y
+    pushAnyArg(args);    // target_z
+    pushAnyArg(args);    // up_x
+    pushAnyArg(args);    // up_y
+    pushAnyArg(args);    // up_z
+    pushAnyArg(args);    // left
+    pushAnyArg(args);    // right
+    pushAnyArg(args);    // bottom
+    pushAnyArg(args);    // top
+    pushAnyArg(args);    // near
+    pushAnyArg(args);    // far
+    TcType *ret = makeBoolean();
+    PROTECT(ret);
+    pushNewBuiltIn(registry, "gfx_set_shader_light_vp_ortho_vp", ret, args,
+                   (void *)builtin_gfx_set_shader_light_vp_ortho_vp,
+                   "builtin_gfx_set_shader_light_vp_ortho_vp");
     UNPROTECT(save);
 }
 
