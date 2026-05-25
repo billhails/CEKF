@@ -37,14 +37,11 @@ let
             let
                 #(pos2, target2) = update_camera(pos, target);
                 light_pos = gfx.vec3(4.5, 6.5, 4.0);
+                light = gfx.point_light(light_pos, gfx.vec3(1.0, 0.95, 0.88), 1.0);
+                lighting = gfx.lighting_config(gfx.vec3(0.08, 0.09, 0.11), 0.90, 96);
             in
             {
-                assert(gfx.set_shader_vec3(lit_shader, "uViewPos", pos2));
-                assert(gfx.set_shader_vec3(lit_shader, "uLightPos", light_pos));
-                assert(gfx.set_shader_vec3(lit_shader, "uLightColor", gfx.vec3(1.0, 0.95, 0.88)));
-                assert(gfx.set_shader_vec3(lit_shader, "uAmbientColor", gfx.vec3(0.08, 0.09, 0.11)));
-                assert(gfx.set_shader_float(lit_shader, "uSpecStrength", 0.90));
-                assert(gfx.set_shader_float(lit_shader, "uShininess", 96));
+                assert(gfx.upload_lighting(lit_shader, pos2, light, lighting));
 
                 gfx.frame(gfx.rgb(22, 24, 32), fn () {
                     gfx.with_camera3d(pos2, target2, gfx.vec3(0, 1, 0), 60, gfx.projection_perspective(), fn () {

@@ -6,6 +6,8 @@ typedef Vec3 { vec3(number, number, number) }
 typedef Vec4 { vec4(number, number, number, number) }
 typedef Size { extent(number, number) }
 typedef Rect { rect(number, number, number, number) }
+typedef Light { point_light(Vec3, Vec3, number) | directional_light(Vec3, Vec3, number) }
+typedef LightingConfig { lighting_config(Vec3, number, number) }
 
 fn rgb(r, g, b) {
     rgba(r, g, b, 255)
@@ -43,6 +45,67 @@ fn translate(point(x, y), dx, dy) { point(x + dx, y + dy) }
 fn vec3_x(vec3(x, _, _)) { x }
 fn vec3_y(vec3(_, y, _)) { y }
 fn vec3_z(vec3(_, _, z)) { z }
+
+fn vec3_scale(vec3(x, y, z), s) {
+    vec3(x * s, y * s, z * s)
+}
+
+fn light_color(light) {
+    switch (light) {
+        (point_light(_, color, intensity)) { vec3_scale(color, intensity) }
+        (directional_light(_, color, intensity)) { vec3_scale(color, intensity) }
+    }
+}
+
+fn light_position(light) {
+    switch (light) {
+        (point_light(position, _, _)) { position }
+        (directional_light(vec3(dx, dy, dz), _, _)) {
+            vec3(0 - (dx * 40), 0 - (dy * 40), 0 - (dz * 40))
+        }
+    }
+}
+
+fn default_lighting() {
+    lighting_config(vec3(0.20, 0.22, 0.28), 0.85, 96)
+}
+
+fn upload_light(shader, light) {
+    assert(set_shader_vec3(shader, "uLightPos", light_position(light)));
+    assert(set_shader_vec3(shader, "uLightColor", light_color(light)));
+    true
+}
+
+fn upload_lighting(shader, view_pos, light, lighting_config(ambient_color, spec_strength, shininess)) {
+    assert(set_shader_vec3(shader, "uViewPos", view_pos));
+    assert(upload_light(shader, light));
+    assert(set_shader_vec3(shader, "uAmbientColor", ambient_color));
+    assert(set_shader_float(shader, "uSpecStrength", spec_strength));
+    assert(set_shader_float(shader, "uShininess", shininess));
+    true
+}
+
+fn upload_lighting_two(
+    shader,
+    view_pos,
+    light_a,
+    light_b,
+    lighting_config(ambient_color, spec_strength, shininess)
+) {
+    assert(set_shader_vec3(shader, "uViewPos", view_pos));
+    assert(set_shader_vec3(shader, "uLightPos0", light_position(light_a)));
+    assert(set_shader_vec3(shader, "uLightColor0", light_color(light_a)));
+    assert(set_shader_vec3(shader, "uLightPos1", light_position(light_b)));
+    assert(set_shader_vec3(shader, "uLightColor1", light_color(light_b)));
+    assert(set_shader_vec3(shader, "uAmbientColor", ambient_color));
+    assert(set_shader_float(shader, "uSpecStrength", spec_strength));
+    assert(set_shader_float(shader, "uShininess", shininess));
+    true
+}
+
+fn draw_light_debug(light, radius, rgba(r, g, b, a)) {
+    draw_sphere(light_position(light), radius, rgba(r, g, b, a))
+}
 
 fn mat2d_identity() {
     gfx_mat2d_identity()
