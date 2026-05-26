@@ -1,0 +1,137 @@
+// Camera2D demo: direct world rendering plus off-screen camera pass.
+//
+// Run: ./bin/fn --include=fn fn/gfx_camera2d_demo.fn
+let
+    link "graphics.fn" as gfx;
+    import gfx macro key_held_action;
+    import gfx macro key_pressed_action;
+
+    fn draw_world() {
+        gfx.draw_line_between(gfx.point(-800, 0), gfx.point(800, 0), gfx.rgb(80, 110, 150));
+        gfx.draw_line_between(gfx.point(0, -800), gfx.point(0, 800), gfx.rgb(80, 110, 150));
+        gfx.draw_line_between(gfx.point(-600, -600), gfx.point(600, 600), gfx.rgb(50, 80, 110));
+        gfx.draw_line_between(gfx.point(-600, 600), gfx.point(600, -600), gfx.rgb(50, 80, 110));
+        gfx.draw_rect_from(gfx.rect(-420, -220, 160, 120), gfx.rgb(255, 210, 120));
+        gfx.fill_rect_from(gfx.rect(-160, -80, 320, 160), gfx.rgba(90, 140, 210, 150));
+        gfx.fill_circle_at(gfx.point(260, 180), 70, gfx.rgba(255, 120, 120, 170));
+        gfx.fill_circle_at(gfx.point(-300, 260), 50, gfx.rgba(120, 255, 180, 170));
+        gfx.draw_text_at("origin", gfx.point(12, 12), 28, gfx.white());
+        gfx.draw_text_at("west block", gfx.point(-400, -250), 24, gfx.rgb(255, 220, 150));
+        gfx.draw_text_at("center platform", gfx.point(-110, -120), 24, gfx.white());
+        gfx.draw_text_at("east orb", gfx.point(230, 90), 24, gfx.rgb(255, 210, 210));
+        gfx.draw_text_at("south marker", gfx.point(-360, 320), 24, gfx.rgb(200, 255, 220))
+    }
+
+    fn next_target_x(target_x) {
+        key_held_action[
+            left => { target_x + (0 - 8) };
+            right => { target_x + 8 };
+            default => { target_x }
+        ]
+    }
+
+    fn next_target_y(target_y) {
+        key_held_action[
+            up => { target_y + (0 - 8) };
+            down => { target_y + 8 };
+            default => { target_y }
+        ]
+    }
+
+    fn next_rotation(rotation) {
+        key_held_action[
+            a => { rotation + (0 - 2) };
+            d => { rotation + 2 };
+            default => { rotation }
+        ]
+    }
+
+    fn next_zoom(zoom) {
+        let
+            trial = key_held_action[
+                q => { zoom + ((0 - 1) / 20) };
+                e => { zoom + (1 / 20) };
+                default => { zoom }
+            ];
+        in
+            if (trial < (1 / 5)) { 1 / 5 }
+            else { trial }
+    }
+
+    fn loop(rt, target_x, target_y, rotation, zoom) {
+        if (gfx.should_close()) { true }
+        else if (key_pressed_action[
+            escape => { true };
+            default => { false }
+        ]) { true }
+        else {
+            let
+                tx = next_target_x(target_x);
+                ty = next_target_y(target_y);
+                rot = next_rotation(rotation);
+                zm = next_zoom(zoom);
+            in
+            {
+                gfx.render_to_texture(rt, gfx.rgb(16, 24, 36), fn () {
+                    gfx.with_camera2d(gfx.point(tx, ty), gfx.point(180, 140), rot, zm, fn () {
+                        draw_world()
+                    })
+                });
+
+                gfx.frame(gfx.rgb(18, 24, 34), fn () {
+                    gfx.draw_text_at("Camera2D Demo", gfx.point(20, 20), 28, gfx.white());
+                    gfx.draw_text_at("Arrows pan target, Q/E zoom, A/D rotate, Esc exits", gfx.point(20, 54), 18, gfx.rgb(195, 205, 220));
+                    gfx.draw_text_at("Direct camera view", gfx.point(20, 92), 20, gfx.rgb(220, 230, 255));
+                    gfx.draw_text_at("Render texture camera view", gfx.point(560, 92), 20, gfx.rgb(220, 230, 255));
+                    gfx.draw_text_at(
+                        key_held_action[
+                            q => { "zoom: out" };
+                            e => { "zoom: in" };
+                            default => { "zoom: steady" }
+                        ],
+                        gfx.point(20, 720),
+                        18,
+                        gfx.white()
+                    );
+                    gfx.draw_text_at(
+                        key_held_action[
+                            a => { "rotation: left" };
+                            d => { "rotation: right" };
+                            default => { "rotation: steady" }
+                        ],
+                        gfx.point(180, 720),
+                        18,
+                        gfx.white()
+                    );
+                    gfx.draw_text_at(
+                        key_held_action[
+                            left => { "pan: left" };
+                            right => { "pan: right" };
+                            up => { "pan: up" };
+                            down => { "pan: down" };
+                            default => { "pan: steady" }
+                        ],
+                        gfx.point(380, 720),
+                        18,
+                        gfx.white()
+                    );
+
+                    gfx.with_camera2d(gfx.point(tx, ty), gfx.point(260, 360), rot, zm, fn () {
+                        draw_world()
+                    });
+
+                    gfx.draw_rect_at(gfx.point(558, 138), gfx.extent(364, 284), gfx.rgb(90, 110, 140));
+                    gfx.draw_render_texture_at(rt, gfx.point(560, 140), gfx.rgba(210, 230, 255, 235))
+                });
+                loop(rt, tx, ty, rot, zm)
+            }
+        }
+    }
+
+in
+    gfx.with_window(960, 760, "Camera2D Demo", fn () {
+        assert(gfx.set_target_fps(60));
+        gfx.with_render_texture(360, 280, fn (rt) {
+            loop(rt, 0, 0, 0, 1)
+        })
+    })

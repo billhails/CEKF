@@ -1,0 +1,115 @@
+// Audio demo: open audio device, load a sound, play on Space, adjust volume.
+//
+// Run: ./bin/fn --include=fn fn/gfx_audio_demo.fn
+//
+// Uses /home/bill/Music/01.mp3 for playback.
+let
+    link "graphics.fn" as gfx;
+    import gfx macro key_pressed_action;
+
+    fn clamp_volume(v) {
+        if (v < 0) { 0 }
+        else if (v > 100) { 100 }
+        else { v }
+    }
+
+    fn next_volume(volume) {
+        clamp_volume(
+            key_pressed_action[
+                up => { volume + 5 };
+                down => { volume + (0 - 5) };
+                default => { volume }
+            ]
+        )
+    }
+
+    fn loop_without_sound() {
+        if (gfx.should_close()) { true }
+        else if (key_pressed_action[
+            escape => { true };
+            default => { false }
+        ]) { true }
+        else {
+            gfx.frame(gfx.rgb(18, 24, 34), fn () {
+                gfx.draw_text_at("Audio Demo", gfx.point(20, 20), 30, gfx.white());
+                gfx.draw_text_at("No sound file loaded.", gfx.point(20, 70), 22, gfx.rgb(255, 190, 170));
+                gfx.draw_text_at("Expected file: /home/bill/Music/01.mp3", gfx.point(20, 104), 20, gfx.rgb(210, 210, 230));
+                gfx.draw_text_at("If missing, update the path in fn/gfx_audio_demo.fn.", gfx.point(20, 136), 20, gfx.rgb(210, 210, 230));
+                gfx.draw_text_at("Press Esc to exit", gfx.point(20, 740), 18, gfx.rgb(170, 170, 190))
+            });
+            loop_without_sound()
+        }
+    }
+
+    fn loop_with_sound(sound, volume) {
+        if (gfx.should_close()) { true }
+        else if (key_pressed_action[
+            escape => { true };
+            default => { false }
+        ]) {
+            gfx.stop_sound(sound);
+            true
+        }
+        else {
+            let
+                next = next_volume(volume);
+            in
+                gfx.frame(gfx.rgb(18, 24, 34), fn () {
+                    gfx.draw_text_at("Audio Demo", gfx.point(20, 20), 30, gfx.white());
+                    gfx.draw_text_at("Space: play sound", gfx.point(20, 70), 22, gfx.rgb(210, 230, 255));
+                    gfx.draw_text_at("Up/Down: volume", gfx.point(20, 102), 22, gfx.rgb(210, 230, 255));
+                    gfx.draw_text_at("Current volume band:", gfx.point(20, 150), 20, gfx.rgb(200, 210, 230));
+                    gfx.draw_text_at(
+                        if (next < 35) { "low" }
+                        else if (next < 70) { "medium" }
+                        else { "high" },
+                        gfx.point(250, 150),
+                        20,
+                        gfx.white()
+                    );
+                    gfx.draw_text_at("Playback:", gfx.point(20, 182), 20, gfx.rgb(200, 210, 230));
+                    gfx.draw_text_at(
+                        if (gfx.is_sound_playing(sound)) { "playing" }
+                        else { "stopped" },
+                        gfx.point(130, 182),
+                        20,
+                        if (gfx.is_sound_playing(sound)) { gfx.rgb(160, 240, 180) }
+                        else { gfx.rgb(230, 180, 170) }
+                    );
+                    gfx.draw_text_at("Press Esc to exit", gfx.point(20, 740), 18, gfx.rgb(170, 170, 190));
+
+                    key_pressed_action[
+                        space => { gfx.play_sound(sound) };
+                        default => { true }
+                    ];
+
+                    if (next != volume) { gfx.set_sound_volume(sound, next) }
+                    else { true }
+                });
+            loop_with_sound(sound, next)
+        }
+    }
+
+in
+    gfx.with_window_size(gfx.extent(960, 760), "Audio Demo", fn () {
+        assert(gfx.set_target_fps(60));
+        gfx.with_audio(fn () {
+            switch (gfx.load_sound("/home/bill/Music/01.mp3")) {
+                (success(sound)) {
+                    assert(gfx.set_sound_volume(sound, 60));
+                    {
+                    let result = loop_with_sound(sound, 60);
+                    in
+                        gfx.unload_sound(sound);
+                        result
+                    }
+                }
+                (failure(msg)) {
+                    puts("audio demo load error: ");
+                    puts(msg);
+                    putc('\n');
+                    loop_without_sound()
+                }
+            }
+        })
+    })

@@ -1,0 +1,1095 @@
+namespace
+
+typedef Color { rgba(number, number, number, number) }
+typedef Point { point(number, number) }
+typedef Vec3 { vec3(number, number, number) }
+typedef Vec4 { vec4(number, number, number, number) }
+typedef Size { extent(number, number) }
+typedef Rect { rect(number, number, number, number) }
+typedef Light { point_light(Vec3, Vec3, number) | directional_light(Vec3, Vec3, number) }
+typedef LightingConfig { lighting_config(Vec3, number, number) }
+
+fn rgb(r, g, b) {
+    rgba(r, g, b, 255)
+}
+
+fn black() { rgba(0, 0, 0, 255) }
+fn white() { rgba(255, 255, 255, 255) }
+fn red() { rgba(255, 0, 0, 255) }
+fn green() { rgba(0, 255, 0, 255) }
+fn blue() { rgba(0, 0, 255, 255) }
+
+fn material_map_albedo() { 0 }
+fn material_map_normal() { 1 }
+fn material_map_specular() { 2 }
+fn material_map_metalness() { 2 }
+fn material_map_roughness() { 3 }
+fn sampler_unit0() { 0 }
+fn sampler_unit1() { 1 }
+fn sampler_unit2() { 2 }
+fn sampler_unit3() { 3 }
+fn sampler_attachment_color() { 0 }
+fn sampler_attachment_depth() { 1 }
+
+fn enabled() { gfx_enabled() }
+
+fn with_window_size(extent(width, height), title, handler) {
+    with_window(width, height, title, handler)
+}
+
+fn load_render_texture_size(extent(width, height)) {
+    load_render_texture(width, height)
+}
+
+fn with_render_texture_size(extent(width, height), handler) {
+    with_render_texture(width, height, handler)
+}
+
+fn point_x(point(x, _)) { x }
+fn point_y(point(_, y)) { y }
+fn translate(point(x, y), dx, dy) { point(x + dx, y + dy) }
+fn vec3_x(vec3(x, _, _)) { x }
+fn vec3_y(vec3(_, y, _)) { y }
+fn vec3_z(vec3(_, _, z)) { z }
+
+fn vec3_scale(vec3(x, y, z), s) {
+    vec3(x * s, y * s, z * s)
+}
+
+fn light_color(light) {
+    switch (light) {
+        (point_light(_, color, intensity)) { vec3_scale(color, intensity) }
+        (directional_light(_, color, intensity)) { vec3_scale(color, intensity) }
+    }
+}
+
+fn light_position(light) {
+    switch (light) {
+        (point_light(position, _, _)) { position }
+        (directional_light(vec3(dx, dy, dz), _, _)) {
+            vec3(0 - (dx * 40), 0 - (dy * 40), 0 - (dz * 40))
+        }
+    }
+}
+
+fn default_lighting() {
+    lighting_config(vec3(0.20, 0.22, 0.28), 0.85, 96)
+}
+
+fn upload_light(shader, light) {
+    assert(set_shader_vec3(shader, "uLightPos", light_position(light)));
+    assert(set_shader_vec3(shader, "uLightColor", light_color(light)));
+    true
+}
+
+fn upload_lighting(shader, view_pos, light, lighting_config(ambient_color, spec_strength, shininess)) {
+    assert(set_shader_vec3(shader, "uViewPos", view_pos));
+    assert(upload_light(shader, light));
+    assert(set_shader_vec3(shader, "uAmbientColor", ambient_color));
+    assert(set_shader_float(shader, "uSpecStrength", spec_strength));
+    assert(set_shader_float(shader, "uShininess", shininess));
+    true
+}
+
+fn upload_lighting_two(
+    shader,
+    view_pos,
+    light_a,
+    light_b,
+    lighting_config(ambient_color, spec_strength, shininess)
+) {
+    assert(set_shader_vec3(shader, "uViewPos", view_pos));
+    assert(set_shader_vec3(shader, "uLightPos0", light_position(light_a)));
+    assert(set_shader_vec3(shader, "uLightColor0", light_color(light_a)));
+    assert(set_shader_vec3(shader, "uLightPos1", light_position(light_b)));
+    assert(set_shader_vec3(shader, "uLightColor1", light_color(light_b)));
+    assert(set_shader_vec3(shader, "uAmbientColor", ambient_color));
+    assert(set_shader_float(shader, "uSpecStrength", spec_strength));
+    assert(set_shader_float(shader, "uShininess", shininess));
+    true
+}
+
+fn draw_light_debug(light, radius, rgba(r, g, b, a)) {
+    draw_sphere(light_position(light), radius, rgba(r, g, b, a))
+}
+
+fn mat2d_identity() {
+    gfx_mat2d_identity()
+}
+
+fn mat2d_translate(mat, dx, dy) {
+    gfx_mat2d_translate(mat, dx, dy)
+}
+
+fn mat2d_rotate(mat, degrees) {
+    gfx_mat2d_rotate(mat, degrees)
+}
+
+fn mat2d_scale(mat, sx, sy) {
+    gfx_mat2d_scale(mat, sx, sy)
+}
+
+fn mat2d_compose(left, right) {
+    gfx_mat2d_compose(left, right)
+}
+
+fn mat2d_apply_x(mat, x, y) {
+    gfx_mat2d_apply_x(mat, x, y)
+}
+
+fn mat2d_apply_y(mat, x, y) {
+    gfx_mat2d_apply_y(mat, x, y)
+}
+
+fn mat2d_apply_point(mat, point(x, y)) {
+    point(mat2d_apply_x(mat, x, y), mat2d_apply_y(mat, x, y))
+}
+
+fn make_transform3d(pos, rot, scale) {
+    gfx_transform3d(
+        vec3_x(pos), vec3_y(pos), vec3_z(pos),
+        vec3_x(rot), vec3_y(rot), vec3_z(rot),
+        vec3_x(scale), vec3_y(scale), vec3_z(scale)
+    )
+}
+
+fn transform3d_position(raw) {
+    vec3(
+        gfx_transform3d_position_x(raw),
+        gfx_transform3d_position_y(raw),
+        gfx_transform3d_position_z(raw)
+    )
+}
+
+fn transform3d_rotation(raw) {
+    vec3(
+        gfx_transform3d_rotation_x(raw),
+        gfx_transform3d_rotation_y(raw),
+        gfx_transform3d_rotation_z(raw)
+    )
+}
+
+fn transform3d_scale(raw) {
+    vec3(
+        gfx_transform3d_scale_x(raw),
+        gfx_transform3d_scale_y(raw),
+        gfx_transform3d_scale_z(raw)
+    )
+}
+
+fn with_window(width, height, title, handler) {
+    switch (gfx_open(width, height, title)) {
+        (success(_)) {
+            let data = just(handler());
+            in
+                gfx_close();
+                data
+        }
+        (failure(errmsg)) {
+            puts("graphics error: ");
+            puts(errmsg);
+            putc('\n');
+            nothing
+        }
+    }
+}
+
+fn set_target_fps(fps) {
+    gfx_set_target_fps(fps)
+}
+
+fn should_close() {
+    gfx_should_close()
+}
+
+fn clear(rgba(r, g, b, a)) {
+    gfx_clear(r, g, b, a)
+}
+
+fn fill_rect(x, y, w, h, rgba(r, g, b, a)) {
+    gfx_fill_rect(x, y, w, h, r, g, b, a)
+}
+
+fn draw_text(text, x, y, size, rgba(r, g, b, a)) {
+    gfx_draw_text(text, x, y, size, r, g, b, a)
+}
+
+fn take_screenshot(path) {
+    gfx_take_screenshot(path)
+}
+
+fn frame(background, draw) {
+    assert(gfx_begin_frame());
+    clear(background);
+    {
+    let result = draw();
+    in
+        assert(gfx_end_frame());
+        result
+    }
+}
+
+fn loop(background, draw) {
+    if (should_close()) {
+        true
+    } else {
+        frame(background, draw);
+        loop(background, draw)
+    }
+}
+
+fn run(width, height, title, fps, background, draw) {
+    with_window(width, height, title, fn () {
+        assert(set_target_fps(fps));
+        loop(background, draw)
+    })
+}
+
+// --- input queries ---
+
+fn key_held(k) { gfx_is_key_down(k) }
+fn key_pressed(k) { gfx_is_key_pressed(k) }
+fn key_released(k) { gfx_is_key_released(k) }
+fn mouse_held(btn) { gfx_is_mouse_down(btn) }
+fn mouse_pressed(btn) { gfx_is_mouse_pressed(btn) }
+fn mouse_released(btn) { gfx_is_mouse_released(btn) }
+fn mouse_x() { gfx_mouse_x() }
+fn mouse_y() { gfx_mouse_y() }
+fn mouse_delta_x() { gfx_mouse_delta_x() }
+fn mouse_delta_y() { gfx_mouse_delta_y() }
+fn mouse_wheel() { gfx_mouse_wheel() }
+fn disable_cursor() { gfx_disable_cursor() }
+fn enable_cursor() { gfx_enable_cursor() }
+fn hide_cursor() { gfx_hide_cursor() }
+fn show_cursor() { gfx_show_cursor() }
+fn screen_width() { gfx_screen_width() }
+fn screen_height() { gfx_screen_height() }
+fn frame_time_ms() { gfx_frame_time_ms() }
+
+// --- key codes (raylib KeyboardKey values) ---
+
+fn key_space() { 32 }
+fn key_escape() { 256 }
+fn key_enter() { 257 }
+fn key_tab() { 258 }
+fn key_backspace() { 259 }
+fn arrow_right() { 262 }
+fn arrow_left() { 263 }
+fn arrow_down() { 264 }
+fn arrow_up() { 265 }
+fn key_left_shift() { 340 }
+fn key_left_ctrl() { 341 }
+fn key_left_alt() { 342 }
+fn key_a() { 65 }
+fn key_b() { 66 }
+fn key_c() { 67 }
+fn key_d() { 68 }
+fn key_e() { 69 }
+fn key_f() { 70 }
+fn key_g() { 71 }
+fn key_h() { 72 }
+fn key_i() { 73 }
+fn key_j() { 74 }
+fn key_k() { 75 }
+fn key_l() { 76 }
+fn key_m() { 77 }
+fn key_n() { 78 }
+fn key_o() { 79 }
+fn key_p() { 80 }
+fn key_q() { 81 }
+fn key_r() { 82 }
+fn key_s() { 83 }
+fn key_t() { 84 }
+fn key_u() { 85 }
+fn key_v() { 86 }
+fn key_w() { 87 }
+fn key_x() { 88 }
+fn key_y() { 89 }
+fn key_z() { 90 }
+fn key_zero() { 48 }
+fn key_one() { 49 }
+fn key_two() { 50 }
+fn key_three() { 51 }
+fn key_four() { 52 }
+fn key_five() { 53 }
+fn key_six() { 54 }
+fn key_seven() { 55 }
+fn key_eight() { 56 }
+fn key_nine() { 57 }
+
+export macro key_held_action: Expr keyHeldActionHead;
+export macro key_pressed_action: Expr keyPressedActionHead;
+
+syntax keyHeldActionKeyExpr ::= "space" quote { key_space() }
+| "escape" quote { key_escape() }
+| "enter" quote { key_enter() }
+| "tab" quote { key_tab() }
+| "backspace" quote { key_backspace() }
+| "right" quote { arrow_right() }
+| "left" quote { arrow_left() }
+| "down" quote { arrow_down() }
+| "up" quote { arrow_up() }
+| "shift" quote { key_left_shift() }
+| "ctrl" quote { key_left_ctrl() }
+| "alt" quote { key_left_alt() }
+| "a" quote { key_a() }
+| "b" quote { key_b() }
+| "c" quote { key_c() }
+| "d" quote { key_d() }
+| "e" quote { key_e() }
+| "f" quote { key_f() }
+| "g" quote { key_g() }
+| "h" quote { key_h() }
+| "i" quote { key_i() }
+| "j" quote { key_j() }
+| "k" quote { key_k() }
+| "l" quote { key_l() }
+| "m" quote { key_m() }
+| "n" quote { key_n() }
+| "o" quote { key_o() }
+| "p" quote { key_p() }
+| "q" quote { key_q() }
+| "r" quote { key_r() }
+| "s" quote { key_s() }
+| "t" quote { key_t() }
+| "u" quote { key_u() }
+| "v" quote { key_v() }
+| "w" quote { key_w() }
+| "x" quote { key_x() }
+| "y" quote { key_y() }
+| "z" quote { key_z() }
+| "zero" quote { key_zero() }
+| "one" quote { key_one() }
+| "two" quote { key_two() }
+| "three" quote { key_three() }
+| "four" quote { key_four() }
+| "five" quote { key_five() }
+| "six" quote { key_six() }
+| "seven" quote { key_seven() }
+| "eight" quote { key_eight() }
+| "nine" quote { key_nine() }
+;
+
+syntax keyPressedActionKeyExpr ::= "space" quote { key_space() }
+| "escape" quote { key_escape() }
+| "enter" quote { key_enter() }
+| "tab" quote { key_tab() }
+| "backspace" quote { key_backspace() }
+| "right" quote { arrow_right() }
+| "left" quote { arrow_left() }
+| "down" quote { arrow_down() }
+| "up" quote { arrow_up() }
+| "shift" quote { key_left_shift() }
+| "ctrl" quote { key_left_ctrl() }
+| "alt" quote { key_left_alt() }
+| "a" quote { key_a() }
+| "b" quote { key_b() }
+| "c" quote { key_c() }
+| "d" quote { key_d() }
+| "e" quote { key_e() }
+| "f" quote { key_f() }
+| "g" quote { key_g() }
+| "h" quote { key_h() }
+| "i" quote { key_i() }
+| "j" quote { key_j() }
+| "k" quote { key_k() }
+| "l" quote { key_l() }
+| "m" quote { key_m() }
+| "n" quote { key_n() }
+| "o" quote { key_o() }
+| "p" quote { key_p() }
+| "q" quote { key_q() }
+| "r" quote { key_r() }
+| "s" quote { key_s() }
+| "t" quote { key_t() }
+| "u" quote { key_u() }
+| "v" quote { key_v() }
+| "w" quote { key_w() }
+| "x" quote { key_x() }
+| "y" quote { key_y() }
+| "z" quote { key_z() }
+| "zero" quote { key_zero() }
+| "one" quote { key_one() }
+| "two" quote { key_two() }
+| "three" quote { key_three() }
+| "four" quote { key_four() }
+| "five" quote { key_five() }
+| "six" quote { key_six() }
+| "seven" quote { key_seven() }
+| "eight" quote { key_eight() }
+| "nine" quote { key_nine() }
+;
+
+syntax keyHeldActionHead ::= "[" body: Syntax(keyHeldActionClauses) "]" {
+    body
+};
+
+syntax keyHeldActionClauses ::= key: Syntax(keyHeldActionKeyExpr) "=" ">" body: Nest ";" rest: Syntax(keyHeldActionClauses) quote {
+    if (key_held(unquote(key))) {
+        unquote(body)
+    } else {
+        unquote(rest)
+    }
+}
+| "default" "=" ">" body: Nest {
+    body
+};
+
+syntax keyPressedActionHead ::= "[" body: Syntax(keyPressedActionClauses) "]" {
+    body
+};
+
+syntax keyPressedActionClauses ::= key: Syntax(keyPressedActionKeyExpr) "=" ">" body: Nest ";" rest: Syntax(keyPressedActionClauses) quote {
+    if (key_pressed(unquote(key))) {
+        unquote(body)
+    } else {
+        unquote(rest)
+    }
+}
+| "default" "=" ">" body: Nest {
+    body
+};
+
+// --- mouse button codes ---
+
+fn btn_left() { 0 }
+fn btn_right() { 1 }
+fn btn_middle() { 2 }
+
+// --- additional primitives ---
+
+fn draw_line(x1, y1, x2, y2, rgba(r, g, b, a)) {
+    gfx_draw_line(x1, y1, x2, y2, r, g, b, a)
+}
+
+fn draw_line_between(point(x1, y1), point(x2, y2), rgba(r, g, b, a)) {
+    draw_line(x1, y1, x2, y2, rgba(r, g, b, a))
+}
+
+fn draw_circle(cx, cy, radius, rgba(r, g, b, a)) {
+    gfx_draw_circle(cx, cy, radius, r, g, b, a)
+}
+
+fn draw_circle_at(point(cx, cy), radius, rgba(r, g, b, a)) {
+    draw_circle(cx, cy, radius, rgba(r, g, b, a))
+}
+
+fn fill_circle(cx, cy, radius, rgba(r, g, b, a)) {
+    gfx_fill_circle(cx, cy, radius, r, g, b, a)
+}
+
+fn fill_circle_at(point(cx, cy), radius, rgba(r, g, b, a)) {
+    fill_circle(cx, cy, radius, rgba(r, g, b, a))
+}
+
+fn draw_rect(x, y, w, h, rgba(r, g, b, a)) {
+    gfx_draw_rect(x, y, w, h, r, g, b, a)
+}
+
+fn draw_rect_at(point(x, y), extent(w, h), rgba(r, g, b, a)) {
+    draw_rect(x, y, w, h, rgba(r, g, b, a))
+}
+
+fn draw_rect_from(rect(x, y, w, h), rgba(r, g, b, a)) {
+    draw_rect(x, y, w, h, rgba(r, g, b, a))
+}
+
+fn fill_rect_at(point(x, y), extent(w, h), rgba(r, g, b, a)) {
+    fill_rect(x, y, w, h, rgba(r, g, b, a))
+}
+
+fn fill_rect_from(rect(x, y, w, h), rgba(r, g, b, a)) {
+    fill_rect(x, y, w, h, rgba(r, g, b, a))
+}
+
+fn draw_triangle(point(x1, y1), point(x2, y2), point(x3, y3), rgba(r, g, b, a)) {
+    gfx_draw_triangle(x1, y1, x2, y2, x3, y3, r, g, b, a)
+}
+
+fn fill_triangle(point(x1, y1), point(x2, y2), point(x3, y3), rgba(r, g, b, a)) {
+    gfx_fill_triangle(x1, y1, x2, y2, x3, y3, r, g, b, a)
+}
+
+fn draw_polygon(point(cx, cy), sides, radius, rotation, rgba(r, g, b, a)) {
+    gfx_draw_polygon(cx, cy, sides, radius, rotation, r, g, b, a)
+}
+
+fn fill_polygon(point(cx, cy), sides, radius, rotation, rgba(r, g, b, a)) {
+    gfx_fill_polygon(cx, cy, sides, radius, rotation, r, g, b, a)
+}
+
+fn draw_arc(point(cx, cy), radius, start_deg, end_deg, segments, rgba(r, g, b, a)) {
+    gfx_draw_arc(cx, cy, radius, start_deg, end_deg, segments, r, g, b, a)
+}
+
+fn draw_rect_rounded(rect(x, y, w, h), roundness, segments, line_thickness, rgba(r, g, b, a)) {
+    gfx_draw_rect_rounded(x, y, w, h, roundness, segments, line_thickness, r, g, b, a)
+}
+
+// --- font resources ---
+
+fn load_font(path, base_size) {
+    gfx_load_font(path, base_size)
+}
+
+fn with_font(path, base_size, handler) {
+    switch (gfx_load_font(path, base_size)) {
+        (success(font)) {
+            let result = just(handler(font));
+            in
+                gfx_unload_font(font);
+                result
+        }
+        (failure(msg)) {
+            puts("font load error: ");
+            puts(msg);
+            putc('\n');
+            nothing
+        }
+    }
+}
+
+fn unload_font(font) { gfx_unload_font(font) }
+
+fn draw_text_font(font, text, x, y, size, spacing, rgba(r, g, b, a)) {
+    gfx_draw_text_font(font, text, x, y, size, spacing, r, g, b, a)
+}
+
+fn draw_text_at(text, point(x, y), size, rgba(r, g, b, a)) {
+    draw_text(text, x, y, size, rgba(r, g, b, a))
+}
+
+fn draw_text_font_at(font, text, point(x, y), size, spacing, rgba(r, g, b, a)) {
+    draw_text_font(font, text, x, y, size, spacing, rgba(r, g, b, a))
+}
+
+fn measure_text_width(font, text, size, spacing) {
+    gfx_measure_text_width(font, text, size, spacing)
+}
+
+// --- texture resources ---
+
+fn load_texture(path) {
+    gfx_load_texture(path)
+}
+
+fn unload_texture(tex) { gfx_unload_texture(tex) }
+
+fn with_texture(path, handler) {
+    switch (gfx_load_texture(path)) {
+        (success(tex)) {
+            let result = just(handler(tex));
+            in
+                gfx_unload_texture(tex);
+                result
+        }
+        (failure(msg)) {
+            puts("texture load error: ");
+            puts(msg);
+            putc('\n');
+            nothing
+        }
+    }
+}
+
+fn texture_width(tex) { gfx_texture_width(tex) }
+fn texture_height(tex) { gfx_texture_height(tex) }
+
+fn draw_texture(tex, x, y, rgba(r, g, b, a)) {
+    gfx_draw_texture(tex, x, y, r, g, b, a)
+}
+
+fn draw_texture_at(tex, point(x, y), rgba(r, g, b, a)) {
+    gfx_draw_texture(tex, x, y, r, g, b, a)
+}
+
+fn draw_sprite(tex, rect(sx, sy, sw, sh), point(dx, dy), rgba(r, g, b, a)) {
+    gfx_draw_texture_rec(tex, sx, sy, sw, sh, dx, dy, r, g, b, a)
+}
+
+fn draw_sprite_pro(tex, rect(sx, sy, sw, sh), rect(dx, dy, dw, dh), point(ox, oy), rotation, rgba(r, g, b, a)) {
+    gfx_draw_texture_pro(tex, sx, sy, sw, sh, dx, dy, dw, dh, ox, oy, rotation, r, g, b, a)
+}
+
+fn draw_sprite_pro_at(tex, rect(sx, sy, sw, sh), point(dx, dy), extent(dw, dh), point(ox, oy), rotation, rgba(r, g, b, a)) {
+    draw_sprite_pro(
+        tex,
+        rect(sx, sy, sw, sh),
+        rect(dx, dy, dw, dh),
+        point(ox, oy),
+        rotation,
+        rgba(r, g, b, a)
+    )
+}
+
+fn load_render_texture(width, height) {
+    gfx_load_render_texture(width, height)
+}
+
+fn unload_render_texture(rt) { gfx_unload_render_texture(rt) }
+
+fn with_render_texture(width, height, handler) {
+    switch (gfx_load_render_texture(width, height)) {
+        (success(rt)) {
+            let result = just(handler(rt));
+            in
+                gfx_unload_render_texture(rt);
+                result
+        }
+        (failure(msg)) {
+            puts("render texture error: ");
+            puts(msg);
+            putc('\n');
+            nothing
+        }
+    }
+}
+
+fn render_to_texture(rt, background, draw_fn) {
+    assert(gfx_begin_texture_mode(rt));
+    clear(background);
+    {
+    let result = draw_fn();
+    in
+        assert(gfx_end_texture_mode());
+        result
+    }
+}
+
+fn draw_render_texture(rt, x, y, rgba(r, g, b, a)) {
+    gfx_draw_render_texture(rt, x, y, r, g, b, a)
+}
+
+fn draw_render_texture_at(rt, point(x, y), rgba(r, g, b, a)) {
+    gfx_draw_render_texture(rt, x, y, r, g, b, a)
+}
+
+fn load_shader(vertex_path, fragment_path) {
+    gfx_load_shader(vertex_path, fragment_path)
+}
+
+fn unload_shader(shader) { gfx_unload_shader(shader) }
+
+fn with_shader(vertex_path, fragment_path, handler) {
+    switch (gfx_load_shader(vertex_path, fragment_path)) {
+        (success(shader)) {
+            let result = just(handler(shader));
+            in
+                gfx_unload_shader(shader);
+                result
+        }
+        (failure(msg)) {
+            puts("shader load error: ");
+            puts(msg);
+            putc('\n');
+            nothing
+        }
+    }
+}
+
+fn begin_shader_mode(shader) {
+    gfx_begin_shader_mode(shader)
+}
+
+fn end_shader_mode() { gfx_end_shader_mode() }
+
+fn set_shader_int(shader, name, value) {
+    gfx_set_shader_int(shader, name, value)
+}
+
+fn set_shader_sampler(shader, name, texture, unit) {
+    gfx_set_shader_sampler(shader, name, texture, unit)
+}
+
+fn set_shader_render_texture_sampler(shader, name, render_texture, unit, attachment_selector) {
+    gfx_set_shader_render_texture_sampler(
+        shader,
+        name,
+        render_texture,
+        unit,
+        attachment_selector
+    )
+}
+
+fn set_shader_float(shader, name, value) {
+    gfx_set_shader_float(shader, name, value)
+}
+
+fn set_shader_vec2(shader, name, point(x, y)) {
+    gfx_set_shader_vec2(shader, name, x, y)
+}
+
+fn set_shader_vec3(shader, name, vec3(x, y, z)) {
+    gfx_set_shader_vec3(shader, name, x, y, z)
+}
+
+fn set_shader_vec4(shader, name, vec4(x, y, z, w)) {
+    gfx_set_shader_vec4(shader, name, x, y, z, w)
+}
+
+fn set_shader_mat4(
+    shader,
+    name,
+    m00, m01, m02, m03,
+    m10, m11, m12, m13,
+    m20, m21, m22, m23,
+    m30, m31, m32, m33
+) {
+    gfx_set_shader_mat4(
+        shader,
+        name,
+        m00, m01, m02, m03,
+        m10, m11, m12, m13,
+        m20, m21, m22, m23,
+        m30, m31, m32, m33
+    )
+}
+
+fn set_shader_light_vp_ortho(
+    shader,
+    name,
+    vec3(light_pos_x, light_pos_y, light_pos_z),
+    vec3(target_x, target_y, target_z),
+    vec3(up_x, up_y, up_z),
+    left,
+    right,
+    bottom,
+    top,
+    near,
+    far
+) {
+    gfx_set_shader_light_vp_ortho(
+        shader,
+        name,
+        light_pos_x,
+        light_pos_y,
+        light_pos_z,
+        target_x,
+        target_y,
+        target_z,
+        up_x,
+        up_y,
+        up_z,
+        left,
+        right,
+        bottom,
+        top,
+        near,
+        far
+    )
+}
+
+fn set_shader_light_vp_ortho_vp(
+    shader,
+    name,
+    vec3(light_pos_x, light_pos_y, light_pos_z),
+    vec3(target_x, target_y, target_z),
+    vec3(up_x, up_y, up_z),
+    left,
+    right,
+    bottom,
+    top,
+    near,
+    far
+) {
+    gfx_set_shader_light_vp_ortho_vp(
+        shader,
+        name,
+        light_pos_x,
+        light_pos_y,
+        light_pos_z,
+        target_x,
+        target_y,
+        target_z,
+        up_x,
+        up_y,
+        up_z,
+        left,
+        right,
+        bottom,
+        top,
+        near,
+        far
+    )
+}
+
+fn set_shader_light_vp_ortho_pv(
+    shader,
+    name,
+    vec3(light_pos_x, light_pos_y, light_pos_z),
+    vec3(target_x, target_y, target_z),
+    vec3(up_x, up_y, up_z),
+    left,
+    right,
+    bottom,
+    top,
+    near,
+    far
+) {
+    gfx_set_shader_light_vp_ortho_pv(
+        shader,
+        name,
+        light_pos_x,
+        light_pos_y,
+        light_pos_z,
+        target_x,
+        target_y,
+        target_z,
+        up_x,
+        up_y,
+        up_z,
+        left,
+        right,
+        bottom,
+        top,
+        near,
+        far
+    )
+}
+
+fn with_shader_mode(shader, draw_fn) {
+    assert(gfx_begin_shader_mode(shader));
+    {
+    let result = draw_fn();
+    in
+        assert(gfx_end_shader_mode());
+        result
+    }
+}
+
+fn begin_mode_2d(point(target_x, target_y), point(offset_x, offset_y), rotation, zoom) {
+    gfx_begin_mode_2d(target_x, target_y, offset_x, offset_y, rotation, zoom)
+}
+
+fn end_mode_2d() { gfx_end_mode_2d() }
+
+fn with_camera2d(point(target_x, target_y), point(offset_x, offset_y), rotation, zoom, draw_fn) {
+    assert(gfx_begin_mode_2d(target_x, target_y, offset_x, offset_y, rotation, zoom));
+    {
+    let result = draw_fn();
+    in
+        assert(gfx_end_mode_2d());
+        result
+    }
+}
+
+fn projection_perspective() { 0 }
+fn projection_orthographic() { 1 }
+
+fn begin_mode_3d(
+    vec3(pos_x, pos_y, pos_z),
+    vec3(target_x, target_y, target_z),
+    vec3(up_x, up_y, up_z),
+    fovy,
+    projection
+) {
+    gfx_begin_mode_3d(
+        pos_x,
+        pos_y,
+        pos_z,
+        target_x,
+        target_y,
+        target_z,
+        up_x,
+        up_y,
+        up_z,
+        fovy,
+        projection
+    )
+}
+
+fn end_mode_3d() { gfx_end_mode_3d() }
+
+fn with_camera3d(position, target, up, fovy, projection, draw_fn) {
+    assert(begin_mode_3d(position, target, up, fovy, projection));
+    {
+    let result = draw_fn();
+    in
+        assert(end_mode_3d());
+        result
+    }
+}
+
+fn draw_cube(vec3(center_x, center_y, center_z), vec3(size_x, size_y, size_z), rgba(r, g, b, a)) {
+    gfx_draw_cube(center_x, center_y, center_z, size_x, size_y, size_z, r, g, b, a)
+}
+
+fn draw_cube_wires(vec3(center_x, center_y, center_z), vec3(size_x, size_y, size_z), rgba(r, g, b, a)) {
+    gfx_draw_cube_wires(center_x, center_y, center_z, size_x, size_y, size_z, r, g, b, a)
+}
+
+fn draw_grid(slices, spacing) {
+    gfx_draw_grid(slices, spacing)
+}
+
+fn draw_sphere(vec3(center_x, center_y, center_z), radius, rgba(r, g, b, a)) {
+    gfx_draw_sphere(center_x, center_y, center_z, radius, r, g, b, a)
+}
+
+fn draw_sphere_wires(vec3(center_x, center_y, center_z), radius, rings, slices, rgba(r, g, b, a)) {
+    gfx_draw_sphere_wires(center_x, center_y, center_z, radius, rings, slices, r, g, b, a)
+}
+
+fn draw_cylinder(vec3(pos_x, pos_y, pos_z), radius_top, radius_bottom, height, slices, rgba(r, g, b, a)) {
+    gfx_draw_cylinder(pos_x, pos_y, pos_z, radius_top, radius_bottom, height, slices, r, g, b, a)
+}
+
+fn draw_cylinder_wires(vec3(pos_x, pos_y, pos_z), radius_top, radius_bottom, height, slices, rgba(r, g, b, a)) {
+    gfx_draw_cylinder_wires(pos_x, pos_y, pos_z, radius_top, radius_bottom, height, slices, r, g, b, a)
+}
+
+fn draw_plane(vec3(center_x, center_y, center_z), vec3(size_x, _, size_z), rgba(r, g, b, a)) {
+    gfx_draw_plane(center_x, center_y, center_z, size_x, size_z, r, g, b, a)
+}
+
+fn draw_line_3d(vec3(start_x, start_y, start_z), vec3(end_x, end_y, end_z), rgba(r, g, b, a)) {
+    gfx_draw_line_3d(start_x, start_y, start_z, end_x, end_y, end_z, r, g, b, a)
+}
+
+fn load_model(path) {
+    gfx_load_model(path)
+}
+
+fn unload_model(model) { gfx_unload_model(model) }
+
+fn set_model_shader(model, shader) {
+    gfx_set_model_shader(model, shader)
+}
+
+fn material_count(model) {
+    gfx_model_material_count(model)
+}
+
+fn set_material_shader(model, material_index, shader) {
+    gfx_set_material_shader(model, material_index, shader)
+}
+
+fn set_material_map(model, material_index, map_kind, texture) {
+    gfx_set_material_map(model, material_index, map_kind, texture)
+}
+
+fn draw_model_at(model, vec3(pos_x, pos_y, pos_z), scale, rgba(r, g, b, a)) {
+    gfx_draw_model(model, pos_x, pos_y, pos_z, scale, r, g, b, a)
+}
+
+fn draw_model_wires_at(model, vec3(pos_x, pos_y, pos_z), scale, rgba(r, g, b, a)) {
+    gfx_draw_model_wires(model, pos_x, pos_y, pos_z, scale, r, g, b, a)
+}
+
+fn with_model(path, handler) {
+    switch (gfx_load_model(path)) {
+        (success(model)) {
+            let result = just(handler(model));
+            in
+                gfx_unload_model(model);
+                result
+        }
+        (failure(msg)) {
+            puts("model load error: ");
+            puts(msg);
+            putc('\n');
+            nothing
+        }
+    }
+}
+
+fn audio_open() { gfx_audio_open() }
+
+fn audio_close() { gfx_audio_close() }
+
+fn with_audio(handler) {
+    if (gfx_audio_open()) {
+        let result = just(handler());
+        in
+            gfx_audio_close();
+            result
+    } else {
+        puts("audio error: failed to open audio device");
+        putc('\n');
+        nothing
+    }
+}
+
+fn load_sound(path) {
+    gfx_load_sound(path)
+}
+
+fn unload_sound(sound) { gfx_unload_sound(sound) }
+
+fn play_sound(sound) { gfx_play_sound(sound) }
+
+fn stop_sound(sound) { gfx_stop_sound(sound) }
+
+fn is_sound_playing(sound) { gfx_is_sound_playing(sound) }
+
+fn set_sound_volume(sound, percent) {
+    gfx_set_sound_volume(sound, percent)
+}
+
+fn with_sound(path, handler) {
+    switch (gfx_load_sound(path)) {
+        (success(sound)) {
+            let result = just(handler(sound));
+            in
+                gfx_unload_sound(sound);
+                result
+        }
+        (failure(msg)) {
+            puts("sound load error: ");
+            puts(msg);
+            putc('\n');
+            nothing
+        }
+    }
+}
+
+fn load_music(path) {
+    gfx_load_music(path)
+}
+
+fn unload_music(music) { gfx_unload_music(music) }
+
+fn play_music(music) { gfx_play_music(music) }
+
+fn pause_music(music) { gfx_pause_music(music) }
+
+fn resume_music(music) { gfx_resume_music(music) }
+
+fn stop_music(music) { gfx_stop_music(music) }
+
+fn is_music_playing(music) { gfx_is_music_playing(music) }
+
+fn update_music_stream(music) { gfx_update_music_stream(music) }
+
+fn seek_music_ms(music, position_ms) {
+    gfx_seek_music_ms(music, position_ms)
+}
+
+fn music_time_played_ms(music) { gfx_music_time_played_ms(music) }
+
+fn music_time_length_ms(music) { gfx_music_time_length_ms(music) }
+
+fn music_progress_width(music, max_width) {
+    gfx_music_progress_width(music, max_width)
+}
+
+fn set_music_volume(music, percent) {
+    gfx_set_music_volume(music, percent)
+}
+
+fn with_music(path, handler) {
+    switch (gfx_load_music(path)) {
+        (success(music)) {
+            let result = just(handler(music));
+            in
+                gfx_unload_music(music);
+                result
+        }
+        (failure(msg)) {
+            puts("music load error: ");
+            puts(msg);
+            putc('\n');
+            nothing
+        }
+    }
+}

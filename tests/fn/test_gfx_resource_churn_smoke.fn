@@ -1,0 +1,53 @@
+let
+    link "graphics.fn" as gfx;
+
+    fn churn_cycle(remaining) {
+        if (remaining <= 0) {
+            true
+        } else {
+            {
+                gfx.with_shader("assets/shaders/postprocess.vs", "assets/shaders/postprocess.fs", fn (shader) {
+                    gfx.with_texture("docs/CEKF.png", fn (tex) {
+                        gfx.with_render_texture_size(gfx.extent(96, 72), fn (rt) {
+                            gfx.render_to_texture(rt, gfx.rgb(12, 16, 26), fn () {
+                                assert(gfx.draw_texture_at(tex, gfx.point(6, 6), gfx.white()));
+                                assert(gfx.fill_rect_from(gfx.rect(12, 44, 52, 18), gfx.rgb(200, 150, 120)))
+                            });
+
+                            assert(gfx.set_shader_float(shader, "uAmount", 0.25));
+                            assert(gfx.set_shader_vec4(shader, "uTint4", gfx.vec4(1, 0.9, 0.7, 1)));
+                            assert(gfx.set_shader_float(shader, "uExposure", 1.0));
+                            assert(gfx.set_shader_float(shader, "uGamma", 2.2));
+                            assert(gfx.set_shader_mat4(
+                                shader,
+                                "uPostMatrix",
+                                1, 0, 0, 0,
+                                0, 1, 0, 0,
+                                0, 0, 1, 0,
+                                0, 0, 0, 1
+                            ));
+
+                            gfx.frame(gfx.rgb(20, 24, 36), fn () {
+                                gfx.with_shader_mode(shader, fn () {
+                                    assert(gfx.draw_render_texture_at(rt, gfx.point(18, 18), gfx.white()))
+                                })
+                            })
+                        })
+                    })
+                });
+
+                churn_cycle(remaining - 1)
+            }
+        }
+    }
+in
+    if (gfx.enabled()) {
+        {
+            gfx.with_window_size(gfx.extent(260, 180), "Test Gfx Resource Churn Smoke", fn () {
+                churn_cycle(12)
+            });
+            true
+        }
+    } else {
+        true
+    }

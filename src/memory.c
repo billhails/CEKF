@@ -26,6 +26,7 @@
 #include "anf.h"
 #include "annotate.h"
 #include "arithmetic_next.h"
+#include "builtin_graphics.h"
 #include "builtin_io.h"
 #include "builtin_regex.h"
 #include "cekf.h"
@@ -552,6 +553,7 @@ static void mark() {
     markProtected();
     markNameSpaces();
     markMemBufs();
+    markGraphicsGlobals();
     markPrattScannerRegexCache();
     markRegexCache();
     minlam_runtime_mark_reg();

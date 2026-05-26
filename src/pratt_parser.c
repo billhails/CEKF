@@ -1907,13 +1907,22 @@ static AstDefinitions *definitions(PrattParser *parser, HashSymbol *terminal) {
         LEAVE(definitions);
         return NULL;
     }
+    int save = STARTPROTECT();
+    PrattToken *start = peek(parser);
+    PROTECT(start);
     AstDefinition *def = definition(parser);
-    int save = PROTECT(def);
+    PROTECT(def);
     AstDefinitions *injected = parser->pendingInjectedDefinitions;
     PROTECT(injected);
     parser->pendingInjectedDefinitions = NULL;
     while (match(parser, TOK_SEMI()))
         ;
+    if (peek(parser) == start && !check(parser, terminal) &&
+        !check(parser, TOK_EOF())) {
+        // Ensure forward progress in error recovery so malformed input cannot
+        // recurse forever.
+        (void)next(parser);
+    }
     AstDefinitions *next = definitions(parser, terminal);
     PROTECT(next);
     if (injected != NULL) {

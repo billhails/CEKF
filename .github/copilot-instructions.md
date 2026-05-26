@@ -140,6 +140,8 @@ make docs              # Generates Mermaid diagrams from YAML schemas
 - `--dump-ast`, `--dump-lambda`, `--dump-anf`, `--dump-bytecode` etc.
 - `--exec="<snippet>"` to run code snippet directly
 - `--stress-gc` forces GC on every allocation (but is very, very slow)
+  - Use only for targeted GC/lifecycle diagnostics.
+  - Do not use for routine validation or casual test runs; large files can take hours.
 - `--help` shows all.
 
 ## Common Patterns

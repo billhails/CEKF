@@ -1,9 +1,9 @@
 .PHONY: all clean realclean deps profile leak-check check-grammar \
-list-cores test docs \
-install-sqlite3 coverage extracov view-coverage \
+list-cores test indent indent-src indent-generated docs \
+install-sqlite3 install-raylib coverage extracov view-coverage \
 coverage-target test-a test-fail test-sh test-c test-unit test-b test-big-c help \
-establish-baseline test-refactoring update-baseline clean-baseline \
-scratch bench-regex-cache
+test-gfx test-gfx-stress establish-baseline test-refactoring update-baseline clean-baseline \
+scratch bench-regex-cache rebuild-default rebuild-raylib
 
 # pass on the command line, i.e. `make test MODE=prod`
 #
@@ -45,6 +45,11 @@ CCC:=clang
 WEXTRA=-Werror=implicit-fallthrough
 endif
 
+ENABLE_RAYLIB ?= 0
+ifeq ($(ENABLE_RAYLIB),1)
+EXTRA_DEFINES += -DENABLE_RAYLIB
+endif
+
 CC:=$(CCC) -Wall -Wextra -Werror $(WEXTRA) $(CCMODE) $(EXTRA_DEFINES)
 LAXCC:=$(CCC) -Werror $(CCMODE) $(EXTRA_DEFINES)
 
@@ -54,6 +59,9 @@ MAKE_AST=$(PYTHON) $(GENERATE)
 GENDEPS=$(GENERATE) $(wildcard ./tools/generate/*.py)
 
 LIBS=-lm -lsqlite3
+ifeq ($(ENABLE_RAYLIB),1)
+LIBS += $(shell pkg-config --libs raylib)
+endif
 
 PREAMBLE_SRC=$(SRCDIR)/preamble.fn
 EXTRA_YAML=$(filter-out $(SRCDIR)/primitives.yaml, $(wildcard $(SRCDIR)/*.yaml))
@@ -134,6 +142,9 @@ ALL_OBJ=$(OBJ) $(EXTRA_OBJ) $(PREAMBLE_OBJ)
 ALL_DEP=$(DEP) $(EXTRA_DEP) $(TEST_DEP) $(MAIN_DEP) $(PREAMBLE_DEP)
 
 INCLUDE_PATHS=-I $(GENDIR)/ -I $(SRCDIR)/
+ifeq ($(ENABLE_RAYLIB),1)
+INCLUDE_PATHS += $(shell pkg-config --cflags raylib)
+endif
 
 all: $(TARGET) docs
 
@@ -342,6 +353,15 @@ test-b: all
 	set -x; for t in $(TSTDIR)/fn/test_*.fn ; do $(TARGET) $(TARGET_ARGS) --flat-closure --target-b $$t || exit 1 ; done
 	@echo All B-code tests pass
 
+test-gfx: all
+	@for t in $(TSTDIR)/fn/test_gfx_*smoke.fn ; do echo '***' $$t '***' ; ./$(TARGET) --include=fn --assertions-accumulate $$t || exit 1 ; done
+	@echo "All gfx smoke tests passed."
+
+test-gfx-stress: all
+	@echo "Running targeted gfx stress checks with --stress-gc (can be very slow on larger files)."
+	@for t in $(TSTDIR)/fn/test_gfx_shader_reload_smoke.fn $(TSTDIR)/fn/test_gfx_resource_churn_smoke.fn ; do echo '***' $$t '***' ; ./$(TARGET) --include=fn --assertions-accumulate --stress-gc $$t || exit 1 ; done
+	@echo "All gfx stress smoke tests passed."
+
 $(TEST_TARGETS): $(TSTDIR)/%: $(OBJDIR)/%.o $(ALL_OBJ)
 	$(CC) -o $@ $< $(ALL_OBJ) $(LIBS)
 
@@ -350,6 +370,9 @@ $(DEPDIR) $(OBJDIR) $(BINDIR) $(GENDIR) $(DOCDIR) $(UNIDIR) $(TMPDIR) :
 
 install-sqlite3:
 	sudo apt-get --yes install sqlite3 libsqlite3-dev
+
+install-raylib:
+	sudo apt-get --yes install libraylib-dev
 
 $(UNIDIR)/unicode.db: $(UNIDIR)/UnicodeData.csv ./tools/create_table.sql
 	rm -f $@
@@ -382,6 +405,14 @@ realclean: clean
 clean: deps
 	rm -rf $(BINDIR) $(OBJDIR) callgrind.out.* $(GENDIR) $(TEST_TARGETS) $(SRCDIR)/*~ gmon.out *.fnc core.* coverage_html coverage_report.txt gcov_output *.gcda *.gcno coverage.info coverage_filtered.info test_output.log $(TEST_FN_CFILES) $(TEST_FN_OFILES) $(TEST_FN_BINARIES) $(TEST_FN_SFILES) $(TMPDIR)
 	$(MAKE) -C scratch clean
+
+rebuild-default:
+	$(MAKE) clean
+	$(MAKE) all
+
+rebuild-raylib:
+	$(MAKE) clean
+	$(MAKE) ENABLE_RAYLIB=1 all
 
 deps:
 	rm -rf $(DEPDIR)
@@ -420,6 +451,21 @@ list-cores:
 
 help:
 	@echo "CEKF Make targets"
+	@echo ""
+	@echo "Build toggles"
+	@echo "  make rebuild-default"
+	@echo "      Clean then rebuild without raylib support."
+	@echo ""
+	@echo "  make rebuild-raylib"
+	@echo "      Clean then rebuild with ENABLE_RAYLIB=1."
+	@echo ""
+	@echo "Graphics checks"
+	@echo "  make test-gfx"
+	@echo "      Run all gated graphics smoke tests in tests/fn/test_gfx_*smoke.fn."
+	@echo ""
+	@echo "  make test-gfx-stress"
+	@echo "      Run targeted graphics smoke tests under --stress-gc."
+	@echo "      Diagnostic only: can take a very long time on larger files."
 	@echo ""
 	@echo "Coverage"
 	@echo "  make coverage"

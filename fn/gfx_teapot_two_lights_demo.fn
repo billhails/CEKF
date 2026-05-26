@@ -1,0 +1,123 @@
+// Two-light teapot demo using Phase 2 lighting helpers.
+//
+// Run: ./bin/fn --include=fn fn/gfx_teapot_two_lights_demo.fn
+let
+    link "graphics.fn" as gfx;
+    import gfx macro key_held_action;
+    import gfx macro key_pressed_action;
+
+    model_path = "assets/TeaPot.obj";
+    vertex_shader = "assets/shaders/lit_model_2l.vs";
+    fragment_shader = "assets/shaders/lit_model_2l.fs";
+
+    fn move_speed() {
+        let dt = gfx.frame_time_ms();
+        in if (dt < 1) { 0.12 }
+           else { dt / 120 }
+    }
+
+    fn update_camera(pos, target) {
+        let
+            speed = move_speed();
+            dz = key_held_action[
+                w => { 0 - speed };
+                s => { speed };
+                default => { 0 }
+            ];
+            dx = key_held_action[
+                a => { 0 - speed };
+                d => { speed };
+                default => { 0 }
+            ];
+            dy = key_held_action[
+                up => { speed };
+                down => { 0 - speed };
+                default => { 0 }
+            ];
+            pos2 = gfx.vec3(gfx.vec3_x(pos) + dx, gfx.vec3_y(pos) + dy, gfx.vec3_z(pos) + dz);
+            target2 = gfx.vec3(gfx.vec3_x(target) + dx, gfx.vec3_y(target) + dy, gfx.vec3_z(target) + dz);
+        in
+            #(pos2, target2)
+    }
+
+    fn next_axis(value, velocity, limit) {
+        let raw = value + velocity;
+        in if (raw > limit) { #(limit, 0 - velocity) }
+           else if (raw < (0 - limit)) { #(0 - limit, 0 - velocity) }
+           else { #(raw, velocity) }
+    }
+
+    fn loop(model, shader, pos, target, ax, av, bz, bv) {
+        if (gfx.should_close()) { true }
+        else if (key_pressed_action[
+            escape => { true };
+            default => { false }
+        ]) { true }
+        else {
+            let
+                #(pos2, target2) = update_camera(pos, target);
+                #(ax2, av2) = next_axis(ax, av, 6.0);
+                #(bz2, bv2) = next_axis(bz, bv, 6.0);
+                light_a = gfx.point_light(gfx.vec3(ax2, 6.0, 3.5), gfx.vec3(1.0, 0.90, 0.82), 1.0);
+                light_b = gfx.point_light(gfx.vec3(-3.8, 4.2, bz2), gfx.vec3(0.70, 0.90, 1.0), 0.85);
+                lighting = gfx.lighting_config(gfx.vec3(0.08, 0.09, 0.11), 0.90, 96);
+            in
+            {
+                assert(gfx.upload_lighting_two(shader, pos2, light_a, light_b, lighting));
+
+                gfx.frame(gfx.rgb(22, 24, 32), fn () {
+                    gfx.with_camera3d(pos2, target2, gfx.vec3(0, 1, 0), 60, gfx.projection_perspective(), fn () {
+                        assert(gfx.draw_grid(24, 1));
+                        assert(gfx.draw_plane(gfx.vec3(0, 0, 0), gfx.vec3(22, 0, 22), gfx.rgb(45, 60, 84)));
+                        assert(gfx.draw_model_at(model, gfx.vec3(0, 0, 0), 1, gfx.white()));
+                        assert(gfx.draw_light_debug(light_a, 0.25, gfx.rgba(255, 220, 180, 255)));
+                        assert(gfx.draw_light_debug(light_b, 0.22, gfx.rgba(170, 220, 255, 255)))
+                    });
+
+                    gfx.draw_text_at("Teapot Two-Lights Demo", gfx.point(20, 20), 30, gfx.white());
+                    gfx.draw_text_at("two moving point lights + helper upload_lighting_two", gfx.point(20, 58), 20, gfx.rgb(190, 220, 255));
+                    gfx.draw_text_at("W/S/A/D + Up/Down move camera; Esc exit", gfx.point(20, 86), 20, gfx.rgb(210, 230, 255))
+                });
+
+                loop(model, shader, pos2, target2, ax2, av2, bz2, bv2)
+            }
+        }
+    }
+in
+    gfx.with_window_size(gfx.extent(980, 760), "Teapot Two-Lights Demo", fn () {
+        assert(gfx.set_target_fps(60));
+        switch (gfx.load_model(model_path)) {
+            (success(model)) {
+                {
+                let result = switch (gfx.load_shader(vertex_shader, fragment_shader)) {
+                    (success(shader)) {
+                        {
+                        let data = {
+                            assert(gfx.set_model_shader(model, shader));
+                            loop(model, shader, gfx.vec3(6, 6, 10), gfx.vec3(0, 1, 0), -4.5, 0.05, 3.2, 0.04)
+                        };
+                        in
+                            gfx.unload_shader(shader);
+                            data
+                        }
+                    }
+                    (failure(shader_msg)) {
+                        puts("two-light shader load warning: ");
+                        puts(shader_msg);
+                        putc('\n');
+                        true
+                    }
+                };
+                in
+                    gfx.unload_model(model);
+                    result
+                }
+            }
+            (failure(model_msg)) {
+                puts("teapot load warning: ");
+                puts(model_msg);
+                putc('\n');
+                true
+            }
+        }
+    })
