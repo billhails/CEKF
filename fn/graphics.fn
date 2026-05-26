@@ -317,6 +317,139 @@ fn key_seven() { 55 }
 fn key_eight() { 56 }
 fn key_nine() { 57 }
 
+export macro key_held_action: Expr keyHeldActionHead;
+export macro key_pressed_action: Expr keyPressedActionHead;
+
+syntax keyHeldActionKeyExpr ::= "space" quote { key_space() }
+| "escape" quote { key_escape() }
+| "enter" quote { key_enter() }
+| "tab" quote { key_tab() }
+| "backspace" quote { key_backspace() }
+| "right" quote { arrow_right() }
+| "left" quote { arrow_left() }
+| "down" quote { arrow_down() }
+| "up" quote { arrow_up() }
+| "shift" quote { key_left_shift() }
+| "ctrl" quote { key_left_ctrl() }
+| "alt" quote { key_left_alt() }
+| "a" quote { key_a() }
+| "b" quote { key_b() }
+| "c" quote { key_c() }
+| "d" quote { key_d() }
+| "e" quote { key_e() }
+| "f" quote { key_f() }
+| "g" quote { key_g() }
+| "h" quote { key_h() }
+| "i" quote { key_i() }
+| "j" quote { key_j() }
+| "k" quote { key_k() }
+| "l" quote { key_l() }
+| "m" quote { key_m() }
+| "n" quote { key_n() }
+| "o" quote { key_o() }
+| "p" quote { key_p() }
+| "q" quote { key_q() }
+| "r" quote { key_r() }
+| "s" quote { key_s() }
+| "t" quote { key_t() }
+| "u" quote { key_u() }
+| "v" quote { key_v() }
+| "w" quote { key_w() }
+| "x" quote { key_x() }
+| "y" quote { key_y() }
+| "z" quote { key_z() }
+| "zero" quote { key_zero() }
+| "one" quote { key_one() }
+| "two" quote { key_two() }
+| "three" quote { key_three() }
+| "four" quote { key_four() }
+| "five" quote { key_five() }
+| "six" quote { key_six() }
+| "seven" quote { key_seven() }
+| "eight" quote { key_eight() }
+| "nine" quote { key_nine() }
+;
+
+syntax keyPressedActionKeyExpr ::= "space" quote { key_space() }
+| "escape" quote { key_escape() }
+| "enter" quote { key_enter() }
+| "tab" quote { key_tab() }
+| "backspace" quote { key_backspace() }
+| "right" quote { arrow_right() }
+| "left" quote { arrow_left() }
+| "down" quote { arrow_down() }
+| "up" quote { arrow_up() }
+| "shift" quote { key_left_shift() }
+| "ctrl" quote { key_left_ctrl() }
+| "alt" quote { key_left_alt() }
+| "a" quote { key_a() }
+| "b" quote { key_b() }
+| "c" quote { key_c() }
+| "d" quote { key_d() }
+| "e" quote { key_e() }
+| "f" quote { key_f() }
+| "g" quote { key_g() }
+| "h" quote { key_h() }
+| "i" quote { key_i() }
+| "j" quote { key_j() }
+| "k" quote { key_k() }
+| "l" quote { key_l() }
+| "m" quote { key_m() }
+| "n" quote { key_n() }
+| "o" quote { key_o() }
+| "p" quote { key_p() }
+| "q" quote { key_q() }
+| "r" quote { key_r() }
+| "s" quote { key_s() }
+| "t" quote { key_t() }
+| "u" quote { key_u() }
+| "v" quote { key_v() }
+| "w" quote { key_w() }
+| "x" quote { key_x() }
+| "y" quote { key_y() }
+| "z" quote { key_z() }
+| "zero" quote { key_zero() }
+| "one" quote { key_one() }
+| "two" quote { key_two() }
+| "three" quote { key_three() }
+| "four" quote { key_four() }
+| "five" quote { key_five() }
+| "six" quote { key_six() }
+| "seven" quote { key_seven() }
+| "eight" quote { key_eight() }
+| "nine" quote { key_nine() }
+;
+
+syntax keyHeldActionHead ::= "[" body: Syntax(keyHeldActionClauses) "]" {
+    body
+};
+
+syntax keyHeldActionClauses ::= key: Syntax(keyHeldActionKeyExpr) "=" ">" body: Nest ";" rest: Syntax(keyHeldActionClauses) quote {
+    if (key_held(unquote(key))) {
+        unquote(body)
+    } else {
+        unquote(rest)
+    }
+}
+| "default" "=" ">" body: Nest {
+    body
+};
+
+syntax keyPressedActionHead ::= "[" body: Syntax(keyPressedActionClauses) "]" {
+    body
+};
+
+syntax keyPressedActionClauses ::= key: Syntax(keyPressedActionKeyExpr) "=" ">" body: Nest ";" rest: Syntax(keyPressedActionClauses) quote {
+    if (key_pressed(unquote(key))) {
+        unquote(body)
+    } else {
+        unquote(rest)
+    }
+}
+| "default" "=" ">" body: Nest {
+    body
+};
+
 // --- mouse button codes ---
 
 fn btn_left() { 0 }

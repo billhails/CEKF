@@ -3,10 +3,14 @@
 // Run: ./bin/fn --include=fn fn/gfx_sampler_demo.fn
 let
     link "graphics.fn" as gfx;
+    import gfx macro key_pressed_action;
 
     fn loop(shader, tex0, tex1, blend, dir) {
         if (gfx.should_close()) { true }
-        else if (gfx.key_pressed(gfx.key_escape())) { true }
+        else if (key_pressed_action[
+            escape => { true };
+            default => { false }
+        ]) { true }
         else {
             let
                 next_blend = if (dir > 0) {

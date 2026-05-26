@@ -3,10 +3,14 @@
 // Run: ./bin/fn --include=fn fn/gfx_2d_primitives_demo.fn
 let
     link "graphics.fn" as gfx;
+    import gfx macro key_pressed_action;
 
     fn loop(angle) {
         if (gfx.should_close()) { true }
-        else if (gfx.key_pressed(gfx.key_escape())) { true }
+        else if (key_pressed_action[
+            escape => { true };
+            default => { false }
+        ]) { true }
         else {
             let
                 angle2 = angle + 2;

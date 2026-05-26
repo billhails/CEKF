@@ -3,10 +3,14 @@
 // Run: ./bin/fn --include=fn fn/gfx_shader_demo.fn
 let
     link "graphics.fn" as gfx;
+    import gfx macro key_pressed_action;
 
     fn loop(shader, tex, amount, dir) {
         if (gfx.should_close()) { true }
-        else if (gfx.key_pressed(gfx.key_escape())) { true }
+        else if (key_pressed_action[
+            escape => { true };
+            default => { false }
+        ]) { true }
         else {
             let
                 nextAmount = if (dir > 0) {

@@ -3,6 +3,8 @@
 // Run: ./bin/fn --include=fn fn/gfx_model_demo.fn
 let
     link "graphics.fn" as gfx;
+    import gfx macro key_held_action;
+    import gfx macro key_pressed_action;
 
     model_path = "assets/TeaPot.obj";
 
@@ -20,19 +22,28 @@ let
 
     fn loop_without_model(pos, target) {
         if (gfx.should_close()) { true }
-        else if (gfx.key_pressed(gfx.key_escape())) { true }
+        else if (key_pressed_action[
+            escape => { true };
+            default => { false }
+        ]) { true }
         else {
             let
                  speed = move_speed();
-                 dz = if (gfx.key_held(gfx.key_w())) { 0 - speed }
-                     else if (gfx.key_held(gfx.key_s())) { speed }
-                     else { 0 };
-                 dx = if (gfx.key_held(gfx.key_a())) { 0 - speed }
-                     else if (gfx.key_held(gfx.key_d())) { speed }
-                     else { 0 };
-                 dy = if (gfx.key_held(gfx.arrow_up())) { speed }
-                     else if (gfx.key_held(gfx.arrow_down())) { 0 - speed }
-                     else { 0 };
+                 dz = key_held_action[
+                     w => { 0 - speed };
+                     s => { speed };
+                     default => { 0 }
+                 ];
+                 dx = key_held_action[
+                     a => { 0 - speed };
+                     d => { speed };
+                     default => { 0 }
+                 ];
+                 dy = key_held_action[
+                     up => { speed };
+                     down => { 0 - speed };
+                     default => { 0 }
+                 ];
                  pos2 = gfx.vec3(gfx.vec3_x(pos) + dx, gfx.vec3_y(pos) + dy, gfx.vec3_z(pos) + dz);
                  target2 = gfx.vec3(gfx.vec3_x(target) + dx, gfx.vec3_y(target) + dy, gfx.vec3_z(target) + dz);
             in
@@ -51,19 +62,28 @@ let
 
     fn loop_with_model(model, pos, target) {
         if (gfx.should_close()) { true }
-        else if (gfx.key_pressed(gfx.key_escape())) { true }
+        else if (key_pressed_action[
+            escape => { true };
+            default => { false }
+        ]) { true }
         else {
             let
                  speed = move_speed();
-                 dz = if (gfx.key_held(gfx.key_w())) { 0 - speed }
-                     else if (gfx.key_held(gfx.key_s())) { speed }
-                     else { 0 };
-                 dx = if (gfx.key_held(gfx.key_a())) { 0 - speed }
-                     else if (gfx.key_held(gfx.key_d())) { speed }
-                     else { 0 };
-                 dy = if (gfx.key_held(gfx.arrow_up())) { speed }
-                     else if (gfx.key_held(gfx.arrow_down())) { 0 - speed }
-                     else { 0 };
+                 dz = key_held_action[
+                     w => { 0 - speed };
+                     s => { speed };
+                     default => { 0 }
+                 ];
+                 dx = key_held_action[
+                     a => { 0 - speed };
+                     d => { speed };
+                     default => { 0 }
+                 ];
+                 dy = key_held_action[
+                     up => { speed };
+                     down => { 0 - speed };
+                     default => { 0 }
+                 ];
                  pos2 = gfx.vec3(gfx.vec3_x(pos) + dx, gfx.vec3_y(pos) + dy, gfx.vec3_z(pos) + dz);
                  target2 = gfx.vec3(gfx.vec3_x(target) + dx, gfx.vec3_y(target) + dy, gfx.vec3_z(target) + dz);
             in

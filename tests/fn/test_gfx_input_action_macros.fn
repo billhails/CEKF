@@ -1,0 +1,31 @@
+let
+    link "graphics.fn" as gfx;
+    import gfx macro key_held_action;
+    import gfx macro key_pressed_action;
+in
+    if (gfx.enabled()) {
+        {
+            gfx.with_window_size(gfx.extent(240, 160), "Test Gfx Input Action Macros", fn () {
+                let
+                    held_value = key_held_action[
+                        w => { 1 };
+                        s => { 2 };
+                        default => { 42 }
+                    ];
+                    pressed_value = key_pressed_action[
+                        h => { gfx.hide_cursor() };
+                        j => { gfx.show_cursor() };
+                        default => { true }
+                    ];
+                in
+                {
+                    assert(held_value == 42);
+                    assert(pressed_value);
+                    true
+                }
+            });
+            true
+        }
+    } else {
+        true
+    }

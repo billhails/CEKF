@@ -5,6 +5,8 @@ let
     link "graphics.fn" as gfx;
     link "ioutils.fn" as io;
     link "listutils.fn" as list;
+    import gfx macro key_held_action;
+    import gfx macro key_pressed_action;
 
     model_path = "assets/TeaPot.obj";
     depth_vs = "assets/shaders/shadow_depth.vs";
@@ -21,15 +23,21 @@ let
     fn update_camera(pos, target) {
         let
             speed = move_speed();
-            dz = if (gfx.key_held(gfx.key_w())) { 0 - speed }
-                else if (gfx.key_held(gfx.key_s())) { speed }
-                else { 0 };
-            dx = if (gfx.key_held(gfx.key_a())) { 0 - speed }
-                else if (gfx.key_held(gfx.key_d())) { speed }
-                else { 0 };
-            dy = if (gfx.key_held(gfx.arrow_up())) { speed }
-                else if (gfx.key_held(gfx.arrow_down())) { 0 - speed }
-                else { 0 };
+            dz = key_held_action[
+                w => { 0 - speed };
+                s => { speed };
+                default => { 0 }
+            ];
+            dx = key_held_action[
+                a => { 0 - speed };
+                d => { speed };
+                default => { 0 }
+            ];
+            dy = key_held_action[
+                up => { speed };
+                down => { 0 - speed };
+                default => { 0 }
+            ];
             pos2 = gfx.vec3(gfx.vec3_x(pos) + dx, gfx.vec3_y(pos) + dy, gfx.vec3_z(pos) + dz);
             target2 = gfx.vec3(gfx.vec3_x(target) + dx, gfx.vec3_y(target) + dy, gfx.vec3_z(target) + dz);
         in
@@ -40,13 +48,17 @@ let
         let
             speed = move_speed();
             lx = gfx.vec3_x(light_pos)
-               + if (gfx.key_held(gfx.key_j())) { 0 - speed }
-                 else if (gfx.key_held(gfx.key_l())) { speed }
-                 else { 0 };
+                    + key_held_action[
+                          j => { 0 - speed };
+                          l => { speed };
+                          default => { 0 }
+                      ];
             lz = gfx.vec3_z(light_pos)
-               + if (gfx.key_held(gfx.key_i())) { 0 - speed }
-                 else if (gfx.key_held(gfx.key_k())) { speed }
-                 else { 0 };
+                    + key_held_action[
+                          i => { 0 - speed };
+                          k => { speed };
+                          default => { 0 }
+                      ];
         in
             gfx.vec3(lx, gfx.vec3_y(light_pos), lz)
     }
@@ -112,16 +124,18 @@ let
 
     fn loop_shadow(model, depth_shader, lit_shader, shadow_rt, camera_pos, camera_target, light_pos, debug_mode, flip_shadow_y) {
         if (gfx.should_close()) { true }
-        else if (gfx.key_pressed(gfx.key_escape())) { true }
+        else if (key_pressed_action[
+            escape => { true };
+            default => { false }
+        ]) { true }
         else {
             let
                 #(camera_pos2, camera_target2) = update_camera(camera_pos, camera_target);
                 light_pos2 = update_light(light_pos);
-                debug_mode2 = if (gfx.key_pressed(gfx.key_n())) {
-                    next_debug_mode(debug_mode)
-                } else {
-                    debug_mode
-                };
+                debug_mode2 = key_pressed_action[
+                    n => { next_debug_mode(debug_mode) };
+                    default => { debug_mode }
+                ];
                 // Lock to the preferred b0 path (flip-y disabled).
                 flip_shadow_y2 = false;
                 light_target = gfx.vec3(0, 0.8, 0);

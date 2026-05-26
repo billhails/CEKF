@@ -3,6 +3,8 @@
 // Run: ./bin/fn --include=fn fn/gfx_3d_mouse_look_demo.fn
 let
     link "graphics.fn" as gfx;
+    import gfx macro key_held_action;
+    import gfx macro key_pressed_action;
 
     fn move_speed() {
         let dt = gfx.frame_time_ms();
@@ -16,32 +18,45 @@ let
 
     fn loop(pos, target, capture_mode) {
         if (gfx.should_close()) { true }
-        else if (gfx.key_pressed(gfx.key_escape())) { true }
+        else if (key_pressed_action[
+            escape => { true };
+            default => { false }
+        ]) { true }
         else {
             let
                 capture_after_mouse = if (gfx.mouse_pressed(gfx.btn_right())) { 1 }
                                       else if (gfx.mouse_released(gfx.btn_right())) { 0 }
                                       else { capture_mode };
-                capture2 = if (gfx.key_pressed(gfx.key_tab())) { 1 - capture_after_mouse }
-                           else { capture_after_mouse };
+                capture2 = key_pressed_action[
+                    tab => { 1 - capture_after_mouse };
+                    default => { capture_after_mouse }
+                ];
                 _cursor_mode = if (capture2 == capture_mode) { true }
                                else if (capture2 == 1) { gfx.disable_cursor() }
                                else { gfx.enable_cursor() };
-                _cursor_vis = if (gfx.key_pressed(gfx.key_h())) { gfx.hide_cursor() }
-                              else if (gfx.key_pressed(gfx.key_j())) { gfx.show_cursor() }
-                              else { true };
+                _cursor_vis = key_pressed_action[
+                    h => { gfx.hide_cursor() };
+                    j => { gfx.show_cursor() };
+                    default => { true }
+                ];
                 speed = move_speed();
                 wheel = gfx.mouse_wheel();
                 wheel_dz = 0 - (wheel * speed * 3);
-                dz = if (gfx.key_held(gfx.key_w())) { 0 - speed }
-                     else if (gfx.key_held(gfx.key_s())) { speed }
-                     else { 0 };
-                dx = if (gfx.key_held(gfx.key_a())) { 0 - speed }
-                     else if (gfx.key_held(gfx.key_d())) { speed }
-                     else { 0 };
-                dy = if (gfx.key_held(gfx.arrow_up())) { speed }
-                     else if (gfx.key_held(gfx.arrow_down())) { 0 - speed }
-                     else { 0 };
+                dz = key_held_action[
+                    w => { 0 - speed };
+                    s => { speed };
+                    default => { 0 }
+                ];
+                dx = key_held_action[
+                    a => { 0 - speed };
+                    d => { speed };
+                    default => { 0 }
+                ];
+                dy = key_held_action[
+                    up => { speed };
+                    down => { 0 - speed };
+                    default => { 0 }
+                ];
                 mouse_dx = if (capture2 == 1) { gfx.mouse_delta_x() * look_sensitivity() } else { 0 };
                 mouse_dy = if (capture2 == 1) { gfx.mouse_delta_y() * look_sensitivity() } else { 0 };
                 pos2 = gfx.vec3(gfx.vec3_x(pos) + dx, gfx.vec3_y(pos) + dy, gfx.vec3_z(pos) + dz + wheel_dz);

@@ -5,6 +5,7 @@
 // Uses /home/bill/Music/01.mp3 for playback.
 let
     link "graphics.fn" as gfx;
+    import gfx macro key_pressed_action;
 
     fn clamp_volume(v) {
         if (v < 0) { 0 }
@@ -14,15 +15,20 @@ let
 
     fn next_volume(volume) {
         clamp_volume(
-            if (gfx.key_pressed(gfx.arrow_up())) { volume + 5 }
-            else if (gfx.key_pressed(gfx.arrow_down())) { volume + (0 - 5) }
-            else { volume }
+            key_pressed_action[
+                up => { volume + 5 };
+                down => { volume + (0 - 5) };
+                default => { volume }
+            ]
         )
     }
 
     fn loop_without_music() {
         if (gfx.should_close()) { true }
-        else if (gfx.key_pressed(gfx.key_escape())) { true }
+        else if (key_pressed_action[
+            escape => { true };
+            default => { false }
+        ]) { true }
         else {
             gfx.frame(gfx.rgb(14, 20, 30), fn () {
                 gfx.draw_text_at("Music Demo", gfx.point(20, 20), 30, gfx.white());
@@ -40,7 +46,10 @@ let
             gfx.stop_music(music);
             true
         }
-        else if (gfx.key_pressed(gfx.key_escape())) {
+        else if (key_pressed_action[
+            escape => { true };
+            default => { false }
+        ]) {
             gfx.stop_music(music);
             true
         }
@@ -49,9 +58,11 @@ let
                 next = next_volume(volume);
                 played_ms = gfx.music_time_played_ms(music);
                 length_ms = gfx.music_time_length_ms(music);
-                seek_target = if (gfx.key_pressed(gfx.arrow_left())) { played_ms + (0 - 5000) }
-                              else if (gfx.key_pressed(gfx.arrow_right())) { played_ms + 5000 }
-                              else { 0 - 1 };
+                seek_target = key_pressed_action[
+                    left => { played_ms + (0 - 5000) };
+                    right => { played_ms + 5000 };
+                    default => { 0 - 1 }
+                ];
                 seek_ms = if (seek_target < 0) { 0 }
                           else if (seek_target > length_ms) { length_ms }
                           else { seek_target };
@@ -88,11 +99,13 @@ let
                     gfx.fill_rect_from(gfx.rect(130, 246, progress, 18), gfx.rgb(160, 220, 255));
                     gfx.draw_text_at("Press Esc to exit", gfx.point(20, 740), 18, gfx.rgb(170, 170, 190));
 
-                    if (gfx.key_pressed(gfx.key_space())) { gfx.play_music(music) }
-                    else if (gfx.key_pressed(gfx.key_p())) { gfx.pause_music(music) }
-                    else if (gfx.key_pressed(gfx.key_r())) { gfx.resume_music(music) }
-                    else if (gfx.key_pressed(gfx.key_s())) { gfx.stop_music(music) }
-                    else { true };
+                    key_pressed_action[
+                        space => { gfx.play_music(music) };
+                        p => { gfx.pause_music(music) };
+                        r => { gfx.resume_music(music) };
+                        s => { gfx.stop_music(music) };
+                        default => { true }
+                    ];
 
                     if (seek_target != (0 - 1)) { gfx.seek_music_ms(music, seek_ms) }
                     else { true };

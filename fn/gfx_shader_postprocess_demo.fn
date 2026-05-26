@@ -3,6 +3,7 @@
 // Run: ./bin/fn --include=fn fn/gfx_shader_postprocess_demo.fn
 let
     link "graphics.fn" as gfx;
+    import gfx macro key_pressed_action;
 
     fn update_osc(value, step, min, max) {
         if (step > 0) {
@@ -14,7 +15,10 @@ let
 
     fn loop(tex, rt, shader, angle, amount, amount_step) {
         if (gfx.should_close()) { true }
-        else if (gfx.key_pressed(gfx.key_escape())) { true }
+        else if (key_pressed_action[
+            escape => { true };
+            default => { false }
+        ]) { true }
         else {
             let
                 nextAngle = angle + 2;

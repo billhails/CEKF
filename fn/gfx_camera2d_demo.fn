@@ -3,6 +3,8 @@
 // Run: ./bin/fn --include=fn fn/gfx_camera2d_demo.fn
 let
     link "graphics.fn" as gfx;
+    import gfx macro key_held_action;
+    import gfx macro key_pressed_action;
 
     fn draw_world() {
         gfx.draw_line_between(gfx.point(-800, 0), gfx.point(800, 0), gfx.rgb(80, 110, 150));
@@ -21,28 +23,36 @@ let
     }
 
     fn next_target_x(target_x) {
-        if (gfx.key_held(gfx.arrow_left())) { target_x + (0 - 8) }
-        else if (gfx.key_held(gfx.arrow_right())) { target_x + 8 }
-        else { target_x }
+        key_held_action[
+            left => { target_x + (0 - 8) };
+            right => { target_x + 8 };
+            default => { target_x }
+        ]
     }
 
     fn next_target_y(target_y) {
-        if (gfx.key_held(gfx.arrow_up())) { target_y + (0 - 8) }
-        else if (gfx.key_held(gfx.arrow_down())) { target_y + 8 }
-        else { target_y }
+        key_held_action[
+            up => { target_y + (0 - 8) };
+            down => { target_y + 8 };
+            default => { target_y }
+        ]
     }
 
     fn next_rotation(rotation) {
-        if (gfx.key_held(gfx.key_a())) { rotation + (0 - 2) }
-        else if (gfx.key_held(gfx.key_d())) { rotation + 2 }
-        else { rotation }
+        key_held_action[
+            a => { rotation + (0 - 2) };
+            d => { rotation + 2 };
+            default => { rotation }
+        ]
     }
 
     fn next_zoom(zoom) {
         let
-            trial = if (gfx.key_held(gfx.key_q())) { zoom + ((0 - 1) / 20) }
-                else if (gfx.key_held(gfx.key_e())) { zoom + (1 / 20) }
-                else { zoom };
+            trial = key_held_action[
+                q => { zoom + ((0 - 1) / 20) };
+                e => { zoom + (1 / 20) };
+                default => { zoom }
+            ];
         in
             if (trial < (1 / 5)) { 1 / 5 }
             else { trial }
@@ -50,7 +60,10 @@ let
 
     fn loop(rt, target_x, target_y, rotation, zoom) {
         if (gfx.should_close()) { true }
-        else if (gfx.key_pressed(gfx.key_escape())) { true }
+        else if (key_pressed_action[
+            escape => { true };
+            default => { false }
+        ]) { true }
         else {
             let
                 tx = next_target_x(target_x);
@@ -71,27 +84,33 @@ let
                     gfx.draw_text_at("Direct camera view", gfx.point(20, 92), 20, gfx.rgb(220, 230, 255));
                     gfx.draw_text_at("Render texture camera view", gfx.point(560, 92), 20, gfx.rgb(220, 230, 255));
                     gfx.draw_text_at(
-                        if (gfx.key_held(gfx.key_q())) { "zoom: out" }
-                        else if (gfx.key_held(gfx.key_e())) { "zoom: in" }
-                        else { "zoom: steady" },
+                        key_held_action[
+                            q => { "zoom: out" };
+                            e => { "zoom: in" };
+                            default => { "zoom: steady" }
+                        ],
                         gfx.point(20, 720),
                         18,
                         gfx.white()
                     );
                     gfx.draw_text_at(
-                        if (gfx.key_held(gfx.key_a())) { "rotation: left" }
-                        else if (gfx.key_held(gfx.key_d())) { "rotation: right" }
-                        else { "rotation: steady" },
+                        key_held_action[
+                            a => { "rotation: left" };
+                            d => { "rotation: right" };
+                            default => { "rotation: steady" }
+                        ],
                         gfx.point(180, 720),
                         18,
                         gfx.white()
                     );
                     gfx.draw_text_at(
-                        if (gfx.key_held(gfx.arrow_left())) { "pan: left" }
-                        else if (gfx.key_held(gfx.arrow_right())) { "pan: right" }
-                        else if (gfx.key_held(gfx.arrow_up())) { "pan: up" }
-                        else if (gfx.key_held(gfx.arrow_down())) { "pan: down" }
-                        else { "pan: steady" },
+                        key_held_action[
+                            left => { "pan: left" };
+                            right => { "pan: right" };
+                            up => { "pan: up" };
+                            down => { "pan: down" };
+                            default => { "pan: steady" }
+                        ],
                         gfx.point(380, 720),
                         18,
                         gfx.white()

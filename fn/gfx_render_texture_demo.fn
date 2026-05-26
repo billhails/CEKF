@@ -3,19 +3,28 @@
 // Run: ./bin/fn --include=fn fn/gfx_render_texture_demo.fn
 let
     link "graphics.fn" as gfx;
+    import gfx macro key_held_action;
+    import gfx macro key_pressed_action;
 
     fn loop(tex, rt, angle, offset) {
         if (gfx.should_close()) { true }
-        else if (gfx.key_pressed(gfx.key_escape())) { true }
+        else if (key_pressed_action[
+            escape => { true };
+            default => { false }
+        ]) { true }
         else {
             let
               // Keep a base rotation and make left/right very obvious.
-              turn = if (gfx.key_held(gfx.arrow_left())) { 0 - 10 }
-                  else if (gfx.key_held(gfx.arrow_right())) { 14 }
-                  else { 2 };
-                step = if (gfx.key_held(gfx.arrow_left())) { 0 - 6 }
-                       else if (gfx.key_held(gfx.arrow_right())) { 6 }
-                       else { 0 };
+              turn = key_held_action[
+                  left => { 0 - 10 };
+                  right => { 14 };
+                  default => { 2 }
+              ];
+                step = key_held_action[
+                       left => { 0 - 6 };
+                       right => { 6 };
+                       default => { 0 }
+                ];
                 nextAngle = angle + turn;
                 nextOffset = offset + step;
             in

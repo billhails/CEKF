@@ -5,6 +5,7 @@
 let
     link "graphics.fn" as gfx;
     link "listutils.fn" as list;
+    import gfx macro key_pressed_action;
 
     fn font_count() { 3 }
 
@@ -47,15 +48,12 @@ let
         if (gfx.should_close()) { -1 }
         else {
             let
-                next_index = if (gfx.key_pressed(gfx.key_escape())) {
-                    -1
-                } else if (gfx.key_pressed(gfx.arrow_left())) {
-                    wrap_font_index(index - 1)
-                } else if (gfx.key_pressed(gfx.arrow_right())) {
-                    wrap_font_index(index + 1)
-                } else {
-                    index
-                };
+                next_index = key_pressed_action[
+                    escape => { -1 };
+                    left => { wrap_font_index(index - 1) };
+                    right => { wrap_font_index(index + 1) };
+                    default => { index }
+                ];
                 label = "Hello from " @@ name;
                 size = 48;
                 title_pos = gfx.point(40, 30);

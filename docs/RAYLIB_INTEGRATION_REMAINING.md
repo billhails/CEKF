@@ -255,3 +255,37 @@ graphics regressions reduce breakage risk as API surface expands.
 - Skeletal animation pipeline.
 - Advanced post-processing chains (multi-pass bloom/SSR).
 - Scene graph/instancing framework.
+
+## Macro/Syntax helpers
+
+There are a lot of repeated patterns like
+
+```fn
+dz = if (gfx.key_held(gfx.key_w())) { 0 - speed }
+      else if (gfx.key_held(gfx.key_s())) { speed }
+      else { 0 };
+```
+
+that could become:
+
+```fn
+dz = gfx.key_held_action[w => { 0 - speed };
+                         s => { speed };
+                         default => { 0 }];
+```
+
+likewise for
+
+```fn
+_cursor_vis = if (gfx.key_pressed(gfx.key_h())) { gfx.hide_cursor() }
+              else if (gfx.key_pressed(gfx.key_j())) { gfx.show_cursor() }
+              else { true };
+```
+
+could become:
+
+```fn
+_cursor_vis = gfx.key_pressed_action[h => { gfx.hide_cursor() };
+                                     j => { gfx.show_cursor() };
+                                     default => { true }];
+```

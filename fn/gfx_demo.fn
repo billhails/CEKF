@@ -1,5 +1,7 @@
 let
     link "graphics.fn" as gfx;
+    import gfx macro key_held_action;
+    import gfx macro key_pressed_action;
 
     // Arrow keys move the player circle. Mouse cursor is tracked.
     // A line connects player to mouse. ESC or close quits.
@@ -15,19 +17,26 @@ let
 
     fn loop(px, py) {
         if (gfx.should_close()) { true }
-        else if (gfx.key_pressed(gfx.key_escape())) { true }
+        else if (key_pressed_action[
+            escape => { true };
+            default => { false }
+        ]) { true }
         else {
             let
                 speed = 3;
                 nx = clamp(
-                    if (gfx.key_held(gfx.arrow_right())) { px + speed }
-                    else if (gfx.key_held(gfx.arrow_left())) { px - speed }
-                    else { px },
+                    key_held_action[
+                        right => { px + speed };
+                        left => { px - speed };
+                        default => { px }
+                    ],
                     20, 780);
                 ny = clamp(
-                    if (gfx.key_held(gfx.arrow_down())) { py + speed }
-                    else if (gfx.key_held(gfx.arrow_up())) { py - speed }
-                    else { py },
+                    key_held_action[
+                        down => { py + speed };
+                        up => { py - speed };
+                        default => { py }
+                    ],
                     20, 580);
                 mx = gfx.mouse_x();
                 my = gfx.mouse_y();
