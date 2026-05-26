@@ -424,14 +424,14 @@ syntax keyHeldActionHead ::= "[" body: Syntax(keyHeldActionClauses) "]" {
     body
 };
 
-syntax keyHeldActionClauses ::= key: Syntax(keyHeldActionKeyExpr) "=" ">" body: Nest ";" rest: Syntax(keyHeldActionClauses) quote {
+syntax keyHeldActionClauses ::= key: Syntax(keyHeldActionKeyExpr) "=>" body: Nest ";" rest: Syntax(keyHeldActionClauses) quote {
     if (key_held(unquote(key))) {
         unquote(body)
     } else {
         unquote(rest)
     }
 }
-| "default" "=" ">" body: Nest {
+| "default" "=>" body: Nest {
     body
 };
 
@@ -439,14 +439,14 @@ syntax keyPressedActionHead ::= "[" body: Syntax(keyPressedActionClauses) "]" {
     body
 };
 
-syntax keyPressedActionClauses ::= key: Syntax(keyPressedActionKeyExpr) "=" ">" body: Nest ";" rest: Syntax(keyPressedActionClauses) quote {
+syntax keyPressedActionClauses ::= key: Syntax(keyPressedActionKeyExpr) "=>" body: Nest ";" rest: Syntax(keyPressedActionClauses) quote {
     if (key_pressed(unquote(key))) {
         unquote(body)
     } else {
         unquote(rest)
     }
 }
-| "default" "=" ">" body: Nest {
+| "default" "=>" body: Nest {
     body
 };
 
