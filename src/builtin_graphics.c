@@ -917,12 +917,23 @@ Value builtin_gfx_open(Vec *args) {
     }
     SCharVec *title = listToUtf8(args->entries[2]);
     int save = PROTECT(title);
+    SetConfigFlags(FLAG_WINDOW_HIDDEN);
     SetTraceLogLevel(LOG_ERROR);
     InitWindow(w, h, title->entries);
     UNPROTECT(save);
     if (!IsWindowReady()) {
         return failMsg("gfx_open: failed to create window");
     }
+
+    int monitor = GetCurrentMonitor();
+    Vector2 monitorPos = GetMonitorPosition(monitor);
+    int monitorW = GetMonitorWidth(monitor);
+    int monitorH = GetMonitorHeight(monitor);
+    int posX = (int)monitorPos.x + (monitorW - w) / 2;
+    int posY = (int)monitorPos.y + (monitorH - h) / 2;
+    SetWindowPosition(posX, posY);
+    ClearWindowState(FLAG_WINDOW_HIDDEN);
+
     gfx_state.initialized = true;
     gfx_state.in_frame = false;
     gfx_state.in_texture_mode = false;
