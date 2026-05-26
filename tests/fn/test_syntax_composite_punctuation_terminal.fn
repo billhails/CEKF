@@ -1,0 +1,29 @@
+let
+    operator "_=>_" left 9 fn (lhs, rhs) { rhs };
+    macro choose_first: Expr chooseFirstHead;
+
+    syntax chooseFirstHead ::= "[" body: Syntax(chooseFirstClauses) "]" {
+        body
+    };
+
+    syntax chooseFirstClauses ::= "on" "=>" value: Expr ";" rest: Syntax(chooseFirstClauses) {
+        value
+    }
+    | "default" "=>" value: Expr {
+        value
+    };
+in
+    assert(11 == choose_first[
+        on => 11;
+        default => 22
+    ]);
+    assert(33 == choose_first[
+        on = > 33;
+        default => 44
+    ]);
+    assert(55 == choose_first[
+        default => 55
+    ]);
+    assert(66 == choose_first[
+        default = > 66
+    ])

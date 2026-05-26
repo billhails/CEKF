@@ -23,6 +23,9 @@
 #include "pratt_scanner.h"
 #include "syntax_template.h"
 
+#include <ctype.h>
+#include <string.h>
+
 static int sNextDeclarationId = 1;
 
 int prattNextDeclarationId(void) { return sNextDeclarationId++; }
@@ -390,6 +393,84 @@ static void restoreSyntaxLexerCheckpoint(PrattParser *parser,
     parser->panicMode = checkpoint->panicMode;
 }
 
+static bool isAsciiPunctuationSymbolName(const char *name) {
+    if (name == NULL || name[0] == '\0') {
+        return false;
+    }
+
+    for (const unsigned char *cursor = (const unsigned char *)name;
+         *cursor != '\0'; ++cursor) {
+        if (*cursor > 0x7f || isalnum((int)*cursor) || isspace((int)*cursor)) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+static bool stringStartsWith(const char *text, const char *prefix) {
+    while (*prefix != '\0') {
+        if (*text == '\0' || *text != *prefix) {
+            return false;
+        }
+        ++text;
+        ++prefix;
+    }
+
+    return true;
+}
+
+static bool consumeQuotedTerminalPunctuationFallback(PrattParser *parser,
+                                                     HashSymbol *expected) {
+    if (expected == NULL || expected->name == NULL ||
+        expected->name[1] == '\0' ||
+        !isAsciiPunctuationSymbolName(expected->name)) {
+        return false;
+    }
+
+    SyntaxLexerCheckpoint checkpoint = captureSyntaxLexerCheckpoint(parser);
+    int save = STARTPROTECT();
+    if (checkpoint.bufList != NULL) {
+        PROTECT(checkpoint.bufList);
+    }
+    if (checkpoint.queuedTokens != NULL) {
+        PROTECT(checkpoint.queuedTokens);
+    }
+    if (checkpoint.snapshots != NULL) {
+        PROTECT(checkpoint.snapshots);
+    }
+
+    const char *remaining = expected->name;
+    while (*remaining != '\0') {
+        PrattToken *token = peek(parser);
+        HashSymbol *actual = prattTokenTypeOrAtom(token);
+
+        if (actual == NULL || actual->name == NULL ||
+            !isAsciiPunctuationSymbolName(actual->name) ||
+            !stringStartsWith(remaining, actual->name)) {
+            restoreSyntaxLexerCheckpoint(parser, &checkpoint);
+            UNPROTECT(save);
+            return false;
+        }
+
+        next(parser);
+        remaining += strlen(actual->name);
+    }
+
+    UNPROTECT(save);
+    return true;
+}
+
+static bool matchQuotedTerminal(PrattParser *parser, HashSymbol *expected) {
+    PrattToken *token = peek(parser);
+    if (prattIsTokenTypeOrAtom(token, expected)) {
+        next(parser);
+        return true;
+    }
+
+    return consumeQuotedTerminalPunctuationFallback(parser, expected);
+}
+
 static AstExpression *lookupSyntaxBindingCopy(SyntaxExprBindings *bindings,
                                               HashSymbol *name) {
     if (bindings == NULL) {
@@ -555,7 +636,7 @@ static AstExpression *expandSyntaxAlternative(
             HashSymbol *expected =
                 getPrattMacroPatternItem_QuotedTerminal(item);
             PrattToken *nextTok = peek(parser);
-            if (!prattIsTokenTypeOrAtom(nextTok, expected)) {
+            if (!matchQuotedTerminal(parser, expected)) {
                 if (consumedPattern) {
                     parserErrorAt(TOKPI(nextTok), parser,
                                   "expected syntax token '%s'", expected->name);
@@ -564,7 +645,6 @@ static AstExpression *expandSyntaxAlternative(
                 return consumedPattern ? prattErrorExpression(TOKPI(nextTok))
                                        : NULL;
             }
-            next(parser);
             consumedPattern = true;
         } else {
             PrattMacroHole *hole = getPrattMacroPatternItem_TypedHole(item);
@@ -751,7 +831,7 @@ static AstDefinition *expandSyntaxAlternativeDef(
             HashSymbol *expected =
                 getPrattMacroPatternItem_QuotedTerminal(item);
             PrattToken *nextTok = peek(parser);
-            if (!prattIsTokenTypeOrAtom(nextTok, expected)) {
+            if (!matchQuotedTerminal(parser, expected)) {
                 if (consumedPattern) {
                     parserErrorAt(TOKPI(nextTok), parser,
                                   "expected syntax token '%s'", expected->name);
@@ -760,7 +840,6 @@ static AstDefinition *expandSyntaxAlternativeDef(
                 return consumedPattern ? newAstDefinition_Blank(TOKPI(nextTok))
                                        : NULL;
             }
-            next(parser);
             consumedPattern = true;
         } else {
             PrattMacroHole *hole = getPrattMacroPatternItem_TypedHole(item);
