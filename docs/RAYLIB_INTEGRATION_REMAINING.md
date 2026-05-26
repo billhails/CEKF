@@ -6,6 +6,18 @@ functional shader/model pipeline milestone.
 It is intentionally scoped as a planning scaffold: each section is detailed
 enough to be expanded into a full implementation plan when work starts.
 
+## Status Update (2026-05-26)
+
+- Sections 1-4 are now functionally delivered in code and demos.
+- Section 5 started: postprocess shader now includes Reinhard tonemap and gamma
+  correction controls (`uExposure`, `uGamma`) and the postprocess demo/smoke
+  path uploads those uniforms.
+- Section 6 started: shader uniform location lookups now use an implicit cache
+  tied to shader lifetime in `src/builtin_graphics.c`.
+- Section 7 started: graphics smoke coverage is now integrated into normal
+  `test-a` discovery via new `tests/fn/test_gfx_*` files that gate execution
+  through `gfx.enabled()` and pass silently when graphics is unavailable.
+
 ## Current Baseline
 
 Delivered and working now:

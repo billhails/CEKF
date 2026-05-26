@@ -3,7 +3,7 @@ list-cores test indent indent-src indent-generated docs \
 install-sqlite3 install-raylib coverage extracov view-coverage \
 coverage-target test-a test-fail test-sh test-c test-unit test-b test-big-c help \
 establish-baseline test-refactoring update-baseline clean-baseline \
-scratch bench-regex-cache
+scratch bench-regex-cache rebuild-default rebuild-raylib
 
 # pass on the command line, i.e. `make test MODE=prod`
 #
@@ -392,6 +392,14 @@ clean: deps
 	rm -rf $(BINDIR) $(OBJDIR) callgrind.out.* $(GENDIR) $(TEST_TARGETS) .typedefs $(SRCDIR)/*~ .generated gmon.out *.fnc core.* coverage_html coverage_report.txt gcov_output *.gcda *.gcno coverage.info coverage_filtered.info test_output.log $(TEST_FN_CFILES) $(TEST_FN_OFILES) $(TEST_FN_BINARIES) $(TEST_FN_SFILES) $(TMPDIR)
 	$(MAKE) -C scratch clean
 
+rebuild-default:
+	$(MAKE) clean
+	$(MAKE) all
+
+rebuild-raylib:
+	$(MAKE) clean
+	$(MAKE) ENABLE_RAYLIB=1 all
+
 deps:
 	rm -rf $(DEPDIR)
 
@@ -441,6 +449,13 @@ list-cores:
 
 help:
 	@echo "CEKF Make targets"
+	@echo ""
+	@echo "Build toggles"
+	@echo "  make rebuild-default"
+	@echo "      Clean then rebuild without raylib support."
+	@echo ""
+	@echo "  make rebuild-raylib"
+	@echo "      Clean then rebuild with ENABLE_RAYLIB=1."
 	@echo ""
 	@echo "Coverage"
 	@echo "  make coverage"

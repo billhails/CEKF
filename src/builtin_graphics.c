@@ -323,6 +323,19 @@ typedef struct ShaderNode {
 
 static ShaderNode *shaderRegistry = NULL;
 
+#ifdef ENABLE_RAYLIB
+typedef struct ShaderUniformLocationNode {
+    HashSymbol *uniform;
+    int location;
+    struct ShaderUniformLocationNode *next;
+} ShaderUniformLocationNode;
+
+typedef struct ShaderData {
+    Shader shader;
+    ShaderUniformLocationNode *uniformLocations;
+} ShaderData;
+#endif
+
 typedef struct SoundNode {
     Opaque *wrapper;
     struct SoundNode *next;
@@ -780,9 +793,15 @@ static void renderTextureRegistryDrain(void) {
 static void opaque_gfx_shader_unload(void *data) {
     if (data == NULL)
         return;
-    Shader *shader = (Shader *)data;
-    UnloadShader(*shader);
-    FREE_ARRAY(Shader, shader, 1);
+    ShaderData *shaderData = (ShaderData *)data;
+    ShaderUniformLocationNode *node = shaderData->uniformLocations;
+    while (node != NULL) {
+        ShaderUniformLocationNode *next = node->next;
+        FREE_ARRAY(ShaderUniformLocationNode, node, 1);
+        node = next;
+    }
+    UnloadShader(shaderData->shader);
+    FREE_ARRAY(ShaderData, shaderData, 1);
 }
 
 static void shaderRegistryDrain(void) {
@@ -2158,9 +2177,11 @@ Value builtin_gfx_load_shader(Vec *args) {
         return failMsg("gfx_load_shader: failed to load shader");
     }
 
-    Shader *shader = NEW_ARRAY(Shader, 1);
-    *shader = loaded;
-    Opaque *wrapper = newOpaque(shader, opaque_gfx_shader_unload, NULL, NULL);
+    ShaderData *shaderData = NEW_ARRAY(ShaderData, 1);
+    shaderData->shader = loaded;
+    shaderData->uniformLocations = NULL;
+    Opaque *wrapper =
+        newOpaque(shaderData, opaque_gfx_shader_unload, NULL, NULL);
     int wSave = PROTECT(wrapper);
 
     ShaderNode *node = NEW_ARRAY(ShaderNode, 1);
@@ -2175,6 +2196,40 @@ Value builtin_gfx_load_shader(Vec *args) {
     return result;
 #endif
 }
+
+#ifdef ENABLE_RAYLIB
+static ShaderData *unwrapShaderData(Opaque *wrapper) {
+    if (wrapper == NULL || wrapper->data == NULL)
+        return NULL;
+    return (ShaderData *)wrapper->data;
+}
+
+static int lookupShaderUniformLocation(ShaderData *shaderData,
+                                       Value uniformNameValue) {
+    SCharVec *uniformName = listToUtf8(uniformNameValue);
+    int save = PROTECT(uniformName);
+    HashSymbol *uniformSymbol = newSymbol(uniformName->entries);
+
+    ShaderUniformLocationNode *cursor = shaderData->uniformLocations;
+    while (cursor != NULL) {
+        if (cursor->uniform == uniformSymbol) {
+            int cachedLocation = cursor->location;
+            UNPROTECT(save);
+            return cachedLocation;
+        }
+        cursor = cursor->next;
+    }
+
+    int location = GetShaderLocation(shaderData->shader, uniformName->entries);
+    ShaderUniformLocationNode *node = NEW_ARRAY(ShaderUniformLocationNode, 1);
+    node->uniform = uniformSymbol;
+    node->location = location;
+    node->next = shaderData->uniformLocations;
+    shaderData->uniformLocations = node;
+    UNPROTECT(save);
+    return location;
+}
+#endif
 
 Value builtin_gfx_unload_shader(Vec *args) {
 #ifndef ENABLE_RAYLIB
@@ -2201,10 +2256,10 @@ Value builtin_gfx_begin_shader_mode(Vec *args) {
     if (args->entries[0].type != VALUE_TYPE_OPAQUE)
         return value_Stdint(0);
     Opaque *wrapper = args->entries[0].val.opaque;
-    if (wrapper->data == NULL)
+    ShaderData *shaderData = unwrapShaderData(wrapper);
+    if (shaderData == NULL)
         return value_Stdint(0);
-    Shader *shader = (Shader *)wrapper->data;
-    BeginShaderMode(*shader);
+    BeginShaderMode(shaderData->shader);
     gfx_state.in_shader_mode = true;
     return value_Stdint(1);
 #endif
@@ -2233,17 +2288,14 @@ Value builtin_gfx_set_shader_int(Vec *args) {
     if (args->entries[0].type != VALUE_TYPE_OPAQUE)
         return value_Stdint(0);
     Opaque *wrapper = args->entries[0].val.opaque;
-    if (wrapper->data == NULL)
+    ShaderData *shaderData = unwrapShaderData(wrapper);
+    if (shaderData == NULL)
         return value_Stdint(0);
-    Shader *shader = (Shader *)wrapper->data;
-    SCharVec *uniformName = listToUtf8(args->entries[1]);
-    int save = PROTECT(uniformName);
-    int location = GetShaderLocation(*shader, uniformName->entries);
-    UNPROTECT(save);
+    int location = lookupShaderUniformLocation(shaderData, args->entries[1]);
     if (location < 0)
         return value_Stdint(0);
     int value = valueAsInt(args->entries[2]);
-    SetShaderValue(*shader, location, &value, SHADER_UNIFORM_INT);
+    SetShaderValue(shaderData->shader, location, &value, SHADER_UNIFORM_INT);
     return value_Stdint(1);
 #endif
 }
@@ -2262,26 +2314,23 @@ Value builtin_gfx_set_shader_sampler(Vec *args) {
 
     Opaque *shaderWrapper = args->entries[0].val.opaque;
     Opaque *textureWrapper = args->entries[2].val.opaque;
-    if (shaderWrapper->data == NULL || textureWrapper->data == NULL)
+    ShaderData *shaderData = unwrapShaderData(shaderWrapper);
+    if (shaderData == NULL || textureWrapper->data == NULL)
         return value_Stdint(0);
 
     int unit = valueAsInt(args->entries[3]);
     if (unit < 0 || unit > 7)
         return value_Stdint(0);
 
-    Shader *shader = (Shader *)shaderWrapper->data;
     Texture2D *texture = (Texture2D *)textureWrapper->data;
-    SCharVec *uniformName = listToUtf8(args->entries[1]);
-    int save = PROTECT(uniformName);
-    int location = GetShaderLocation(*shader, uniformName->entries);
-    UNPROTECT(save);
+    int location = lookupShaderUniformLocation(shaderData, args->entries[1]);
     if (location < 0)
         return value_Stdint(0);
 
     // Keep unit validated for API compatibility; Raylib manages slots
     // internally.
     (void)unit;
-    SetShaderValueTexture(*shader, location, *texture);
+    SetShaderValueTexture(shaderData->shader, location, *texture);
     return value_Stdint(1);
 #endif
 }
@@ -2300,7 +2349,8 @@ Value builtin_gfx_set_shader_render_texture_sampler(Vec *args) {
 
     Opaque *shaderWrapper = args->entries[0].val.opaque;
     Opaque *renderTextureWrapper = args->entries[2].val.opaque;
-    if (shaderWrapper->data == NULL || renderTextureWrapper->data == NULL)
+    ShaderData *shaderData = unwrapShaderData(shaderWrapper);
+    if (shaderData == NULL || renderTextureWrapper->data == NULL)
         return value_Stdint(0);
 
     int unit = valueAsInt(args->entries[3]);
@@ -2308,16 +2358,12 @@ Value builtin_gfx_set_shader_render_texture_sampler(Vec *args) {
         return value_Stdint(0);
 
     bool useDepthAttachment = valueAsInt(args->entries[4]) != 0;
-    Shader *shader = (Shader *)shaderWrapper->data;
     RenderTexture2D *rt = (RenderTexture2D *)renderTextureWrapper->data;
     unsigned int texId = useDepthAttachment ? rt->depth.id : rt->texture.id;
     if (texId == 0)
         return value_Stdint(0);
 
-    SCharVec *uniformName = listToUtf8(args->entries[1]);
-    int save = PROTECT(uniformName);
-    int location = GetShaderLocation(*shader, uniformName->entries);
-    UNPROTECT(save);
+    int location = lookupShaderUniformLocation(shaderData, args->entries[1]);
     if (location < 0)
         return value_Stdint(0);
 
@@ -2325,7 +2371,7 @@ Value builtin_gfx_set_shader_render_texture_sampler(Vec *args) {
     // internally.
     (void)unit;
     Texture2D samplerTexture = useDepthAttachment ? rt->depth : rt->texture;
-    SetShaderValueTexture(*shader, location, samplerTexture);
+    SetShaderValueTexture(shaderData->shader, location, samplerTexture);
     return value_Stdint(1);
 #endif
 }
@@ -2340,17 +2386,14 @@ Value builtin_gfx_set_shader_float(Vec *args) {
     if (args->entries[0].type != VALUE_TYPE_OPAQUE)
         return value_Stdint(0);
     Opaque *wrapper = args->entries[0].val.opaque;
-    if (wrapper->data == NULL)
+    ShaderData *shaderData = unwrapShaderData(wrapper);
+    if (shaderData == NULL)
         return value_Stdint(0);
-    Shader *shader = (Shader *)wrapper->data;
-    SCharVec *uniformName = listToUtf8(args->entries[1]);
-    int save = PROTECT(uniformName);
-    int location = GetShaderLocation(*shader, uniformName->entries);
-    UNPROTECT(save);
+    int location = lookupShaderUniformLocation(shaderData, args->entries[1]);
     if (location < 0)
         return value_Stdint(0);
     float value = valueAsFloat(args->entries[2]);
-    SetShaderValue(*shader, location, &value, SHADER_UNIFORM_FLOAT);
+    SetShaderValue(shaderData->shader, location, &value, SHADER_UNIFORM_FLOAT);
     return value_Stdint(1);
 #endif
 }
@@ -2365,18 +2408,15 @@ Value builtin_gfx_set_shader_vec2(Vec *args) {
     if (args->entries[0].type != VALUE_TYPE_OPAQUE)
         return value_Stdint(0);
     Opaque *wrapper = args->entries[0].val.opaque;
-    if (wrapper->data == NULL)
+    ShaderData *shaderData = unwrapShaderData(wrapper);
+    if (shaderData == NULL)
         return value_Stdint(0);
-    Shader *shader = (Shader *)wrapper->data;
-    SCharVec *uniformName = listToUtf8(args->entries[1]);
-    int save = PROTECT(uniformName);
-    int location = GetShaderLocation(*shader, uniformName->entries);
-    UNPROTECT(save);
+    int location = lookupShaderUniformLocation(shaderData, args->entries[1]);
     if (location < 0)
         return value_Stdint(0);
     float values[2] = {valueAsFloat(args->entries[2]),
                        valueAsFloat(args->entries[3])};
-    SetShaderValue(*shader, location, values, SHADER_UNIFORM_VEC2);
+    SetShaderValue(shaderData->shader, location, values, SHADER_UNIFORM_VEC2);
     return value_Stdint(1);
 #endif
 }
@@ -2391,19 +2431,16 @@ Value builtin_gfx_set_shader_vec3(Vec *args) {
     if (args->entries[0].type != VALUE_TYPE_OPAQUE)
         return value_Stdint(0);
     Opaque *wrapper = args->entries[0].val.opaque;
-    if (wrapper->data == NULL)
+    ShaderData *shaderData = unwrapShaderData(wrapper);
+    if (shaderData == NULL)
         return value_Stdint(0);
-    Shader *shader = (Shader *)wrapper->data;
-    SCharVec *uniformName = listToUtf8(args->entries[1]);
-    int save = PROTECT(uniformName);
-    int location = GetShaderLocation(*shader, uniformName->entries);
-    UNPROTECT(save);
+    int location = lookupShaderUniformLocation(shaderData, args->entries[1]);
     if (location < 0)
         return value_Stdint(0);
     float values[3] = {valueAsFloat(args->entries[2]),
                        valueAsFloat(args->entries[3]),
                        valueAsFloat(args->entries[4])};
-    SetShaderValue(*shader, location, values, SHADER_UNIFORM_VEC3);
+    SetShaderValue(shaderData->shader, location, values, SHADER_UNIFORM_VEC3);
     return value_Stdint(1);
 #endif
 }
@@ -2418,19 +2455,16 @@ Value builtin_gfx_set_shader_vec4(Vec *args) {
     if (args->entries[0].type != VALUE_TYPE_OPAQUE)
         return value_Stdint(0);
     Opaque *wrapper = args->entries[0].val.opaque;
-    if (wrapper->data == NULL)
+    ShaderData *shaderData = unwrapShaderData(wrapper);
+    if (shaderData == NULL)
         return value_Stdint(0);
-    Shader *shader = (Shader *)wrapper->data;
-    SCharVec *uniformName = listToUtf8(args->entries[1]);
-    int save = PROTECT(uniformName);
-    int location = GetShaderLocation(*shader, uniformName->entries);
-    UNPROTECT(save);
+    int location = lookupShaderUniformLocation(shaderData, args->entries[1]);
     if (location < 0)
         return value_Stdint(0);
     float values[4] = {
         valueAsFloat(args->entries[2]), valueAsFloat(args->entries[3]),
         valueAsFloat(args->entries[4]), valueAsFloat(args->entries[5])};
-    SetShaderValue(*shader, location, values, SHADER_UNIFORM_VEC4);
+    SetShaderValue(shaderData->shader, location, values, SHADER_UNIFORM_VEC4);
     return value_Stdint(1);
 #endif
 }
@@ -2445,13 +2479,10 @@ Value builtin_gfx_set_shader_mat4(Vec *args) {
     if (args->entries[0].type != VALUE_TYPE_OPAQUE)
         return value_Stdint(0);
     Opaque *wrapper = args->entries[0].val.opaque;
-    if (wrapper->data == NULL)
+    ShaderData *shaderData = unwrapShaderData(wrapper);
+    if (shaderData == NULL)
         return value_Stdint(0);
-    Shader *shader = (Shader *)wrapper->data;
-    SCharVec *uniformName = listToUtf8(args->entries[1]);
-    int save = PROTECT(uniformName);
-    int location = GetShaderLocation(*shader, uniformName->entries);
-    UNPROTECT(save);
+    int location = lookupShaderUniformLocation(shaderData, args->entries[1]);
     if (location < 0)
         return value_Stdint(0);
 
@@ -2491,7 +2522,7 @@ Value builtin_gfx_set_shader_mat4(Vec *args) {
     matrix.m11 = m32;
     matrix.m15 = m33;
 
-    SetShaderValueMatrix(*shader, location, matrix);
+    SetShaderValueMatrix(shaderData->shader, location, matrix);
     return value_Stdint(1);
 #endif
 }
@@ -2509,14 +2540,10 @@ builtin_gfx_set_shader_light_vp_ortho_impl(Vec *args, bool useViewProjection) {
         return value_Stdint(0);
 
     Opaque *wrapper = args->entries[0].val.opaque;
-    if (wrapper->data == NULL)
+    ShaderData *shaderData = unwrapShaderData(wrapper);
+    if (shaderData == NULL)
         return value_Stdint(0);
-    Shader *shader = (Shader *)wrapper->data;
-
-    SCharVec *uniformName = listToUtf8(args->entries[1]);
-    int save = PROTECT(uniformName);
-    int location = GetShaderLocation(*shader, uniformName->entries);
-    UNPROTECT(save);
+    int location = lookupShaderUniformLocation(shaderData, args->entries[1]);
     if (location < 0)
         return value_Stdint(0);
 
@@ -2547,7 +2574,7 @@ builtin_gfx_set_shader_light_vp_ortho_impl(Vec *args, bool useViewProjection) {
     Matrix lightVp = useViewProjection ? MatrixMultiply(view, projection)
                                        : MatrixMultiply(projection, view);
 
-    SetShaderValueMatrix(*shader, location, lightVp);
+    SetShaderValueMatrix(shaderData->shader, location, lightVp);
     return value_Stdint(1);
 #endif
 }
@@ -2971,16 +2998,16 @@ Value builtin_gfx_set_model_shader(Vec *args) {
 
     Opaque *modelWrapper = args->entries[0].val.opaque;
     Opaque *shaderWrapper = args->entries[1].val.opaque;
-    if (modelWrapper->data == NULL || shaderWrapper->data == NULL)
+    ShaderData *shaderData = unwrapShaderData(shaderWrapper);
+    if (modelWrapper->data == NULL || shaderData == NULL)
         return value_Stdint(0);
 
     Model *model = (Model *)modelWrapper->data;
-    Shader *shader = (Shader *)shaderWrapper->data;
     if (model->materials == NULL || model->materialCount <= 0)
         return value_Stdint(0);
 
     for (int i = 0; i < model->materialCount; i++) {
-        model->materials[i].shader = *shader;
+        model->materials[i].shader = shaderData->shader;
     }
     return value_Stdint(1);
 #endif
@@ -3015,7 +3042,8 @@ Value builtin_gfx_set_material_shader(Vec *args) {
 
     Opaque *modelWrapper = args->entries[0].val.opaque;
     Opaque *shaderWrapper = args->entries[2].val.opaque;
-    if (modelWrapper->data == NULL || shaderWrapper->data == NULL)
+    ShaderData *shaderData = unwrapShaderData(shaderWrapper);
+    if (modelWrapper->data == NULL || shaderData == NULL)
         return value_Stdint(0);
 
     Model *model = (Model *)modelWrapper->data;
@@ -3025,8 +3053,7 @@ Value builtin_gfx_set_material_shader(Vec *args) {
     if (materialIndex < 0 || materialIndex >= model->materialCount)
         return value_Stdint(0);
 
-    Shader *shader = (Shader *)shaderWrapper->data;
-    model->materials[materialIndex].shader = *shader;
+    model->materials[materialIndex].shader = shaderData->shader;
     return value_Stdint(1);
 #endif
 }

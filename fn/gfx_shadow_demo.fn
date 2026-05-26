@@ -218,7 +218,6 @@ let
                     gfx.draw_text_at("Shadow Mapping Demo", gfx.point(20, 20), 30, gfx.white());
                     gfx.draw_text_at("W/S/A/D + Up/Down move camera", gfx.point(20, 58), 20, gfx.rgb(210, 230, 255));
                     gfx.draw_text_at("I/K/J/L move light", gfx.point(20, 86), 20, gfx.rgb(210, 230, 255));
-                    gfx.draw_text_at("shadow-map preview: removed", gfx.point(20, 114), 20, gfx.rgb(210, 230, 255));
                     gfx.draw_text_at("N cycle: 0=lit 1=mask 2=projDepth 3=sampleDepth 4=sampleReason 5=projUv", gfx.point(20, 142), 20, gfx.rgb(210, 230, 255));
                     gfx.draw_text_at("shadow-map flip-y: locked OFF (b0)", gfx.point(20, 170), 20, gfx.rgb(210, 230, 255));
                     gfx.draw_text_at("light VP: view * projection (canonical)", gfx.point(20, 198), 20, gfx.rgb(255, 220, 170));

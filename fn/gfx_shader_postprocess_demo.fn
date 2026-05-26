@@ -25,6 +25,8 @@ let
                 amt = nextAmount / 100;
                 tx = (nextAmount - 50) / 500;
                 tint = gfx.vec4(1, 0.6 + amt / 3, 1 - amt / 2, 1);
+                exposure = 0.85 + (amt * 0.7);
+                gamma = 2.2;
             in
             {
                 // Pass 1: draw scene into render texture.
@@ -52,6 +54,8 @@ let
                 // Update shader uniforms before compositing.
                 assert(gfx.set_shader_float(shader, "uAmount", amt));
                 assert(gfx.set_shader_vec4(shader, "uTint4", tint));
+                assert(gfx.set_shader_float(shader, "uExposure", exposure));
+                assert(gfx.set_shader_float(shader, "uGamma", gamma));
                 assert(gfx.set_shader_mat4(
                     shader,
                     "uPostMatrix",
@@ -72,8 +76,8 @@ let
                     });
 
                     assert(gfx.draw_render_texture_at(rt, gfx.point(520, 140), gfx.white()));
-                    gfx.draw_text_at("uAmount + uTint4 + uPostMatrix", gfx.point(60, 510), 18, gfx.rgb(170, 190, 220));
-                    gfx.draw_text_at("matrix translates shaded quad slightly", gfx.point(60, 534), 18, gfx.rgb(170, 190, 220))
+                    gfx.draw_text_at("uAmount + uTint4 + uExposure + uGamma", gfx.point(60, 510), 18, gfx.rgb(170, 190, 220));
+                    gfx.draw_text_at("Reinhard tonemap + gamma correction", gfx.point(60, 534), 18, gfx.rgb(170, 190, 220))
                 });
 
                 loop(tex, rt, shader, nextAngle, nextAmount, nextStep)

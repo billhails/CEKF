@@ -15,6 +15,8 @@ in
 
                     assert(gfx.set_shader_float(shader, "uAmount", 0.35));
                     assert(gfx.set_shader_vec4(shader, "uTint4", gfx.vec4(1, 0.8, 0.6, 1)));
+                    assert(gfx.set_shader_float(shader, "uExposure", 1.0));
+                    assert(gfx.set_shader_float(shader, "uGamma", 2.2));
                     assert(gfx.set_shader_mat4(
                         shader,
                         "uPostMatrix",
