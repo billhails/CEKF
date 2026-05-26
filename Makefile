@@ -2,7 +2,7 @@
 list-cores test indent indent-src indent-generated docs \
 install-sqlite3 install-raylib coverage extracov view-coverage \
 coverage-target test-a test-fail test-sh test-c test-unit test-b test-big-c help \
-establish-baseline test-refactoring update-baseline clean-baseline \
+test-gfx test-gfx-stress establish-baseline test-refactoring update-baseline clean-baseline \
 scratch bench-regex-cache rebuild-default rebuild-raylib
 
 # pass on the command line, i.e. `make test MODE=prod`
@@ -348,6 +348,15 @@ test-b: all
 	@for t in $(TEST_FN_FILES) ; do set -x; $(TARGET) $(TARGET_ARGS) --target-b $$t || exit 1 ; done
 	@echo All B-code tests pass
 
+test-gfx: all
+	@for t in $(TSTDIR)/fn/test_gfx_*smoke.fn ; do echo '***' $$t '***' ; ./$(TARGET) --include=fn --assertions-accumulate $$t || exit 1 ; done
+	@echo "All gfx smoke tests passed."
+
+test-gfx-stress: all
+	@echo "Running targeted gfx stress checks with --stress-gc (can be very slow on larger files)."
+	@for t in $(TSTDIR)/fn/test_gfx_shader_reload_smoke.fn $(TSTDIR)/fn/test_gfx_resource_churn_smoke.fn ; do echo '***' $$t '***' ; ./$(TARGET) --include=fn --assertions-accumulate --stress-gc $$t || exit 1 ; done
+	@echo "All gfx stress smoke tests passed."
+
 $(TEST_TARGETS): $(TSTDIR)/%: $(OBJDIR)/%.o $(ALL_OBJ)
 	$(CC) -o $@ $< $(ALL_OBJ) $(LIBS)
 
@@ -456,6 +465,14 @@ help:
 	@echo ""
 	@echo "  make rebuild-raylib"
 	@echo "      Clean then rebuild with ENABLE_RAYLIB=1."
+	@echo ""
+	@echo "Graphics checks"
+	@echo "  make test-gfx"
+	@echo "      Run all gated graphics smoke tests in tests/fn/test_gfx_*smoke.fn."
+	@echo ""
+	@echo "  make test-gfx-stress"
+	@echo "      Run targeted graphics smoke tests under --stress-gc."
+	@echo "      Diagnostic only: can take a very long time on larger files."
 	@echo ""
 	@echo "Coverage"
 	@echo "  make coverage"

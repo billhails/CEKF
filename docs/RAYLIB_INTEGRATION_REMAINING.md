@@ -12,11 +12,15 @@ enough to be expanded into a full implementation plan when work starts.
 - Section 5 started: postprocess shader now includes Reinhard tonemap and gamma
   correction controls (`uExposure`, `uGamma`) and the postprocess demo/smoke
   path uploads those uniforms.
-- Section 6 started: shader uniform location lookups now use an implicit cache
-  tied to shader lifetime in `src/builtin_graphics.c`.
-- Section 7 started: graphics smoke coverage is now integrated into normal
-  `test-a` discovery via new `tests/fn/test_gfx_*` files that gate execution
-  through `gfx.enabled()` and pass silently when graphics is unavailable.
+- Section 6 progressed: shader uniform location lookups use an implicit cache
+  tied to shader lifetime in `src/builtin_graphics.c`; a benchmark harness
+  (`fn/gfx_shader_cache_benchmark.fn`) and explicit unload/reload smoke test
+  (`tests/fn/test_gfx_shader_reload_smoke.fn`) are now in place.
+- Section 7 progressed: graphics smoke coverage is owned by
+  `tests/fn/test_gfx_*` files that gate execution through `gfx.enabled()` and
+  pass silently when graphics is unavailable; duplicate `fn/gfx_*smoke.fn`
+  scripts have been retired and grouped Make targets now provide repeatable
+  graphics-only validation (`make test-gfx`, `make test-gfx-stress`).
 
 ## Current Baseline
 
@@ -32,13 +36,13 @@ Delivered and working now:
 
 ## 1. Material Control Surface
 
-### Why it is major
+### 1.1 Why is it major
 
 Model shading is currently mostly model-level. Realistic rendering needs
 per-material controls (especially for multi-material meshes and map-based
 shading).
 
-### Minimum deliverable
+### 1.2 Minimum deliverable
 
 - Query material count for a model.
 - Bind shader per material index (not only all materials at once).
@@ -46,60 +50,60 @@ shading).
 - Keep behavior safe when material index is out of range (boolean false, no
   crash).
 
-### Primary implementation surfaces
+### 1.3 Primary implementation surfaces
 
 - `src/builtin_graphics.c` builtin additions.
 - `fn/graphics.fn` ergonomic wrappers.
 - New focused demo showing two materials with different parameters.
 
-### Dependencies
+### 1.4 Dependencies
 
 - Existing model and shader ownership registries.
 - Existing texture and model wrappers.
 
-### Validation hooks
+### 1.5 Validation hooks
 
 - Targeted parse/run demo.
 - Stress-gc run over load/bind/unload loop.
 
 ## 2. Lighting Abstraction Layer
 
-### Why it is major
+### 2.1 Why is it major
 
 Lighting is currently hardcoded in demos. Reusable lights are needed to scale
 from one scene to multiple scenes and effects.
 
-### Minimum deliverable
+### 2.2 Minimum deliverable
 
 - FN-level light record conventions (position/direction, color, intensity,
   type).
 - Helper functions to upload one or more lights to shader uniform slots.
 - Optional debug draw for light positions/directions.
 
-### Primary implementation surfaces
+### 2.3 Primary implementation surfaces
 
 - `fn/graphics.fn` helper layer first.
 - `src/builtin_graphics.c` only if additional uniform upload primitives are
   required.
 
-### Dependencies
+### 2.4 Dependencies
 
 - Stable shader uniform API.
 - One lit scene to consume helpers.
 
-### Validation hooks
+### 2.5 Validation hooks
 
 - Demo with at least two moving lights.
 - Manual visual check for light contribution changes.
 
 ## 3. Texture/Sampler Binding API
 
-### Why it is major
+### 3.1 Why is it major
 
 Custom shaders commonly require explicit sampler bindings beyond default model
 texture usage.
 
-### Minimum deliverable
+### 3.2 Minimum deliverable
 
 - Bind texture to named sampler uniform and texture unit.
 - Support at least one custom map in a shader demo (for example normal map or
@@ -107,130 +111,133 @@ texture usage.
 - Define clear lifetime/ownership semantics: texture remains owned by existing
   texture wrapper; sampler binding is transient state.
 
-### Primary implementation surfaces
+### 3.3 Primary implementation surfaces
 
 - `src/builtin_graphics.c` new builtin for sampler binding.
 - `fn/graphics.fn` wrapper with simple call shape.
 
-### Dependencies
+### 3.4 Dependencies
 
 - Shader and texture wrappers.
 
-### Validation hooks
+### 3.5 Validation hooks
 
 - Parse-only and runtime sampler demo.
 - Stress-gc pass while rebinding textures each frame.
 
 ## 4. Shadow Mapping Slice
 
-### Why it is major
+### 4.1 Why is it major
 
 Shadows are the largest quality jump after basic direct lighting.
 
-### Minimum deliverable
+### 4.2 Minimum deliverable
 
 - Single directional-light shadow map pass.
 - Render depth to shadow texture in a first pass.
 - Sample shadow map in lit pass with basic bias to reduce acne.
 
-### Primary implementation surfaces
+### 4.3 Primary implementation surfaces
 
 - Shader assets for depth pass and lit pass.
 - Render texture workflow expansion in FN demo.
 - Potential builtin additions only if depth-texture specifics are blocked.
 
-### Dependencies
+### 4.4 Dependencies
 
 - Render-to-texture path.
 - Model shader assignment and matrix uniforms.
 
-### Validation hooks
+### 4.5 Validation hooks
 
 - Visual checks: moving camera and light while shadow remains coherent.
 - Performance sanity check with one model + ground plane.
 
 ## 5. Color Pipeline and Tonemapping
 
-### Why it is major
+### 5.1 Why is it major
 
 Without explicit color workflow, scenes can look flat or clipped even when
 lighting math is correct.
 
-### Minimum deliverable
+### 5.2 Minimum deliverable
 
 - Define and document working color assumptions (linear workflow expectations).
 - Add one tonemapping/gamma correction post-process pass.
 - Verify text/UI overlays still look correct with post-processing enabled.
 
-### Primary implementation surfaces
+### 5.3 Primary implementation surfaces
 
 - Post-process shader assets.
 - Existing render-texture composition demos.
 
-### Dependencies
+### 5.4 Dependencies
 
 - Shader + render texture pipeline.
 
-### Validation hooks
+### 5.5 Validation hooks
 
 - Side-by-side scene comparison (before/after tonemap).
 - Histogram-like debug readout is optional, not required for first pass.
 
 ## 6. Performance and State Management Pass
 
-### Why it is major
+### 6.1 Why is it major
 
 Current APIs prioritize correctness and simplicity. Before broadening features,
 state churn and per-frame overhead should be measured.
 
-### Minimum deliverable
+### 6.2 Minimum deliverable
 
 - Measure impact of repeated `GetShaderLocation` calls in hot paths.
 - Decide keep-as-is vs caching uniform locations.
 - If caching is adopted, keep cache ownership tied to shader lifetime.
 
-### Primary implementation surfaces
+### 6.3 Primary implementation surfaces
 
 - `src/builtin_graphics.c` shader uniform helper path.
 - Optional new opaque helper for cached uniform locations.
 
-### Dependencies
+### 6.4 Dependencies
 
 - Stable lit demo(s) with per-frame uniform updates.
 
-### Validation hooks
+### 6.5 Validation hooks
 
 - Benchmark loop comparing uncached and cached paths.
 - Confirm no stale-location crashes after shader unload/reload.
+- Runtime benchmark harness: `./bin/fn --include=fn fn/gfx_shader_cache_benchmark.fn`.
+- Reload regression smoke: `./bin/fn --include=fn tests/fn/test_gfx_shader_reload_smoke.fn`.
 
 ## 7. Graphics Regression Coverage
 
-### Why it is major
+### 7.1 Why is it major
 
 Most confidence currently comes from demos and broad test runs. Dedicated
 graphics regressions reduce breakage risk as API surface expands.
 
-### Minimum deliverable
+### 7.2 Minimum deliverable
 
-- Add a small set of non-interactive smoke scripts under `fn/` for:
+- Add a small set of non-interactive gated smoke scripts under `tests/fn/` for:
   - shader lifecycle,
   - model shader binding,
   - render-texture + shader composition,
   - stress-gc resource churn.
 - Wire those smoke scripts into a repeatable validation command sequence.
 
-### Primary implementation surfaces
+### 7.3 Primary implementation surfaces
 
-- `fn/gfx_*_smoke.fn` scripts.
-- Optional `Makefile` target for grouped graphics checks.
+- `tests/fn/test_gfx_*smoke.fn` scripts.
+- `Makefile` grouped graphics checks (`test-gfx`, `test-gfx-stress`).
 
-### Dependencies
+### 7.4 Dependencies
 
 - Existing demos and wrappers.
 
-### Validation hooks
+### 7.5 Validation hooks
 
-- Local run: parse-only + stress-gc + standard test suite.
+- Local run: `make test-gfx` + standard `make test`.
+- Targeted diagnostics only: `make test-gfx-stress` (can be very slow; avoid routine use).
 
 ## Suggested Execution Order
 
