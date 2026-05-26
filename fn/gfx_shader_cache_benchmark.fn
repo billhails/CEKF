@@ -1,0 +1,97 @@
+let
+    link "graphics.fn" as gfx;
+
+    fn seed_render_texture(rt) {
+        gfx.render_to_texture(rt, gfx.rgb(14, 18, 28), fn () {
+            assert(gfx.fill_rect_from(gfx.rect(10, 10, 96, 56), gfx.rgb(220, 170, 120)));
+            assert(gfx.fill_circle_at(gfx.point(110, 80), 24, gfx.rgb(120, 190, 255)));
+            gfx.draw_text_at("cache bench", gfx.point(12, 88), 16, gfx.rgb(220, 230, 245))
+        })
+    }
+
+    fn report(frames, uniform_calls, total_ms) {
+        let
+            avg_ms = if (frames <= 0) { 0 } else { total_ms / frames };
+            calls_per_ms = if (total_ms <= 0) { 0 } else { uniform_calls / total_ms };
+        in
+        {
+            puts("gfx shader cache benchmark\n");
+            puts("frames: ");
+            print(frames);
+            putc('\n');
+            puts("uniform calls: ");
+            print(uniform_calls);
+            putc('\n');
+            puts("total frame ms: ");
+            print(total_ms);
+            putc('\n');
+            puts("avg frame ms: ");
+            print(avg_ms);
+            putc('\n');
+            puts("uniform calls per ms: ");
+            print(calls_per_ms);
+            putc('\n');
+            true
+        }
+    }
+
+    fn loop_frames(remaining, shader, rt, total_ms, uniform_calls) {
+        if (remaining <= 0) {
+            report(180, uniform_calls, total_ms)
+        } else if (gfx.should_close()) {
+            report(180 - remaining, uniform_calls, total_ms)
+        } else {
+            let
+                amt = remaining / 180;
+                tx = (remaining - 90) / 900;
+                exposure = 0.85 + (amt * 0.7);
+                gamma = 2.2;
+                tint = gfx.vec4(1, 0.6 + amt / 3, 1 - amt / 2, 1);
+            in
+            {
+                assert(gfx.set_shader_float(shader, "uAmount", amt));
+                assert(gfx.set_shader_vec4(shader, "uTint4", tint));
+                assert(gfx.set_shader_float(shader, "uExposure", exposure));
+                assert(gfx.set_shader_float(shader, "uGamma", gamma));
+                assert(gfx.set_shader_mat4(
+                    shader,
+                    "uPostMatrix",
+                    1, 0, 0, tx,
+                    0, 1, 0, 0,
+                    0, 0, 1, 0,
+                    0, 0, 0, 1
+                ));
+
+                gfx.frame(gfx.rgb(20, 24, 36), fn () {
+                    gfx.with_shader_mode(shader, fn () {
+                        assert(gfx.draw_render_texture_at(rt, gfx.point(18, 18), gfx.white()))
+                    })
+                });
+
+                loop_frames(
+                    remaining - 1,
+                    shader,
+                    rt,
+                    total_ms + gfx.frame_time_ms(),
+                    uniform_calls + 5
+                )
+            }
+        }
+    }
+in
+    if (gfx.enabled()) {
+        {
+            gfx.with_window_size(gfx.extent(320, 220), "Gfx Shader Cache Benchmark", fn () {
+                gfx.with_shader("assets/shaders/postprocess.vs", "assets/shaders/postprocess.fs", fn (shader) {
+                    gfx.with_render_texture_size(gfx.extent(140, 110), fn (rt) {
+                        seed_render_texture(rt);
+                        loop_frames(180, shader, rt, 0, 0)
+                    })
+                })
+            });
+            true
+        }
+    } else {
+        puts("gfx disabled; benchmark skipped\n");
+        true
+    }

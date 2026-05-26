@@ -1,0 +1,74 @@
+let
+    link "graphics.fn" as gfx;
+    import gfx macro key_held_action;
+    import gfx macro key_pressed_action;
+
+    // Arrow keys move the player circle. Mouse cursor is tracked.
+    // A line connects player to mouse. ESC or close quits.
+    //
+    // Demonstrates: key_held, key_pressed, mouse_x/y, draw_line,
+    // fill_circle, draw_circle, draw_rect, frame_time_ms.
+
+    fn clamp(v, lo, hi) {
+        if (v < lo) { lo }
+        else if (v > hi) { hi }
+        else { v }
+    }
+
+    fn loop(px, py) {
+        if (gfx.should_close()) { true }
+        else if (key_pressed_action[
+            escape => { true };
+            default => { false }
+        ]) { true }
+        else {
+            let
+                speed = 3;
+                nx = clamp(
+                    key_held_action[
+                        right => { px + speed };
+                        left => { px - speed };
+                        default => { px }
+                    ],
+                    20, 780);
+                ny = clamp(
+                    key_held_action[
+                        down => { py + speed };
+                        up => { py - speed };
+                        default => { py }
+                    ],
+                    20, 580);
+                mx = gfx.mouse_x();
+                my = gfx.mouse_y();
+                player = gfx.point(nx, ny);
+                cursor = gfx.point(mx, my);
+                clicking = gfx.mouse_held(gfx.btn_left());
+            in
+                gfx.frame(gfx.black(), fn () {
+                    // play area border
+                    gfx.draw_rect_at(gfx.point(5, 5), gfx.extent(790, 590),
+                                     gfx.rgb(80, 80, 80));
+                    // line from player to mouse
+                    gfx.draw_line_between(player, cursor,
+                                          gfx.rgb(255, 200, 0));
+                    // player: filled circle, turns red when left mouse held
+                    if (clicking) {
+                        gfx.fill_circle_at(player, 20, gfx.red())
+                    } else {
+                        gfx.fill_circle_at(player, 20, gfx.green())
+                    };
+                    // mouse cursor: outline circle
+                    gfx.draw_circle_at(cursor, 14, gfx.rgb(100, 180, 255));
+                    // hud
+                    gfx.draw_text_at("Arrows: move   LMB: flash red   ESC: quit",
+                                     gfx.point(16, 566), 16,
+                                     gfx.rgb(160, 160, 160))
+                });
+                loop(nx, ny)
+        }
+    }
+in
+    gfx.with_window_size(gfx.extent(800, 600), "Input + Shapes Demo", fn () {
+        assert(gfx.set_target_fps(60));
+        loop(400, 300)
+    })

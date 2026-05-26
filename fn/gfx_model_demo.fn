@@ -1,0 +1,124 @@
+// Model demo: load and draw a 3D model, with primitive fallback when unavailable.
+//
+// Run: ./bin/fn --include=fn fn/gfx_model_demo.fn
+let
+    link "graphics.fn" as gfx;
+    import gfx macro key_held_action;
+    import gfx macro key_pressed_action;
+
+    model_path = "assets/TeaPot.obj";
+
+    fn move_speed() {
+        let dt = gfx.frame_time_ms();
+        in if (dt < 1) { 0.12 }
+           else { dt / 120 }
+    }
+
+    fn draw_fallback_scene() {
+        assert(gfx.draw_grid(20, 1));
+        assert(gfx.draw_cube(gfx.vec3(0, 1, 0), gfx.vec3(2, 2, 2), gfx.rgb(120, 180, 255)));
+        assert(gfx.draw_cube_wires(gfx.vec3(0, 1, 0), gfx.vec3(2, 2, 2), gfx.white()))
+    }
+
+    fn loop_without_model(pos, target) {
+        if (gfx.should_close()) { true }
+        else if (key_pressed_action[
+            escape => { true };
+            default => { false }
+        ]) { true }
+        else {
+            let
+                 speed = move_speed();
+                 dz = key_held_action[
+                     w => { 0 - speed };
+                     s => { speed };
+                     default => { 0 }
+                 ];
+                 dx = key_held_action[
+                     a => { 0 - speed };
+                     d => { speed };
+                     default => { 0 }
+                 ];
+                 dy = key_held_action[
+                     up => { speed };
+                     down => { 0 - speed };
+                     default => { 0 }
+                 ];
+                 pos2 = gfx.vec3(gfx.vec3_x(pos) + dx, gfx.vec3_y(pos) + dy, gfx.vec3_z(pos) + dz);
+                 target2 = gfx.vec3(gfx.vec3_x(target) + dx, gfx.vec3_y(target) + dy, gfx.vec3_z(target) + dz);
+            in
+                gfx.frame(gfx.rgb(24, 26, 34), fn () {
+                    gfx.with_camera3d(pos2, target2, gfx.vec3(0, 1, 0), 60, gfx.projection_perspective(), fn () {
+                        draw_fallback_scene()
+                    });
+                    gfx.draw_text_at("Model Demo (fallback)", gfx.point(20, 20), 30, gfx.white());
+                    gfx.draw_text_at("Model path unavailable: /home/bill/Downloads/model.obj", gfx.point(20, 60), 20, gfx.rgb(255, 190, 170));
+                    gfx.draw_text_at("W/S/A/D + Up/Down move camera", gfx.point(20, 92), 20, gfx.rgb(210, 230, 255));
+                    gfx.draw_text_at("Esc exit", gfx.point(20, 120), 20, gfx.rgb(210, 230, 255))
+                });
+            loop_without_model(pos2, target2)
+        }
+    }
+
+    fn loop_with_model(model, pos, target) {
+        if (gfx.should_close()) { true }
+        else if (key_pressed_action[
+            escape => { true };
+            default => { false }
+        ]) { true }
+        else {
+            let
+                 speed = move_speed();
+                 dz = key_held_action[
+                     w => { 0 - speed };
+                     s => { speed };
+                     default => { 0 }
+                 ];
+                 dx = key_held_action[
+                     a => { 0 - speed };
+                     d => { speed };
+                     default => { 0 }
+                 ];
+                 dy = key_held_action[
+                     up => { speed };
+                     down => { 0 - speed };
+                     default => { 0 }
+                 ];
+                 pos2 = gfx.vec3(gfx.vec3_x(pos) + dx, gfx.vec3_y(pos) + dy, gfx.vec3_z(pos) + dz);
+                 target2 = gfx.vec3(gfx.vec3_x(target) + dx, gfx.vec3_y(target) + dy, gfx.vec3_z(target) + dz);
+            in
+                gfx.frame(gfx.rgb(24, 26, 34), fn () {
+                    gfx.with_camera3d(pos2, target2, gfx.vec3(0, 1, 0), 60, gfx.projection_perspective(), fn () {
+                        assert(gfx.draw_grid(20, 1));
+                        assert(gfx.draw_plane(gfx.vec3(0, 0, 0), gfx.vec3(20, 0, 20), gfx.rgb(50, 70, 95)));
+                        assert(gfx.draw_model_at(model, gfx.vec3(0, 0, 0), 1, gfx.white()));
+                        assert(gfx.draw_model_wires_at(model, gfx.vec3(0, 0, 0), 1, gfx.rgb(30, 30, 30)))
+                    });
+                    gfx.draw_text_at("Model Demo", gfx.point(20, 20), 30, gfx.white());
+                    gfx.draw_text_at("W/S/A/D + Up/Down move camera", gfx.point(20, 60), 20, gfx.rgb(210, 230, 255));
+                    gfx.draw_text_at("Esc exit", gfx.point(20, 88), 20, gfx.rgb(210, 230, 255))
+                });
+            loop_with_model(model, pos2, target2)
+        }
+    }
+
+in
+    gfx.with_window_size(gfx.extent(960, 760), "Model Demo", fn () {
+        assert(gfx.set_target_fps(60));
+        switch (gfx.load_model(model_path)) {
+            (success(model)) {
+                {
+                let result = loop_with_model(model, gfx.vec3(6, 6, 10), gfx.vec3(0, 1, 0));
+                in
+                    gfx.unload_model(model);
+                    result
+                }
+            }
+            (failure(msg)) {
+                puts("model demo load warning: ");
+                puts(msg);
+                putc('\n');
+                loop_without_model(gfx.vec3(6, 6, 10), gfx.vec3(0, 1, 0))
+            }
+        }
+    })

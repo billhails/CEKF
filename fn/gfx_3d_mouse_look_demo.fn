@@ -1,0 +1,109 @@
+// 3D mouse-look demo: adjust camera target by mouse deltas.
+//
+// Run: ./bin/fn --include=fn fn/gfx_3d_mouse_look_demo.fn
+let
+    link "graphics.fn" as gfx;
+    import gfx macro key_held_action;
+    import gfx macro key_pressed_action;
+
+    fn move_speed() {
+        let dt = gfx.frame_time_ms();
+        in if (dt < 1) { 0.12 }
+           else { dt / 120 }
+    }
+
+    fn look_sensitivity() {
+        1 / 240
+    }
+
+    fn loop(pos, target, capture_mode) {
+        if (gfx.should_close()) { true }
+        else if (key_pressed_action[
+            escape => { true };
+            default => { false }
+        ]) { true }
+        else {
+            let
+                capture_after_mouse = if (gfx.mouse_pressed(gfx.btn_right())) { 1 }
+                                      else if (gfx.mouse_released(gfx.btn_right())) { 0 }
+                                      else { capture_mode };
+                capture2 = key_pressed_action[
+                    tab => { 1 - capture_after_mouse };
+                    default => { capture_after_mouse }
+                ];
+                _cursor_mode = if (capture2 == capture_mode) { true }
+                               else if (capture2 == 1) { gfx.disable_cursor() }
+                               else { gfx.enable_cursor() };
+                _cursor_vis = key_pressed_action[
+                    h => { gfx.hide_cursor() };
+                    j => { gfx.show_cursor() };
+                    default => { true }
+                ];
+                speed = move_speed();
+                wheel = gfx.mouse_wheel();
+                wheel_dz = 0 - (wheel * speed * 3);
+                dz = key_held_action[
+                    w => { 0 - speed };
+                    s => { speed };
+                    default => { 0 }
+                ];
+                dx = key_held_action[
+                    a => { 0 - speed };
+                    d => { speed };
+                    default => { 0 }
+                ];
+                dy = key_held_action[
+                    up => { speed };
+                    down => { 0 - speed };
+                    default => { 0 }
+                ];
+                mouse_dx = if (capture2 == 1) { gfx.mouse_delta_x() * look_sensitivity() } else { 0 };
+                mouse_dy = if (capture2 == 1) { gfx.mouse_delta_y() * look_sensitivity() } else { 0 };
+                pos2 = gfx.vec3(gfx.vec3_x(pos) + dx, gfx.vec3_y(pos) + dy, gfx.vec3_z(pos) + dz + wheel_dz);
+                target2 = gfx.vec3(
+                    gfx.vec3_x(target) + dx + mouse_dx,
+                    gfx.vec3_y(target) + dy + (0 - mouse_dy),
+                    gfx.vec3_z(target) + dz + wheel_dz
+                );
+            in
+                gfx.frame(gfx.rgb(24, 26, 34), fn () {
+                    gfx.with_camera3d(
+                        pos2,
+                        target2,
+                        gfx.vec3(0, 1, 0),
+                        60,
+                        gfx.projection_perspective(),
+                        fn () {
+                            assert(gfx.draw_grid(20, 1));
+                            assert(gfx.draw_line_3d(gfx.vec3(0, 0.05, 0), gfx.vec3(4, 0.05, 0), gfx.red()));
+                            assert(gfx.draw_line_3d(gfx.vec3(0, 0.05, 0), gfx.vec3(0, 4, 0), gfx.green()));
+                            assert(gfx.draw_line_3d(gfx.vec3(0, 0.05, 0), gfx.vec3(0, 0.05, 4), gfx.blue()));
+                            assert(gfx.draw_sphere(gfx.vec3(0, 0.3, 0), 0.2, gfx.white()));
+                            assert(gfx.draw_cube(gfx.vec3(0, 1, 0), gfx.vec3(2, 2, 2), gfx.rgb(120, 180, 255)));
+                            assert(gfx.draw_cube_wires(gfx.vec3(0, 1, 0), gfx.vec3(2, 2, 2), gfx.white()));
+                            assert(gfx.draw_cube(gfx.vec3(3, 0.5, -2), gfx.vec3(1, 1, 1), gfx.rgb(255, 170, 120)));
+                            assert(gfx.draw_sphere(gfx.vec3(-3, 1, -2), 1, gfx.rgb(180, 240, 150)))
+                        }
+                    );
+                    gfx.draw_text_at("3D Mouse-Look Demo", gfx.point(20, 20), 30, gfx.white());
+                    gfx.draw_text_at("RMB hold or Tab toggle mouse capture", gfx.point(20, 60), 20, gfx.rgb(210, 230, 255));
+                    gfx.draw_text_at("Wheel zooms, W/S/A/D + Up/Down move", gfx.point(20, 88), 20, gfx.rgb(210, 230, 255));
+                    gfx.draw_text_at("H hide cursor, J show cursor, Esc exit", gfx.point(20, 116), 20, gfx.rgb(210, 230, 255))
+                });
+            loop(pos2, target2, capture2)
+        }
+    }
+
+in
+    gfx.with_window_size(gfx.extent(960, 760), "3D Mouse-Look Demo", fn () {
+        assert(gfx.set_target_fps(60));
+        assert(gfx.enable_cursor());
+        assert(gfx.show_cursor());
+        {
+        let done = loop(gfx.vec3(6, 6, 10), gfx.vec3(0, 1, 0), 0);
+        in
+            assert(gfx.enable_cursor());
+            assert(gfx.show_cursor());
+            done
+        }
+    })

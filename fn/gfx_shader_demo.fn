@@ -1,0 +1,58 @@
+// Shader demo: tint texture and primitives using shader uniforms.
+//
+// Run: ./bin/fn --include=fn fn/gfx_shader_demo.fn
+let
+    link "graphics.fn" as gfx;
+    import gfx macro key_pressed_action;
+
+    fn loop(shader, tex, amount, dir) {
+        if (gfx.should_close()) { true }
+        else if (key_pressed_action[
+            escape => { true };
+            default => { false }
+        ]) { true }
+        else {
+            let
+                nextAmount = if (dir > 0) {
+                    if (amount >= 100) { 100 } else { amount + 1 }
+                } else {
+                    if (amount <= 0) { 0 } else { amount - 1 }
+                };
+                nextDir = if (nextAmount >= 100) { 0 - 1 }
+                    else if (nextAmount <= 0) { 1 }
+                    else { dir };
+                amountFloat = nextAmount / 100;
+                tint = gfx.vec3(1, amountFloat, (100 - nextAmount) / 100);
+            in
+            {
+                assert(gfx.set_shader_float(shader, "uAmount", amountFloat));
+                assert(gfx.set_shader_vec3(shader, "uTint", tint));
+
+                gfx.frame(gfx.rgb(20, 24, 34), fn () {
+                    gfx.draw_text_at("Shader Demo", gfx.point(20, 20), 32, gfx.white());
+                    gfx.draw_text_at("Esc: quit", gfx.point(20, 60), 20, gfx.rgb(200, 220, 255));
+                    gfx.draw_text_at("uAmount animates 0..1 and back", gfx.point(20, 90), 20, gfx.rgb(180, 200, 230));
+
+                    gfx.with_shader_mode(shader, fn () {
+                        assert(gfx.draw_texture_at(tex, gfx.point(80, 140), gfx.white()));
+                        assert(gfx.fill_rect_from(gfx.rect(560, 180, 280, 180), gfx.rgb(240, 190, 120)));
+                        assert(gfx.fill_circle_at(gfx.point(700, 500), 90, gfx.rgb(130, 200, 255)));
+                        assert(gfx.draw_rect_from(gfx.rect(540, 160, 320, 220), gfx.white()))
+                    });
+
+                    gfx.draw_text_at("Outside shader mode (reference)", gfx.point(80, 640), 20, gfx.rgb(180, 200, 230));
+                    assert(gfx.draw_texture_at(tex, gfx.point(80, 680), gfx.white()))
+                });
+                loop(shader, tex, nextAmount, nextDir)
+            }
+        }
+    }
+in
+    gfx.with_window_size(gfx.extent(980, 860), "Shader Demo", fn () {
+        assert(gfx.set_target_fps(60));
+        gfx.with_shader("assets/shaders/basic.vs", "assets/shaders/tint.fs", fn (shader) {
+            gfx.with_texture("docs/CEKF.png", fn (tex) {
+                loop(shader, tex, 0, 1)
+            })
+        })
+    })

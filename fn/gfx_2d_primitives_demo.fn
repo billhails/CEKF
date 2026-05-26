@@ -1,0 +1,80 @@
+// 2D primitives demo: triangles, polygons, arcs, and rounded rectangles.
+//
+// Run: ./bin/fn --include=fn fn/gfx_2d_primitives_demo.fn
+let
+    link "graphics.fn" as gfx;
+    import gfx macro key_pressed_action;
+
+    fn loop(angle) {
+        if (gfx.should_close()) { true }
+        else if (key_pressed_action[
+            escape => { true };
+            default => { false }
+        ]) { true }
+        else {
+            let
+                angle2 = angle + 2;
+            in
+                gfx.frame(gfx.rgb(18, 20, 28), fn () {
+                    gfx.draw_text_at("2D Primitives Demo", gfx.point(20, 18), 30, gfx.white());
+                    gfx.draw_text_at("Esc: quit", gfx.point(20, 54), 18, gfx.rgb(210, 230, 255));
+
+                    assert(gfx.fill_triangle(
+                        gfx.point(100, 170),
+                        gfx.point(40, 280),
+                        gfx.point(160, 280),
+                        gfx.rgb(120, 200, 255)
+                    ));
+                    assert(gfx.draw_triangle(
+                        gfx.point(240, 170),
+                        gfx.point(180, 280),
+                        gfx.point(300, 280),
+                        gfx.white()
+                    ));
+
+                    assert(gfx.fill_polygon(gfx.point(460, 230), 6, 70, angle, gfx.rgb(255, 170, 120)));
+                    assert(gfx.draw_polygon(gfx.point(640, 230), 8, 80, 0 - angle, gfx.rgb(170, 255, 180)));
+
+                    assert(gfx.draw_arc(gfx.point(820, 230), 90, 20, 320, 40, gfx.rgb(255, 220, 120)));
+                    assert(gfx.draw_rect_rounded(
+                        gfx.rect(740, 330, 160, 90),
+                        0.35,
+                        16,
+                        4,
+                        gfx.rgb(200, 220, 255)
+                    ));
+
+                    gfx.with_camera2d(
+                        gfx.point(0, 0),
+                        gfx.point(560, 560),
+                        0,
+                        1,
+                        fn () {
+                            assert(gfx.draw_rect_rounded(
+                                gfx.rect(-180, -120, 360, 240),
+                                0.2,
+                                12,
+                                3,
+                                gfx.rgb(90, 110, 150)
+                            ));
+                            assert(gfx.fill_polygon(gfx.point(0, 0), 5, 70, angle2, gfx.rgb(140, 120, 230)));
+                            assert(gfx.draw_arc(gfx.point(0, 0), 120, 0, 270, 48, gfx.rgb(230, 200, 130)));
+                            assert(gfx.draw_triangle(
+                                gfx.point(-110, 80),
+                                gfx.point(0, -110),
+                                gfx.point(110, 80),
+                                gfx.white()
+                            ))
+                        }
+                    );
+
+                    gfx.draw_text_at("Camera2D section at lower-middle", gfx.point(440, 700), 20, gfx.rgb(190, 210, 240))
+                });
+                loop(angle2)
+        }
+    }
+in
+    gfx.with_window_size(gfx.extent(980, 760), "2D Primitives Demo", fn () {
+        assert(gfx.set_target_fps(60));
+        loop(0)
+    })

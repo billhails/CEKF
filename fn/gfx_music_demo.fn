@@ -1,0 +1,142 @@
+// Music streaming demo: update stream each frame and control transport.
+//
+// Run: ./bin/fn --include=fn fn/gfx_music_demo.fn
+//
+// Uses /home/bill/Music/01.mp3 for playback.
+let
+    link "graphics.fn" as gfx;
+    import gfx macro key_pressed_action;
+
+    fn clamp_volume(v) {
+        if (v < 0) { 0 }
+        else if (v > 100) { 100 }
+        else { v }
+    }
+
+    fn next_volume(volume) {
+        clamp_volume(
+            key_pressed_action[
+                up => { volume + 5 };
+                down => { volume + (0 - 5) };
+                default => { volume }
+            ]
+        )
+    }
+
+    fn loop_without_music() {
+        if (gfx.should_close()) { true }
+        else if (key_pressed_action[
+            escape => { true };
+            default => { false }
+        ]) { true }
+        else {
+            gfx.frame(gfx.rgb(14, 20, 30), fn () {
+                gfx.draw_text_at("Music Demo", gfx.point(20, 20), 30, gfx.white());
+                gfx.draw_text_at("No music file loaded.", gfx.point(20, 70), 22, gfx.rgb(255, 190, 170));
+                gfx.draw_text_at("Expected file: /home/bill/Music/01.mp3", gfx.point(20, 104), 20, gfx.rgb(210, 210, 230));
+                gfx.draw_text_at("If missing, update the path in fn/gfx_music_demo.fn.", gfx.point(20, 136), 20, gfx.rgb(210, 210, 230));
+                gfx.draw_text_at("Press Esc to exit", gfx.point(20, 740), 18, gfx.rgb(170, 170, 190))
+            });
+            loop_without_music()
+        }
+    }
+
+    fn loop_with_music(music, volume) {
+        if (gfx.should_close()) {
+            gfx.stop_music(music);
+            true
+        }
+        else if (key_pressed_action[
+            escape => { true };
+            default => { false }
+        ]) {
+            gfx.stop_music(music);
+            true
+        }
+        else {
+            let
+                next = next_volume(volume);
+                played_ms = gfx.music_time_played_ms(music);
+                length_ms = gfx.music_time_length_ms(music);
+                seek_target = key_pressed_action[
+                    left => { played_ms + (0 - 5000) };
+                    right => { played_ms + 5000 };
+                    default => { 0 - 1 }
+                ];
+                seek_ms = if (seek_target < 0) { 0 }
+                          else if (seek_target > length_ms) { length_ms }
+                          else { seek_target };
+                progress = gfx.music_progress_width(music, 560);
+            in
+                gfx.frame(gfx.rgb(14, 20, 30), fn () {
+                    assert(gfx.update_music_stream(music));
+
+                    gfx.draw_text_at("Music Demo", gfx.point(20, 20), 30, gfx.white());
+                    gfx.draw_text_at("Space: play from start", gfx.point(20, 70), 22, gfx.rgb(210, 230, 255));
+                    gfx.draw_text_at("P: pause   R: resume   S: stop", gfx.point(20, 102), 22, gfx.rgb(210, 230, 255));
+                    gfx.draw_text_at("Left/Right: seek -/+5s", gfx.point(20, 134), 22, gfx.rgb(210, 230, 255));
+                    gfx.draw_text_at("Up/Down: volume", gfx.point(20, 166), 22, gfx.rgb(210, 230, 255));
+                    gfx.draw_text_at("Current volume band:", gfx.point(20, 180), 20, gfx.rgb(200, 210, 230));
+                    gfx.draw_text_at(
+                        if (next < 35) { "low" }
+                        else if (next < 70) { "medium" }
+                        else { "high" },
+                        gfx.point(250, 180),
+                        20,
+                        gfx.white()
+                    );
+                    gfx.draw_text_at("Playback:", gfx.point(20, 212), 20, gfx.rgb(200, 210, 230));
+                    gfx.draw_text_at(
+                        if (gfx.is_music_playing(music)) { "playing" }
+                        else { "stopped/paused" },
+                        gfx.point(130, 212),
+                        20,
+                        if (gfx.is_music_playing(music)) { gfx.rgb(160, 240, 180) }
+                        else { gfx.rgb(230, 180, 170) }
+                    );
+                    gfx.draw_text_at("Progress:", gfx.point(20, 244), 20, gfx.rgb(200, 210, 230));
+                    gfx.draw_rect_from(gfx.rect(130, 246, 560, 18), gfx.rgb(120, 130, 160));
+                    gfx.fill_rect_from(gfx.rect(130, 246, progress, 18), gfx.rgb(160, 220, 255));
+                    gfx.draw_text_at("Press Esc to exit", gfx.point(20, 740), 18, gfx.rgb(170, 170, 190));
+
+                    key_pressed_action[
+                        space => { gfx.play_music(music) };
+                        p => { gfx.pause_music(music) };
+                        r => { gfx.resume_music(music) };
+                        s => { gfx.stop_music(music) };
+                        default => { true }
+                    ];
+
+                    if (seek_target != (0 - 1)) { gfx.seek_music_ms(music, seek_ms) }
+                    else { true };
+
+                    if (next != volume) { gfx.set_music_volume(music, next) }
+                    else { true }
+                });
+            loop_with_music(music, next)
+        }
+    }
+
+in
+    gfx.with_window_size(gfx.extent(960, 760), "Music Demo", fn () {
+        assert(gfx.set_target_fps(60));
+        gfx.with_audio(fn () {
+            switch (gfx.load_music("/home/bill/Music/01.mp3")) {
+                (success(music)) {
+                    assert(gfx.set_music_volume(music, 60));
+                    {
+                    let result = loop_with_music(music, 60);
+                    in
+                        gfx.unload_music(music);
+                        result
+                    }
+                }
+                (failure(msg)) {
+                    puts("music demo load error: ");
+                    puts(msg);
+                    putc('\n');
+                    loop_without_music()
+                }
+            }
+        })
+    })
