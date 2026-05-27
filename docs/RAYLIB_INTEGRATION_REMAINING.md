@@ -53,7 +53,7 @@ shading).
 ### 1.3 Primary implementation surfaces
 
 - `src/builtin_graphics.c` builtin additions.
-- `fn/graphics.fn` ergonomic wrappers.
+- `fn/gfxutils.fn` ergonomic wrappers.
 - New focused demo showing two materials with different parameters.
 
 ### 1.4 Dependencies
@@ -82,7 +82,7 @@ from one scene to multiple scenes and effects.
 
 ### 2.3 Primary implementation surfaces
 
-- `fn/graphics.fn` helper layer first.
+- `fn/gfxutils.fn` helper layer first.
 - `src/builtin_graphics.c` only if additional uniform upload primitives are
   required.
 
@@ -114,7 +114,7 @@ texture usage.
 ### 3.3 Primary implementation surfaces
 
 - `src/builtin_graphics.c` new builtin for sampler binding.
-- `fn/graphics.fn` wrapper with simple call shape.
+- `fn/gfxutils.fn` wrapper with simple call shape.
 
 ### 3.4 Dependencies
 
