@@ -1,0 +1,8 @@
+namespace
+
+export macro first: Expr sharedHead;
+export macro second: Expr sharedHead;
+
+syntax sharedHead ::= "(" value: Expr ")" {
+    value
+};

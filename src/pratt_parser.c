@@ -228,6 +228,10 @@ static bool stageImportedSyntaxSpec(PrattParser *parser, PrattExportedOps *ops,
                                     PrattMacroSpec *source, int nsRef,
                                     HashSymbol *nsSymbol,
                                     PrattMacroTable *stagedSpecs);
+static PrattMacroSpec *findReusableImportedSyntaxSpec(PrattParser *parser,
+                                                      PrattMacroSpec *source,
+                                                      int nsRef,
+                                                      HashSymbol *nsSymbol);
 static PrattRecord *ensureTargetRecord(PrattParser *parser, HashSymbol *op);
 static AstSyntaxEntryKind
 convertPrattSyntaxEntryKind(PrattSyntaxEntryKind entryKind);
@@ -1443,6 +1447,13 @@ static bool stageImportedSyntaxSpec(PrattParser *parser, PrattExportedOps *ops,
         return true;
     }
 
+    PrattMacroSpec *reused =
+        findReusableImportedSyntaxSpec(parser, source, nsRef, nsSymbol);
+    if (reused != NULL) {
+        setPrattMacroTable(stagedSpecs, reused->headSymbol, reused);
+        return true;
+    }
+
     int declarationId = prattNextDeclarationId();
     PrattMacroSpec *clone =
         cloneImportedSyntaxSpec(source, declarationId, nsRef, nsSymbol);
@@ -1551,6 +1562,33 @@ static bool stageImportedSyntaxSpec(PrattParser *parser, PrattExportedOps *ops,
 
     UNPROTECT(save);
     return true;
+}
+
+static PrattMacroSpec *findReusableImportedSyntaxSpec(PrattParser *parser,
+                                                      PrattMacroSpec *source,
+                                                      int nsRef,
+                                                      HashSymbol *nsSymbol) {
+    if (parser == NULL || source == NULL) {
+        return NULL;
+    }
+
+    PrattMacroSpec *existing = NULL;
+    getPrattMacroTable(parser->macros, source->headSymbol, &existing);
+    if (existing == NULL) {
+        return NULL;
+    }
+
+    if (existing->importNsRef != nsRef ||
+        existing->importNsSymbol != nsSymbol) {
+        return NULL;
+    }
+
+    if (existing->entryKind != source->entryKind ||
+        existing->resultKind != source->resultKind) {
+        return NULL;
+    }
+
+    return existing;
 }
 
 static PrattRecord *ensureTargetRecord(PrattParser *parser, HashSymbol *op) {
@@ -3667,7 +3705,9 @@ static AstDefinition *importOp(PrattParser *parser) {
                 PrattMacroSpec *staged = NULL;
                 while ((name = iteratePrattMacroTable(stagedSpecs, &i,
                                                       &staged)) != NULL) {
-                    if (getPrattMacroTable(parser->macros, name, NULL)) {
+                    PrattMacroSpec *installed = NULL;
+                    if (getPrattMacroTable(parser->macros, name, &installed) &&
+                        installed != NULL && installed != staged) {
                         parserErrorAt(TOKPI(tok), parser,
                                       "import macro conflicts with existing "
                                       "syntax %s",
@@ -3680,6 +3720,13 @@ static AstDefinition *importOp(PrattParser *parser) {
                     i = 0;
                     while (iteratePrattMacroTable(stagedSpecs, &i, &staged) !=
                            NULL) {
+                        PrattMacroSpec *installed = NULL;
+                        if (getPrattMacroTable(parser->macros,
+                                               staged->headSymbol,
+                                               &installed) &&
+                            installed == staged) {
+                            continue;
+                        }
                         setPrattMacroTable(parser->macros, staged->headSymbol,
                                            staged);
                         registerSyntaxSpecTerminals(parser, staged);

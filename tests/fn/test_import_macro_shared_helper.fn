@@ -1,0 +1,7 @@
+let
+    link "import_macro_shared_helper_lib.fn" as shm;
+    import shm macro first;
+    import shm macro second;
+in
+    assert(first(1) == 1);
+    assert(second(2) == 2)
