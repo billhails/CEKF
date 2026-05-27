@@ -1,0 +1,8 @@
+let
+    syntax choose ::= "" value: Expr {
+        value
+    };
+
+    broken = choose 1;
+in
+    broken

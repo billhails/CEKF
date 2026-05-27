@@ -11,11 +11,10 @@ let
     | "default" "=>" value: Expr {
         value
     };
-in
-    assert(11 == choose_first[
-        on => 11;
+
+    broken = choose_first[
+        on = > 11;
         default => 22
-    ]);
-    assert(55 == choose_first[
-        default => 55
-    ])
+    ];
+in
+    broken
