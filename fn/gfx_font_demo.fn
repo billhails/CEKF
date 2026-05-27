@@ -3,7 +3,7 @@
 //
 // Run: ./bin/fn --include=fn fn/gfx_font_demo.fn
 let
-    link "graphics.fn" as gfx;
+    link "gfxutils.fn" as gfx;
     link "listutils.fn" as list;
     import gfx macro key_pressed_action;
 

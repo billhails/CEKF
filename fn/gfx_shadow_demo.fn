@@ -2,7 +2,7 @@
 //
 // Run: ./bin/fn --include=fn fn/gfx_shadow_demo.fn
 let
-    link "graphics.fn" as gfx;
+    link "gfxutils.fn" as gfx;
     link "ioutils.fn" as io;
     link "listutils.fn" as list;
     import gfx macro key_held_action;

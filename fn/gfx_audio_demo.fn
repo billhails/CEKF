@@ -4,7 +4,7 @@
 //
 // Uses /home/bill/Music/01.mp3 for playback.
 let
-    link "graphics.fn" as gfx;
+    link "gfxutils.fn" as gfx;
     import gfx macro key_pressed_action;
 
     fn clamp_volume(v) {

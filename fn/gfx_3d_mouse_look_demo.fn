@@ -2,7 +2,7 @@
 //
 // Run: ./bin/fn --include=fn fn/gfx_3d_mouse_look_demo.fn
 let
-    link "graphics.fn" as gfx;
+    link "gfxutils.fn" as gfx;
     import gfx macro key_held_action;
     import gfx macro key_pressed_action;
 

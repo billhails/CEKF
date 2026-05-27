@@ -1,5 +1,5 @@
 let
-    link "graphics.fn" as gfx;
+    link "gfxutils.fn" as gfx;
 
     fn animate(x) {
         if (gfx.should_close()) {
