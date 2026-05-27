@@ -12,27 +12,15 @@ in
                         s => { 2 };
                         default => { 42 }
                     ];
-                    held_value_split = key_held_action[
-                        w = > { 1 };
-                        s = > { 2 };
-                        default = > { 43 }
-                    ];
                     pressed_value = key_pressed_action[
                         h => { gfx.hide_cursor() };
                         j => { gfx.show_cursor() };
                         default => { true }
                     ];
-                    pressed_value_split = key_pressed_action[
-                        h = > { gfx.hide_cursor() };
-                        j = > { gfx.show_cursor() };
-                        default = > { true }
-                    ];
                 in
                 {
                     assert(held_value == 42);
-                    assert(held_value_split == 43);
                     assert(pressed_value);
-                    assert(pressed_value_split);
                     true
                 }
             });

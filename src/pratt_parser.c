@@ -23,6 +23,7 @@
 #include <locale.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <wchar.h>
 #include <wctype.h>
 
@@ -227,6 +228,10 @@ static bool stageImportedSyntaxSpec(PrattParser *parser, PrattExportedOps *ops,
                                     PrattMacroSpec *source, int nsRef,
                                     HashSymbol *nsSymbol,
                                     PrattMacroTable *stagedSpecs);
+static PrattMacroSpec *findReusableImportedSyntaxSpec(PrattParser *parser,
+                                                      PrattMacroSpec *source,
+                                                      int nsRef,
+                                                      HashSymbol *nsSymbol);
 static PrattRecord *ensureTargetRecord(PrattParser *parser, HashSymbol *op);
 static AstSyntaxEntryKind
 convertPrattSyntaxEntryKind(PrattSyntaxEntryKind entryKind);
@@ -247,6 +252,8 @@ static void resolvePendingMacroFixupsForHelper(PrattParser *parser,
                                                HashSymbol *helperName,
                                                PrattMacroSpec *helperSpec);
 static void finalizePendingMacroFixups(PrattParser *parser);
+static void registerSyntaxSpecTerminals(PrattParser *parser,
+                                        PrattMacroSpec *spec);
 static void registerExprSyntaxHead(PrattParser *parser, HashSymbol *head);
 static void mergeFixityImport(PrattParser *parser, PrattRecord *target,
                               PrattRecord *source, int nsRef,
@@ -272,6 +279,73 @@ static bool symbolArrayContains(SymbolArray *symbols, HashSymbol *symbol) {
     }
 
     return false;
+}
+
+static bool syntaxTerminalNeedsTrieRegistration(HashSymbol *symbol) {
+    if (symbol == NULL || symbol->name == NULL) {
+        return false;
+    }
+
+    size_t byteLen = strlen(symbol->name);
+    if (byteLen <= 1) {
+        return false;
+    }
+
+    wchar_t wide[byteLen + 1];
+    size_t wideLen = mbstowcs(wide, symbol->name, byteLen + 1);
+    if (wideLen == (size_t)-1 || wideLen <= 1) {
+        return false;
+    }
+
+    for (size_t i = 0; i < wideLen; ++i) {
+        if (unicode_isalnum(wide[i]) || unicode_isspace(wide[i])) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+static void registerSyntaxPatternTerminals(PrattParser *parser,
+                                           PrattMacroPatternItems *items) {
+    if (parser == NULL || items == NULL) {
+        return;
+    }
+
+    for (Index i = 0; i < countPrattMacroPatternItems(items); ++i) {
+        PrattMacroPatternItem *item = getPrattMacroPatternItems(items, i);
+        if (item == NULL ||
+            item->type != PRATTMACROPATTERNITEM_TYPE_QUOTEDTERMINAL) {
+            continue;
+        }
+
+        HashSymbol *terminal = getPrattMacroPatternItem_QuotedTerminal(item);
+        if (syntaxTerminalNeedsTrieRegistration(terminal)) {
+            parser->trie = insertPrattTrie(parser->trie, terminal);
+        }
+    }
+}
+
+static void registerSyntaxSpecTerminals(PrattParser *parser,
+                                        PrattMacroSpec *spec) {
+    if (parser == NULL || spec == NULL) {
+        return;
+    }
+
+    if (spec->alternatives != NULL) {
+        for (Index i = 0; i < sizePrattMacroAlternatives(spec->alternatives);
+             ++i) {
+            PrattMacroAlternative *alternative =
+                getPrattMacroAlternatives(spec->alternatives, i);
+            if (alternative != NULL) {
+                registerSyntaxPatternTerminals(parser,
+                                               alternative->patternItems);
+            }
+        }
+        return;
+    }
+
+    registerSyntaxPatternTerminals(parser, spec->patternItems);
 }
 // if you're wondering where the arithmetic primitives are, they're
 // defined in the preamble.
@@ -1373,6 +1447,13 @@ static bool stageImportedSyntaxSpec(PrattParser *parser, PrattExportedOps *ops,
         return true;
     }
 
+    PrattMacroSpec *reused =
+        findReusableImportedSyntaxSpec(parser, source, nsRef, nsSymbol);
+    if (reused != NULL) {
+        setPrattMacroTable(stagedSpecs, reused->headSymbol, reused);
+        return true;
+    }
+
     int declarationId = prattNextDeclarationId();
     PrattMacroSpec *clone =
         cloneImportedSyntaxSpec(source, declarationId, nsRef, nsSymbol);
@@ -1481,6 +1562,33 @@ static bool stageImportedSyntaxSpec(PrattParser *parser, PrattExportedOps *ops,
 
     UNPROTECT(save);
     return true;
+}
+
+static PrattMacroSpec *findReusableImportedSyntaxSpec(PrattParser *parser,
+                                                      PrattMacroSpec *source,
+                                                      int nsRef,
+                                                      HashSymbol *nsSymbol) {
+    if (parser == NULL || source == NULL) {
+        return NULL;
+    }
+
+    PrattMacroSpec *existing = NULL;
+    getPrattMacroTable(parser->macros, source->headSymbol, &existing);
+    if (existing == NULL) {
+        return NULL;
+    }
+
+    if (existing->importNsRef != nsRef ||
+        existing->importNsSymbol != nsSymbol) {
+        return NULL;
+    }
+
+    if (existing->entryKind != source->entryKind ||
+        existing->resultKind != source->resultKind) {
+        return NULL;
+    }
+
+    return existing;
 }
 
 static PrattRecord *ensureTargetRecord(PrattParser *parser, HashSymbol *op) {
@@ -3224,6 +3332,7 @@ static AstDefinition *syntaxDefinition(PrattParser *parser) {
     int declarationId = prattNextDeclarationId();
     spec->declarationId = declarationId;
     setPrattMacroTable(parser->macros, ruleName, spec);
+    registerSyntaxSpecTerminals(parser, spec);
 
     AstSyntaxAlternatives *astAlts = newAstSyntaxAlternatives();
     int save2 = PROTECT(astAlts);
@@ -3596,7 +3705,9 @@ static AstDefinition *importOp(PrattParser *parser) {
                 PrattMacroSpec *staged = NULL;
                 while ((name = iteratePrattMacroTable(stagedSpecs, &i,
                                                       &staged)) != NULL) {
-                    if (getPrattMacroTable(parser->macros, name, NULL)) {
+                    PrattMacroSpec *installed = NULL;
+                    if (getPrattMacroTable(parser->macros, name, &installed) &&
+                        installed != NULL && installed != staged) {
                         parserErrorAt(TOKPI(tok), parser,
                                       "import macro conflicts with existing "
                                       "syntax %s",
@@ -3609,8 +3720,16 @@ static AstDefinition *importOp(PrattParser *parser) {
                     i = 0;
                     while (iteratePrattMacroTable(stagedSpecs, &i, &staged) !=
                            NULL) {
+                        PrattMacroSpec *installed = NULL;
+                        if (getPrattMacroTable(parser->macros,
+                                               staged->headSymbol,
+                                               &installed) &&
+                            installed == staged) {
+                            continue;
+                        }
                         setPrattMacroTable(parser->macros, staged->headSymbol,
                                            staged);
+                        registerSyntaxSpecTerminals(parser, staged);
                         if (staged->entryKind ==
                             PRATTSYNTAXENTRYKIND_TYPE_EXPR) {
                             registerExprSyntaxHead(parser, staged->headSymbol);
