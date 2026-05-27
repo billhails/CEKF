@@ -1,5 +1,5 @@
 let
-    link "graphics.fn" as gfx;
+    link "gfxutils.fn" as gfx;
 
     fn loop_frames(n, shader, tex0, tex1) {
         if (n <= 0) { true }

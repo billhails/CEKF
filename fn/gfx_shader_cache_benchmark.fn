@@ -1,5 +1,5 @@
 let
-    link "graphics.fn" as gfx;
+    link "gfxutils.fn" as gfx;
 
     fn seed_render_texture(rt) {
         gfx.render_to_texture(rt, gfx.rgb(14, 18, 28), fn () {

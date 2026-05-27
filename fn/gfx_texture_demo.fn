@@ -3,7 +3,7 @@
 //
 // Run: ./bin/fn --include=fn fn/gfx_texture_demo.fn
 let
-    link "graphics.fn" as gfx;
+    link "gfxutils.fn" as gfx;
     import gfx macro key_pressed_action;
 
     fn loop(tex, angle) {

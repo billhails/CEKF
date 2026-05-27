@@ -1,5 +1,5 @@
 let
-    link "graphics.fn" as gfx;
+    link "gfxutils.fn" as gfx;
 
     fn draw_scene(model) {
         assert(gfx.draw_plane(gfx.vec3(0, 0, 0), gfx.vec3(12, 0, 12), gfx.rgb(44, 58, 82)));
