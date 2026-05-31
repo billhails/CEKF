@@ -17,7 +17,7 @@ The goal of this sketch is not to commit to a full inference algorithm yet. The 
 
 ## Why ordinary HM is not enough
 
-The current rewrite inference prototype in [infer.fn](infer.fn) only infers ordinary expression types and ordinary arrow types.
+The current rewrite inference prototype in [infer.fn](../infer.fn) only infers ordinary expression types and ordinary arrow types.
 
 That works for `call/cc`, because `call/cc` can be given a self-contained type schema:
 
