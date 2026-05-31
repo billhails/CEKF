@@ -362,6 +362,9 @@ fn supports {
     (E.construct(_, _, args)) {
         supportsList(args)
     }
+    (E.deconstruct(_, _, scrutinee)) {
+        supports(scrutinee)
+    }
     (E.sequence(exprs)) {
         supportsNonEmptyList(exprs)
     }
@@ -647,6 +650,17 @@ fn ctorSchemesToBindings {
     }
 }
 
+fn spineArg {
+    (0, operType("->", [arg, _])) { arg }
+    (n, operType("->", [_, rest])) { spineArg(n - 1, rest) }
+    (_, _) { error("infer_expr: deconstruct index out of range for constructor type") }
+}
+
+fn spineResult {
+    (operType("->", [_, rest])) { spineResult(rest) }
+    (type) { type }
+}
+
 fn analyzeExpr {
     (E.amb_expr(left, right), envt, ng, subst) {
         bind(analyzeExpr(left, envt, ng, subst), fn (#(leftType, subst1)) {
@@ -775,6 +789,15 @@ fn analyzeExpr {
     }
     (E.construct(name, _, args), envt, ng, subst) {
         analyzeConstruct(name, args, envt, ng, subst)
+    }
+    (E.deconstruct(name, index, scrutinee), envt, ng, subst) {
+        let ctorType = retrieve(name, envt, ng, subst);
+            fieldType = spineArg(index, ctorType);
+            resultType = spineResult(ctorType)
+        in bind(analyzeExpr(scrutinee, envt, ng, subst), fn (#(scrutType, subst1)) {
+            let subst2 = unifyType(scrutType, resultType, subst1)
+            in #(applySubst(fieldType, subst2), subst2)
+        })
     }
     (E.make_tuple(exprs), envt, ng, subst) {
         bind(analyzeArgs(exprs, envt, ng, subst), fn (#(partTypes, subst1)) {

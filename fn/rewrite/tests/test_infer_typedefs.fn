@@ -21,3 +21,12 @@ in
     assert(infer_type("(typedefs ((wrap (-> 'a 'a))) (construct wrap 0 42))") == "Int");
     // typedefs: construct with typedef env is reported as supported
     assert(supports("(typedefs ((wrap (-> 'a 'a))) (construct wrap 0 42))"));
+    // deconstruct: reported as supported
+    assert(supports("(typedefs ((box (-> 'a (Box 'a))))"
+                    "(deconstruct box 0 (construct box 0 42)))"));
+    // deconstruct: extracts field type from constructor scheme
+    assert(infer_type("(typedefs ((box (-> 'a (Box 'a))))"
+                      "(deconstruct box 0 (construct box 0 42)))") == "Int");
+    // deconstruct: selects correct field by index from multi-field constructor
+    assert(infer_type("(typedefs ((pair (-> 'a (-> 'b (Pair 'a 'b)))))"
+                      "(deconstruct pair 1 (construct pair 0 42 true)))") == "Bool");
