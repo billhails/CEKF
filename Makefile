@@ -2,7 +2,7 @@
 list-cores test indent indent-src indent-generated docs \
 install-sqlite3 install-raylib coverage extracov view-coverage \
 coverage-target test-a test-fail test-sh test-c test-unit test-b test-big-c help \
-test-gfx test-gfx-stress establish-baseline test-refactoring update-baseline clean-baseline \
+test-rewrite test-gfx test-gfx-stress establish-baseline test-refactoring update-baseline clean-baseline \
 scratch bench-regex-cache rebuild-default rebuild-raylib
 
 # pass on the command line, i.e. `make test MODE=prod`
@@ -323,7 +323,7 @@ $(EXTRA_OBJ) $(PREAMBLE_OBJ): $(OBJDIR)/%.o: $(GENDIR)/%.c | $(OBJDIR) $(DEPDIR)
 $(TEST_OBJ): $(OBJDIR)/%.o: $(TSTDIR)/src/%.c | $(OBJDIR) $(DEPDIR) $(GENERATED_BOOTSTRAP)
 	$(LAXCC) $(INCLUDE_PATHS) -MMD -MP -MF $(DEPDIR)/$*.d -MT $@ -c $< -o $@
 
-test: test-unit test-a test-b test-sh test-fail
+test: test-unit test-a test-b test-sh test-fail test-rewrite
 	@echo "All tests passed."
 
 test-unit: $(TEST_TARGETS)
@@ -361,6 +361,10 @@ test-gfx-stress: all
 	@echo "Running targeted gfx stress checks with --stress-gc (can be very slow on larger files)."
 	@for t in $(TSTDIR)/fn/test_gfx_shader_reload_smoke.fn $(TSTDIR)/fn/test_gfx_resource_churn_smoke.fn ; do echo '***' $$t '***' ; ./$(TARGET) --include=fn --assertions-accumulate --stress-gc $$t || exit 1 ; done
 	@echo "All gfx stress smoke tests passed."
+
+test-rewrite: all
+	set -x; for t in fn/rewrite/tests/test_*.fn ; do $(TARGET) $(TARGET_ARGS) --flat-closure --target-b $$t || exit 1 ; done
+	@echo All rewrite tests pass
 
 $(TEST_TARGETS): $(TSTDIR)/%: $(OBJDIR)/%.o $(ALL_OBJ)
 	$(CC) -o $@ $< $(ALL_OBJ) $(LIBS)

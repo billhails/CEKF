@@ -1,6 +1,6 @@
 let
-    link "../../fn/rewrite/infer_expr.fn" as INFER;
-    link "../../fn/rewrite/expr.fn" as E;
+    link "../infer_expr.fn" as INFER;
+    link "../expr.fn" as E;
 
     fn infer_type(source) {
         INFER.infer_to_string(E.parse(source))
