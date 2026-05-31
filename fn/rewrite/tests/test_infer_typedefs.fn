@@ -1,0 +1,23 @@
+let
+    link "../infer_expr.fn" as INFER;
+    link "../expr.fn" as E;
+
+    fn infer_type(source) {
+        INFER.infer_to_string(E.parse(source))
+    }
+
+    fn supports(source) {
+        INFER.supports(E.parse(source))
+    }
+in
+    // typedefs: empty constructor env passes body through unchanged
+    assert(infer_type("(typedefs () 42)") == "Int");
+    assert(infer_type("(typedefs () (letrec ((f (λ (x) (+ x 1)))) (f 1)))") == "Int");
+    // typedefs: non-empty constructor env extends the type environment
+    assert(infer_type("(typedefs ((id (-> 'a 'a))) (id 1))") == "Int");
+    // typedefs: constructor env bindings are polymorphic (fresh vars per use)
+    assert(infer_type("(typedefs ((id (-> 'a 'a))) (if (id true) (id 1) (id 2)))") == "Int");
+    // typedefs: construct form uses typedef-defined constructor from env
+    assert(infer_type("(typedefs ((wrap (-> 'a 'a))) (construct wrap 0 42))") == "Int");
+    // typedefs: construct with typedef env is reported as supported
+    assert(supports("(typedefs ((wrap (-> 'a 'a))) (construct wrap 0 42))"));
