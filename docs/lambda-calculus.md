@@ -41,10 +41,10 @@ $$
 \\
 \mathcal{F}(e_0\ e_1) &= \mathcal{F}e_0\cup \mathcal{F}e_1
 \\
-\mathcal{F}\lambda x.e &= \mathcal{F}e - \set{ x } && \text{(1)}
+\tag{1}\mathcal{F}\lambda x.e &= \mathcal{F}e - \set{ x }
 \\
-\mathcal{F}(\mathtt{letrec}\ (( x_0:\lambda_0)\dots( x_n:\lambda_n))\ e) &=
-\Big( \mathcal{F}e\cup\bigcup_{i=0}^n\mathcal{F}\lambda_i\Big) - \set{x_0\dots x_n} && \text{(2)}
+\tag{2}\mathcal{F}(\mathtt{letrec}\ (( x_0:\lambda_0)\dots( x_n:\lambda_n))\ e) &=
+\Big( \mathcal{F}e\cup\bigcup_{i=0}^n\mathcal{F}\lambda_i\Big) - \set{x_0\dots x_n}
 \end{align*}
 $$
 
@@ -70,25 +70,36 @@ $$
 \begin{align*}
 \alpha_{\rho}\mathtt{C} &= \mathtt{C}
 \\
-\alpha_{\rho}x &= \rho(x) && && \text{(1)}
+\tag{1}
+\alpha_{\rho}x &= \rho(x)
+
 \\
 \alpha_{\rho}(e_0\ e_1) &= (\alpha_{\rho}e_0\ \alpha_{\rho}e_1)
+
 \\
+\tag{2}
 \alpha_{\rho}\lambda x.e &= \lambda x'.\alpha_{\rho[x \mapsto x']}e
-&& \text{where } x' = \mathrm{fresh}(x) && \text{(2)}
+& \text{where } & x' = \mathrm{fresh}(x)
+
 \\
+\tag{3}
 l &= (\mathtt{letrec}\ (b_0\dots b_n)\ e)
-&& && \text{(3)}
+
 \\
 \rho' &= \rho[x_0 \mapsto x'_0,\dots,x_n \mapsto x'_n]
-&& \text{where } b_i = (x_i:\lambda y_i.e_i),\ x'_i = \mathrm{fresh}(x_i) && \text{(4)}
+& \text{where } & b_i = (x_i:\lambda y_i.e_i),
+
 \\
-\alpha_{\rho}l &=
+\tag{4}
+&&&x'_i = \mathrm{fresh}(x_i)
+
+\\
+\tag{5}\alpha_{\rho}l &=
 (\mathtt{letrec}\ (\alpha_{\rho'}b_0\dots\alpha_{\rho'}b_n)\ \alpha_{\rho'}e)
-&& && \text{(5)}
+
 \\
-\alpha_{\rho}(x:\lambda y.e) &= (\rho(x):\lambda y'.\alpha_{\rho[y \mapsto y']}e)
-&& \text{where } y' = \mathrm{fresh}(y) && \text{(6)}
+\tag{6}\alpha_{\rho}(x:\lambda y.e) &= (\rho(x):\lambda y'.\alpha_{\rho[y \mapsto y']}e)
+& \text{where } & y' = \mathrm{fresh}(y)
 \end{align*}
 $$
 
@@ -119,18 +130,23 @@ y &\text{otherwise}
 \\
 \mathcal{S}_{[x/r]}(e_0\ e_1) &= (\mathcal{S}_{[x/r]}e_0\ \mathcal{S}_{[x/r]}e_1)
 \\
+\tag{1}
 \mathcal{S}_{[x/r]}\lambda y.e_0 &= \begin{cases}
-\lambda y.e_0 &\text{if } x = y\ \mathrm{(1)}
+\lambda y.e_0 &\text{if } x = y
 \\
 \lambda y.\mathcal{S}_{[x/r]}e_0 &\text{otherwise}
 \end{cases}
+
 \\
 l &= (\mathtt{letrec}\ ((y_0:\lambda z_0.e_0)\dots(y_n:\lambda z_n.e_n))\ e)
 \\
+\tag{2}
 \mathcal{S}_{[x/r]}l &= \begin{cases}
-l &\text{if } x \in \set{y_0\dots y_n}\ \mathrm{(2)}
+l &\text{if } x \in \set{y_0\dots y_n}
 \\
-(\mathtt{letrec}\ ((y_0:\lambda z_0.\mathcal{S}_{[x/r]}e_0)\dots(y_n:\lambda z_n.\mathcal{S}_{[x/r]}e_n))\ \mathcal{S}_{[x/r]}e) &\text{otherwise}
+(\mathtt{letrec}\ ((y_0:\lambda z_0.\mathcal{S}_{[x/r]}e_0)\dots
+\\
+\phantom{\mathtt{letrec}\ ((} (y_n:\lambda z_n.\mathcal{S}_{[x/r]}e_n))\ \mathcal{S}_{[x/r]}e) &\text{otherwise}
 \end{cases}
 \end{align*}
 $$
@@ -144,8 +160,9 @@ $$
 \begin{align*}
 \mathcal{S}^{cs}_{[x/r]}y &= y
 \\
+\tag{3}
 \mathcal{S}^{cs}_{[x/r]}(e_0\ e_1) &= \begin{cases}
-(r\ \mathcal{S}^{cs}_{[x/r]}e_1) &\text{if } e_0 = x\ \mathrm{(3)}
+(r\ \mathcal{S}^{cs}_{[x/r]}e_1) &\text{if } e_0 = x
 \\
 (\mathcal{S}^{cs}_{[x/r]}e_0\ \mathcal{S}^{cs}_{[x/r]}e_1) &\text{otherwise}
 \end{cases}
@@ -166,7 +183,8 @@ $$
 \\
 \beta x &= x
 \\
-\beta((\lambda x.e_0)\ e_1) &= \mathcal{S}_{[x/\beta e_1]}\beta e_0 && \text{(1)}
+\tag{1}
+\beta((\lambda x.e_0)\ e_1) &= \mathcal{S}_{[x/\beta e_1]}\beta e_0
 \\
 \beta (e_0\ e_1) &= (\beta e_0\ \beta e_1)
 \\
@@ -193,8 +211,9 @@ $$
 \\
 \eta (e_0\ e_1) &= (\eta e_0\  \eta e_1)
 \\
+\tag{1}
 \eta\lambda x.(e\ x) &= \begin{cases}
-\eta e &\text{iff } x \not \in \mathcal{F}e\ \mathrm{(1)}
+\eta e &\text{iff } x \not \in \mathcal{F}e
 \\
 \lambda x .\eta(e\ x) &\text{otherwise}
 \end{cases}
@@ -223,26 +242,32 @@ $$
 \\
 \mathcal{T}\lambda x . e &= \lambda x.\mathcal{T}e
 \\
-l &= (\mathtt{letrec}\ (( x_0:\lambda_0)\dots ( x_n:\lambda_n))\ e) && \text{(1)}
+\tag{1}
+l &= (\mathtt{letrec}\ (( x_0:\lambda_0)\dots ( x_n:\lambda_n))\ e)
 \\
-l' &= (\mathtt{letrec}\ (( x_0:\lambda'_0)\dots ( x_n:\lambda'_n))\ e') && \text{(2)}
+l' &= (\mathtt{letrec}\ (( x_0:\lambda'_0)\dots ( x_n:\lambda'_n))\ e')
 \\
-&\text{where }\lambda'_i = \mathcal{T}\lambda_i \text{ and }e' = \mathcal{T}e
+\tag{2}
+&\phantom{=}\text{where }\lambda'_i = \mathcal{T}\lambda_i \text{ and }e' = \mathcal{T}e
 \\
-K &= \set{x_0\dots x_n} && \text{(3)}
+\tag{3}
+K &= \set{x_0\dots x_n}
 \\
-\vec{D} &= \set{ x_i \rightarrow x_j | x_i \in K,\ x_j \in K \cap \mathcal{F}\lambda'_i} && \text{(4)}
+\tag{4}
+\vec{D} &= \set{ x_i \rightarrow x_j | x_i \in K,\ x_j \in K \cap \mathcal{F}\lambda'_i}
 \\
-B &= \mathcal{F}e' \cap K && \text{(5)}
+\tag{5}
+B &= \mathcal{F}e' \cap K
 \\
-L &= \bigcup_{x\in B} \vec{D}^{\ast}x && \text{(6)}
+\tag{6}
+L &= \bigcup_{x\in B} \vec{D}^{\ast}x
 \\
+\tag{7}
 \mathcal{T}l &=
 (\mathtt{letrec}\ (\set{(x_i:\lambda'_i) | x_i \in L})\ e')
-&& \text{(7)}
 \\
+\tag{8}
 \mathcal{T}(\mathtt{letrec}\ (\ )\ e) &= \mathcal{T}e
-&& \text{(8)}
 \end{align*}
 $$
 
@@ -287,7 +312,9 @@ l &= (\mathtt{letrec}\ ((x_0:\lambda_0)\dots(x_n:\lambda_n))\ e)
 \\
 \mathcal{S}_{cs}^{\ast}y &= \mathcal{S}^{cs}_{[x_0/\lambda_0]}\dots\mathcal{S}^{cs}_{[x_m/\lambda_m]}y
 \\
-R &= \set{(x_i:\lambda_i) \in \set{(x_0:\lambda_0)\dots(x_n:\lambda_n)} | \mathrm{safe}(x_i, \lambda_i, l)} = \set{(x_0:\lambda_0)\dots(x_m:\lambda_m)}
+R &= \set{(x_i:\lambda_i) \in \set{(x_0:\lambda_0)\dots(x_n:\lambda_n)} | \mathrm{safe}(x_i, \lambda_i, l)}
+\\
+&= \set{(x_0:\lambda_0)\dots(x_m:\lambda_m)}
 \\
 \mathrm{safe}(x_i, \lambda_i, l) &= \mathcal{Z}\lambda_i < \mathtt{MAX} \land \lnot\mathcal{R}x_i \land \mathcal{C}_{x_i}l = 1 \land \mathcal{C}^{cs}_{x_i}l = 1
 \end{align*}
@@ -309,9 +336,11 @@ $$
 \\
 \mathcal{Z}\lambda x.e &= 1 + \mathcal{Z}e
 \\
-\mathcal{Z}(\mathtt{letrec}\ (b_0\dots b_n)\ e) &= 1 + \sum_{i=0}^n\mathcal{Z}b_i + \mathcal{Z}e
+\mathcal{Z}(\mathtt{letrec}\ (b_0\dots b_n)\ e) &= 1 + \mathcal{Z}e + \textstyle\sum_{i=0}^n\mathcal{Z}b_i
 \\
-\mathcal{Z}(x:\lambda y.e) &= 1+ \mathcal{Z}e
+\mathcal{Z}b &= 1+ \mathcal{Z}e
+\\
+&\phantom{=}\text{where } b = (x:\lambda y.e)
 \end{align*}
 $$
 
@@ -326,17 +355,22 @@ $$
 \begin{align*}
 \text{given}
 \\
-l &= (\mathtt{letrec}\ ((x_0:\lambda_0)\dots(x_n:\lambda_n))\ e) & \text{(1)}
+\tag{1}
+l &= (\mathtt{letrec}\ ((x_0:\lambda_0)\dots(x_n:\lambda_n))\ e)
 \\
-K &= \set{x_0\dots x_n} & \text{(2)}
+\tag{2}
+K &= \set{x_0\dots x_n}
 \\
-\vec{D} &= \set{x_i \mapsto x_j | x_i \in K,\ x_j \in K \cap \mathcal{F}\lambda_i} & \text{(3)}
+\tag{3}
+\vec{D} &= \set{x_i \mapsto x_j | x_i \in K,\ x_j \in K \cap \mathcal{F}\lambda_i}
 \\
-x &\in K & \text{(4)}
+\tag{4}
+x &\in K
 \\
 \text{then}
 \\
-\mathcal{R}x &= (x \mapsto x) \in \vec{D}^+ & \text{(5)}
+\tag{5}
+\mathcal{R}x &= (x \mapsto x) \in \vec{D}^+
 \end{align*}
 $$
 
@@ -375,7 +409,7 @@ $$
 \mathcal{C}_x(\mathtt{letrec}\ ((y_0:\lambda z_0.e_0)\dots(y_n:\lambda z_n.e_n))\ e) &= \begin{cases}
 0 & \text{if } x \in \set{y_0\dots y_n}
 \\
-\mathcal{C}_x e + \sum_{i=0}^{i=n}\mathcal{C}_x(\lambda z_i.e_i) &\text{otherwise}
+\mathcal{C}_x e + \sum_{i=0}^{n}\mathcal{C}_x(\lambda z_i.e_i) &\text{otherwise}
 \end{cases}
 \end{align*}
 $$

@@ -283,11 +283,11 @@ This is the main substitution law the prototype should preserve.
 These are good first samples for `fn/rewrite/samples.fn` once parsing exists:
 
 ```text
-(reset 1)                                   ==> 1
-(reset (+ 1 (shift (λ (k) 2))))             ==> 2
-(reset (+ 1 (shift (λ (k) (k 2)))))         ==> 3
+(reset 1)                                     ==> 1
+(reset (+ 1 (shift (λ (k) 2))))               ==> 2
+(reset (+ 1 (shift (λ (k) (k 2)))))           ==> 3
 (reset (+ 1 (shift (λ (k) (+ (k 2) (k 3)))))) ==> 7
-(+ 1 (reset (shift (λ (k) 2))))             ==> 3
+(+ 1 (reset (shift (λ (k) 2))))               ==> 3
 ```
 
 Those examples are small enough to inspect through the prototype pipeline stage-by-stage.
