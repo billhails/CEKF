@@ -138,22 +138,22 @@ namespace
         "(letrec ((f (λ (x) x)) (g (λ (x) (+ x 10))) (h (λ (x) (+ x 20)))) (let ((x 2)) (cond (f x) (1 (g 1)) (2 (h 2)))))",
 
         ";33. construct with atomic arguments",
-        "(construct pair 0 1 2)",
+        "(typedefs ((pair (-> 'a (-> 'b (Pair 'a 'b))))) (construct pair 0 1 2))",
 
         ";34. construct with complex arguments",
-        "(letrec ((f (λ (x) (+ x 1))) (g (λ (x) (+ x 2)))) (construct pair 0 (f 1) (g 2)))",
+        "(typedefs ((pair (-> 'a (-> 'b (Pair 'a 'b))))) (letrec ((f (λ (x) (+ x 1))) (g (λ (x) (+ x 2)))) (construct pair 0 (f 1) (g 2))))",
 
         ";35. nested construct",
-        "(letrec ((f (λ (x) (+ x 1))) (g (λ (x) (+ x 2)))) (let ((x 1) (y 2)) (construct cons 0 (f x) (construct cons 0 (g y) null))))",
+        "(typedefs ((pair (-> 'a (-> 'b (Pair 'a 'b))))) (letrec ((f (λ (x) (+ x 1))) (g (λ (x) (+ x 2)))) (let ((x 1) (y 2)) (construct pair 0 (f x) (construct pair 0 (g y) 42)))))",
 
         ";36. deconstruct with atomic argument",
-        "(let ((p (construct pair 0 10 20))) (deconstruct pair 0 p))",
+        "(typedefs ((pair (-> 'a (-> 'b (Pair 'a 'b))))) (let ((p (construct pair 0 10 20))) (deconstruct pair 0 p)))",
 
         ";37. deconstruct with complex argument",
-        "(letrec ((f (λ (x) (construct pair 0 x (+ x 1))))) (let ((x 1)) (deconstruct pair 1 (f x))))",
+        "(typedefs ((pair (-> 'a (-> 'b (Pair 'a 'b))))) (letrec ((f (λ (x) (construct pair 0 x (+ x 1))))) (let ((x 1)) (deconstruct pair 1 (f x)))))",
 
         ";38. nested deconstruct",
-        "(letrec ((f (λ (x) (construct pair 0 (construct pair 0 x (+ x 1)) (+ x 2))))) (let ((x 1)) (deconstruct pair 0 (deconstruct pair 1 (f x)))))",
+        "(typedefs ((pair (-> 'a (-> 'b (Pair 'a 'b))))) (letrec ((f (λ (x) (construct pair 0 (construct pair 0 x (+ x 1)) (+ x 2))))) (let ((x 1)) (deconstruct pair 0 (deconstruct pair 0 (f x))))))",
 
         ";39. let with atomic value",
         "(letrec ((f (λ (v) v))) (let ((x 42)) (f x)))",

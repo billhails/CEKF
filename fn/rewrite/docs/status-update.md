@@ -17,4 +17,4 @@ Recommended validation path remains:
 
 1. `make test-rewrite`
 2. `./bin/fn fn/rewrite/test_harness.fn` for optional pipeline smoke coverage
-3. `make test` after the focused rewrite slice is stable
+3. `make test` after the focused rewrite slice is stable (not usually necessary if nothing outside of `fn/rewrite` has changed).

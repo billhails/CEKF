@@ -184,13 +184,13 @@ fn freshType(type, ng, subst) {
 
 fn retrieve {
     (name, tcEnv(name, type, _), ng, subst) { freshType(type, ng, subst) }
-    (_, nullTcEnv, _, _) { error("infer_expr: unbound variable") }
+    (name, nullTcEnv, _, _) { error("infer_expr: unbound variable '" @@ name @@ "'") }
     (name, tcEnv(_, _, tail), ng, subst) { retrieve(name, tail, ng, subst) }
 }
 
 fn retrieveBound {
     (name, tcEnv(name, type, _)) { type }
-    (_, nullTcEnv) { error("infer_expr: unbound variable") }
+    (name, nullTcEnv) { error("infer_expr: unbound variable '" @@ name @@ "'") }
     (name, tcEnv(_, _, tail)) { retrieveBound(name, tail) }
 }
 
