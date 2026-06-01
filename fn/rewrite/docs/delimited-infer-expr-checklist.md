@@ -47,8 +47,8 @@ This section covers the top of the file through the basic type constructors.
 - [x] Keep `funTypeList`, but make it build explicit nested callable nodes.
 - [x] Add `controlThunkType` helper.
 - [x] Add `controlFunType` helper.
-- [ ] Add a helper that normalizes `controlThunkType(R, A, A)` to `thunkType(R)`.
-- [ ] Add a helper that normalizes `controlFunType(X, R, A, A)` to `funType(X, R)`.
+- [x] Add a helper that normalizes `controlThunkType(R, A, A)` to `thunkType(R)`.
+- [x] Add a helper that normalizes `controlFunType(X, R, A, A)` to `funType(X, R)`.
 - [x] Add a helper for building curried callables whose rightmost callable node is controlful.
 
 ### Fresh variables and names
@@ -127,12 +127,12 @@ This section is new work rather than migration of existing helpers.
 
 - [ ] Add an effect-aware `analyzeExpr` signature carrying `answerIn`, `answerOut`, and `controlAllowed`.
 - [ ] Add a small wrapper for pure ambient contexts, if that keeps branches readable.
-- [ ] Add a helper that creates fresh local answer-type pairs for lambda bodies and reset bodies.
+- [x] Add a helper that creates fresh local answer-type pairs for lambda bodies and reset bodies.
 
 ### Callable builder helpers to add
 
-- [ ] Add `makeLambdaCallable` for zero-argument lambdas.
-- [ ] Add `makeLambdaCallableChain` for curried lambdas.
+- [x] Add `makeLambdaCallable` for zero-argument lambdas.
+- [x] Add `makeLambdaCallableChain` for curried lambdas.
 - [ ] Make these helpers responsible for purity normalization after substitution has been applied.
 
 ### Callable consumer helpers to add

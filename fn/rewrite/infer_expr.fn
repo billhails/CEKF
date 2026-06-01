@@ -60,6 +60,35 @@ fn controlFunTypeList {
     }
 }
 
+fn normalizeControlThunkType {
+    (type, answer, answer) { thunkType(type) }
+    (type, answerIn, answerOut) { controlThunkType(type, answerIn, answerOut) }
+}
+
+fn normalizeControlFunType {
+    (dom, cod, answer, answer) { funType(dom, cod) }
+    (dom, cod, answerIn, answerOut) { controlFunType(dom, cod, answerIn, answerOut) }
+}
+
+fn freshLocalAnswers() {
+    let answerType = freshTypeVar()
+    in #(answerType, answerType)
+}
+
+fn makeLambdaCallable {
+    (bodyType, false, _, _) { thunkType(bodyType) }
+    (bodyType, true, answerIn, answerOut) {
+        controlThunkType(bodyType, answerIn, answerOut)
+    }
+}
+
+fn makeLambdaCallableChain {
+    (paramTypes, bodyType, false, _, _) { funTypeList(paramTypes, bodyType) }
+    (paramTypes, bodyType, true, answerIn, answerOut) {
+        controlFunTypeList(paramTypes, bodyType, answerIn, answerOut)
+    }
+}
+
 fn ensure {
     (true, _) { true }
     (false, msg) { error("infer_expr: " @@ msg) }
@@ -956,10 +985,12 @@ fn analyzeExpr {
     (E.lambda([], body), envt, ng, subst, _) {
         bind(analyzeExpr(body, envt, ng, subst, true), fn (#(bodyType, subst1)) {
             if (latentControlInBody(body, envt, ng, subst1)) {
-                let answerType = freshTypeVar()
-                in #(controlThunkType(applySubst(bodyType, subst1), answerType, answerType), subst1)
+                bind(freshLocalAnswers(), fn (#(answerIn, answerOut)) {
+                    #(makeLambdaCallable(applySubst(bodyType, subst1), true, answerIn, answerOut), subst1)
+                })
             } else {
-                #(thunkType(applySubst(bodyType, subst1)), subst1)
+                let resolvedBodyType = applySubst(bodyType, subst1)
+                in #(makeLambdaCallable(resolvedBodyType, false, resolvedBodyType, resolvedBodyType), subst1)
             }
         })
     }
@@ -967,10 +998,12 @@ fn analyzeExpr {
         bind(bindParams(params, envt, ng), fn (#(paramTypes, env2, ng2)) {
             bind(analyzeExpr(body, env2, ng2, subst, true), fn (#(bodyType, subst1)) {
                 if (latentControlInBody(body, env2, ng2, subst1)) {
-                    let answerType = freshTypeVar()
-                    in #(controlFunTypeList(paramTypes, applySubst(bodyType, subst1), answerType, answerType), subst1)
+                    bind(freshLocalAnswers(), fn (#(answerIn, answerOut)) {
+                        #(makeLambdaCallableChain(paramTypes, applySubst(bodyType, subst1), true, answerIn, answerOut), subst1)
+                    })
                 } else {
-                    #(funTypeList(paramTypes, applySubst(bodyType, subst1)), subst1)
+                    let resolvedBodyType = applySubst(bodyType, subst1)
+                    in #(makeLambdaCallableChain(paramTypes, resolvedBodyType, false, resolvedBodyType, resolvedBodyType), subst1)
                 }
             })
         })
