@@ -18,3 +18,4 @@ in
     assert(infer_type("(reset (let ((f (λ (x) (shift (λ (k) (k x)))))) (+ 1 (f 2))))") == "Int");
     assert(infer_type("(reset (let ((apply1 (λ (f) (f 1))) (g (λ (x) (shift (λ (k) (k x)))))) (+ 1 (apply1 g))))") == "Int");
     assert(infer_type("(let ((apply1 (λ (f) (f 1))) (g (λ (x) (shift (λ (k) (k x)))))) (λ () (apply1 g)))") == "#() -['0=>'0]-> Int");
+    assert(infer_type("(let ((apply1 (λ (f) (f 1))) (g (λ (x) (shift (λ (k) (k x)))))) (λ () (begin 0 (apply1 g))))") == "#() -['0=>'0]-> Int");

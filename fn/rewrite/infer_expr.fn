@@ -410,6 +410,13 @@ fn directShiftBody {
     (_) { false }
 }
 
+fn latentControlInExprList {
+    ([], _, _, _) { false }
+    (expr @ rest, envt, ng, subst) {
+        latentControlInBody(expr, envt, ng, subst) or latentControlInExprList(rest, envt, ng, subst)
+    }
+}
+
 fn directControlfulApplyBody {
     (E.apply(fun, args), envt, ng, subst) {
         bind(analyzeExpr(fun, envt, ng, subst, true), fn (#(funTypeExp, subst1)) {
@@ -418,6 +425,17 @@ fn directControlfulApplyBody {
             })
         })
     }
+    (_, _, _, _) { false }
+}
+
+fn latentControlInBody {
+    (expr = E.shift_expr(_), _, _, _) { directShiftBody(expr) }
+    (expr = E.apply(_, _), envt, ng, subst) { directControlfulApplyBody(expr, envt, ng, subst) }
+    (E.sequence(exprs), envt, ng, subst) { latentControlInExprList(exprs, envt, ng, subst) }
+    (E.cut_expr(expr), envt, ng, subst) { latentControlInBody(expr, envt, ng, subst) }
+    (E.tag(expr), envt, ng, subst) { latentControlInBody(expr, envt, ng, subst) }
+    (E.print_exp(expr), envt, ng, subst) { latentControlInBody(expr, envt, ng, subst) }
+    (E.typeof_expr(expr), envt, ng, subst) { latentControlInBody(expr, envt, ng, subst) }
     (_, _, _, _) { false }
 }
 
@@ -887,7 +905,7 @@ fn analyzeExpr {
     }
     (E.lambda([], body), envt, ng, subst, _) {
         bind(analyzeExpr(body, envt, ng, subst, true), fn (#(bodyType, subst1)) {
-            if (directShiftBody(body) or directControlfulApplyBody(body, envt, ng, subst1)) {
+            if (latentControlInBody(body, envt, ng, subst1)) {
                 let answerType = freshTypeVar()
                 in #(controlThunkType(applySubst(bodyType, subst1), answerType, answerType), subst1)
             } else {
@@ -898,7 +916,7 @@ fn analyzeExpr {
     (E.lambda(params, body), envt, ng, subst, _) {
         bind(bindParams(params, envt, ng), fn (#(paramTypes, env2, ng2)) {
             bind(analyzeExpr(body, env2, ng2, subst, true), fn (#(bodyType, subst1)) {
-                if (directShiftBody(body) or directControlfulApplyBody(body, env2, ng2, subst1)) {
+                if (latentControlInBody(body, env2, ng2, subst1)) {
                     let answerType = freshTypeVar()
                     in #(controlFunTypeList(paramTypes, applySubst(bodyType, subst1), answerType, answerType), subst1)
                 } else {
