@@ -125,7 +125,7 @@ This section is new work rather than migration of existing helpers.
 
 ### Analyzer entry helpers to add
 
-- [ ] Add an effect-aware `analyzeExpr` signature carrying `answerIn`, `answerOut`, and `controlAllowed`.
+- [x] Add an effect-aware `analyzeExpr` signature carrying `answerIn`, `answerOut`, and `controlAllowed`.
 - [ ] Add a small wrapper for pure ambient contexts, if that keeps branches readable.
 - [x] Add a helper that creates fresh local answer-type pairs for lambda bodies and reset bodies.
 
@@ -145,9 +145,9 @@ This section is new work rather than migration of existing helpers.
 
 ### Argument threading helpers to add or replace
 
-- [ ] Replace the current `analyzeArgs` with an effect-threaded version.
-- [ ] Thread answer types left-to-right through argument evaluation.
-- [ ] Preserve current source evaluation order.
+- [x] Replace the current `analyzeArgs` with an effect-threaded version.
+- [x] Thread answer types left-to-right through argument evaluation.
+- [x] Preserve current source evaluation order.
 
 ## Section E: Existing Mid-Level Helper Migration
 
@@ -155,14 +155,14 @@ This section covers the helpers below the support predicates and above the `anal
 
 ### `analyzeArgs`
 
-- [ ] Expand the signature to thread `answerIn`, `answerOut`, and `controlAllowed`.
-- [ ] Preserve left-to-right evaluation.
-- [ ] Return the argument type list plus the updated substitution as it does now.
+- [x] Expand the signature to thread `answerIn`, `answerOut`, and `controlAllowed`.
+- [x] Preserve left-to-right evaluation.
+- [x] Return the argument type list plus the updated substitution as it does now.
 
 ### `analyzeCondCases` and `analyzeMatchCases`
 
-- [ ] Expand both helpers to thread answer types explicitly.
-- [ ] Ensure each branch starts from the same post-test answer state.
+- [x] Expand both helpers to thread answer types explicitly.
+- [x] Ensure each branch starts from the same post-test answer state.
 - [ ] Keep branch result-type unification logic unchanged in spirit.
 
 ### `bindParams`
@@ -172,7 +172,7 @@ This section covers the helpers below the support predicates and above the `anal
 
 ### `analyzeLetBindings`
 
-- [ ] Expand the helper to thread answer types left-to-right through binding expression evaluation.
+- [x] Expand the helper to thread answer types left-to-right through binding expression evaluation.
 - [ ] Keep the environment-extension result unchanged in shape.
 
 ### `extendTypeEnv`
@@ -182,8 +182,8 @@ This section covers the helpers below the support predicates and above the `anal
 
 ### `analyzeSequence`
 
-- [ ] Expand the helper to thread answer types left-to-right.
-- [ ] Preserve “last expression determines result type”.
+- [x] Expand the helper to thread answer types left-to-right.
+- [x] Preserve “last expression determines result type”.
 
 ### Letrec helpers
 
@@ -203,7 +203,7 @@ Checklist:
 
 - [x] Keep the broad letrec strategy unchanged for the first pass.
 - [x] Update recursive binder snapshots so controlful callables print deterministically.
-- [ ] Expand `processRecBinding` so lambda bodies are analyzed through the new effect-aware analyzer.
+- [x] Expand `processRecBinding` so lambda bodies are analyzed through the new effect-aware analyzer.
 - [x] Keep answer-type generalization policy out of this first migration.
 - [x] Defer any letrec soundness redesign beyond what the new representation and analyzer interface force.
 
@@ -220,7 +220,7 @@ This group includes:
 
 Checklist:
 
-- [ ] Expand `analyzePrimitive` to thread answer types through left and right operands.
+- [x] Expand `analyzePrimitive` to thread answer types through left and right operands.
 - [x] Keep the primitive result-type rules unchanged.
 - [x] Expand `analyzeConstruct` only through the new application path.
 - [x] Update `ctorTypeToTypeExp` so constructor arrows become explicit pure `funType` nodes.
@@ -248,9 +248,9 @@ This group includes:
 
 Checklist:
 
-- [ ] Make atomic value branches unify `answerIn` with `answerOut`.
-- [ ] Keep their direct result types unchanged.
-- [ ] Make wrapper branches preserve their child expression's answer threading rather than silently forcing purity.
+- [x] Make atomic value branches unify `answerIn` with `answerOut`.
+- [x] Keep their direct result types unchanged.
+- [x] Make wrapper branches preserve their child expression's answer threading rather than silently forcing purity.
 
 ## Lambda branches
 
@@ -261,10 +261,10 @@ This group includes:
 
 Checklist:
 
-- [ ] Analyze lambda bodies under fresh local answer types.
+- [x] Analyze lambda bodies under fresh local answer types.
 - [x] Analyze lambda bodies with `controlAllowed = true`.
-- [ ] Keep lambda construction itself pure in the surrounding context.
-- [ ] Route the result through the new callable-builder helpers.
+- [x] Keep lambda construction itself pure in the surrounding context.
+- [x] Route the result through the new callable-builder helpers.
 - [ ] Normalize pure latent effects back to pure callable types when possible.
 
 ## Application branches
@@ -277,8 +277,8 @@ This group includes:
 Checklist:
 
 - [ ] Decompose application into function evaluation, argument evaluation, and callable consumption.
-- [ ] Thread answer types through function evaluation.
-- [ ] Thread answer types through argument evaluation in source order.
+- [x] Thread answer types through function evaluation.
+- [x] Thread answer types through argument evaluation in source order.
 - [ ] Route zero-argument calls through `consumeThunkCallable`.
 - [ ] Route non-empty applications through `consumeCurriedCallable`.
 - [x] Reject controlful callable invocation when `controlAllowed = false`.
@@ -307,9 +307,9 @@ This group includes:
 
 Checklist:
 
-- [ ] Evaluate the test or scrutinee first and thread the answer state through it.
-- [ ] Start each branch from the same post-test answer state.
-- [ ] Make both branches or all cases end at the same final `answerOut`.
+- [x] Evaluate the test or scrutinee first and thread the answer state through it.
+- [x] Start each branch from the same post-test answer state.
+- [x] Make both branches or all cases end at the same final `answerOut`.
 - [x] Keep existing branch result-type unification logic.
 
 ## Binding expressions
@@ -322,7 +322,7 @@ This group includes:
 
 Checklist:
 
-- [ ] Thread answer types through binding evaluation before entering the body.
+- [x] Thread answer types through binding evaluation before entering the body.
 - [x] Keep environment extension logic structurally unchanged.
 - [x] Keep the letrec fixpoint loop intact unless the new analyzer interface forces a small local rewrite.
 
@@ -340,7 +340,7 @@ This group includes:
 
 Checklist:
 
-- [ ] Thread answer types through any evaluated subexpressions.
+- [x] Thread answer types through any evaluated subexpressions.
 - [x] Keep the final constructor or tuple shape itself pure.
 - [x] Keep `make_vec` unsupported.
 - [x] Keep typedef environment extension behavior unchanged.
@@ -355,8 +355,8 @@ This group includes:
 
 Checklist:
 
-- [ ] Expand `sequence` to explicit left-to-right answer threading.
-- [ ] Decide whether `amb_expr` should simply thread both sides through the new analyzer without deeper redesign in this pass.
+- [x] Expand `sequence` to explicit left-to-right answer threading.
+- [x] Decide whether `amb_expr` should simply thread both sides through the new analyzer without deeper redesign in this pass.
 - [x] Decide whether `back_expr` remains a placeholder returning a fresh type variable for now.
 - [x] Keep these decisions explicit rather than letting them drift as accidental behavior.
 
@@ -385,8 +385,8 @@ This section covers the bottom of the file.
 
 ### `infer`
 
-- [ ] Make `infer` create one fresh top-level answer variable.
-- [ ] Call the effect-aware `analyzeExpr` with identical `answerIn` and `answerOut` at top level.
+- [x] Make `infer` create one fresh top-level answer variable.
+- [x] Call the effect-aware `analyzeExpr` with identical `answerIn` and `answerOut` at top level.
 - [x] Set top-level `controlAllowed = false`.
 - [ ] Normalize the final type after substitution so pure callables do not print as controlful callables with identical answer types.
 
