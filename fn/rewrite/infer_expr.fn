@@ -471,6 +471,13 @@ fn latentControlInBody {
     (E.letrec_expr(bindings, body), envt, ng, subst) {
         latentControlInBindings(bindings, envt, ng, subst) or latentControlInBody(body, envt, ng, subst)
     }
+    (E.construct(_, _, args), envt, ng, subst) { latentControlInExprList(args, envt, ng, subst) }
+    (E.deconstruct(_, _, scrutinee), envt, ng, subst) { latentControlInBody(scrutinee, envt, ng, subst) }
+    (E.make_tuple(exprs), envt, ng, subst) { latentControlInExprList(exprs, envt, ng, subst) }
+    (E.primapp(_, left, right), envt, ng, subst) {
+        latentControlInBody(left, envt, ng, subst) or latentControlInBody(right, envt, ng, subst)
+    }
+    (E.tuple_index(_, _, expr), envt, ng, subst) { latentControlInBody(expr, envt, ng, subst) }
     (E.cut_expr(expr), envt, ng, subst) { latentControlInBody(expr, envt, ng, subst) }
     (E.tag(expr), envt, ng, subst) { latentControlInBody(expr, envt, ng, subst) }
     (E.print_exp(expr), envt, ng, subst) { latentControlInBody(expr, envt, ng, subst) }

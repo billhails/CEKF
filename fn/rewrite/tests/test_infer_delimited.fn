@@ -24,3 +24,5 @@ in
     assert(infer_type("(let ((apply1 (λ (f) (f 1))) (g (λ (x) (shift (λ (k) (k x)))))) (λ () (cond 2 (1 0) (2 (apply1 g)))))") == "#() -['0=>'0]-> Int");
     assert(infer_type("(let ((apply1 (λ (f) (f 1))) (g (λ (x) (shift (λ (k) (k x)))))) (λ () (match_cases 2 ((1) 0) ((2) (apply1 g)))))") == "#() -['0=>'0]-> Int");
     assert(infer_type("(let ((apply1 (λ (f) (f 1))) (g (λ (x) (shift (λ (k) (k x)))))) (λ () (typedefs () (apply1 g))))") == "#() -['0=>'0]-> Int");
+    assert(infer_type("(let ((apply1 (λ (f) (f 1))) (g (λ (x) (shift (λ (k) (k x)))))) (λ () (tuple_index 2 0 (make_tuple (apply1 g) 0))))") == "#() -['0=>'0]-> Int");
+    assert(infer_type("(let ((apply1 (λ (f) (f 1))) (g (λ (x) (shift (λ (k) (k x)))))) (λ () (typedefs ((wrap (-> 'a (Box 'a)))) (deconstruct wrap 0 (construct wrap 0 (apply1 g))))))") == "#() -['0=>'0]-> Int");
