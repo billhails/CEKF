@@ -137,10 +137,10 @@ This section is new work rather than migration of existing helpers.
 
 ### Callable consumer helpers to add
 
-- [ ] Add `consumeThunkCallable`.
-- [ ] Add `consumeCurriedCallable`.
-- [ ] Keep callable-consumption logic out of `unifyType`.
-- [ ] Let these helpers enforce `controlAllowed` when a controlful callable is actually invoked.
+- [x] Add `consumeThunkCallable`.
+- [x] Add `consumeCurriedCallable`.
+- [x] Keep callable-consumption logic out of `unifyType`.
+- [x] Let these helpers enforce `controlAllowed` when a controlful callable is actually invoked.
 - [ ] Let these helpers instantiate type variables to controlful callable skeletons when needed.
 
 ### Argument threading helpers to add or replace
@@ -276,11 +276,11 @@ This group includes:
 
 Checklist:
 
-- [ ] Decompose application into function evaluation, argument evaluation, and callable consumption.
+- [x] Decompose application into function evaluation, argument evaluation, and callable consumption.
 - [x] Thread answer types through function evaluation.
 - [x] Thread answer types through argument evaluation in source order.
-- [ ] Route zero-argument calls through `consumeThunkCallable`.
-- [ ] Route non-empty applications through `consumeCurriedCallable`.
+- [x] Route zero-argument calls through `consumeThunkCallable`.
+- [x] Route non-empty applications through `consumeCurriedCallable`.
 - [x] Reject controlful callable invocation when `controlAllowed = false`.
 
 ## Control-related existing branch

@@ -89,6 +89,38 @@ fn makeLambdaCallableChain {
     }
 }
 
+fn consumeThunkCallable {
+    (callableType, resultType, _, _, true, subst) {
+        let subst1 = unifyType(callableType, thunkType(resultType), subst)
+        in #(applySubst(resultType, subst1), subst1)
+    }
+    (callableType, resultType, _, _, false, subst) {
+        let resolvedCallable = applySubst(callableType, subst)
+        in if (isControlCallable(resolvedCallable)) {
+            error("infer_expr: controlful callable application requires reset")
+        } else {
+            let subst1 = unifyType(callableType, thunkType(resultType), subst)
+            in #(applySubst(resultType, subst1), subst1)
+        }
+    }
+}
+
+fn consumeCurriedCallable {
+    (callableType, argTypes, resultType, _, _, true, subst) {
+        let subst1 = unifyType(callableType, funTypeList(argTypes, resultType), subst)
+        in #(applySubst(resultType, subst1), subst1)
+    }
+    (callableType, argTypes, resultType, _, _, false, subst) {
+        let resolvedCallable = applySubst(callableType, subst)
+        in if (isControlCallable(resolvedCallable) or hasControlCallableType(argTypes)) {
+            error("infer_expr: controlful callable application requires reset")
+        } else {
+            let subst1 = unifyType(callableType, funTypeList(argTypes, resultType), subst)
+            in #(applySubst(resultType, subst1), subst1)
+        }
+    }
+}
+
 fn preserveAnswers(answerIn, answerOut, subst) {
     unifyType(answerIn, answerOut, subst)
 }
@@ -1045,33 +1077,17 @@ fn analyzeExpr {
     (E.apply(fun, []), envt, ng, subst, answerIn, answerOut, controlAllowed) {
         let afterFun = freshTypeVar()
         in bind(analyzeExpr(fun, envt, ng, subst, answerIn, afterFun, controlAllowed), fn (#(funTypeExp, subst1)) {
-            let resolvedFunType = applySubst(funTypeExp, subst1)
-            in if (controlAllowed or not isControlCallable(resolvedFunType)) {
-                let resultType = freshTypeVar();
-                    subst2 = unifyType(funTypeExp, thunkType(resultType), subst1)
-                in #(applySubst(resultType, subst2), subst2)
-            } else {
-                error("infer_expr: controlful callable application requires reset")
-            }
+            let resultType = freshTypeVar()
+            in consumeThunkCallable(funTypeExp, resultType, applySubst(afterFun, subst1), answerOut, controlAllowed, subst1)
         })
     }
     (E.apply(fun, args), envt, ng, subst, answerIn, answerOut, controlAllowed) {
         let afterFun = freshTypeVar()
         in bind(analyzeExpr(fun, envt, ng, subst, answerIn, afterFun, controlAllowed), fn (#(funTypeExp, subst1)) {
-            let resolvedFunType = applySubst(funTypeExp, subst1)
-            in if (controlAllowed or not isControlCallable(resolvedFunType)) {
-                bind(analyzeArgs(args, envt, ng, subst1, applySubst(afterFun, subst1), answerOut, controlAllowed), fn (#(argTypes, subst2)) {
-                    if (controlAllowed or not hasControlCallableType(argTypes)) {
-                        let resultType = freshTypeVar();
-                            subst3 = unifyType(funTypeExp, funTypeList(argTypes, resultType), subst2)
-                        in #(applySubst(resultType, subst3), subst3)
-                    } else {
-                        error("infer_expr: controlful callable application requires reset")
-                    }
-                })
-            } else {
-                error("infer_expr: controlful callable application requires reset")
-            }
+            bind(analyzeArgs(args, envt, ng, subst1, applySubst(afterFun, subst1), answerOut, controlAllowed), fn (#(argTypes, subst2)) {
+                let resultType = freshTypeVar()
+                in consumeCurriedCallable(funTypeExp, argTypes, resultType, applySubst(afterFun, subst2), answerOut, controlAllowed, subst2)
+            })
         })
     }
     (E.callcc_expr(called), envt, ng, subst, answerIn, answerOut, controlAllowed) {
