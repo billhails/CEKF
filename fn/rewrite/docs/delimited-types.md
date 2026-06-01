@@ -6,6 +6,8 @@ That note fixes a candidate operational account for `reset` and `shift` in the r
 
 The short answer is that plain Hindley-Milner types over ordinary arrows are not enough. A `shift` occurrence does not just compute a result of some type $\tau$. It also changes the answer type of the surrounding delimited computation. Once `shift` can sit inside a named function, that control behavior becomes latent in the function type and cannot be reconstructed only from the local syntax at the eventual call site.
 
+For the real compiler pipeline, this judgment belongs on the earlier `expr.fn` / `src/lambda.yaml`-like structures. Desugaring to `minexpr.fn` / `src/minlam.yaml` happens shortly afterward, and the majority of later transforms then operate on that reduced core, so the delimited-control guarantees need to exist before that handoff.
+
 ## Goal
 
 The goal of this sketch is not to commit to a full inference algorithm yet. The goal is to pin down a type judgment precise enough that:
@@ -249,14 +251,14 @@ The application rule above mirrors the ordinary left-to-right threading of `k` a
 
 ## Recommended first implementation target
 
-For the rewrite prototype, the most pragmatic staged plan is:
+For the rewrite prototype and the real compiler, the pragmatic staged plan is:
 
 1. Keep this note as the direct-style semantic reference.
-2. Validate the delimited CPS transform first.
-3. Add a post-CPS type check before attempting source-level inference for `shift/reset`.
-4. If source-level typing is still desired, start with explicit annotations on controlful named functions and on `reset` bodies.
+2. Implement delimited typing at the existing early source-level typechecking stage over the `expr.fn` / `src/lambda.yaml`-like structures, before desugaring to `minexpr.fn` / `src/minlam.yaml`, ANF, or any target-specific CPS split.
+3. Use the delimited CPS transform as a secondary validation oracle in the rewrite prototype, not as the place where typing first becomes valid.
+4. If inference is too ambitious at first, start with explicit annotations on controlful named functions and on `reset` bodies, together with monomorphic answer-type variables.
 
-That order keeps the hard part isolated. It also avoids overcommitting to a complex inference algorithm before the operational rewrite is stable.
+That order preserves guarantees for earlier transforms, works for both the ANF-based CEKF path and the target-b path, and still lets the CPS note act as an operational cross-check.
 
 ## Worked example
 
