@@ -294,6 +294,8 @@ Checklist:
 - [x] Keep this branch special-cased for the first pass.
 - [x] Update it only enough to use explicit pure `funType` construction.
 - [x] Do not force `call/cc` into the new delimited-control rule set yet.
+- [x] Treat `call/cc` as a whole-continuation operator, not as evidence that a lambda should be classified as a reset-gated controlful callable.
+- [ ] Revisit `call/cc` only in the later reconciliation phase once `answerIn` / `answerOut` threading is stable across the analyzer.
 
 ## Branching expressions
 
