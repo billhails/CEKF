@@ -450,6 +450,9 @@ fn directControlfulApplyBody {
 }
 
 fn latentControlInBody {
+    (E.amb_expr(left, right), envt, ng, subst) {
+        latentControlInBody(left, envt, ng, subst) or latentControlInBody(right, envt, ng, subst)
+    }
     (expr = E.shift_expr(_), _, _, _) { directShiftBody(expr) }
     (expr = E.apply(_, _), envt, ng, subst) { directControlfulApplyBody(expr, envt, ng, subst) }
     (E.sequence(exprs), envt, ng, subst) { latentControlInExprList(exprs, envt, ng, subst) }
