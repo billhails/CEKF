@@ -417,6 +417,27 @@ fn latentControlInExprList {
     }
 }
 
+fn latentControlInBindings {
+    ([], _, _, _) { false }
+    (#(_, expr) @ rest, envt, ng, subst) {
+        latentControlInBody(expr, envt, ng, subst) or latentControlInBindings(rest, envt, ng, subst)
+    }
+}
+
+fn latentControlInCondCases {
+    ([], _, _, _) { false }
+    (#(matchExpr, resultExpr) @ rest, envt, ng, subst) {
+        latentControlInBody(matchExpr, envt, ng, subst) or latentControlInBody(resultExpr, envt, ng, subst) or latentControlInCondCases(rest, envt, ng, subst)
+    }
+}
+
+fn latentControlInMatchCases {
+    ([], _, _, _) { false }
+    (#(_, resultExpr) @ rest, envt, ng, subst) {
+        latentControlInBody(resultExpr, envt, ng, subst) or latentControlInMatchCases(rest, envt, ng, subst)
+    }
+}
+
 fn directControlfulApplyBody {
     (E.apply(fun, args), envt, ng, subst) {
         bind(analyzeExpr(fun, envt, ng, subst, true), fn (#(funTypeExp, subst1)) {
@@ -432,10 +453,29 @@ fn latentControlInBody {
     (expr = E.shift_expr(_), _, _, _) { directShiftBody(expr) }
     (expr = E.apply(_, _), envt, ng, subst) { directControlfulApplyBody(expr, envt, ng, subst) }
     (E.sequence(exprs), envt, ng, subst) { latentControlInExprList(exprs, envt, ng, subst) }
+    (E.if_expr(test, consequent, alternative), envt, ng, subst) {
+        latentControlInBody(test, envt, ng, subst) or latentControlInBody(consequent, envt, ng, subst) or latentControlInBody(alternative, envt, ng, subst)
+    }
+    (E.cond_expr(test, cases), envt, ng, subst) {
+        latentControlInBody(test, envt, ng, subst) or latentControlInCondCases(cases, envt, ng, subst)
+    }
+    (E.match_cases(indexExpr, cases), envt, ng, subst) {
+        latentControlInBody(indexExpr, envt, ng, subst) or latentControlInMatchCases(cases, envt, ng, subst)
+    }
+    (E.let_expr(bindings, body), envt, ng, subst) {
+        latentControlInBindings(bindings, envt, ng, subst) or latentControlInBody(body, envt, ng, subst)
+    }
+    (E.letstar_expr(bindings, body), envt, ng, subst) {
+        latentControlInBindings(bindings, envt, ng, subst) or latentControlInBody(body, envt, ng, subst)
+    }
+    (E.letrec_expr(bindings, body), envt, ng, subst) {
+        latentControlInBindings(bindings, envt, ng, subst) or latentControlInBody(body, envt, ng, subst)
+    }
     (E.cut_expr(expr), envt, ng, subst) { latentControlInBody(expr, envt, ng, subst) }
     (E.tag(expr), envt, ng, subst) { latentControlInBody(expr, envt, ng, subst) }
     (E.print_exp(expr), envt, ng, subst) { latentControlInBody(expr, envt, ng, subst) }
     (E.typeof_expr(expr), envt, ng, subst) { latentControlInBody(expr, envt, ng, subst) }
+    (E.typedefs(_, body), envt, ng, subst) { latentControlInBody(body, envt, ng, subst) }
     (_, _, _, _) { false }
 }
 

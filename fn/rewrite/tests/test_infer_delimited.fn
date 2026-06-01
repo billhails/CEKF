@@ -19,3 +19,8 @@ in
     assert(infer_type("(reset (let ((apply1 (λ (f) (f 1))) (g (λ (x) (shift (λ (k) (k x)))))) (+ 1 (apply1 g))))") == "Int");
     assert(infer_type("(let ((apply1 (λ (f) (f 1))) (g (λ (x) (shift (λ (k) (k x)))))) (λ () (apply1 g)))") == "#() -['0=>'0]-> Int");
     assert(infer_type("(let ((apply1 (λ (f) (f 1))) (g (λ (x) (shift (λ (k) (k x)))))) (λ () (begin 0 (apply1 g))))") == "#() -['0=>'0]-> Int");
+    assert(infer_type("(let ((apply1 (λ (f) (f 1))) (g (λ (x) (shift (λ (k) (k x)))))) (λ () (if true (apply1 g) 0)))") == "#() -['0=>'0]-> Int");
+    assert(infer_type("(let ((apply1 (λ (f) (f 1))) (g (λ (x) (shift (λ (k) (k x)))))) (λ () (let ((x 0)) (apply1 g))))") == "#() -['0=>'0]-> Int");
+    assert(infer_type("(let ((apply1 (λ (f) (f 1))) (g (λ (x) (shift (λ (k) (k x)))))) (λ () (cond 2 (1 0) (2 (apply1 g)))))") == "#() -['0=>'0]-> Int");
+    assert(infer_type("(let ((apply1 (λ (f) (f 1))) (g (λ (x) (shift (λ (k) (k x)))))) (λ () (match_cases 2 ((1) 0) ((2) (apply1 g)))))") == "#() -['0=>'0]-> Int");
+    assert(infer_type("(let ((apply1 (λ (f) (f 1))) (g (λ (x) (shift (λ (k) (k x)))))) (λ () (typedefs () (apply1 g))))") == "#() -['0=>'0]-> Int");
