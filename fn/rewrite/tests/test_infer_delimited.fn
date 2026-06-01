@@ -1,0 +1,18 @@
+let
+    link "../infer_expr.fn" as INFER;
+    link "../expr.fn" as E;
+
+    fn infer_type(source) {
+        INFER.infer_to_string(E.parse(source))
+    }
+
+    fn supports(source) {
+        INFER.supports(E.parse(source))
+    }
+in
+    assert(infer_type("(reset 1)") == "Int");
+    assert(infer_type("(reset (+ 1 (shift (λ (k) 2))))") == "Int");
+    assert(infer_type("(reset (+ 1 (shift (λ (k) (k 2)))))") == "Int");
+    assert(supports("(reset (+ 1 (shift (λ (k) (k 2)))))"));
+    assert(infer_type("(let ((f (λ (x) (shift (λ (k) (k x)))))) f)") == "'0 -['1=>'1]-> '0");
+    assert(infer_type("(reset (let ((f (λ (x) (shift (λ (k) (k x)))))) (+ 1 (f 2))))") == "Int");
