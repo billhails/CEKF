@@ -410,6 +410,17 @@ fn directShiftBody {
     (_) { false }
 }
 
+fn directControlfulApplyBody {
+    (E.apply(fun, args), envt, ng, subst) {
+        bind(analyzeExpr(fun, envt, ng, subst, true), fn (#(funTypeExp, subst1)) {
+            bind(analyzeArgs(args, envt, ng, subst1, true), fn (#(argTypes, subst2)) {
+                isControlCallable(applySubst(funTypeExp, subst2)) or hasControlCallableType(argTypes)
+            })
+        })
+    }
+    (_, _, _, _) { false }
+}
+
 fn isControlCallable {
     (controlThunkType(_, _, _)) { true }
     (controlFunType(_, _, _, _)) { true }
@@ -876,7 +887,7 @@ fn analyzeExpr {
     }
     (E.lambda([], body), envt, ng, subst, _) {
         bind(analyzeExpr(body, envt, ng, subst, true), fn (#(bodyType, subst1)) {
-            if (directShiftBody(body)) {
+            if (directShiftBody(body) or directControlfulApplyBody(body, envt, ng, subst1)) {
                 let answerType = freshTypeVar()
                 in #(controlThunkType(applySubst(bodyType, subst1), answerType, answerType), subst1)
             } else {
@@ -887,7 +898,7 @@ fn analyzeExpr {
     (E.lambda(params, body), envt, ng, subst, _) {
         bind(bindParams(params, envt, ng), fn (#(paramTypes, env2, ng2)) {
             bind(analyzeExpr(body, env2, ng2, subst, true), fn (#(bodyType, subst1)) {
-                if (directShiftBody(body)) {
+                if (directShiftBody(body) or directControlfulApplyBody(body, env2, ng2, subst1)) {
                     let answerType = freshTypeVar()
                     in #(controlFunTypeList(paramTypes, applySubst(bodyType, subst1), answerType, answerType), subst1)
                 } else {
