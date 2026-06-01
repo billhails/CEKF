@@ -416,6 +416,13 @@ fn isControlCallable {
     (_) { false }
 }
 
+fn hasControlCallableType {
+    ([]) { false }
+    (type @ rest) {
+        isControlCallable(type) or hasControlCallableType(rest)
+    }
+}
+
 fn canonicalizeArgs {
     ([], renv, counter) { #([], renv, counter) }
     (arg @ rest, renv, counter) {
@@ -906,9 +913,13 @@ fn analyzeExpr {
             let resolvedFunType = applySubst(funTypeExp, subst1)
             in if (controlAllowed or not isControlCallable(resolvedFunType)) {
                 bind(analyzeArgs(args, envt, ng, subst1, controlAllowed), fn (#(argTypes, subst2)) {
-                    let resultType = freshTypeVar();
-                        subst3 = unifyType(funTypeExp, funTypeList(argTypes, resultType), subst2)
-                    in #(applySubst(resultType, subst3), subst3)
+                    if (controlAllowed or not hasControlCallableType(argTypes)) {
+                        let resultType = freshTypeVar();
+                            subst3 = unifyType(funTypeExp, funTypeList(argTypes, resultType), subst2)
+                        in #(applySubst(resultType, subst3), subst3)
+                    } else {
+                        error("infer_expr: controlful callable application requires reset")
+                    }
                 })
             } else {
                 error("infer_expr: controlful callable application requires reset")
