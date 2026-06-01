@@ -89,34 +89,64 @@ fn makeLambdaCallableChain {
     }
 }
 
+fn callableAnswers {
+    (thunkType(_)) { nothing }
+    (controlThunkType(_, answerIn, answerOut)) { just(#(answerIn, answerOut)) }
+    (funType(_, cod)) { callableAnswers(cod) }
+    (controlFunType(_, _, answerIn, answerOut)) { just(#(answerIn, answerOut)) }
+    (_) { nothing }
+}
+
 fn consumeThunkCallable {
-    (callableType, resultType, _, _, true, subst) {
-        let subst1 = unifyType(callableType, thunkType(resultType), subst)
-        in #(applySubst(resultType, subst1), subst1)
+    (callableType, resultType, callAnswerIn, callAnswerOut, true, subst) {
+        let resolvedCallable = applySubst(callableType, subst)
+        in switch (resolvedCallable) {
+            (controlThunkType(_, _, _)) {
+                let subst1 = unifyType(callableType, controlThunkType(resultType, callAnswerIn, callAnswerOut), subst)
+                in #(applySubst(resultType, subst1), subst1)
+            }
+            (_) {
+                let subst1 = unifyType(callableType, thunkType(resultType), subst);
+                    subst2 = preserveAnswers(callAnswerIn, callAnswerOut, subst1)
+                in #(applySubst(resultType, subst2), subst2)
+            }
+        }
     }
-    (callableType, resultType, _, _, false, subst) {
+    (callableType, resultType, callAnswerIn, callAnswerOut, false, subst) {
         let resolvedCallable = applySubst(callableType, subst)
         in if (isControlCallable(resolvedCallable)) {
             error("infer_expr: controlful callable application requires reset")
         } else {
-            let subst1 = unifyType(callableType, thunkType(resultType), subst)
-            in #(applySubst(resultType, subst1), subst1)
+            let subst1 = unifyType(callableType, thunkType(resultType), subst);
+                subst2 = preserveAnswers(callAnswerIn, callAnswerOut, subst1)
+            in #(applySubst(resultType, subst2), subst2)
         }
     }
 }
 
 fn consumeCurriedCallable {
-    (callableType, argTypes, resultType, _, _, true, subst) {
-        let subst1 = unifyType(callableType, funTypeList(argTypes, resultType), subst)
-        in #(applySubst(resultType, subst1), subst1)
-    }
-    (callableType, argTypes, resultType, _, _, false, subst) {
+    (callableType, argTypes, resultType, callAnswerIn, callAnswerOut, true, subst) {
         let resolvedCallable = applySubst(callableType, subst)
-        in if (isControlCallable(resolvedCallable) or hasControlCallableType(argTypes)) {
+        in switch (callableAnswers(resolvedCallable)) {
+            (just(_)) {
+                let subst1 = unifyType(callableType, controlFunTypeList(argTypes, resultType, callAnswerIn, callAnswerOut), subst)
+                in #(applySubst(resultType, subst1), subst1)
+            }
+            (nothing) {
+                let subst1 = unifyType(callableType, funTypeList(argTypes, resultType), subst);
+                    subst2 = preserveAnswers(callAnswerIn, callAnswerOut, subst1)
+                in #(applySubst(resultType, subst2), subst2)
+            }
+        }
+    }
+    (callableType, argTypes, resultType, callAnswerIn, callAnswerOut, false, subst) {
+        let resolvedCallable = applySubst(callableType, subst)
+        in if (callableAnswers(resolvedCallable) != nothing or hasControlCallableType(argTypes)) {
             error("infer_expr: controlful callable application requires reset")
         } else {
-            let subst1 = unifyType(callableType, funTypeList(argTypes, resultType), subst)
-            in #(applySubst(resultType, subst1), subst1)
+            let subst1 = unifyType(callableType, funTypeList(argTypes, resultType), subst);
+                subst2 = preserveAnswers(callAnswerIn, callAnswerOut, subst1)
+            in #(applySubst(resultType, subst2), subst2)
         }
     }
 }
