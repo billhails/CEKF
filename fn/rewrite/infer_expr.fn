@@ -580,12 +580,8 @@ fn latentControlInBody {
     (E.match_cases(indexExpr, cases), envt, ng, subst) {
         latentControlInBody(indexExpr, envt, ng, subst) or latentControlInMatchCases(cases, envt, ng, subst)
     }
-    (E.let_expr(bindings, body), envt, ng, subst) {
-        latentControlInBindings(bindings, envt, ng, subst) or latentControlInBody(body, envt, ng, subst)
-    }
-    (E.letstar_expr(bindings, body), envt, ng, subst) {
-        latentControlInBindings(bindings, envt, ng, subst) or latentControlInBody(body, envt, ng, subst)
-    }
+    (E.let_expr(bindings, body), envt, ng, subst) |
+    (E.letstar_expr(bindings, body), envt, ng, subst) |
     (E.letrec_expr(bindings, body), envt, ng, subst) {
         latentControlInBindings(bindings, envt, ng, subst) or latentControlInBody(body, envt, ng, subst)
     }
@@ -665,15 +661,11 @@ fn supports {
     (E.constant(_, _)) {
         false
     }
-    (E.lambda([], body)) {
-        supports(body)
-    }
+    (E.lambda([], body)) |
     (E.lambda(_, body)) {
         supports(body)
     }
-    (E.apply(fun, [])) {
-        supports(fun)
-    }
+    (E.apply(fun, [])) |
     (E.apply(fun, args)) {
         supports(fun) and supportsList(args)
     }
@@ -686,12 +678,8 @@ fn supports {
     (E.match_cases(expr, cases)) {
         supports(expr) and supportsMatchCases(cases)
     }
-    (E.let_expr(bindings, body)) {
-        supportsBindings(bindings) and supports(body)
-    }
-    (E.letrec_expr(bindings, body)) {
-        supportsBindings(bindings) and supports(body)
-    }
+    (E.let_expr(bindings, body)) |
+    (E.letrec_expr(bindings, body)) |
     (E.letstar_expr(bindings, body)) {
         supportsBindings(bindings) and supports(body)
     }
@@ -727,8 +715,7 @@ fn supportsList {
 }
 
 fn supportsNonEmptyList {
-    ([]) { false }
-    (exprs) { supportsList(exprs) }
+    (exprs) { not list.empty(exprs) and supportsList(exprs) }
 }
 
 fn supportsBindings {
@@ -740,10 +727,7 @@ fn supportsBindings {
 }
 
 fn supportsCondCases {
-    ([]) { false }
-    (#(matchExpr, resultExpr) @ rest) {
-        supports(matchExpr) and supports(resultExpr) and supportsCondCasesTail(rest)
-    }
+    (cases) { not list.empty(cases) and supportsCondCasesTail(cases) }
 }
 
 fn supportsCondCasesTail {
@@ -755,10 +739,7 @@ fn supportsCondCasesTail {
 }
 
 fn supportsMatchCases {
-    ([]) { false }
-    (#(_, resultExpr) @ rest) {
-        supports(resultExpr) and supportsMatchCasesTail(rest)
-    }
+    (cases) { not list.empty(cases) and supportsMatchCasesTail(cases) }
 }
 
 fn supportsMatchCasesTail {
