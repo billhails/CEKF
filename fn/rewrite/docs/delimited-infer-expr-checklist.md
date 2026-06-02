@@ -141,7 +141,7 @@ This section is new work rather than migration of existing helpers.
 - [x] Add `consumeCurriedCallable`.
 - [x] Keep callable-consumption logic out of `unifyType`.
 - [x] Let these helpers enforce `controlAllowed` when a controlful callable is actually invoked.
-- [ ] Let these helpers instantiate type variables to controlful callable skeletons when needed.
+- [x] Let these helpers instantiate type variables to controlful callable skeletons when needed.
 
 ### Argument threading helpers to add or replace
 
@@ -403,9 +403,9 @@ Use this order to keep diffs reviewable and failures localized.
 2. [x] Update substitution, occurs check, unification, instantiation, rendering, and canonicalization.
 3. [x] Update constructor spine helpers and any pure arrow assumptions.
 4. [ ] Add the new analyzer signature and thread it through existing helpers without changing branch meaning yet.
-5. [ ] Add callable builders, callable consumers, and effect-threaded `analyzeArgs`.
-6. [ ] Migrate lambda and apply branches.
-7. [ ] Migrate ordered pure branches, branching forms, and binding forms.
+5. [x] Add callable builders, callable consumers, and effect-threaded `analyzeArgs`.
+6. [x] Migrate lambda and apply branches.
+7. [x] Migrate ordered pure branches, branching forms, and binding forms.
 8. [x] Add `reset_expr`.
 9. [x] Add `shift_expr`.
 10. [ ] Revisit `supports` and any temporary placeholders such as `amb_expr` and `back_expr`.
@@ -415,9 +415,9 @@ Use this order to keep diffs reviewable and failures localized.
 This note is file-local, but a few checks should be tied to the implementation order.
 
 1. [x] After explicit callable constructors land, verify that pure programs still render pure arrow and thunk types unchanged.
-2. [ ] After the analyzer signature is threaded everywhere, verify that the file still supports the existing non-delimited expression subset.
-3. [ ] After lambda and apply migration, verify that partial application still produces the expected nested callable types.
-4. [ ] After `reset_expr` lands, verify that internal answer-type change is hidden from the surrounding context.
+2. [x] After the analyzer signature is threaded everywhere, verify that the file still supports the existing non-delimited expression subset.
+3. [x] After lambda and apply migration, verify that partial application still produces the expected nested callable types.
+4. [x] After `reset_expr` lands, verify that internal answer-type change is hidden from the surrounding context.
 5. [x] After `shift_expr` lands, verify that named helpers infer latent controlful callable types and that invoking them outside a delimiter is rejected.
 
 ## Final Intent
