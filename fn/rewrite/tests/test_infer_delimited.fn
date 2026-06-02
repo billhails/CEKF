@@ -12,6 +12,7 @@ let
 in
     assert(infer_type("(reset 1)") == "Int");
     assert(infer_type("(reset (+ 1 (shift (λ (k) 2))))") == "Int");
+    assert(infer_type("(reset (shift (λ (k) true)))") == "Bool");
     assert(infer_type("(reset (+ 1 (shift (λ (k) (k 2)))))") == "Int");
     assert(supports("(reset (+ 1 (shift (λ (k) (k 2)))))"));
     assert(infer_type("(let ((f (λ (x) (shift (λ (k) (k x)))))) f)") == "'0 -['1=>'1]-> '0");

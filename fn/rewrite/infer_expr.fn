@@ -1154,14 +1154,16 @@ fn analyzeExpr {
     }
     (E.shift_expr(expr), envt, ng, subst, answerIn, answerOut, controlAllowed, _) {
         if (controlAllowed) {
-            bind(analyzeExpr(expr, envt, ng, subst, answerIn, answerOut, false, false), fn (#(shiftedType, subst1)) {
+            let shiftBodyResult = freshTypeVar()
+            in bind(analyzeExpr(expr, envt, ng, subst, shiftBodyResult, shiftBodyResult, false, false), fn (#(shiftedType, subst1)) {
                 let holeType = freshTypeVar();
-                    answerType = freshTypeVar();
-                    bodyType = freshTypeVar();
-                    continuationType = funType(holeType, answerType);
-                    shiftedFunType = funType(continuationType, bodyType);
-                    subst2 = unifyType(shiftedType, shiftedFunType, subst1)
-                in #(applySubst(holeType, subst2), subst2)
+                    capturedAnswer = freshTypeVar();
+                    continuationType = funType(holeType, capturedAnswer);
+                    shiftedFunType = funType(continuationType, shiftBodyResult);
+                    subst2 = unifyType(shiftedType, shiftedFunType, subst1);
+                    subst3 = unifyType(answerIn, capturedAnswer, subst2);
+                    subst4 = unifyType(answerOut, shiftBodyResult, subst3)
+                in #(applySubst(holeType, subst4), subst4)
             })
         } else {
             error("infer_expr: shift requires reset")

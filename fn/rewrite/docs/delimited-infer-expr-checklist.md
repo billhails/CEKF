@@ -373,11 +373,11 @@ Checklist:
 - [x] Analyze `reset` bodies under fresh local answer types and `controlAllowed = true`.
 - [x] Make `reset` pure to the outside by unifying the surrounding `answerIn` with `answerOut`.
 - [x] Return the body's outgoing answer type as the direct result type of `reset`.
-- [ ] Add `E.shift_expr` only after callable builders and consumers are stable.
+- [x] Add `E.shift_expr` only after callable builders and consumers are stable.
 - [x] Require `controlAllowed = true` in `shift`.
 - [x] Check `shift` operands against the rewrite function-argument form described in the rules note.
 - [x] Make `shift` return the captured hole type, not the shift-body result type.
-- [ ] Use the ambient answer-type change of the `shift` expression itself to carry the captured answer to shift-body result transition.
+- [x] Use the ambient answer-type change of the `shift` expression itself to carry the captured answer to shift-body result transition.
 
 ## Section G: Entry Points and Public Surface
 
