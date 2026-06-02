@@ -3,6 +3,7 @@ link "expr.fn" as E;
 link "../listutils.fn" as list;
 link "../ioutils.fn" as IO;
 import IO operator "$_";
+import list operator "_|>_";
 
 typedef typeExp {
       varType(string)
@@ -28,8 +29,7 @@ typedef substEnv {
     | nullSubstEnv
 }
 
-fn bind(arg, fun) { fun(arg) }
-operator "_=>_" left 8 bind;
+operator "_=>_" left 8 fn (arg, fun) { fun(arg) };
 
 fn freshTypeVar() { varType("'" @@ $incr()) }
 
@@ -77,17 +77,17 @@ fn normalizeType {
     (thunkType(type)) { thunkType(normalizeType(type)) }
     (funType(dom, cod)) { funType(normalizeType(dom), normalizeType(cod)) }
     (controlThunkType(type, answerIn, answerOut)) {
-        normalizeControlThunkType(normalizeType(type), normalizeType(answerIn), normalizeType(answerOut))
+        normalizeControlThunkType(normalizeType(type),
+                                  normalizeType(answerIn),
+                                  normalizeType(answerOut))
     }
     (controlFunType(dom, cod, answerIn, answerOut)) {
-        normalizeControlFunType(normalizeType(dom), normalizeType(cod), normalizeType(answerIn), normalizeType(answerOut))
+        normalizeControlFunType(normalizeType(dom),
+                                normalizeType(cod),
+                                normalizeType(answerIn),
+                                normalizeType(answerOut))
     }
-    (operType(name, args)) { operType(name, normalizeTypeList(args)) }
-}
-
-fn normalizeTypeList {
-    ([]) { [] }
-    (head @ tail) { normalizeType(head) @ normalizeTypeList(tail) }
+    (operType(name, args)) { operType(name, args |> normalizeType) }
 }
 
 fn freshLocalAnswers() {
@@ -117,66 +117,88 @@ fn callableAnswers {
     (_) { nothing }
 }
 
-fn consumeThunkCallable {
-    (callableType, resultType, callAnswerIn, callAnswerOut, controlAllowed, delimiterActive, subst) {
-        let resolvedCallable = applySubst(callableType, subst)
-        in switch (resolvedCallable) {
-            (varType(_)) {
-                if (delimiterActive) {
-                    let subst1 = unifyType(callableType, controlThunkType(resultType, callAnswerIn, callAnswerOut), subst)
-                    in #(applySubst(resultType, subst1), subst1)
-                } else {
-                    let subst1 = unifyType(callableType, thunkType(resultType), subst);
-                        subst2 = preserveAnswers(callAnswerIn, callAnswerOut, subst1)
-                    in #(applySubst(resultType, subst2), subst2)
-                }
-            }
-            (controlThunkType(_, _, _)) {
-                if (controlAllowed) {
-                    let subst1 = unifyType(callableType, controlThunkType(resultType, callAnswerIn, callAnswerOut), subst)
-                    in #(applySubst(resultType, subst1), subst1)
-                } else {
-                    error("infer_expr: controlful callable application requires reset")
-                }
-            }
-            (_) {
+fn consumeThunkCallable(callableType,
+                        resultType,
+                        callAnswerIn,
+                        callAnswerOut,
+                        controlAllowed,
+                        delimiterActive,
+                        subst) {
+    let resolvedCallable = applySubst(callableType, subst)
+    in switch (resolvedCallable) {
+        (varType(_)) {
+            if (delimiterActive) {
+                let subst1 = unifyType(callableType,
+                                       controlThunkType(resultType,
+                                                        callAnswerIn,
+                                                        callAnswerOut),
+                                       subst)
+                in #(applySubst(resultType, subst1), subst1)
+            } else {
                 let subst1 = unifyType(callableType, thunkType(resultType), subst);
                     subst2 = preserveAnswers(callAnswerIn, callAnswerOut, subst1)
                 in #(applySubst(resultType, subst2), subst2)
             }
         }
+        (controlThunkType(_, _, _)) {
+            if (controlAllowed) {
+                let subst1 = unifyType(callableType,
+                                       controlThunkType(resultType,
+                                                        callAnswerIn,
+                                                        callAnswerOut),
+                                       subst)
+                in #(applySubst(resultType, subst1), subst1)
+            } else {
+                error("infer_expr: controlful callable application requires reset")
+            }
+        }
+        (_) {
+            let subst1 = unifyType(callableType, thunkType(resultType), subst);
+                subst2 = preserveAnswers(callAnswerIn, callAnswerOut, subst1)
+            in #(applySubst(resultType, subst2), subst2)
+        }
     }
 }
 
-fn consumeCurriedCallable {
-    (callableType, argTypes, resultType, callAnswerIn, callAnswerOut, controlAllowed, delimiterActive, subst) {
-        let resolvedCallable = applySubst(callableType, subst)
-        in switch (resolvedCallable) {
-            (varType(_)) {
-                if (delimiterActive) {
-                    let subst1 = unifyType(callableType, controlFunTypeList(argTypes, resultType, callAnswerIn, callAnswerOut), subst)
-                    in #(applySubst(resultType, subst1), subst1)
-                } else {
+fn consumeCurriedCallable(callableType,
+                          argTypes,
+                          resultType,
+                          callAnswerIn,
+                          callAnswerOut,
+                          controlAllowed,
+                          delimiterActive,
+                          subst) {
+    let resolvedCallable = applySubst(callableType, subst)
+    in switch (resolvedCallable) {
+        (varType(_)) {
+            if (delimiterActive) {
+                let subst1 = unifyType(callableType,
+                                       controlFunTypeList(argTypes,
+                                                          resultType,
+                                                          callAnswerIn,
+                                                          callAnswerOut),
+                                       subst)
+                in #(applySubst(resultType, subst1), subst1)
+            } else {
+                let subst1 = unifyType(callableType, funTypeList(argTypes, resultType), subst);
+                    subst2 = preserveAnswers(callAnswerIn, callAnswerOut, subst1)
+                in #(applySubst(resultType, subst2), subst2)
+            }
+        }
+        (_) {
+            switch (callableAnswers(resolvedCallable)) {
+                (just(_)) {
+                    if (controlAllowed) {
+                        let subst1 = unifyType(callableType, controlFunTypeList(argTypes, resultType, callAnswerIn, callAnswerOut), subst)
+                        in #(applySubst(resultType, subst1), subst1)
+                    } else {
+                        error("infer_expr: controlful callable application requires reset")
+                    }
+                }
+                (nothing) {
                     let subst1 = unifyType(callableType, funTypeList(argTypes, resultType), subst);
                         subst2 = preserveAnswers(callAnswerIn, callAnswerOut, subst1)
                     in #(applySubst(resultType, subst2), subst2)
-                }
-            }
-            (_) {
-                switch (callableAnswers(resolvedCallable)) {
-                    (just(_)) {
-                        if (controlAllowed) {
-                            let subst1 = unifyType(callableType, controlFunTypeList(argTypes, resultType, callAnswerIn, callAnswerOut), subst)
-                            in #(applySubst(resultType, subst1), subst1)
-                        } else {
-                            error("infer_expr: controlful callable application requires reset")
-                        }
-                    }
-                    (nothing) {
-                        let subst1 = unifyType(callableType, funTypeList(argTypes, resultType), subst);
-                            subst2 = preserveAnswers(callAnswerIn, callAnswerOut, subst1)
-                        in #(applySubst(resultType, subst2), subst2)
-                    }
                 }
             }
         }
@@ -232,20 +254,18 @@ fn applySubstList {
     (h @ t, subst) { applySubst(h, subst) @ applySubstList(t, subst) }
 }
 
-fn occursInType {
-    (name, type, subst) {
-        switch (applySubst(type, subst)) {
-            (varType(other)) { name == other }
-            (thunkType(inner)) { occursInType(name, inner, subst) }
-            (funType(dom, cod)) { occursInType(name, dom, subst) or occursInType(name, cod, subst) }
-            (controlThunkType(inner, answerIn, answerOut)) {
-                occursInType(name, inner, subst) or occursInType(name, answerIn, subst) or occursInType(name, answerOut, subst)
-            }
-            (controlFunType(dom, cod, answerIn, answerOut)) {
-                occursInType(name, dom, subst) or occursInType(name, cod, subst) or occursInType(name, answerIn, subst) or occursInType(name, answerOut, subst)
-            }
-            (operType(_, args)) { occursInTypeList(name, args, subst) }
+fn occursInType (name, type, subst) {
+    switch (applySubst(type, subst)) {
+        (varType(other)) { name == other }
+        (thunkType(inner)) { occursInType(name, inner, subst) }
+        (funType(dom, cod)) { occursInType(name, dom, subst) or occursInType(name, cod, subst) }
+        (controlThunkType(inner, answerIn, answerOut)) {
+            occursInType(name, inner, subst) or occursInType(name, answerIn, subst) or occursInType(name, answerOut, subst)
         }
+        (controlFunType(dom, cod, answerIn, answerOut)) {
+            occursInType(name, dom, subst) or occursInType(name, cod, subst) or occursInType(name, answerIn, subst) or occursInType(name, answerOut, subst)
+        }
+        (operType(_, args)) { occursInTypeList(name, args, subst) }
     }
 }
 
@@ -348,59 +368,59 @@ fn instantiateApplied {
         }
     }
     (thunkType(type), ng, cp) {
-        bind(instantiateApplied(type, ng, cp), fn (#(newType, cp1)) {
+        instantiateApplied(type, ng, cp) => fn (#(newType, cp1)) {
             #(thunkType(newType), cp1)
-        })
+        }
     }
     (funType(dom, cod), ng, cp) {
-        bind(instantiateApplied(dom, ng, cp), fn (#(newDom, cp1)) {
-            bind(instantiateApplied(cod, ng, cp1), fn (#(newCod, cp2)) {
+        instantiateApplied(dom, ng, cp) => fn (#(newDom, cp1)) {
+            instantiateApplied(cod, ng, cp1) => fn (#(newCod, cp2)) {
                 #(funType(newDom, newCod), cp2)
-            })
-        })
+            }
+        }
     }
     (controlThunkType(type, answerIn, answerOut), ng, cp) {
-        bind(instantiateApplied(type, ng, cp), fn (#(newType, cp1)) {
-            bind(instantiateApplied(answerIn, ng, cp1), fn (#(newAnswerIn, cp2)) {
-                bind(instantiateApplied(answerOut, ng, cp2), fn (#(newAnswerOut, cp3)) {
+        instantiateApplied(type, ng, cp) => fn (#(newType, cp1)) {
+            instantiateApplied(answerIn, ng, cp1) => fn (#(newAnswerIn, cp2)) {
+                instantiateApplied(answerOut, ng, cp2) => fn (#(newAnswerOut, cp3)) {
                     #(controlThunkType(newType, newAnswerIn, newAnswerOut), cp3)
-                })
-            })
-        })
+                }
+            }
+        }
     }
     (controlFunType(dom, cod, answerIn, answerOut), ng, cp) {
-        bind(instantiateApplied(dom, ng, cp), fn (#(newDom, cp1)) {
-            bind(instantiateApplied(cod, ng, cp1), fn (#(newCod, cp2)) {
-                bind(instantiateApplied(answerIn, ng, cp2), fn (#(newAnswerIn, cp3)) {
-                    bind(instantiateApplied(answerOut, ng, cp3), fn (#(newAnswerOut, cp4)) {
+        instantiateApplied(dom, ng, cp) => fn (#(newDom, cp1)) {
+            instantiateApplied(cod, ng, cp1) => fn (#(newCod, cp2)) {
+                instantiateApplied(answerIn, ng, cp2) => fn (#(newAnswerIn, cp3)) {
+                    instantiateApplied(answerOut, ng, cp3) => fn (#(newAnswerOut, cp4)) {
                         #(controlFunType(newDom, newCod, newAnswerIn, newAnswerOut), cp4)
-                    })
-                })
-            })
-        })
+                    }
+                }
+            }
+        }
     }
     (operType(name, args), ng, cp) {
-        bind(instantiateArgs(args, ng, cp), fn (#(newArgs, cp2)) {
+        instantiateArgs(args, ng, cp) => fn (#(newArgs, cp2)) {
             #(operType(name, newArgs), cp2)
-        })
+        }
     }
 }
 
 fn instantiateArgs {
     ([], _, cp) { #([], cp) }
     (h @ t, ng, cp) {
-        bind(instantiateApplied(h, ng, cp), fn (#(newHead, cp1)) {
-            bind(instantiateArgs(t, ng, cp1), fn (#(newTail, cp2)) {
+        instantiateApplied(h, ng, cp) => fn (#(newHead, cp1)) {
+            instantiateArgs(t, ng, cp1) => fn (#(newTail, cp2)) {
                 #(newHead @ newTail, cp2)
-            })
-        })
+            }
+        }
     }
 }
 
 fn freshType(type, ng, subst) {
-    bind(instantiateApplied(applySubst(type, subst), ng, nullCpEnv), fn (#(newType, _)) {
+    instantiateApplied(applySubst(type, subst), ng, nullCpEnv) => fn (#(newType, _)) {
         newType
-    })
+    }
 }
 
 fn retrieve {
@@ -482,48 +502,48 @@ fn canonicalizeType {
         }
     }
     (thunkType(type), renv, counter) {
-        bind(canonicalizeType(type, renv, counter), fn (#(canonicalType, renv1, counter1)) {
+        canonicalizeType(type, renv, counter) => fn (#(canonicalType, renv1, counter1)) {
             #(thunkType(canonicalType), renv1, counter1)
-        })
+        }
     }
     (funType(dom, cod), renv, counter) {
-        bind(canonicalizeType(dom, renv, counter), fn (#(canonicalDom, renv1, counter1)) {
-            bind(canonicalizeType(cod, renv1, counter1), fn (#(canonicalCod, renv2, counter2)) {
+        canonicalizeType(dom, renv, counter) => fn (#(canonicalDom, renv1, counter1)) {
+            canonicalizeType(cod, renv1, counter1) => fn (#(canonicalCod, renv2, counter2)) {
                 #(funType(canonicalDom, canonicalCod), renv2, counter2)
-            })
-        })
+            }
+        }
     }
     (controlThunkType(type, answerIn, answerOut), renv, counter) {
-        bind(canonicalizeType(type, renv, counter), fn (#(canonicalType, renv1, counter1)) {
-            bind(canonicalizeType(answerIn, renv1, counter1), fn (#(canonicalIn, renv2, counter2)) {
-                bind(canonicalizeType(answerOut, renv2, counter2), fn (#(canonicalOut, renv3, counter3)) {
+        canonicalizeType(type, renv, counter) => fn (#(canonicalType, renv1, counter1)) {
+            canonicalizeType(answerIn, renv1, counter1) => fn (#(canonicalIn, renv2, counter2)) {
+                canonicalizeType(answerOut, renv2, counter2) => fn (#(canonicalOut, renv3, counter3)) {
                     #(controlThunkType(canonicalType, canonicalIn, canonicalOut), renv3, counter3)
-                })
-            })
-        })
+                }
+            }
+        }
     }
     (controlFunType(dom, cod, answerIn, answerOut), renv, counter) {
-        bind(canonicalizeType(dom, renv, counter), fn (#(canonicalDom, renv1, counter1)) {
-            bind(canonicalizeType(cod, renv1, counter1), fn (#(canonicalCod, renv2, counter2)) {
-                bind(canonicalizeType(answerIn, renv2, counter2), fn (#(canonicalIn, renv3, counter3)) {
-                    bind(canonicalizeType(answerOut, renv3, counter3), fn (#(canonicalOut, renv4, counter4)) {
+        canonicalizeType(dom, renv, counter) => fn (#(canonicalDom, renv1, counter1)) {
+            canonicalizeType(cod, renv1, counter1) => fn (#(canonicalCod, renv2, counter2)) {
+                canonicalizeType(answerIn, renv2, counter2) => fn (#(canonicalIn, renv3, counter3)) {
+                    canonicalizeType(answerOut, renv3, counter3) => fn (#(canonicalOut, renv4, counter4)) {
                         #(controlFunType(canonicalDom, canonicalCod, canonicalIn, canonicalOut), renv4, counter4)
-                    })
-                })
-            })
-        })
+                    }
+                }
+            }
+        }
     }
     (operType(name, args), renv, counter) {
-        bind(canonicalizeArgs(args, renv, counter), fn (#(canonicalArgs, renv2, counter2)) {
+        canonicalizeArgs(args, renv, counter) => fn (#(canonicalArgs, renv2, counter2)) {
             #(operType(name, canonicalArgs), renv2, counter2)
-        })
+        }
     }
 }
 
 fn canonicalizeTop(type) {
-    bind(canonicalizeType(type, nullCpEnv, 0), fn (#(canonicalType, _, _)) {
+    canonicalizeType(type, nullCpEnv, 0) => fn (#(canonicalType, _, _)) {
         canonicalType
-    })
+    }
 }
 
 fn latentControlInExprList {
@@ -621,11 +641,11 @@ fn hasControlCallableType {
 fn canonicalizeArgs {
     ([], renv, counter) { #([], renv, counter) }
     (arg @ rest, renv, counter) {
-        bind(canonicalizeType(arg, renv, counter), fn (#(canonicalArg, renv1, counter1)) {
-            bind(canonicalizeArgs(rest, renv1, counter1), fn (#(canonicalRest, renv2, counter2)) {
+        canonicalizeType(arg, renv, counter) => fn (#(canonicalArg, renv1, counter1)) {
+            canonicalizeArgs(rest, renv1, counter1) => fn (#(canonicalRest, renv2, counter2)) {
                 #(canonicalArg @ canonicalRest, renv2, counter2)
-            })
-        })
+            }
+        }
     }
 }
 
@@ -818,9 +838,9 @@ fn bindParams {
     (param @ rest, envt, ng) {
         let paramType = freshTypeVar();
             paramName = typeVarName(paramType)
-        in bind(bindParams(rest, tcEnv(param, paramType, envt), paramName @ ng), fn (#(restTypes, env2, ng2)) {
+        in bindParams(rest, tcEnv(param, paramType, envt), paramName @ ng) => fn (#(restTypes, env2, ng2)) {
             #(paramType @ restTypes, env2, ng2)
-        })
+        }
     }
 }
 
@@ -877,19 +897,19 @@ fn finalizeRecBindings {
 }
 
 fn snapshotRecBindings(bindings, envt, subst) {
-    bind(snapshotRecBindingsAcc(bindings, envt, subst, nullCpEnv, 0), fn (#(snapshot, _, _)) {
+    snapshotRecBindingsAcc(bindings, envt, subst, nullCpEnv, 0) => fn (#(snapshot, _, _)) {
         snapshot
-    })
+    }
 }
 
 fn snapshotRecBindingsAcc {
     ([], _, _, renv, counter) { #("", renv, counter) }
     (#(name, expr = E.lambda(_, _)) @ rest, envt, subst, renv, counter) {
-        bind(canonicalizeType(applySubst(retrieveBound(name, envt), subst), renv, counter), fn (#(canonicalType, renv1, counter1)) {
-            bind(snapshotRecBindingsAcc(rest, envt, subst, renv1, counter1), fn (#(tailSnapshot, renv2, counter2)) {
+        canonicalizeType(applySubst(retrieveBound(name, envt), subst), renv, counter) => fn (#(canonicalType, renv1, counter1)) {
+            snapshotRecBindingsAcc(rest, envt, subst, renv1, counter1) => fn (#(tailSnapshot, renv2, counter2)) {
                 #(name @@ "::" @@ renderType(canonicalType) @@ ";" @@ tailSnapshot, renv2, counter2)
-            })
-        })
+            }
+        }
     }
     (#(_, _) @ rest, envt, subst, renv, counter) {
         snapshotRecBindingsAcc(rest, envt, subst, renv, counter)
@@ -899,9 +919,9 @@ fn snapshotRecBindingsAcc {
 fn processRecBinding(name, expr, envt, ng, subst, answerIn, answerOut, controlAllowed, delimiterActive) {
     let binderType = retrieveBound(name, envt);
         ng2 = typeVarName(binderType) @ ng
-    in bind(analyzeExpr(expr, envt, ng2, subst, answerIn, answerOut, controlAllowed, delimiterActive), fn (#(exprType, subst1)) {
+    in analyzeExpr(expr, envt, ng2, subst, answerIn, answerOut, controlAllowed, delimiterActive) => fn (#(exprType, subst1)) {
         unifyType(binderType, exprType, subst1)
-    })
+    }
 }
 
 fn checkRecBindings {
@@ -956,9 +976,9 @@ fn analyzeLetStar {
     }
     (#(name, expr) @ rest, body, envt, ng, subst, answerIn, answerOut, controlAllowed, delimiterActive) {
         let afterBinding = freshTypeVar()
-        in bind(analyzeExpr(expr, envt, ng, subst, answerIn, afterBinding, controlAllowed, delimiterActive), fn (#(exprType, subst1)) {
+        in analyzeExpr(expr, envt, ng, subst, answerIn, afterBinding, controlAllowed, delimiterActive) => fn (#(exprType, subst1)) {
             analyzeLetStar(rest, body, tcEnv(name, applySubst(exprType, subst1), envt), ng, subst1, applySubst(afterBinding, subst1), answerOut, controlAllowed, delimiterActive)
-        })
+        }
     }
 }
 
@@ -1019,12 +1039,12 @@ fn spineResult {
 
 fn analyzeExpr {
     (E.amb_expr(left, right), envt, ng, subst, answerIn, answerOut, controlAllowed, delimiterActive) {
-        bind(analyzeExpr(left, envt, ng, subst, answerIn, answerOut, controlAllowed, delimiterActive), fn (#(leftType, subst1)) {
-            bind(analyzeExpr(right, envt, ng, subst1, answerIn, answerOut, controlAllowed, delimiterActive), fn (#(rightType, subst2)) {
+        analyzeExpr(left, envt, ng, subst, answerIn, answerOut, controlAllowed, delimiterActive) => fn (#(leftType, subst1)) {
+            analyzeExpr(right, envt, ng, subst1, answerIn, answerOut, controlAllowed, delimiterActive) => fn (#(rightType, subst2)) {
                 let subst3 = unifyType(leftType, rightType, subst2)
                 in #(applySubst(leftType, subst3), subst3)
-            })
-        })
+            }
+        }
     }
     (E.back_expr, _, _, subst, answerIn, answerOut, _, _) {
         pureResult(freshTypeVar(), subst, answerIn, answerOut)
@@ -1035,9 +1055,9 @@ fn analyzeExpr {
         analyzeExpr(expr, envt, ng, subst, answerIn, answerOut, controlAllowed, delimiterActive)
     }
     (E.typeof_expr(expr), envt, ng, subst, answerIn, answerOut, controlAllowed, delimiterActive) {
-        bind(analyzeExpr(expr, envt, ng, subst, answerIn, answerOut, controlAllowed, delimiterActive), fn (#(_, subst1)) {
+        analyzeExpr(expr, envt, ng, subst, answerIn, answerOut, controlAllowed, delimiterActive) => fn (#(_, subst1)) {
             #(stringType(), subst1)
-        })
+        }
     }
     (E.var(name), envt, ng, subst, answerIn, answerOut, _, _) {
         let subst1 = preserveAnswers(answerIn, answerOut, subst)
@@ -1061,8 +1081,8 @@ fn analyzeExpr {
         error("infer_expr: unsupported constant " @@ name)
     }
     (E.lambda([], body), envt, ng, subst, answerIn, answerOut, _, _) {
-        bind(freshLocalAnswers(), fn (#(bodyAnswerIn, bodyAnswerOut)) {
-        bind(analyzeExpr(body, envt, ng, subst, bodyAnswerIn, bodyAnswerOut, true, false), fn (#(bodyType, subst1)) {
+        freshLocalAnswers() => fn (#(bodyAnswerIn, bodyAnswerOut)) {
+        analyzeExpr(body, envt, ng, subst, bodyAnswerIn, bodyAnswerOut, true, false) => fn (#(bodyType, subst1)) {
             if (latentControlInBody(body, envt, ng, subst1)) {
                 let subst2 = preserveAnswers(answerIn, answerOut, subst1)
                 in #(makeLambdaCallable(applySubst(bodyType, subst2), true, applySubst(bodyAnswerIn, subst2), applySubst(bodyAnswerOut, subst2)), subst2)
@@ -1071,13 +1091,13 @@ fn analyzeExpr {
                     subst2 = preserveAnswers(answerIn, answerOut, subst1)
                 in #(makeLambdaCallable(resolvedBodyType, false, resolvedBodyType, resolvedBodyType), subst2)
             }
-        })
-        })
+        }
+        }
     }
     (E.lambda(params, body), envt, ng, subst, answerIn, answerOut, _, _) {
-        bind(bindParams(params, envt, ng), fn (#(paramTypes, env2, ng2)) {
-            bind(freshLocalAnswers(), fn (#(bodyAnswerIn, bodyAnswerOut)) {
-            bind(analyzeExpr(body, env2, ng2, subst, bodyAnswerIn, bodyAnswerOut, true, false), fn (#(bodyType, subst1)) {
+        bindParams(params, envt, ng) => fn (#(paramTypes, env2, ng2)) {
+            freshLocalAnswers() => fn (#(bodyAnswerIn, bodyAnswerOut)) {
+            analyzeExpr(body, env2, ng2, subst, bodyAnswerIn, bodyAnswerOut, true, false) => fn (#(bodyType, subst1)) {
                 if (latentControlInBody(body, env2, ng2, subst1)) {
                     let subst2 = preserveAnswers(answerIn, answerOut, subst1)
                     in #(makeLambdaCallableChain(paramTypes, applySubst(bodyType, subst2), true, applySubst(bodyAnswerIn, subst2), applySubst(bodyAnswerOut, subst2)), subst2)
@@ -1086,49 +1106,49 @@ fn analyzeExpr {
                         subst2 = preserveAnswers(answerIn, answerOut, subst1)
                     in #(makeLambdaCallableChain(paramTypes, resolvedBodyType, false, resolvedBodyType, resolvedBodyType), subst2)
                 }
-            })
-            })
-        })
+            }
+            }
+        }
     }
     (E.apply(fun, []), envt, ng, subst, answerIn, answerOut, controlAllowed, delimiterActive) {
         let afterFun = freshTypeVar()
-        in bind(analyzeExpr(fun, envt, ng, subst, answerIn, afterFun, controlAllowed, delimiterActive), fn (#(funTypeExp, subst1)) {
+        in analyzeExpr(fun, envt, ng, subst, answerIn, afterFun, controlAllowed, delimiterActive) => fn (#(funTypeExp, subst1)) {
             let resultType = freshTypeVar()
             in consumeThunkCallable(funTypeExp, resultType, applySubst(afterFun, subst1), answerOut, controlAllowed, delimiterActive, subst1)
-        })
+        }
     }
     (E.apply(fun, args), envt, ng, subst, answerIn, answerOut, controlAllowed, delimiterActive) {
         let afterFun = freshTypeVar()
-        in bind(analyzeExpr(fun, envt, ng, subst, answerIn, afterFun, controlAllowed, delimiterActive), fn (#(funTypeExp, subst1)) {
-            bind(analyzeArgs(args, envt, ng, subst1, applySubst(afterFun, subst1), answerOut, controlAllowed, delimiterActive), fn (#(argTypes, subst2)) {
+        in analyzeExpr(fun, envt, ng, subst, answerIn, afterFun, controlAllowed, delimiterActive) => fn (#(funTypeExp, subst1)) {
+            analyzeArgs(args, envt, ng, subst1, applySubst(afterFun, subst1), answerOut, controlAllowed, delimiterActive) => fn (#(argTypes, subst2)) {
                 let resultType = freshTypeVar()
                 in consumeCurriedCallable(funTypeExp, argTypes, resultType, applySubst(afterFun, subst2), answerOut, controlAllowed, delimiterActive, subst2)
-            })
-        })
+            }
+        }
     }
     (E.callcc_expr(called), envt, ng, subst, answerIn, answerOut, controlAllowed, delimiterActive) {
-        bind(analyzeExpr(called, envt, ng, subst, answerIn, answerOut, controlAllowed, delimiterActive), fn (#(calledType, subst1)) {
+        analyzeExpr(called, envt, ng, subst, answerIn, answerOut, controlAllowed, delimiterActive) => fn (#(calledType, subst1)) {
             let a = freshTypeVar();
                 b = freshTypeVar();
                 continuationType = funType(a, b);
                 callccType = funType(continuationType, a);
                 subst2 = unifyType(calledType, callccType, subst1)
             in #(applySubst(a, subst2), subst2)
-        })
+        }
     }
     (E.reset_expr(expr), envt, ng, subst, answerIn, answerOut, _, _) {
-        bind(freshLocalAnswers(), fn (#(bodyAnswerIn, bodyAnswerOut)) {
-            bind(analyzeExpr(expr, envt, ng, subst, bodyAnswerIn, bodyAnswerOut, true, true), fn (#(bodyType, subst1)) {
+        freshLocalAnswers() => fn (#(bodyAnswerIn, bodyAnswerOut)) {
+            analyzeExpr(expr, envt, ng, subst, bodyAnswerIn, bodyAnswerOut, true, true) => fn (#(bodyType, subst1)) {
                 let subst2 = unifyType(bodyType, bodyAnswerIn, subst1);
                     subst3 = preserveAnswers(answerIn, answerOut, subst2)
                 in #(applySubst(bodyAnswerOut, subst3), subst3)
-            })
-        })
+            }
+        }
     }
     (E.shift_expr(expr), envt, ng, subst, answerIn, answerOut, controlAllowed, _) {
         if (controlAllowed) {
             let shiftBodyResult = freshTypeVar()
-            in bind(analyzeExpr(expr, envt, ng, subst, shiftBodyResult, shiftBodyResult, false, false), fn (#(shiftedType, subst1)) {
+            in analyzeExpr(expr, envt, ng, subst, shiftBodyResult, shiftBodyResult, false, false) => fn (#(shiftedType, subst1)) {
                 let holeType = freshTypeVar();
                     capturedAnswer = freshTypeVar();
                     continuationType = funType(holeType, capturedAnswer);
@@ -1137,49 +1157,49 @@ fn analyzeExpr {
                     subst3 = unifyType(answerIn, capturedAnswer, subst2);
                     subst4 = unifyType(answerOut, shiftBodyResult, subst3)
                 in #(applySubst(holeType, subst4), subst4)
-            })
+            }
         } else {
             error("infer_expr: shift requires reset")
         }
     }
     (E.if_expr(test, consequent, alternative), envt, ng, subst, answerIn, answerOut, controlAllowed, delimiterActive) {
-        bind(analyzeExpr(test, envt, ng, subst, answerIn, answerOut, controlAllowed, delimiterActive), fn (#(testType, subst1)) {
+        analyzeExpr(test, envt, ng, subst, answerIn, answerOut, controlAllowed, delimiterActive) => fn (#(testType, subst1)) {
             let subst2 = unifyType(testType, boolType(), subst1)
-            in bind(analyzeExpr(consequent, envt, ng, subst2, answerIn, answerOut, controlAllowed, delimiterActive), fn (#(consequentType, subst3)) {
-                bind(analyzeExpr(alternative, envt, ng, subst3, answerIn, answerOut, controlAllowed, delimiterActive), fn (#(alternativeType, subst4)) {
+            in analyzeExpr(consequent, envt, ng, subst2, answerIn, answerOut, controlAllowed, delimiterActive) => fn (#(consequentType, subst3)) {
+                analyzeExpr(alternative, envt, ng, subst3, answerIn, answerOut, controlAllowed, delimiterActive) => fn (#(alternativeType, subst4)) {
                     let subst5 = unifyType(consequentType, alternativeType, subst4)
                     in #(applySubst(consequentType, subst5), subst5)
-                })
-            })
-        })
+                }
+            }
+        }
     }
     (E.cond_expr(test, cases), envt, ng, subst, answerIn, answerOut, controlAllowed, delimiterActive) {
-        bind(analyzeExpr(test, envt, ng, subst, answerIn, answerOut, controlAllowed, delimiterActive), fn (#(testType, subst1)) {
+        analyzeExpr(test, envt, ng, subst, answerIn, answerOut, controlAllowed, delimiterActive) => fn (#(testType, subst1)) {
             let subst2 = unifyType(testType, intType(), subst1);
                 resultType = freshTypeVar()
             in analyzeCondCases(cases, envt, ng, subst2, resultType, answerIn, answerOut, controlAllowed, delimiterActive)
-        })
+        }
     }
     (E.match_cases(indexExpr, cases), envt, ng, subst, answerIn, answerOut, controlAllowed, delimiterActive) {
-        bind(analyzeExpr(indexExpr, envt, ng, subst, answerIn, answerOut, controlAllowed, delimiterActive), fn (#(indexType, subst1)) {
+        analyzeExpr(indexExpr, envt, ng, subst, answerIn, answerOut, controlAllowed, delimiterActive) => fn (#(indexType, subst1)) {
             let subst2 = unifyType(indexType, intType(), subst1);
                 resultType = freshTypeVar()
             in analyzeMatchCases(cases, envt, ng, subst2, resultType, answerIn, answerOut, controlAllowed, delimiterActive)
-        })
+        }
     }
     (E.let_expr(bindings, body), envt, ng, subst, answerIn, answerOut, controlAllowed, delimiterActive) {
-        bind(analyzeLetBindings(bindings, envt, ng, subst, answerIn, answerOut, controlAllowed, delimiterActive), fn (#(bindingTypes, subst1)) {
+        analyzeLetBindings(bindings, envt, ng, subst, answerIn, answerOut, controlAllowed, delimiterActive) => fn (#(bindingTypes, subst1)) {
             analyzeExpr(body, extendTypeEnv(bindingTypes, envt), ng, subst1, answerIn, answerOut, controlAllowed, delimiterActive)
-        })
+        }
     }
     (E.letrec_expr(bindings, body), envt, ng, subst, answerIn, answerOut, controlAllowed, delimiterActive) {
         let env2 = bindRecBindings(bindings, envt)
-        in bind(processFirstRecBindings(bindings, env2, ng, subst, answerIn, answerOut, controlAllowed, delimiterActive), fn (#(env3, subst1)) {
+        in processFirstRecBindings(bindings, env2, ng, subst, answerIn, answerOut, controlAllowed, delimiterActive) => fn (#(env3, subst1)) {
             let snapshot = snapshotRecBindings(bindings, env3, subst1);
                 subst2 = iterateRecBindings(bindings, env3, ng, subst1, 9, snapshot, answerIn, answerOut, controlAllowed, delimiterActive);
                 finalized = finalizeRecBindings(bindings, env3, subst2)
             in analyzeExpr(body, extendTypeEnv(finalized, envt), ng, subst2, answerIn, answerOut, controlAllowed, delimiterActive)
-        })
+        }
     }
     (E.letstar_expr(bindings, body), envt, ng, subst, answerIn, answerOut, controlAllowed, delimiterActive) {
         analyzeLetStar(bindings, body, envt, ng, subst, answerIn, answerOut, controlAllowed, delimiterActive)
@@ -1191,15 +1211,15 @@ fn analyzeExpr {
         let ctorType = retrieve(name, envt, ng, subst);
             fieldType = spineArg(index, ctorType);
             resultType = spineResult(ctorType)
-        in bind(analyzeExpr(scrutinee, envt, ng, subst, answerIn, answerOut, controlAllowed, delimiterActive), fn (#(scrutType, subst1)) {
+        in analyzeExpr(scrutinee, envt, ng, subst, answerIn, answerOut, controlAllowed, delimiterActive) => fn (#(scrutType, subst1)) {
             let subst2 = unifyType(scrutType, resultType, subst1)
             in #(applySubst(fieldType, subst2), subst2)
-        })
+        }
     }
     (E.make_tuple(exprs), envt, ng, subst, answerIn, answerOut, controlAllowed, delimiterActive) {
-        bind(analyzeArgs(exprs, envt, ng, subst, answerIn, answerOut, controlAllowed, delimiterActive), fn (#(partTypes, subst1)) {
+        analyzeArgs(exprs, envt, ng, subst, answerIn, answerOut, controlAllowed, delimiterActive) => fn (#(partTypes, subst1)) {
             #(tupleType(partTypes), subst1)
-        })
+        }
     }
     (E.make_vec(_, _), _, _, _, _, _, _, _) {
         error("infer_expr: make_vec is unsupported before desugaring")
@@ -1208,14 +1228,14 @@ fn analyzeExpr {
         analyzePrimitive(name, left, right, envt, ng, subst, answerIn, answerOut, controlAllowed, delimiterActive)
     }
     (E.tuple_index(size, index, expr), envt, ng, subst, answerIn, answerOut, controlAllowed, delimiterActive) {
-        bind(analyzeExpr(expr, envt, ng, subst, answerIn, answerOut, controlAllowed, delimiterActive), fn (#(exprType, subst1)) {
+        analyzeExpr(expr, envt, ng, subst, answerIn, answerOut, controlAllowed, delimiterActive) => fn (#(exprType, subst1)) {
             let template = makeTupleTemplate(size);
                 subst2 = unifyType(exprType, template, subst1)
             in switch (applySubst(template, subst2)) {
                 (operType("Tuple", parts)) { #(tupleEntry(index, parts), subst2) }
                 (_) { error("infer_expr: tuple template mismatch") }
             }
-        })
+        }
     }
     (E.sequence(exprs), envt, ng, subst, answerIn, answerOut, controlAllowed, delimiterActive) {
         analyzeSequence(exprs, envt, ng, subst, answerIn, answerOut, controlAllowed, delimiterActive)
@@ -1232,9 +1252,9 @@ fn analyzeExpr {
 
 fn infer(expr) {
     let topAnswer = freshTypeVar()
-    in bind(analyzeExpr(expr, nullTcEnv, [], nullSubstEnv, topAnswer, topAnswer, false, false), fn (#(type, subst)) {
+    in analyzeExpr(expr, nullTcEnv, [], nullSubstEnv, topAnswer, topAnswer, false, false) => fn (#(type, subst)) {
         normalizeType(applySubst(type, subst))
-    })
+    }
 }
 
 fn infer_string(source) {
