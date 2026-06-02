@@ -1,5 +1,6 @@
 namespace
 link "expr.fn" as E;
+link "../listutils.fn" as list;
 link "../ioutils.fn" as IO;
 import IO operator "$_";
 
@@ -196,17 +197,6 @@ fn lookupSubst {
     (name, bindSubst(_, _, tail)) { lookupSubst(name, tail) }
 }
 
-fn member {
-    (_, []) { false }
-    (name, head @ tail) {
-        if (name == head) {
-            true
-        } else {
-            member(name, tail)
-        }
-    }
-}
-
 fn applySubst {
     (varType(name), subst) {
         switch (lookupSubst(name, subst)) {
@@ -339,7 +329,7 @@ fn lookupCopy {
 
 fn instantiateApplied {
     (varType(name), ng, cp) {
-        if (member(name, ng)) {
+        if (list.member(name, ng)) {
             #(varType(name), cp)
         } else {
             switch (lookupCopy(name, cp)) {
@@ -536,30 +526,34 @@ fn directShiftBody {
 }
 
 fn latentControlInExprList {
-    ([], _, _, _) { false }
-    (expr @ rest, envt, ng, subst) {
-        latentControlInBody(expr, envt, ng, subst) or latentControlInExprList(rest, envt, ng, subst)
+    (exprs, envt, ng, subst) {
+        list.any(fn (expr) { latentControlInBody(expr, envt, ng, subst) }, exprs)
     }
 }
 
 fn latentControlInBindings {
-    ([], _, _, _) { false }
-    (#(_, expr) @ rest, envt, ng, subst) {
-        latentControlInBody(expr, envt, ng, subst) or latentControlInBindings(rest, envt, ng, subst)
+    (bindings, envt, ng, subst) {
+        list.any(fn {
+            (#(_, expr)) { latentControlInBody(expr, envt, ng, subst) }
+        }, bindings)
     }
 }
 
 fn latentControlInCondCases {
-    ([], _, _, _) { false }
-    (#(matchExpr, resultExpr) @ rest, envt, ng, subst) {
-        latentControlInBody(matchExpr, envt, ng, subst) or latentControlInBody(resultExpr, envt, ng, subst) or latentControlInCondCases(rest, envt, ng, subst)
+    (cases, envt, ng, subst) {
+        list.any(fn {
+            (#(matchExpr, resultExpr)) {
+                latentControlInBody(matchExpr, envt, ng, subst) or latentControlInBody(resultExpr, envt, ng, subst)
+            }
+        }, cases)
     }
 }
 
 fn latentControlInMatchCases {
-    ([], _, _, _) { false }
-    (#(_, resultExpr) @ rest, envt, ng, subst) {
-        latentControlInBody(resultExpr, envt, ng, subst) or latentControlInMatchCases(rest, envt, ng, subst)
+    (cases, envt, ng, subst) {
+        list.any(fn {
+            (#(_, resultExpr)) { latentControlInBody(resultExpr, envt, ng, subst) }
+        }, cases)
     }
 }
 
@@ -622,10 +616,7 @@ fn isControlCallable {
 }
 
 fn hasControlCallableType {
-    ([]) { false }
-    (type @ rest) {
-        isControlCallable(type) or hasControlCallableType(rest)
-    }
+    (types) { list.any(isControlCallable, types) }
 }
 
 fn canonicalizeArgs {
@@ -752,8 +743,7 @@ fn supports {
 }
 
 fn supportsList {
-    ([]) { true }
-    (h @ t) { supports(h) and supportsList(t) }
+    (exprs) { list.all(supports, exprs) }
 }
 
 fn supportsNonEmptyList {
@@ -762,8 +752,11 @@ fn supportsNonEmptyList {
 }
 
 fn supportsBindings {
-    ([]) { true }
-    (#(_, expr) @ rest) { supports(expr) and supportsBindings(rest) }
+    (bindings) {
+        list.all(fn {
+            (#(_, expr)) { supports(expr) }
+        }, bindings)
+    }
 }
 
 fn supportsCondCases {
@@ -774,9 +767,10 @@ fn supportsCondCases {
 }
 
 fn supportsCondCasesTail {
-    ([]) { true }
-    (#(matchExpr, resultExpr) @ rest) {
-        supports(matchExpr) and supports(resultExpr) and supportsCondCasesTail(rest)
+    (cases) {
+        list.all(fn {
+            (#(matchExpr, resultExpr)) { supports(matchExpr) and supports(resultExpr) }
+        }, cases)
     }
 }
 
@@ -788,9 +782,10 @@ fn supportsMatchCases {
 }
 
 fn supportsMatchCasesTail {
-    ([]) { true }
-    (#(_, resultExpr) @ rest) {
-        supports(resultExpr) and supportsMatchCasesTail(rest)
+    (cases) {
+        list.all(fn {
+            (#(_, resultExpr)) { supports(resultExpr) }
+        }, cases)
     }
 }
 
