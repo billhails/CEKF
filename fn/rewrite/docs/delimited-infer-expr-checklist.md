@@ -110,14 +110,14 @@ This section covers the `supports*` family.
 
 - [x] Add explicit support handling for `reset_expr` once the branch is implemented.
 - [x] Add explicit support handling for `shift_expr` once the branch is implemented.
-- [ ] Decide whether unsupported delimited-control expressions should return `false` here before their typing branches land, rather than falling through implicitly.
+- [x] Decide whether unsupported delimited-control expressions should return `false` here before their typing branches land, rather than falling through implicitly.
 - [x] Keep `make_vec` unsupported.
 - [x] Keep the current primitive allowlist until delimited typing is stable.
 
 ### `supportsList`, `supportsNonEmptyList`, `supportsBindings`, `supportsCondCases`, `supportsCondCasesTail`, `supportsMatchCases`, `supportsMatchCasesTail`
 
-- [ ] Update only as needed for `reset_expr` and `shift_expr` propagation.
-- [ ] Do not redesign these helpers unless the analyzer rollout exposes a concrete gap.
+- [x] Update only as needed for `reset_expr` and `shift_expr` propagation.
+- [x] Do not redesign these helpers unless the analyzer rollout exposes a concrete gap.
 
 ## Section D: New Analyzer-Level Helper Layer
 
@@ -408,7 +408,7 @@ Use this order to keep diffs reviewable and failures localized.
 7. [x] Migrate ordered pure branches, branching forms, and binding forms.
 8. [x] Add `reset_expr`.
 9. [x] Add `shift_expr`.
-10. [ ] Revisit `supports` and any temporary placeholders such as `amb_expr` and `back_expr`.
+10. [x] Revisit `supports` and any temporary placeholders such as `amb_expr` and `back_expr`.
 
 ## Section I: Minimal Validation Checklist
 
