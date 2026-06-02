@@ -133,7 +133,7 @@ This section is new work rather than migration of existing helpers.
 
 - [x] Add `makeLambdaCallable` for zero-argument lambdas.
 - [x] Add `makeLambdaCallableChain` for curried lambdas.
-- [ ] Make these helpers responsible for purity normalization after substitution has been applied.
+- [x] Make these helpers responsible for purity normalization after substitution has been applied.
 
 ### Callable consumer helpers to add
 
@@ -265,7 +265,7 @@ Checklist:
 - [x] Analyze lambda bodies with `controlAllowed = true`.
 - [x] Keep lambda construction itself pure in the surrounding context.
 - [x] Route the result through the new callable-builder helpers.
-- [ ] Normalize pure latent effects back to pure callable types when possible.
+- [x] Normalize pure latent effects back to pure callable types when possible.
 
 ## Application branches
 
@@ -388,12 +388,12 @@ This section covers the bottom of the file.
 - [x] Make `infer` create one fresh top-level answer variable.
 - [x] Call the effect-aware `analyzeExpr` with identical `answerIn` and `answerOut` at top level.
 - [x] Set top-level `controlAllowed = false`.
-- [ ] Normalize the final type after substitution so pure callables do not print as controlful callables with identical answer types.
+- [x] Normalize the final type after substitution so pure callables do not print as controlful callables with identical answer types.
 
 ### `infer_string` and `infer_to_string`
 
 - [x] Keep both entrypoints structurally unchanged.
-- [ ] Let them inherit the new normalized output through `infer` and `renderType`.
+- [x] Let them inherit the new normalized output through `infer` and `renderType`.
 
 ## Section H: Suggested Implementation Order
 
@@ -402,7 +402,7 @@ Use this order to keep diffs reviewable and failures localized.
 1. [x] Change `typeExp` plus the small callable constructor helpers.
 2. [x] Update substitution, occurs check, unification, instantiation, rendering, and canonicalization.
 3. [x] Update constructor spine helpers and any pure arrow assumptions.
-4. [ ] Add the new analyzer signature and thread it through existing helpers without changing branch meaning yet.
+4. [x] Add the new analyzer signature and thread it through existing helpers without changing branch meaning yet.
 5. [x] Add callable builders, callable consumers, and effect-threaded `analyzeArgs`.
 6. [x] Migrate lambda and apply branches.
 7. [x] Migrate ordered pure branches, branching forms, and binding forms.

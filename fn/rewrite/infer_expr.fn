@@ -70,6 +70,24 @@ fn normalizeControlFunType {
     (dom, cod, answerIn, answerOut) { controlFunType(dom, cod, answerIn, answerOut) }
 }
 
+fn normalizeType {
+    (varType(name)) { varType(name) }
+    (thunkType(type)) { thunkType(normalizeType(type)) }
+    (funType(dom, cod)) { funType(normalizeType(dom), normalizeType(cod)) }
+    (controlThunkType(type, answerIn, answerOut)) {
+        normalizeControlThunkType(normalizeType(type), normalizeType(answerIn), normalizeType(answerOut))
+    }
+    (controlFunType(dom, cod, answerIn, answerOut)) {
+        normalizeControlFunType(normalizeType(dom), normalizeType(cod), normalizeType(answerIn), normalizeType(answerOut))
+    }
+    (operType(name, args)) { operType(name, normalizeTypeList(args)) }
+}
+
+fn normalizeTypeList {
+    ([]) { [] }
+    (head @ tail) { normalizeType(head) @ normalizeTypeList(tail) }
+}
+
 fn freshLocalAnswers() {
     let answerType = freshTypeVar()
     in #(answerType, answerType)
@@ -78,14 +96,14 @@ fn freshLocalAnswers() {
 fn makeLambdaCallable {
     (bodyType, false, _, _) { thunkType(bodyType) }
     (bodyType, true, answerIn, answerOut) {
-        controlThunkType(bodyType, answerIn, answerOut)
+        normalizeControlThunkType(bodyType, answerIn, answerOut)
     }
 }
 
 fn makeLambdaCallableChain {
     (paramTypes, bodyType, false, _, _) { funTypeList(paramTypes, bodyType) }
     (paramTypes, bodyType, true, answerIn, answerOut) {
-        controlFunTypeList(paramTypes, bodyType, answerIn, answerOut)
+        normalizeType(controlFunTypeList(paramTypes, bodyType, answerIn, answerOut))
     }
 }
 
@@ -1263,7 +1281,7 @@ fn analyzeExpr {
 fn infer(expr) {
     let topAnswer = freshTypeVar()
     in bind(analyzeExpr(expr, nullTcEnv, [], nullSubstEnv, topAnswer, topAnswer, false, false), fn (#(type, subst)) {
-        applySubst(type, subst)
+        normalizeType(applySubst(type, subst))
     })
 }
 
