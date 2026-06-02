@@ -29,6 +29,7 @@ typedef substEnv {
 }
 
 fn bind(arg, fun) { fun(arg) }
+operator "_=>_" left 8 bind;
 
 fn freshTypeVar() { varType("'" @@ $incr()) }
 
@@ -184,6 +185,11 @@ fn consumeCurriedCallable {
 
 fn preserveAnswers(answerIn, answerOut, subst) {
     unifyType(answerIn, answerOut, subst)
+}
+
+fn pureResult(resultType, subst, answerIn, answerOut) {
+    let subst1 = preserveAnswers(answerIn, answerOut, subst)
+    in #(resultType, subst1)
 }
 
 fn ensure {
@@ -555,11 +561,11 @@ fn latentControlInMatchCases {
 fn directControlfulApplyBody {
     (E.apply(fun, args), envt, ng, subst) {
         let answerType = freshTypeVar()
-        in bind(analyzeExpr(fun, envt, ng, subst, answerType, answerType, true, true), fn (#(funTypeExp, subst1)) {
-            bind(analyzeArgs(args, envt, ng, subst1, answerType, answerType, true, true), fn (#(argTypes, subst2)) {
+        in analyzeExpr(fun, envt, ng, subst, answerType, answerType, true, true) => fn (#(funTypeExp, subst1)) {
+            analyzeArgs(args, envt, ng, subst1, answerType, answerType, true, true) => fn (#(argTypes, subst2)) {
                 isControlCallable(applySubst(funTypeExp, subst2)) or hasControlCallableType(argTypes)
-            })
-        })
+            }
+        }
     }
     (_, _, _, _) { false }
 }
@@ -756,32 +762,32 @@ fn analyzeArgs {
     }
     (h @ t, envt, ng, subst, answerIn, answerOut, controlAllowed, delimiterActive) {
         let afterHead = freshTypeVar()
-        in bind(analyzeExpr(h, envt, ng, subst, answerIn, afterHead, controlAllowed, delimiterActive), fn (#(headType, subst1)) {
-            bind(analyzeArgs(t, envt, ng, subst1, applySubst(afterHead, subst1), answerOut, controlAllowed, delimiterActive), fn (#(tailTypes, subst2)) {
+        in analyzeExpr(h, envt, ng, subst, answerIn, afterHead, controlAllowed, delimiterActive) => fn (#(headType, subst1)) {
+            analyzeArgs(t, envt, ng, subst1, applySubst(afterHead, subst1), answerOut, controlAllowed, delimiterActive) => fn (#(tailTypes, subst2)) {
                 #(headType @ tailTypes, subst2)
-            })
-        })
+            }
+        }
     }
 }
 
 fn analyzeCondCases {
     (#(matchExpr, resultExpr) @ [], envt, ng, subst, resultType, answerIn, answerOut, controlAllowed, delimiterActive) {
-        bind(analyzeExpr(matchExpr, envt, ng, subst, answerIn, answerOut, controlAllowed, delimiterActive), fn (#(matchType, subst1)) {
+        analyzeExpr(matchExpr, envt, ng, subst, answerIn, answerOut, controlAllowed, delimiterActive) => fn (#(matchType, subst1)) {
             let subst2 = unifyType(matchType, intType(), subst1)
-            in bind(analyzeExpr(resultExpr, envt, ng, subst2, answerIn, answerOut, controlAllowed, delimiterActive), fn (#(caseType, subst3)) {
+            in analyzeExpr(resultExpr, envt, ng, subst2, answerIn, answerOut, controlAllowed, delimiterActive) => fn (#(caseType, subst3)) {
                 let subst4 = unifyType(resultType, caseType, subst3)
                 in #(applySubst(resultType, subst4), subst4)
-            })
-        })
+            }
+        }
     }
     (#(matchExpr, resultExpr) @ rest, envt, ng, subst, resultType, answerIn, answerOut, controlAllowed, delimiterActive) {
-        bind(analyzeExpr(matchExpr, envt, ng, subst, answerIn, answerOut, controlAllowed, delimiterActive), fn (#(matchType, subst1)) {
+        analyzeExpr(matchExpr, envt, ng, subst, answerIn, answerOut, controlAllowed, delimiterActive) => fn (#(matchType, subst1)) {
             let subst2 = unifyType(matchType, intType(), subst1)
-            in bind(analyzeExpr(resultExpr, envt, ng, subst2, answerIn, answerOut, controlAllowed, delimiterActive), fn (#(caseType, subst3)) {
+            in analyzeExpr(resultExpr, envt, ng, subst2, answerIn, answerOut, controlAllowed, delimiterActive) => fn (#(caseType, subst3)) {
                 let subst4 = unifyType(resultType, caseType, subst3)
                 in analyzeCondCases(rest, envt, ng, subst4, applySubst(resultType, subst4), answerIn, answerOut, controlAllowed, delimiterActive)
-            })
-        })
+            }
+        }
     }
     ([], _, _, _, _, _, _, _, _) {
         error("infer_expr: cond requires at least one case")
@@ -790,16 +796,16 @@ fn analyzeCondCases {
 
 fn analyzeMatchCases {
     (#(_, resultExpr) @ [], envt, ng, subst, resultType, answerIn, answerOut, controlAllowed, delimiterActive) {
-        bind(analyzeExpr(resultExpr, envt, ng, subst, answerIn, answerOut, controlAllowed, delimiterActive), fn (#(caseType, subst1)) {
+        analyzeExpr(resultExpr, envt, ng, subst, answerIn, answerOut, controlAllowed, delimiterActive) => fn (#(caseType, subst1)) {
             let subst2 = unifyType(resultType, caseType, subst1)
             in #(applySubst(resultType, subst2), subst2)
-        })
+        }
     }
     (#(_, resultExpr) @ rest, envt, ng, subst, resultType, answerIn, answerOut, controlAllowed, delimiterActive) {
-        bind(analyzeExpr(resultExpr, envt, ng, subst, answerIn, answerOut, controlAllowed, delimiterActive), fn (#(caseType, subst1)) {
+        analyzeExpr(resultExpr, envt, ng, subst, answerIn, answerOut, controlAllowed, delimiterActive) => fn (#(caseType, subst1)) {
             let subst2 = unifyType(resultType, caseType, subst1)
             in analyzeMatchCases(rest, envt, ng, subst2, applySubst(resultType, subst2), answerIn, answerOut, controlAllowed, delimiterActive)
-        })
+        }
     }
     ([], _, _, subst, resultType, answerIn, answerOut, _, _) {
         let subst1 = preserveAnswers(answerIn, answerOut, subst)
@@ -824,11 +830,11 @@ fn analyzeLetBindings {
     }
     (#(name, expr) @ rest, envt, ng, subst, answerIn, answerOut, controlAllowed, delimiterActive) {
         let afterBinding = freshTypeVar()
-        in bind(analyzeExpr(expr, envt, ng, subst, answerIn, afterBinding, controlAllowed, delimiterActive), fn (#(exprType, subst1)) {
-            bind(analyzeLetBindings(rest, envt, ng, subst1, applySubst(afterBinding, subst1), answerOut, controlAllowed, delimiterActive), fn (#(restBindings, subst2)) {
+        in analyzeExpr(expr, envt, ng, subst, answerIn, afterBinding, controlAllowed, delimiterActive) => fn (#(exprType, subst1)) {
+            analyzeLetBindings(rest, envt, ng, subst1, applySubst(afterBinding, subst1), answerOut, controlAllowed, delimiterActive) => fn (#(restBindings, subst2)) {
                 #( #(name, applySubst(exprType, subst2)) @ restBindings, subst2 )
-            })
-        })
+            }
+        }
     }
 }
 
@@ -845,9 +851,9 @@ fn analyzeSequence {
     }
     (expr @ rest, envt, ng, subst, answerIn, answerOut, controlAllowed, delimiterActive) {
         let afterExpr = freshTypeVar()
-        in bind(analyzeExpr(expr, envt, ng, subst, answerIn, afterExpr, controlAllowed, delimiterActive), fn (#(_, subst1)) {
+        in analyzeExpr(expr, envt, ng, subst, answerIn, afterExpr, controlAllowed, delimiterActive) => fn (#(_, subst1)) {
             analyzeSequence(rest, envt, ng, subst1, applySubst(afterExpr, subst1), answerOut, controlAllowed, delimiterActive)
-        })
+        }
     }
     ([], _, _, _, _, _, _, _) { error("infer_expr: empty sequence") }
 }
@@ -958,8 +964,8 @@ fn analyzeLetStar {
 
 fn analyzePrimitive(name, left, right, envt, ng, subst, answerIn, answerOut, controlAllowed, delimiterActive) {
     let afterLeft = freshTypeVar()
-    in bind(analyzeExpr(left, envt, ng, subst, answerIn, afterLeft, controlAllowed, delimiterActive), fn (#(leftType, subst1)) {
-        bind(analyzeExpr(right, envt, ng, subst1, applySubst(afterLeft, subst1), answerOut, controlAllowed, delimiterActive), fn (#(rightType, subst2)) {
+    in analyzeExpr(left, envt, ng, subst, answerIn, afterLeft, controlAllowed, delimiterActive) => fn (#(leftType, subst1)) {
+        analyzeExpr(right, envt, ng, subst1, applySubst(afterLeft, subst1), answerOut, controlAllowed, delimiterActive) => fn (#(rightType, subst2)) {
             if (name == "+" or name == "-" or name == "*" or name == "/" or name == "%" or name == "**") {
                 let subst3 = unifyType(leftType, intType(), subst2);
                     subst4 = unifyType(rightType, intType(), subst3)
@@ -971,8 +977,8 @@ fn analyzePrimitive(name, left, right, envt, ng, subst, answerIn, answerOut, con
             } else {
                 error("infer_expr: unsupported primitive " @@ name)
             }
-        })
-    })
+        }
+    }
 }
 
 fn analyzeConstruct(name, args, envt, ng, subst, answerIn, answerOut, controlAllowed, delimiterActive) {
@@ -1021,9 +1027,7 @@ fn analyzeExpr {
         })
     }
     (E.back_expr, _, _, subst, answerIn, answerOut, _, _) {
-        let resultType = freshTypeVar();
-            subst1 = preserveAnswers(answerIn, answerOut, subst)
-        in #(resultType, subst1)
+        pureResult(freshTypeVar(), subst, answerIn, answerOut)
     }
     (E.cut_expr(expr), envt, ng, subst, answerIn, answerOut, controlAllowed, delimiterActive) |
     (E.print_exp(expr), envt, ng, subst, answerIn, answerOut, controlAllowed, delimiterActive) |
@@ -1041,21 +1045,17 @@ fn analyzeExpr {
     }
     (E.bigint(_), _, _, subst, answerIn, answerOut, _, _) |
     (E.stdint(_), _, _, subst, answerIn, answerOut, _, _) {
-        let subst1 = preserveAnswers(answerIn, answerOut, subst)
-        in #(intType(), subst1)
+        pureResult(intType(), subst, answerIn, answerOut)
     }
     (E.character(_), _, _, subst, answerIn, answerOut, _, _) {
-        let subst1 = preserveAnswers(answerIn, answerOut, subst)
-        in #(charType(), subst1)
+        pureResult(charType(), subst, answerIn, answerOut)
     }
     (E.constant("true", _), _, _, subst, answerIn, answerOut, _, _) |
     (E.constant("false", _), _, _, subst, answerIn, answerOut, _, _) {
-        let subst1 = preserveAnswers(answerIn, answerOut, subst)
-        in #(boolType(), subst1)
+        pureResult(boolType(), subst, answerIn, answerOut)
     }
     (E.constant("null", _), _, _, subst, answerIn, answerOut, _, _) {
-        let subst1 = preserveAnswers(answerIn, answerOut, subst)
-        in #(nullValueType(), subst1)
+        pureResult(nullValueType(), subst, answerIn, answerOut)
     }
     (E.constant(name, _), _, _, _, _, _, _, _) {
         error("infer_expr: unsupported constant " @@ name)
