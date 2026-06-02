@@ -1144,7 +1144,13 @@ fn analyzeExpr {
         analyzeExpr(expr, envt, ng, subst, answerIn, answerOut, controlAllowed, delimiterActive)
     }
     (E.reset_expr(expr), envt, ng, subst, answerIn, answerOut, _, _) {
-        analyzeExpr(expr, envt, ng, subst, answerIn, answerOut, true, true)
+        bind(freshLocalAnswers(), fn (#(bodyAnswerIn, bodyAnswerOut)) {
+            bind(analyzeExpr(expr, envt, ng, subst, bodyAnswerIn, bodyAnswerOut, true, true), fn (#(bodyType, subst1)) {
+                let subst2 = unifyType(bodyType, bodyAnswerIn, subst1);
+                    subst3 = preserveAnswers(answerIn, answerOut, subst2)
+                in #(applySubst(bodyAnswerOut, subst3), subst3)
+            })
+        })
     }
     (E.shift_expr(expr), envt, ng, subst, answerIn, answerOut, controlAllowed, _) {
         if (controlAllowed) {

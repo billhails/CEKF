@@ -369,10 +369,10 @@ This group includes:
 
 Checklist:
 
-- [ ] Add `E.reset_expr` only after the general analyzer threading is in place.
-- [ ] Analyze `reset` bodies under fresh local answer types and `controlAllowed = true`.
-- [ ] Make `reset` pure to the outside by unifying the surrounding `answerIn` with `answerOut`.
-- [ ] Return the body's outgoing answer type as the direct result type of `reset`.
+- [x] Add `E.reset_expr` only after the general analyzer threading is in place.
+- [x] Analyze `reset` bodies under fresh local answer types and `controlAllowed = true`.
+- [x] Make `reset` pure to the outside by unifying the surrounding `answerIn` with `answerOut`.
+- [x] Return the body's outgoing answer type as the direct result type of `reset`.
 - [ ] Add `E.shift_expr` only after callable builders and consumers are stable.
 - [x] Require `controlAllowed = true` in `shift`.
 - [x] Check `shift` operands against the rewrite function-argument form described in the rules note.
