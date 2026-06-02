@@ -520,11 +520,6 @@ fn canonicalizeTop(type) {
     })
 }
 
-fn directShiftBody {
-    (E.shift_expr(_)) { true }
-    (_) { false }
-}
-
 fn latentControlInExprList {
     (exprs, envt, ng, subst) {
         list.any(fn (expr) { latentControlInBody(expr, envt, ng, subst) }, exprs)
@@ -573,7 +568,7 @@ fn latentControlInBody {
     (E.amb_expr(left, right), envt, ng, subst) {
         latentControlInBody(left, envt, ng, subst) or latentControlInBody(right, envt, ng, subst)
     }
-    (expr = E.shift_expr(_), _, _, _) { directShiftBody(expr) }
+    (E.shift_expr(_), _, _, _) { true }
     (expr = E.apply(_, _), envt, ng, subst) { directControlfulApplyBody(expr, envt, ng, subst) }
     (E.sequence(exprs), envt, ng, subst) { latentControlInExprList(exprs, envt, ng, subst) }
     (E.if_expr(test, consequent, alternative), envt, ng, subst) {
@@ -601,9 +596,11 @@ fn latentControlInBody {
         latentControlInBody(left, envt, ng, subst) or latentControlInBody(right, envt, ng, subst)
     }
     (E.tuple_index(_, _, expr), envt, ng, subst) { latentControlInBody(expr, envt, ng, subst) }
-    (E.cut_expr(expr), envt, ng, subst) { latentControlInBody(expr, envt, ng, subst) }
-    (E.tag(expr), envt, ng, subst) { latentControlInBody(expr, envt, ng, subst) }
-    (E.print_exp(expr), envt, ng, subst) { latentControlInBody(expr, envt, ng, subst) }
+    (E.cut_expr(expr), envt, ng, subst) |
+    (E.tag(expr), envt, ng, subst) |
+    (E.print_exp(expr), envt, ng, subst) {
+        latentControlInBody(expr, envt, ng, subst)
+    }
     (E.typeof_expr(expr), envt, ng, subst) { latentControlInBody(expr, envt, ng, subst) }
     (E.typedefs(_, body), envt, ng, subst) { latentControlInBody(body, envt, ng, subst) }
     (_, _, _, _) { false }
@@ -630,11 +627,6 @@ fn canonicalizeArgs {
     }
 }
 
-fn isLambdaBinding {
-    (#(_, E.lambda(_, _))) { true }
-    (_) { false }
-}
-
 fn supportedPrimitive {
     ("+") | ("-") | ("*") | ("/") | ("%") | ("**") |
     ("=") | ("==") | ("!=") | ("<") | (">") | ("<=") | (">=") {
@@ -650,24 +642,12 @@ fn supports {
     (E.back_expr) {
         true
     }
-    (E.callcc_expr(expr)) {
-        supports(expr)
-    }
-    (E.print_exp(expr)) {
-        supports(expr)
-    }
-    (E.reset_expr(expr)) {
-        supports(expr)
-    }
-    (E.shift_expr(expr)) {
-        supports(expr)
-    }
-    (E.tag(expr)) {
-        supports(expr)
-    }
-    (E.cut_expr(expr)) {
-        supports(expr)
-    }
+    (E.callcc_expr(expr)) |
+    (E.print_exp(expr)) |
+    (E.reset_expr(expr)) |
+    (E.shift_expr(expr)) |
+    (E.tag(expr)) |
+    (E.cut_expr(expr)) |
     (E.typeof_expr(expr)) {
         supports(expr)
     }
@@ -1064,7 +1044,9 @@ fn analyzeExpr {
             subst1 = preserveAnswers(answerIn, answerOut, subst)
         in #(resultType, subst1)
     }
-    (E.cut_expr(expr), envt, ng, subst, answerIn, answerOut, controlAllowed, delimiterActive) {
+    (E.cut_expr(expr), envt, ng, subst, answerIn, answerOut, controlAllowed, delimiterActive) |
+    (E.print_exp(expr), envt, ng, subst, answerIn, answerOut, controlAllowed, delimiterActive) |
+    (E.tag(expr), envt, ng, subst, answerIn, answerOut, controlAllowed, delimiterActive) {
         analyzeExpr(expr, envt, ng, subst, answerIn, answerOut, controlAllowed, delimiterActive)
     }
     (E.typeof_expr(expr), envt, ng, subst, answerIn, answerOut, controlAllowed, delimiterActive) {
@@ -1153,9 +1135,6 @@ fn analyzeExpr {
             in #(applySubst(a, subst2), subst2)
         })
     }
-    (E.print_exp(expr), envt, ng, subst, answerIn, answerOut, controlAllowed, delimiterActive) {
-        analyzeExpr(expr, envt, ng, subst, answerIn, answerOut, controlAllowed, delimiterActive)
-    }
     (E.reset_expr(expr), envt, ng, subst, answerIn, answerOut, _, _) {
         bind(freshLocalAnswers(), fn (#(bodyAnswerIn, bodyAnswerOut)) {
             bind(analyzeExpr(expr, envt, ng, subst, bodyAnswerIn, bodyAnswerOut, true, true), fn (#(bodyType, subst1)) {
@@ -1181,9 +1160,6 @@ fn analyzeExpr {
         } else {
             error("infer_expr: shift requires reset")
         }
-    }
-    (E.tag(expr), envt, ng, subst, answerIn, answerOut, controlAllowed, delimiterActive) {
-        analyzeExpr(expr, envt, ng, subst, answerIn, answerOut, controlAllowed, delimiterActive)
     }
     (E.if_expr(test, consequent, alternative), envt, ng, subst, answerIn, answerOut, controlAllowed, delimiterActive) {
         bind(analyzeExpr(test, envt, ng, subst, answerIn, answerOut, controlAllowed, delimiterActive), fn (#(testType, subst1)) {
