@@ -2,7 +2,7 @@
 list-cores test indent indent-src indent-generated docs \
 install-sqlite3 install-raylib coverage extracov view-coverage \
 coverage-target test-a test-fail test-sh test-c test-unit test-b test-big-c help \
-test-gfx test-gfx-stress establish-baseline test-refactoring update-baseline clean-baseline \
+test-rewrite test-gfx test-gfx-stress establish-baseline test-refactoring update-baseline clean-baseline \
 scratch bench-regex-cache rebuild-default rebuild-raylib
 
 # pass on the command line, i.e. `make test MODE=prod`
@@ -97,6 +97,23 @@ EXTRA_TARGETS= \
 	$(GENDIR)/cps_kont_impl.h \
 	$(GENDIR)/cps_kont_impl.c
 
+GENERATED_BOOTSTRAP= \
+	$(EXTRA_H_TARGETS) \
+	$(EXTRA_OBJTYPES_H_TARGETS) \
+	$(EXTRA_DEBUG_H_TARGETS) \
+	$(GENDIR)/UnicodeData.inc \
+	$(GENDIR)/UnicodeCasing.inc \
+	$(GENDIR)/UnicodeDigits.inc \
+	$(GENDIR)/UnicodeNumbers.inc \
+	$(GENDIR)/anf_kont.h \
+	$(GENDIR)/anf_kont_objtypes.h \
+	$(GENDIR)/anf_kont_debug.h \
+	$(GENDIR)/anf_kont_impl.inc \
+	$(GENDIR)/cps_kont.h \
+	$(GENDIR)/cps_kont_objtypes.h \
+	$(GENDIR)/cps_kont_debug.h \
+	$(GENDIR)/cps_kont_impl.h
+
 MAIN=$(SRCDIR)/main.c
 PREAMBLE=$(GENDIR)/preamble.c
 CFILES=$(filter-out $(MAIN), $(wildcard $(SRCDIR)/*.c))
@@ -153,15 +170,15 @@ FN_BFILES=$(patsubst $(FNDIR)/%,$(TMPDIR)/%,$(patsubst %.fn,%.fnc,$(FN_FILES)))
 FN_OFILES=$(patsubst %.c,%.o,$(FN_CFILES))
 FN_BINARIES=$(patsubst %.o,%,$(FN_OFILES))
 
-TARGET_ARGS=--include=fn --flat-closure
+TARGET_ARGS=--include=fn --assertions-accumulate
 
 $(TEST_FN_CFILES): $(TMPDIR)/%.c: $(TEST_FN_DIR)/%.fn $(TARGET) | $(TMPDIR)
-	$(TARGET) $(TARGET_ARGS) --target-c=$@~ $<  && mv $@~ $@
+	$(TARGET) $(TARGET_ARGS) --flat-closure --target-c=$@~ $<  && mv $@~ $@
 	indent $@
 	rm -f $@~
 
 $(FN_CFILES): $(TMPDIR)/%.c: $(FNDIR)/%.fn $(TARGET) | $(TMPDIR)
-	$(TARGET) $(TARGET_ARGS) --target-c=$@~ $< && mv $@~ $@
+	$(TARGET) $(TARGET_ARGS) --flat-closure --target-c=$@~ $< && mv $@~ $@
 	indent $@
 	rm -f $@~
 
@@ -172,10 +189,10 @@ $(FN_BFILES): $(TMPDIR)/%.fnc: $(FNDIR)/%.fn $(TARGET) | $(TMPDIR)
 	$(TARGET) --binary-out=$@~ $<  && mv $@~ $@
 
 $(TEST_FN_SFILES): $(TMPDIR)/%.scm: $(TEST_FN_DIR)/%.fn $(TARGET) | $(TMPDIR)
-	$(TARGET) $(TARGET_ARGS) --target-c --dump-inline-f $<  > $@~ && mv $@~ $@
+	$(TARGET) $(TARGET_ARGS) --flat-closure --target-c --dump-inline-f $<  > $@~ && mv $@~ $@
 
 $(FN_SFILES): $(TMPDIR)/%.scm: $(FNDIR)/%.fn $(TARGET) | $(TMPDIR)
-	$(TARGET) $(TARGET_ARGS) --target-c --dump-inline-f $<  > $@~ && mv $@~ $@
+	$(TARGET) $(TARGET_ARGS) --flat-closure --target-c --dump-inline-f $<  > $@~ && mv $@~ $@
 
 $(FN_OFILES) $(TEST_FN_OFILES): %.o: %.c
 	$(LAXCC) $(INCLUDE_PATHS) -c $< -o $@
@@ -240,7 +257,7 @@ Double \
 Control
 EXTRA_INDENT_ARGS=$(patsubst %,-T %,$(EXTRA_TYPES))
 
-include $(ALL_DEP)
+-include $(ALL_DEP)
 
 $(PREAMBLE): $(PREAMBLE_SRC) | $(GENDIR)
 	tools/make-preamble.sh
@@ -291,61 +308,49 @@ $(GENDIR)/cps_kont_impl.c: tools/cps_continuations.yaml $(GENDEPS) $(SRCDIR)/pri
 $(EXTRA_DOCS): $(DOCDIR)/%.md: $(SRCDIR)/%.yaml $(GENDEPS) $(SRCDIR)/primitives.yaml | $(DOCDIR)
 	$(MAKE_AST) $< md > $@~ && mv $@~ $@
 
-.generated: $(EXTRA_TARGETS)
-	touch $@
-
 tags: $(SRCDIR)/* $(EXTRA_TARGETS)
 	ctags $(SRCDIR)/* $(EXTRA_TARGETS)
 
 xref: $(SRCDIR)/* $(EXTRA_TARGETS)
 	ctags -x $(SRCDIR)/* $(EXTRA_TARGETS) > $@
 
-$(MAIN_OBJ) $(OBJ): $(OBJDIR)/%.o: $(SRCDIR)/%.c | $(OBJDIR)
-	$(CC) $(INCLUDE_PATHS) -c $< -o $@
+$(MAIN_OBJ) $(OBJ): $(OBJDIR)/%.o: $(SRCDIR)/%.c | $(OBJDIR) $(DEPDIR) $(GENERATED_BOOTSTRAP)
+	$(CC) $(INCLUDE_PATHS) -MMD -MP -MF $(DEPDIR)/$*.d -MT $@ -c $< -o $@
 
-$(EXTRA_OBJ) $(PREAMBLE_OBJ): $(OBJDIR)/%.o: $(GENDIR)/%.c | $(OBJDIR)
-	$(CC) $(INCLUDE_PATHS) -c $< -o $@
+$(EXTRA_OBJ) $(PREAMBLE_OBJ): $(OBJDIR)/%.o: $(GENDIR)/%.c | $(OBJDIR) $(DEPDIR) $(GENERATED_BOOTSTRAP)
+	$(CC) $(INCLUDE_PATHS) -MMD -MP -MF $(DEPDIR)/$*.d -MT $@ -c $< -o $@
 
-$(TEST_OBJ): $(OBJDIR)/%.o: $(TSTDIR)/src/%.c | $(OBJDIR)
-	$(LAXCC) $(INCLUDE_PATHS) -c $< -o $@
+$(TEST_OBJ): $(OBJDIR)/%.o: $(TSTDIR)/src/%.c | $(OBJDIR) $(DEPDIR) $(GENERATED_BOOTSTRAP)
+	$(LAXCC) $(INCLUDE_PATHS) -MMD -MP -MF $(DEPDIR)/$*.d -MT $@ -c $< -o $@
 
-$(MAIN_DEP) $(DEP): $(DEPDIR)/%.d: $(SRCDIR)/%.c .generated | $(DEPDIR)
-	$(CC) $(INCLUDE_PATHS) -MM -MT $(patsubst $(DEPDIR)/%,$(OBJDIR)/%,$(patsubst %.d,%.o,$@)) -o $@ $<
-
-$(EXTRA_DEP) $(PREAMBLE_DEP): $(DEPDIR)/%.d: $(GENDIR)/%.c .generated | $(DEPDIR)
-	$(CC) $(INCLUDE_PATHS) -MM -MT $(patsubst $(DEPDIR)/%,$(OBJDIR)/%,$(patsubst %.d,%.o,$@)) -o $@ $<
-
-$(TEST_DEP): $(DEPDIR)/%.d: $(TSTDIR)/src/%.c .generated | $(DEPDIR)
-	$(CC) $(INCLUDE_PATHS) -MM -MT $(patsubst $(DEPDIR)/%,$(OBJDIR)/%,$(patsubst %.d,%.o,$@)) -o $@ $<
-
-test: test-unit test-a test-b test-sh test-fail
+test: test-unit test-a test-b test-sh test-fail test-rewrite
 	@echo "All tests passed."
 
-test-unit: all $(TEST_TARGETS)
-	for t in $(TEST_TARGETS) ; do echo '***' $$t '***' ; $$t || exit 1 ; done
+test-unit: $(TEST_TARGETS)
+	set -x; for t in $(TEST_TARGETS) ; do $$t || exit 1 ; done
 	@echo "All unit tests passed."
 
 test-a: all
-	for t in $(TSTDIR)/fn/test_*.fn ; do echo '***' $$t '***' ; ./$(TARGET) --include=fn --assertions-accumulate $$t || exit 1 ; done
+	set -x; for t in $(TSTDIR)/fn/test_*.fn ; do $(TARGET) $(TARGET_ARGS) $$t || exit 1 ; done
 	@echo "All a tests passed."
 
 test-sh: all
-	for t in $(TSTDIR)/sh/*.sh ; do [ -e $$t ] || continue ; echo '***' $$t '***' ; bash $$t || exit 1 ; done
+	set -x ; for t in $(TSTDIR)/sh/*.sh ; do bash $$t || exit 1 ; done
 	@echo "All sh tests passed."
 
 test-fail: all
-	for t in $(TSTDIR)/fn/fail_*.fn ; do echo '***' $$t '***' ; ! ./$(TARGET) --include=fn --assertions-accumulate $$t >/dev/null 2>&1 || exit 1 ; done
+	set -x ; for t in $(TSTDIR)/fn/fail_*.fn ; do ! ./$(TARGET) $(TARGET_ARGS) $$t >/dev/null 2>&1 || exit 1 ; done
 	@echo "All negative tests passed."
 
 test-c: all $(TEST_FN_BINARIES)
-	@for t in $(TEST_FN_BINARIES) ; do echo $$t ; $$t || exit 1 ; done
+	set -x ; for t in $(TEST_FN_BINARIES) ; do $$t || exit 1 ; done
 	@echo All generated C tests pass
 
 test-big-c: all $(TMPDIR)/test_harness
 	$(TMPDIR)/test_harness
 
 test-b: all
-	@for t in $(TEST_FN_FILES) ; do set -x; $(TARGET) $(TARGET_ARGS) --target-b $$t || exit 1 ; done
+	set -x; for t in $(TSTDIR)/fn/test_*.fn ; do $(TARGET) $(TARGET_ARGS) --flat-closure --target-b $$t || exit 1 ; done
 	@echo All B-code tests pass
 
 test-gfx: all
@@ -356,6 +361,10 @@ test-gfx-stress: all
 	@echo "Running targeted gfx stress checks with --stress-gc (can be very slow on larger files)."
 	@for t in $(TSTDIR)/fn/test_gfx_shader_reload_smoke.fn $(TSTDIR)/fn/test_gfx_resource_churn_smoke.fn ; do echo '***' $$t '***' ; ./$(TARGET) --include=fn --assertions-accumulate --stress-gc $$t || exit 1 ; done
 	@echo "All gfx stress smoke tests passed."
+
+test-rewrite: all
+	set -x; for t in fn/rewrite/tests/test_*.fn ; do $(TARGET) $(TARGET_ARGS) --flat-closure --target-b $$t || exit 1 ; done
+	@echo All rewrite tests pass
 
 $(TEST_TARGETS): $(TSTDIR)/%: $(OBJDIR)/%.o $(ALL_OBJ)
 	$(CC) -o $@ $< $(ALL_OBJ) $(LIBS)
@@ -398,7 +407,7 @@ realclean: clean
 	rm -rf tags xref $(UNIDIR)
 
 clean: deps
-	rm -rf $(BINDIR) $(OBJDIR) callgrind.out.* $(GENDIR) $(TEST_TARGETS) .typedefs $(SRCDIR)/*~ .generated gmon.out *.fnc core.* coverage_html coverage_report.txt gcov_output *.gcda *.gcno coverage.info coverage_filtered.info test_output.log $(TEST_FN_CFILES) $(TEST_FN_OFILES) $(TEST_FN_BINARIES) $(TEST_FN_SFILES) $(TMPDIR)
+	rm -rf $(BINDIR) $(OBJDIR) callgrind.out.* $(GENDIR) $(TEST_TARGETS) $(SRCDIR)/*~ gmon.out *.fnc core.* coverage_html coverage_report.txt gcov_output *.gcda *.gcno coverage.info coverage_filtered.info test_output.log $(TEST_FN_CFILES) $(TEST_FN_OFILES) $(TEST_FN_BINARIES) $(TEST_FN_SFILES) $(TMPDIR)
 	$(MAKE) -C scratch clean
 
 rebuild-default:
@@ -440,18 +449,6 @@ profile-parse: all
 
 leak-check: all
 	valgrind --leak-check=full ./$(TARGET) $(FNDIR)/$(PROF_SRC).fn
-
-indent: indent-src indent-generated
-
-indent-src: .typedefs .indent.pro
-	indent `cat .typedefs | sort -u | xargs` $(EXTRA_INDENT_ARGS) $(SRCDIR)/*.[ch]
-	rm -f $(SRCDIR)/*~
-
-indent-generated: .typedefs .indent.pro
-	indent `cat .typedefs | sort -u | xargs` $(EXTRA_INDENT_ARGS) $(GENDIR)/*.[ch]
-	rm -f $(GENDIR)/*~
-
-.typedefs: .generated
 
 list-cores:
 	@ls -rt1 /var/lib/apport/coredump/* | tail -1

@@ -1,23 +1,171 @@
 namespace
 
-typedef Color { rgba(number, number, number, number) }
-typedef Point { point(number, number) }
-typedef Vec3 { vec3(number, number, number) }
-typedef Vec4 { vec4(number, number, number, number) }
-typedef Size { extent(number, number) }
-typedef Rect { rect(number, number, number, number) }
-typedef Light { point_light(Vec3, Vec3, number) | directional_light(Vec3, Vec3, number) }
-typedef LightingConfig { lighting_config(Vec3, number, number) }
+typedef rgba(number, number, number, number);
+typedef point(number, number);
+typedef vec3(number, number, number);
+typedef vec4(number, number, number, number);
+typedef extent(number, number);
+typedef rect(number, number, number, number);
+typedef Light { point_light(vec3, vec3, number) | directional_light(vec3, vec3, number) }
+typedef lighting_config(vec3, number, number);
 
 fn rgb(r, g, b) {
     rgba(r, g, b, 255)
 }
 
-fn black() { rgba(0, 0, 0, 255) }
-fn white() { rgba(255, 255, 255, 255) }
-fn red() { rgba(255, 0, 0, 255) }
-fn green() { rgba(0, 255, 0, 255) }
-fn blue() { rgba(0, 0, 255, 255) }
+fn alice_blue() { rgb(240, 248, 255) }
+fn antique_white() { rgb(250, 235, 215) }
+fn aquamarine() { rgb(127, 255, 212) }
+fn aqua() { rgb(0, 255, 255) }
+fn azure() { rgb(240, 255, 255) }
+fn beige() { rgb(245, 245, 220) }
+fn bisque() { rgb(255, 228, 196) }
+fn black() { rgb(0, 0, 0) }
+fn blanched_almond() { rgb(255, 235, 205) }
+fn blue() { rgb(0, 0, 255) }
+fn blue_violet() { rgb(138, 43, 226) }
+fn brown() { rgb(165, 42, 42) }
+fn burlywood() { rgb(222, 184, 135) }
+fn cadet_blue() { rgb(95, 158, 160) }
+fn chartreuse() { rgb(127, 255, 0) }
+fn chocolate() { rgb(210, 105, 30) }
+fn coral() { rgb(255, 127, 80) }
+fn cornflower_blue() { rgb(100, 149, 237) }
+fn cornsilk() { rgb(255, 248, 220) }
+fn crimson() { rgb(220, 20, 60) }
+fn cyan() { rgb(0, 255, 255) }
+fn dark_blue() { rgb(0, 0, 139) }
+fn dark_cyan() { rgb(0, 139, 139) }
+fn dark_goldenrod() { rgb(184, 134, 11) }
+fn dark_gray() { rgb(169, 169, 169) }
+fn dark_green() { rgb(0, 100, 0) }
+fn dark_khaki() { rgb(189, 183, 107) }
+fn dark_magenta() { rgb(139, 0, 139) }
+fn dark_olive_green() { rgb(85, 107, 47) }
+fn dark_orange() { rgb(255, 140, 0) }
+fn dark_orchid() { rgb(153, 50, 204) }
+fn dark_red() { rgb(139, 0, 0) }
+fn dark_salmon() { rgb(233, 150, 122) }
+fn dark_sea_green() { rgb(143, 188, 143) }
+fn dark_slate_blue() { rgb(72, 61, 139) }
+fn dark_slate_gray() { rgb(47, 79, 79) }
+fn dark_turquoise() { rgb(0, 206, 209) }
+fn dark_violet() { rgb(148, 0, 211) }
+fn deep_pink() { rgb(255, 20, 147) }
+fn deep_sky_blue() { rgb(0, 191, 255) }
+fn dim_gray() { rgb(105, 105, 105) }
+fn dodger_blue() { rgb(30, 144, 255) }
+fn firebrick() { rgb(178, 34, 34) }
+fn floral_white() { rgb(255, 250, 240) }
+fn forest_green() { rgb(34, 139, 34) }
+fn fuchsia() { rgb(255, 0, 255) }
+fn gainsboro() { rgb(220, 220, 220) }
+fn ghost_white() { rgb(248, 248, 255) }
+fn goldenrod() { rgb(218, 165, 32) }
+fn gold() { rgb(255, 215, 0) }
+fn gray() { rgb(190, 190, 190) }
+fn green() { rgb(0, 255, 0) }
+fn green_yellow() { rgb(173, 255, 47) }
+fn honeydew() { rgb(240, 255, 240) }
+fn hot_pink() { rgb(255, 105, 180) }
+fn indian_red() { rgb(205, 92, 92) }
+fn indigo() { rgb(75, 0, 130) }
+fn ivory() { rgb(255, 255, 240) }
+fn khaki() { rgb(240, 230, 140) }
+fn lavender_blush() { rgb(255, 240, 245) }
+fn lavender() { rgb(230, 230, 250) }
+fn lawn_green() { rgb(124, 252, 0) }
+fn lemon_chiffon() { rgb(255, 250, 205) }
+fn light_blue() { rgb(173, 216, 230) }
+fn light_coral() { rgb(240, 128, 128) }
+fn light_cyan() { rgb(224, 255, 255) }
+fn light_goldenrod() { rgb(238, 221, 130) }
+fn light_goldenrod_yellow() { rgb(250, 250, 210) }
+fn light_gray() { rgb(211, 211, 211) }
+fn light_green() { rgb(144, 238, 144) }
+fn light_pink() { rgb(255, 182, 193) }
+fn light_salmon() { rgb(255, 160, 122) }
+fn light_sea_green() { rgb(32, 178, 170) }
+fn light_sky_blue() { rgb(135, 206, 250) }
+fn light_slate_blue() { rgb(132, 112, 255) }
+fn light_slate_gray() { rgb(119, 136, 153) }
+fn light_steel_blue() { rgb(176, 196, 222) }
+fn light_yellow() { rgb(255, 255, 224) }
+fn lime_green() { rgb(50, 205, 50) }
+fn lime() { rgb(0, 255, 0) }
+fn linen() { rgb(250, 240, 230) }
+fn magenta() { rgb(255, 0, 255) }
+fn maroon() { rgb(176, 48, 96) }
+fn medium_aquamarine() { rgb(102, 205, 170) }
+fn medium_blue() { rgb(0, 0, 205) }
+fn medium_orchid() { rgb(186, 85, 211) }
+fn medium_purple() { rgb(147, 112, 219) }
+fn medium_sea_green() { rgb(60, 179, 113) }
+fn medium_slate_blue() { rgb(123, 104, 238) }
+fn medium_spring_green() { rgb(0, 250, 154) }
+fn medium_turquoise() { rgb(72, 209, 204) }
+fn medium_violet_red() { rgb(199, 21, 133) }
+fn midnight_blue() { rgb(25, 25, 112) }
+fn mint_cream() { rgb(245, 255, 250) }
+fn misty_rose() { rgb(255, 228, 225) }
+fn moccasin() { rgb(255, 228, 181) }
+fn navajo_white() { rgb(255, 222, 173) }
+fn navy_blue() { rgb(0, 0, 128) }
+fn navy() { rgb(0, 0, 128) }
+fn old_lace() { rgb(253, 245, 230) }
+fn olive_drab() { rgb(107, 142, 35) }
+fn olive() { rgb(128, 128, 0) }
+fn orange_red() { rgb(255, 69, 0) }
+fn orange() { rgb(255, 165, 0) }
+fn orchid() { rgb(218, 112, 214) }
+fn pale_goldenrod() { rgb(238, 232, 170) }
+fn pale_green() { rgb(152, 251, 152) }
+fn pale_turquoise() { rgb(175, 238, 238) }
+fn pale_violet_red() { rgb(219, 112, 147) }
+fn papaya_whip() { rgb(255, 239, 213) }
+fn peach_puff() { rgb(255, 218, 185) }
+fn peru() { rgb(205, 133, 63) }
+fn pink() { rgb(255, 192, 203) }
+fn plum() { rgb(221, 160, 221) }
+fn powder_blue() { rgb(176, 224, 230) }
+fn purple() { rgb(160, 32, 240) }
+fn rebecca_purple() { rgb(102, 51, 153) }
+fn red() { rgb(255, 0, 0) }
+fn rosy_brown() { rgb(188, 143, 143) }
+fn royal_blue() { rgb(65, 105, 225) }
+fn saddle_brown() { rgb(139, 69, 19) }
+fn salmon() { rgb(250, 128, 114) }
+fn sandy_brown() { rgb(244, 164, 96) }
+fn sea_green() { rgb(46, 139, 87) }
+fn seashell() { rgb(255, 245, 238) }
+fn sienna() { rgb(160, 82, 45) }
+fn silver() { rgb(192, 192, 192) }
+fn sky_blue() { rgb(135, 206, 235) }
+fn slate_blue() { rgb(106, 90, 205) }
+fn slate_gray() { rgb(112, 128, 144) }
+fn snow() { rgb(255, 250, 250) }
+fn spring_green() { rgb(0, 255, 127) }
+fn steel_blue() { rgb(70, 130, 180) }
+fn tan() { rgb(210, 180, 140) }
+fn teal() { rgb(0, 128, 128) }
+fn thistle() { rgb(216, 191, 216) }
+fn tomato() { rgb(255, 99, 71) }
+fn turquoise() { rgb(64, 224, 208) }
+fn violet_red() { rgb(208, 32, 144) }
+fn violet() { rgb(238, 130, 238) }
+fn web_gray() { rgb(128, 128, 128) }
+fn web_green() { rgb(0, 128, 0) }
+fn web_maroon() { rgb(128, 0, 0) }
+fn web_purple() { rgb(128, 0, 128) }
+fn wheat() { rgb(245, 222, 179) }
+fn white() { rgb(255, 255, 255) }
+fn white_smoke() { rgb(245, 245, 245) }
+fn x11_gray() { rgb(190, 190, 190) }
+fn x11_green() { rgb(0, 255, 0) }
+fn x11_maroon() { rgb(176, 48, 96) }
+fn x11_purple() { rgb(160, 32, 240) }
+fn yellow_green() { rgb(154, 205, 50) }
+fn yellow() { rgb(255, 255, 0) }
 
 fn material_map_albedo() { 0 }
 fn material_map_normal() { 1 }

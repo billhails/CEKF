@@ -37,6 +37,7 @@ coverage.info
 coverage_filtered.info
 test_output.log
 .github/skills
+.codegraph
 
 # Refactoring testing baseline (optional: remove this line to track in git)
 test_baseline/

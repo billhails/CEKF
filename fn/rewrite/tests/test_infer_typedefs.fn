@@ -1,0 +1,59 @@
+let
+    link "../infer_expr.fn" as INFER;
+    link "../expr.fn" as E;
+
+    fn infer_type(source) {
+        INFER.infer_to_string(E.parse(source))
+    }
+
+    fn supports(source) {
+        INFER.supports(E.parse(source))
+    }
+in
+    // typedefs: empty constructor env passes body through unchanged
+    assert(infer_type("(typedefs () 42)") == "Int");
+    assert(infer_type("(typedefs () (letrec ((f (λ (x) (+ x 1)))) (f 1)))") == "Int");
+    // typedefs: non-empty constructor env extends the type environment
+    assert(infer_type("(typedefs ((id (-> 'a 'a))) (id 1))") == "Int");
+    // typedefs: constructor env bindings are polymorphic (fresh vars per use)
+    assert(infer_type("(typedefs ((id (-> 'a 'a))) (if (id true) (id 1) (id 2)))") == "Int");
+    // typedefs: construct form uses typedef-defined constructor from env
+    assert(infer_type("(typedefs ((wrap (-> 'a 'a))) (construct wrap 0 42))") == "Int");
+    // typedefs: construct with typedef env is reported as supported
+    assert(supports("(typedefs ((wrap (-> 'a 'a))) (construct wrap 0 42))"));
+    // typedefs: user-defined maybe constructors unify to a concrete custom type
+    assert(infer_type("(typedefs ((just (-> 'a (maybe 'a))) (nothing (maybe 'a)))"
+                      "(if true (construct just 0 42) nothing))") == "maybe(Int)");
+    // typedefs: deconstructing just from maybe(Int) recovers the payload type
+    assert(infer_type("(typedefs ((just (-> 'a (maybe 'a))) (nothing (maybe 'a)))"
+                      "(deconstruct just 0 (construct just 0 42)))") == "Int");
+    // typedefs: the same maybe family instantiates at another concrete type
+    assert(infer_type("(typedefs ((just (-> 'a (maybe 'a))) (nothing (maybe 'a)))"
+                      "(if true (construct just 0 true) nothing))") == "maybe(Bool)");
+    // typedefs: either constructors unify to a concrete two-parameter custom type
+    assert(infer_type("(typedefs ((left (-> 'a (either 'a 'b))) (right (-> 'b (either 'a 'b))))"
+                      "(if true (construct left 0 42) (construct right 1 true)))") == "either(Int, Bool)");
+    // typedefs: deconstructing left from either(Int, Bool) recovers the left payload type
+    assert(infer_type("(typedefs ((left (-> 'a (either 'a 'b))) (right (-> 'b (either 'a 'b))))"
+                      "(deconstruct left 0 (construct left 0 42)))") == "Int");
+    // typedefs: deconstructing right from either(Int, Bool) recovers the right payload type
+    assert(infer_type("(typedefs ((left (-> 'a (either 'a 'b))) (right (-> 'b (either 'a 'b))))"
+                      "(deconstruct right 0 (construct right 1 true)))") == "Bool");
+    // typedefs: recursive list constructors unify to a concrete recursive custom type
+    assert(infer_type("(typedefs ((nil (list 'a)) (cons (-> 'a (-> (list 'a) (list 'a)))))"
+                      "(if true (construct cons 0 1 nil) nil))") == "list(Int)");
+    // typedefs: deconstructing cons from list(Int) recovers the head payload type
+    assert(infer_type("(typedefs ((nil (list 'a)) (cons (-> 'a (-> (list 'a) (list 'a)))))"
+                      "(deconstruct cons 0 (construct cons 0 1 nil)))") == "Int");
+    // typedefs: deconstructing cons from list(Int) recovers the tail payload type
+    assert(infer_type("(typedefs ((nil (list 'a)) (cons (-> 'a (-> (list 'a) (list 'a)))))"
+                      "(deconstruct cons 1 (construct cons 0 1 nil)))") == "list(Int)");
+    // deconstruct: reported as supported
+    assert(supports("(typedefs ((box (-> 'a (Box 'a))))"
+                    "(deconstruct box 0 (construct box 0 42)))"));
+    // deconstruct: extracts field type from constructor scheme
+    assert(infer_type("(typedefs ((box (-> 'a (Box 'a))))"
+                      "(deconstruct box 0 (construct box 0 42)))") == "Int");
+    // deconstruct: selects correct field by index from multi-field constructor
+    assert(infer_type("(typedefs ((pair (-> 'a (-> 'b (Pair 'a 'b)))))"
+                      "(deconstruct pair 1 (construct pair 0 42 true)))") == "Bool");

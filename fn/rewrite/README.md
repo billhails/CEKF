@@ -6,6 +6,12 @@ Even if it doesn't pan out, this is still useful as it provides concise referenc
 
 For agent-oriented guidance on the rewrite prototyping/self-hosting workflow (`test_harness.fn`, pass ordering, and `samples.fn` usage), see [`docs/agents/rewrite-self-hosting-guide.md`](../../docs/agents/rewrite-self-hosting-guide.md).
 
+For a prototype-oriented design note on adding delimited control to the rewrite CPS pass, see [`docs/delimited-cps.md`](docs/delimited-cps.md).
+
+For a companion note on how `shift/reset` might be typed safely, especially when `shift` appears in named functions, see [`docs/delimited-types.md`](docs/delimited-types.md).
+
+For a short current status note on rewrite inference and typedef coverage, see [`docs/status-update.md`](docs/status-update.md).
+
 * [`alphaconvert.fn`](alphaconvert.fn) - ɑ-conversion algorithm over `expr`.
 * [`appel.fn`](appel.fn) - The continuation type from Appel's book (unused).
 * [`beta_reduce.fn`](beta_reduce.fn) - β-reduction algorithm.

@@ -84,3 +84,7 @@ fn integers_between(lower, upper) {
 
 export operator "_.._" 8 integers_between;
 
+fn random(seed) {
+    let r = rand(seed);
+    in r then random(r)
+}

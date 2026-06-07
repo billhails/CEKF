@@ -2,6 +2,14 @@ namespace
     link "../listutils.fn" as list;
     import list operator "_|>_";
 
+    typedef ctorScheme(string, ctorType);
+
+    typedef ctorType {
+        funType(ctorType, ctorType) |
+        operType(string, list(ctorType)) |
+        varType(string)
+    };
+
     typedef expr {
         amb_expr(expr, expr) |
         apply(expr, list(expr)) |
@@ -29,16 +37,93 @@ namespace
         namespaces(list(expr)) |
         primapp(string, expr, expr) |
         print_exp(expr) |
+        reset_expr(expr) |
         sequence(list(expr)) |
+        shift_expr(expr) |
         stdint(number) |
         tag(expr) |
         tuple_index(number, number, expr) |
-        typedefs(number, expr) |
+        typedefs(list(ctorScheme), expr) |
         typeof_expr(expr) |
         var(string)
     }
 
     // Helper printers
+    fn print_ctorScheme(x=ctorScheme(name, type)) {
+        puts("(");
+        puts(name);
+        puts(" ");
+        print_ctorType(type);
+        puts(")");
+        x
+    }
+
+    // funType(ctorType, ctorType) |
+    // operType(string, list(ctorType)) |
+    // varType(string)
+    fn print_ctorType {
+        (x=funType(a, b)) {
+            puts("(-> ");
+            print_ctorType(a);
+            puts(" ");
+            print_ctorType(b);
+            puts(")");
+            x;
+        }
+        (x=operType(name, lst)) {
+            let fn h {
+                ([]) { true }
+                ([last]) {
+                    print_ctorType(last);
+                    true;
+                }
+                (next @ rest) {
+                    print_ctorType(next);
+                    puts(" ");
+                    h(rest);
+                }
+            }
+            in
+            puts("(");
+            puts(name);
+            switch (lst) {
+                ([]) { true }
+                (_) {
+                    puts(" ")
+                    h(lst);
+                    true;
+                }
+            }
+            puts(")");
+            x;
+        }
+        (x=varType(name)) {
+            puts("'");
+            puts(name);
+            x;
+        }
+    }
+
+    fn print_list_ctorScheme(l) {
+        let fn h {
+            ([]) { true }
+            ([scheme]) {
+                print_ctorScheme(scheme);
+                true;
+            }
+            (scheme @ rest ) {
+                print_ctorScheme(scheme);
+                puts(" ");
+                h(rest);
+            }
+        }
+        in
+            puts("[");
+            h(l);
+            puts("]");
+            l;
+    }
+
     fn print_list(indices, putter, space) {
         switch (indices) {
             ([]) { "" }
@@ -96,14 +181,14 @@ namespace
         }
         (x=typedefs(defs, expr)) {
             puts("(typedefs ");
-            putn(defs);
+            print_list_ctorScheme(defs);
             puts(" ");
             print_expr(expr);
             puts(")");
             x;
         }
         (x=tuple_index(size, index, expr)) {
-            puts("(tuple-index ");
+            puts("(tuple_index ");
             putn(size);
             puts(" ");
             putn(index);
@@ -128,8 +213,20 @@ namespace
             puts(")");
             x;
         }
+        (x=reset_expr(e)) {
+            puts("(reset ");
+            print_expr(e);
+            puts(")");
+            x;
+        }
         (x=print_exp(e)) {
             puts("(print ");
+            print_expr(e);
+            puts(")");
+            x;
+        }
+        (x=shift_expr(e)) {
+            puts("(shift ");
             print_expr(e);
             puts(")");
             x;
@@ -151,7 +248,7 @@ namespace
             x;
         }
         (x=match_cases(exp, cases)) {
-            puts("(match-cases ");
+            puts("(match_cases ");
             print_expr(exp);
             list.for_each (fn {
                 (#(indices, caseExpr)) {
@@ -166,14 +263,14 @@ namespace
             x;
         }
         (x=make_vec(size, elements)) {
-            puts("(make-vec ");
+            puts("(make_vec ");
             putn(size);
             print_sequence(elements);
             puts(")");
             x;
         }
         (x=make_tuple(elements)) {
-            puts("(make-tuple");
+            puts("(make_tuple");
             print_sequence(elements);
             puts(")");
             x;
@@ -207,7 +304,7 @@ namespace
             x;
         }
         (x=constructor_info(name)) {
-            puts("(constructor-info ");
+            puts("(constructor_info ");
             puts(name);
             puts(")");
             x;
@@ -368,6 +465,8 @@ namespace
                 (sexp([atom("amb"), a, b])) { amb_expr(to_expr(a), to_expr(b)) }
                 (sexp([atom("call/cc"), e])) { callcc_expr(to_expr(e)) }
                 (sexp([atom("cut"), e])) { cut_expr(to_expr(e)) }
+                (sexp([atom("reset"), e])) { reset_expr(to_expr(e)) }
+                (sexp([atom("shift"), e])) { shift_expr(to_expr(e)) }
                 (sexp([atom("if"), e1, e2, e3])) { if_expr(to_expr(e1), to_expr(e2), to_expr(e3)) }
                 (sexp(atom("cond") @ test @ branches)) { cond_expr(to_expr(test), branches |> fn {
                     (sexp([e1, e2])) { #(to_expr(e1), to_expr(e2)) }
@@ -439,14 +538,45 @@ namespace
                 (sexp([atom(">="), e1, e2])) { primapp(">=", to_expr(e1), to_expr(e2)) }
                 (sexp([atom("print"), e])) { print_exp(to_expr(e)) }
                 (sexp([atom("tag"), e])) { tag(to_expr(e)) }
-                (sexp([atom("tuple_index"), atom(size), atom(index), e])) { tuple_index(1, 1, to_expr(e)) }
-                (sexp([atom("typedefs"), atom(defs), e])) { typedefs(1, to_expr(e)) }
+                (sexp([atom("tuple_index"), atom(size), atom(index), e])) { tuple_index(to_number(size), to_number(index), to_expr(e)) }
+                (sexp([atom("typedefs"), sexp(defs), e])) { typedefs(defs |> to_ctorScheme, to_expr(e)) }
                 (sexp([atom("typeof"), e])) { typeof_expr(to_expr(e)) }
                 (sexp([])) { error("Empty expression") }
                 (sexp(func @ args)) { apply(to_expr(func), args |> to_expr) }
                 (x) {
                     print x;
                     error("Cannot parse expression");
+                }
+            }
+
+
+            // ctorScheme(string, ctorType);
+            fn to_ctorScheme {
+                (sexp([atom(name), type])) {
+                    ctorScheme(name, to_ctorType(type));
+                }
+                (x) {
+                    print x;
+                    error("Cannot parse ctorScheme");
+                }
+            }
+
+            // funType(ctorType, ctorType) |
+            // operType(string, list(ctorType)) |
+            // varType(string)
+            fn to_ctorType {
+                (sexp([atom("->"), a, b])) {
+                    funType(to_ctorType(a), to_ctorType(b));
+                }
+                (atom('\'' @ name)) {
+                    varType(name)
+                }
+                (sexp(atom(name) @ types)) {
+                    operType(name, types |> to_ctorType);
+                }
+                (x) {
+                    print x;
+                    error("Cannot parse ctorType");
                 }
             }
 

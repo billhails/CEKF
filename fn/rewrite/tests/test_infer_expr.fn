@@ -1,0 +1,42 @@
+let
+    link "../infer_expr.fn" as INFER;
+    link "../expr.fn" as E;
+
+    fn infer_type(source) {
+        INFER.infer_to_string(E.parse(source))
+    }
+in
+    assert(infer_type("((λ (x) x) 1)") == "Int");
+    assert(infer_type("(if true (back) 1)") == "Int");
+    assert(infer_type("(λ () 42)") == "#() -> Int");
+    assert(infer_type("((λ () 42))") == "Int");
+    assert(infer_type("(cut 1)") == "Int");
+    assert(infer_type("(typeof 42)") == "list(Char)");
+    assert(infer_type("(letrec ((f (λ (x) x)) (h (λ (x) (+ x 2)))) (let ((x 1)) (if (= x 1) (typeof (f x)) (typeof (h 2)))))") == "list(Char)");
+    assert(infer_type("(print 42)") == "Int");
+    assert(infer_type("(letrec ((f (λ (x) (+ x 1)))) (let ((x 1)) (print (f x))))") == "Int");
+    assert(infer_type("(typeof (print 42))") == "list(Char)");
+    assert(infer_type("(amb 1 2)") == "Int");
+    assert(infer_type("(call/cc (λ (k) (k 5)))") == "Int");
+    assert(infer_type("(call/cc (λ (k) 42))") == "Int");
+    assert(infer_type("(call/cc (λ (k) (+ 10 (k 5))))") == "Int");
+    assert(infer_type("(let ((x 42)) (tag x))") == "Int");
+    assert(infer_type("(letrec ((f (λ (x) (+ x 1)))) (let ((x 1)) (tag (f x))))") == "Int");
+    assert(infer_type("(letrec ((f (λ (x) (+ x 1))) (result1 (λ () 11)) (result2 (λ () 22))) (let ((x 1)) (cond (tag (f x)) (1 (result1)) (2 (result2)))))") == "Int");
+    assert(infer_type("(amb ((λ (x) x) 1) ((λ (y) y) 2))") == "Int");
+    assert(infer_type("(amb 1 (begin (back) 2))") == "Int");
+    assert(infer_type("(+ (amb (begin (back) 10) 20) 3)") == "Int");
+    assert(infer_type("(amb (amb (cut 1) 2) 3)") == "Int");
+    assert(infer_type("(cond 2 (1 10) (2 20) (3 30))") == "Int");
+    assert(infer_type("(match_cases 3 ((1 2) 10) ((3 4 5) 20))") == "Int");
+    assert(infer_type("(letrec ((result1 (λ () 11)) (result2 (λ () 22)) (result3 (λ () 33))) (let ((x 2)) (cond x (1 (result1)) (2 (result2)) (3 (result3)))))") == "Int");
+    assert(infer_type("(letrec ((f (λ (x) x)) (g (λ (x) (+ x 1))) (h (λ (x) (+ x 2)))) (let ((x 2)) (match_cases (f x) ((1) (g 1)) ((2) (h 2)))))") == "Int");
+    assert(infer_type("(letrec ((id (λ (x) x))) (if (id true) (id 1) (id 2)))") == "Int");
+    assert(infer_type("(letrec ((f (λ (x) x)) (g (λ (x) (+ x 10))) (h (λ (x) (+ x 20)))) (let ((x 2)) (cond (f x) (1 (g 1)) (2 (h 2)))))") == "Int");
+    assert(infer_type("(letrec ((i (λ (x) x)) (j (λ (x y) (begin (i x) (i y))))) (j true 1))") == "Int");
+    assert(infer_type("(letrec ((f (λ (x) (g x))) (g (λ (n) (+ n 1)))) (f 1))") == "Int");
+    assert(infer_type("(letrec ((fact (λ (n) (if (= n 0) 1 (* n (fact (- n 1))))))) (fact 5))") == "Int");
+    assert(infer_type("(letrec ((pair (λ (x y) x))) (construct pair 0 1 true))") == "Int");
+    assert(infer_type("(make_tuple 1 true 'a')") == "#(Int, Bool, Char)");
+    assert(infer_type("(tuple_index 3 1 (make_tuple 1 true 'a'))") == "Bool");
+    assert(infer_type("(tuple_index 2 0 (letrec ((pair (λ (x) (make_tuple x (+ x 1))))) (pair 4)))") == "Int");

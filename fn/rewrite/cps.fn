@@ -17,20 +17,56 @@ namespace
 
     fn M {
         (M.lambda(vars, body)) {
-            let c = GS.genstring("$k");
-            in M.lambda(vars @@ [c], T_c(body, M.var(c)))
+            let
+                k = GS.genstring("$k");
+                m = GS.genstring("$m");
+            in M.lambda(vars @@ [k, m], T_c(body, M.var(k), M.var(m)))
         }
         (x) { x }
     }
 
     fn kToC(k) {
-        let rv = GS.genstring("$rv");
-        in M.lambda([rv], k(M.var(rv)))
+        let
+            rv = GS.genstring("$rv");
+            m = GS.genstring("$m");
+        in M.lambda([rv, m], k(M.var(rv), M.var(m)))
     }
 
-    fn T_k(e, k) {
+    fn makeIdk() {
+        let
+            v = GS.genstring("$v");
+            m = GS.genstring("$m");
+        in M.lambda([v, m], M.apply(M.var(m), [M.var(v)]))
+    }
+
+    fn captureCont(c) {
+        let
+            x = GS.genstring("$x");
+            k = GS.genstring("$k");
+            m = GS.genstring("$m");
+            v = GS.genstring("$v");
+            km = M.lambda([v], M.apply(M.var(k), [M.var(v), M.var(m)]));
+        in M.lambda([x, k, m], M.apply(c, [M.var(x), km]))
+    }
+
+    fn captureWhole(c, m) {
+        let
+            x = GS.genstring("$x");
+            k = GS.genstring("$k");
+            m2 = GS.genstring("$m");
+        in M.lambda([x, k, m2], M.apply(c, [M.var(x), m]))
+    }
+
+    fn T(expr, halt) {
+        let
+            v = GS.genstring("$v");
+            m = M.lambda([v], M.apply(halt, [M.var(v)]));
+        in T_c(expr, makeIdk(), m)
+    }
+
+    fn T_k(e, k, m) {
         if (isAexpr(e)) {
-            k(M(e))
+            k(M(e), m)
         } else {
             switch (e)  {
                 (M.back_expr) {
@@ -41,69 +77,71 @@ namespace
                     let
                         c = kToC(k);
                     in
-                        M.amb_expr(T_c(expr1, c), T_c(expr2, c))
+                        M.amb_expr(T_c(expr1, c, m), T_c(expr2, c, m))
                 }
 
-                (M.apply(_, _)) {
+                (M.apply(_, _)) |
+                (M.callcc_expr(_)) |
+                (M.reset_expr(_)) |
+                (M.shift_expr(_)) {
                     let
                         c = kToC(k);
                     in
-                        T_c(e, c)
-                }
-
-                (M.callcc_expr(e)) {
-                    let
-                        c = kToC(k);
-                    in
-                        T_c(M.callcc_expr(e), c)
+                        T_c(e, c, m)
                 }
 
                 (M.cut_expr(e)) {
-                    M.cut_expr(T_c(e, kToC(k)))
+                    M.cut_expr(T_c(e, kToC(k), m))
                 }
 
                 (M.cond_expr(test, branches)) {
                     let
                         c = kToC(k);
                     in
-                        T_k(test, fn (atest) {
-                            M.cond_expr(atest, branches |> identity && T_c flip c)
-                        })
+                        T_k(test, fn (atest, m1) {
+                            M.cond_expr(atest, branches |> fn {
+                                (#(e1, e2)) {
+                                    #(T_c(e1, c, m1), T_c(e2, c, m1))
+                                }
+                            })
+                        }, m)
                 }
 
                 (M.if_expr(exprc, exprt, exprf)) {
                     let
                         c = kToC(k);
                     in
-                        T_k(exprc, fn(aexp) {
-                            M.if_expr(aexp, T_c(exprt, c), T_c(exprf, c))
-                        })
+                        T_k(exprc, fn(aexp, m1) {
+                            M.if_expr(aexp, T_c(exprt, c, m1), T_c(exprf, c, m1))
+                        }, m)
                 }
 
                 (M.letrec_expr(bindings, expr)) {
-                    M.letrec_expr(bindings |> identity && (M && identity), T_k(expr, k))
+                    M.letrec_expr(bindings |> identity && (M && identity), T_k(expr, k, m))
                 }
 
                 (M.make_vec(size, args)) {
-                    Ts_k(args, fn (sargs) {
-                        k(M.make_vec(size, sargs))
-                    })
+                    Ts_k(args, fn (sargs, m1) {
+                        k(M.make_vec(size, sargs), m1)
+                    }, m)
                 }
 
                 (M.match_cases(test, cases)) {
                     let
                         c = kToC(k);
                     in
-                        T_k(test, fn (atest) {
-                            M.match_cases(atest, cases |> identity && T_c flip c)
-                        })
+                        T_k(test, fn (atest, m1) {
+                            M.match_cases(atest, cases |> identity && fn (caseExpr) {
+                                T_c(caseExpr, c, m1)
+                            })
+                        }, m)
                 }
 
-                (M.sequence([expr])) { T_k(expr, k) }
+                (M.sequence([expr])) { T_k(expr, k, m) }
                 (M.sequence(expr @ exprs)) {
-                    T_k(expr, fn (ignored) {
-                        T_k(M.sequence(exprs), k)
-                    })
+                    T_k(expr, fn (ignored, m1) {
+                        T_k(M.sequence(exprs), k, m1)
+                    }, m)
                 }
 
                 (x) {
@@ -115,9 +153,9 @@ namespace
         }
     }
 
-    fn T_c(expr, c) {
+    fn T_c(expr, c, m) {
         if (isAexpr(expr)) {
-            M.apply(c, [M(expr)])
+            M.apply(c, [M(expr), m])
         } else {
             switch(expr) {
                 (M.back_expr) {
@@ -127,86 +165,112 @@ namespace
                 (M.amb_expr(expr1, expr2)) {
                     let
                         sk = GS.genstring("$k");
+                        sm = GS.genstring("$m");
                         vsk = M.var(sk);
+                        vsm = M.var(sm);
                     in
-                        M.apply(M.lambda([sk],
-                                M.amb_expr(T_c(expr1, vsk),
-                                           T_c(expr2, vsk))),
-                                [c])
+                        M.apply(M.lambda([sk, sm],
+                                M.amb_expr(T_c(expr1, vsk, vsm),
+                                           T_c(expr2, vsk, vsm))),
+                                [c, m])
                 }
 
                 (M.apply(p=M.primop(_), [e1, e2])) {
-                    T_k(e1, fn (s1) {
-                        T_k(e2, fn (s2) {
-                            M.apply(c, [M.apply(p, [s1, s2])])
-                        })
-                    })
+                    T_k(e1, fn (s1, m1) {
+                        T_k(e2, fn (s2, m2) {
+                            M.apply(c, [M.apply(p, [s1, s2]), m2])
+                        }, m1)
+                    }, m)
                 }
 
                 (M.apply(f, es)) {
-                    T_k(f, fn(sf) {
-                        Ts_k(es, fn (ses) {M.apply(sf, ses @@ [c])})
-                    })
+                    T_k(f, fn(sf, m1) {
+                        Ts_k(es, fn (ses, m2) {M.apply(sf, ses @@ [c, m2])}, m1)
+                    }, m)
                 }
 
                 (M.callcc_expr(e)) {
-                    T_k(e, fn (sf) {
-                        M.apply(
-                            M.parse("(λ (f cc) (f (λ (x i) (cc x)) cc))"),
-                            [sf, c]
-                        )
-                    })
+                    T_k(e, fn (sf, m1) {
+                        M.apply(sf, [captureWhole(c, m1), c, m1])
+                    }, m)
                 }
 
                 (M.cut_expr(e)) {
-                    M.cut_expr(T_c(e, c))
+                    M.cut_expr(T_c(e, c, m))
+                }
+
+                (M.reset_expr(e)) {
+                    let
+                        v = GS.genstring("$v");
+                    in
+                        T_c(e,
+                            makeIdk(),
+                            M.lambda([v], M.apply(c, [M.var(v), m])))
+                }
+
+                (M.shift_expr(e)) {
+                    T_k(e, fn (sf, m1) {
+                        M.apply(sf, [captureCont(c), makeIdk(), m1])
+                    }, m)
                 }
 
                 (M.cond_expr(test, branches)) {
                     let
                         sk = GS.genstring("$k");
+                        sm = GS.genstring("$m");
                         vsk = M.var(sk);
+                        vsm = M.var(sm);
                     in
-                        M.apply(M.lambda([sk], T_k(test, fn (atest) {
-                            M.cond_expr(atest, branches |> identity && T_c flip vsk)
-                        })), [c])
+                        M.apply(M.lambda([sk, sm], T_k(test, fn (atest, m1) {
+                            M.cond_expr(atest, branches |> fn {
+                                (#(e1, e2)) {
+                                    #(T_c(e1, vsk, m1), T_c(e2, vsk, m1))
+                                }
+                            })
+                        }, vsm)), [c, m])
                 }
 
                 (M.if_expr(exprc, exprt, exprf)) {
                     let
                         sk = GS.genstring("$k");
+                        sm = GS.genstring("$m");
                         vsk = M.var(sk);
+                        vsm = M.var(sm);
                     in
-                        M.apply(M.lambda([sk], T_k(exprc, fn (aexp) {
-                            M.if_expr(aexp, T_c(exprt, vsk), T_c(exprf, vsk))
-                        })), [c])
+                        M.apply(M.lambda([sk, sm], T_k(exprc, fn (aexp, m1) {
+                            M.if_expr(aexp, T_c(exprt, vsk, m1), T_c(exprf, vsk, m1))
+                        }, vsm)), [c, m])
                 }
 
                 (M.letrec_expr(bindings, expr)) {
-                    M.letrec_expr(bindings |> identity && (M && identity), T_c(expr, c))
+                    M.letrec_expr(bindings |> identity && (M && identity), T_c(expr, c, m))
                 }
 
                 (M.make_vec(size, args)) {
-                    Ts_k(args, fn (sargs) {
-                        M.apply(c, [M.make_vec(size, sargs)])
-                    })
+                    Ts_k(args, fn (sargs, m1) {
+                        M.apply(c, [M.make_vec(size, sargs), m1])
+                    }, m)
                 }
 
                 (M.match_cases(test, cases)) {
                     let
                         sk = GS.genstring("$k");
+                        sm = GS.genstring("$m");
                         vsk = M.var(sk);
+                        vsm = M.var(sm);
                     in
-                        M.apply(M.lambda([sk], T_k(test, fn (atest) {
-                            M.match_cases(atest, cases |> identity && T_c flip vsk)
-                        })), [c])
+                        M.apply(M.lambda([sk, sm], T_k(test, fn (atest, m1) {
+                            M.match_cases(atest, cases |> identity && fn (caseExpr) {
+                                T_c(caseExpr, vsk, m1)
+                            })
+                        }, vsm)), [c, m])
                 }
 
-                (M.sequence([expr])) { T_c(expr, c) }
+                (M.sequence([expr])) { T_c(expr, c, m) }
                 (M.sequence(expr @ exprs)) {
-                    T_k(expr, fn (ignored) {
-                        T_c(M.sequence(exprs), c)
-                    })
+                    T_k(expr, fn (ignored, m1) {
+                        T_c(M.sequence(exprs), c, m1)
+                    }, m)
                 }
 
                 (x) {
@@ -219,12 +283,12 @@ namespace
     }
 
     fn Ts_k {
-        ([], k) { k([]) }
-        (h @ t, k) {
-            T_k(h, fn (hd) {
-                Ts_k(t, fn (tl) {
-                    k(hd @ tl)
-                })
-            })
+        ([], k, m) { k([], m) }
+        (h @ t, k, m) {
+            T_k(h, fn (hd, m1) {
+                Ts_k(t, fn (tl, m2) {
+                    k(hd @ tl, m2)
+                }, m1)
+            }, m)
         }
     }
