@@ -202,10 +202,18 @@ fn make (keys, values) {
     add_lists(keys, values, E)
 }
 
+fn add_list (list, dict) {
+    list.foldl(fn (#(k, v), d) { insert(k, v, d) }, dict, list)
+}
+
 fn add_lists (keys, values, dict) {
-    list.foldl(fn (#(k, v), d) { insert(k, v, d) }, dict, list.zip(keys, values))
+    add_list(list.zip(keys, values), dict)
 }
 
 fn delete_list (keys, dict) {
     list.foldl(fn (k, d) { delete(k, d) }, dict, keys)
+}
+
+fn from_list (list) {
+    add_list(list, empty())
 }
