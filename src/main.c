@@ -86,7 +86,7 @@
 #include "tests.h"
 #endif
 
-typedef MinExp *(*minExpTransform)(MinExp *);
+typedef MinExp *(*MinExpTransform)(MinExp *);
 
 // temporary test
 LamExp *anfNormalize2(LamExp *exp);
@@ -469,28 +469,48 @@ static void report(char *prog, clock_t begin, clock_t compiled, clock_t end) {
     }
 }
 
-static MinExp *fixedPoint(minExpTransform transform, MinExp *node) {
-    int save = PROTECT(node);
-    int save2 = PROTECT(node);
+/**
+ * Iterates a MInExpTransform to a fixed point.
+ *
+ * @param transform the transform to iterate.
+ * @param minExp the initial MinExp.
+ * @return the fixed point result.
+ */
+static MinExp *fixedPoint(MinExpTransform transform, MinExp *minExp) {
+    int save = PROTECT(minExp);
+    int save2 = PROTECT(minExp);
     MinExp *res = NULL;
-    while (res != node) {
-        res = node;
+    while (res != minExp) {
+        res = minExp;
         REPLACE_PROTECT(save, res);
-        node = transform(res);
-        REPLACE_PROTECT(save2, node);
+        minExp = transform(res);
+        REPLACE_PROTECT(save2, minExp);
     }
     UNPROTECT(save);
-    return node;
+    return minExp;
 }
 
-static MinExp *betaEta(MinExp *node) {
-    node = betaMinExp(node);
-    int save = PROTECT(node);
-    node = etaMinExp(node);
+/**
+ * Wrapper around a β- then η-reduction.
+ *
+ * @param minExp the expression to reduce.
+ * @return the reduced expression.
+ */
+static MinExp *betaEta(MinExp *minExp) {
+    minExp = betaMinExp(minExp);
+    int save = PROTECT(minExp);
+    minExp = etaMinExp(minExp);
     UNPROTECT(save);
-    return node;
+    return minExp;
 }
 
+/**
+ * Wrapper around a sequence of inlining and constant and operator folding
+ * operations.
+ *
+ * @param minExp the expression to be transformed.
+ * @return the transformed expression.
+ */
 static MinExp *inlineShakeFold(MinExp *minExp) {
     int save = PROTECT(minExp);
     minExp = inlineMinExp(minExp, builtIns);
@@ -703,7 +723,6 @@ int main(int argc, char *argv[]) {
 
             MinExp *fail = makeExhaustedCont(CPI(minExp), 0, 1);
             PROTECT(fail);
-
             minExp = ambMinExp(minExp, fail);
             REPLACE_PROTECT(save2, minExp);
             PP_AND_EXIT_IF(amb_flag);
