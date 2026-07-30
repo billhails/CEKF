@@ -86,11 +86,15 @@
 #include "tests.h"
 #endif
 
+typedef MinExp *(*minExpTransform)(MinExp *);
+
 // temporary test
 LamExp *anfNormalize2(LamExp *exp);
 #ifdef SAFETY_CHECKS
 extern int forceGcFlag;
 #endif
+
+static BuiltIns *builtIns = NULL;
 
 int report_flag = 0;
 static int help_flag = 0;
@@ -465,30 +469,59 @@ static void report(char *prog, clock_t begin, clock_t compiled, clock_t end) {
     }
 }
 
-static MinExp *betaEtaFixedPoint(MinExp *node) {
+static MinExp *fixedPoint(minExpTransform transform, MinExp *node) {
     int save = PROTECT(node);
     int save2 = PROTECT(node);
     MinExp *res = NULL;
-#ifdef DEBUG_FIXED_POINT
-    int count = 0;
-#endif
     while (res != node) {
         res = node;
         REPLACE_PROTECT(save, res);
-        node = betaMinExp(res);
+        node = transform(res);
         REPLACE_PROTECT(save2, node);
-        node = etaMinExp(node);
-        REPLACE_PROTECT(save2, node);
-#ifdef DEBUG_FIXED_POINT
-        count++;
-#endif
     }
-#ifdef DEBUG_FIXED_POINT
-    eprintf("beta/eta fixed point: %d\n", count - 1);
-#endif
     UNPROTECT(save);
     return node;
 }
+
+static MinExp *betaEta(MinExp *node) {
+    node = betaMinExp(node);
+    int save = PROTECT(node);
+    node = etaMinExp(node);
+    UNPROTECT(save);
+    return node;
+}
+
+static MinExp *inlineShakeFold(MinExp *minExp) {
+    int save = PROTECT(minExp);
+    minExp = inlineMinExp(minExp, builtIns);
+    REPLACE_PROTECT(save, minExp);
+    minExp = fixedPoint(betaEta, minExp);
+    REPLACE_PROTECT(save, minExp);
+    minExp = shakeMinExp(minExp);
+    REPLACE_PROTECT(save, minExp);
+    minExp = foldVecMinExp(minExp);
+    REPLACE_PROTECT(save, minExp);
+    minExp = foldIffMinExp(minExp);
+    REPLACE_PROTECT(save, minExp);
+    minExp = foldCmpMinExp(minExp);
+    UNPROTECT(save);
+    return minExp;
+}
+
+static MinExp *closureConvert(MinExp *minExp) {
+    if (flat_closures_flag) {
+        return flatClosureConvert(minExp);
+    } else {
+        return sharedClosureConvert(minExp);
+    }
+}
+
+#define PP_AND_EXIT_IF(flag)                                                   \
+    if (flag) {                                                                \
+        ppMinExp(stdout, minExp);                                              \
+        printf("\n");                                                          \
+        exit(0);                                                               \
+    }
 
 /**
  * Main entry point for the program.
@@ -503,7 +536,7 @@ int main(int argc, char *argv[]) {
     include_paths = newStringArray();
     int save = PROTECT(include_paths);
     int nextargc = processArgs(argc, argv);
-    BuiltIns *builtIns = registerBuiltIns(
+    builtIns = registerBuiltIns(
         argc, binary_input_file ? nextargc : nextargc + 1, argv);
     PROTECT(builtIns);
 
@@ -633,225 +666,67 @@ int main(int argc, char *argv[]) {
         /////////////////////
         MinExp *minExp = desugarLamExp(exp);
         REPLACE_PROTECT(save2, minExp);
+        PP_AND_EXIT_IF(desugar_flag);
 
-        if (desugar_flag) {
-            ppMinExp(stdout, minExp);
-            printf("\n");
-            exit(0);
-        }
-
-        /////////
-        // Shake
-        /////////
         minExp = shakeMinExp(minExp);
         REPLACE_PROTECT(save2, minExp);
 
-        /////
-        // ɑ
-        /////
         minExp = alphaConvertMinExp(minExp, builtIns);
         REPLACE_PROTECT(save2, minExp);
+        PP_AND_EXIT_IF(alpha_flag);
 
-        if (alpha_flag) {
-            ppMinExp(stdout, minExp);
-            printf("\n");
-            exit(0);
-        }
-
-        /////////
-        // curry
-        /////////
         minExp = curryMinExp(minExp);
         REPLACE_PROTECT(save2, minExp);
+        PP_AND_EXIT_IF(curry_flag);
 
-        if (curry_flag) {
-            ppMinExp(stdout, minExp);
-            printf("\n");
-            exit(0);
-        }
-
-        /////////
-        // β - η
-        /////////
-        minExp = betaEtaFixedPoint(minExp);
+        minExp = fixedPoint(betaEta, minExp);
         REPLACE_PROTECT(save2, minExp);
+        PP_AND_EXIT_IF(beta_flag);
 
-        if (beta_flag) {
-            ppMinExp(stdout, minExp);
-            printf("\n");
-            exit(0);
-        }
-
-        ////////////////////
-        // Operator Folding
-        ////////////////////
         minExp = foldMinExp(minExp);
         REPLACE_PROTECT(save2, minExp);
+        PP_AND_EXIT_IF(fold_flag);
 
-        if (fold_flag) {
-            ppMinExp(stdout, minExp);
-            printf("\n");
-            exit(0);
-        }
-
-        ///////////
-        // uncurry
-        ///////////
         minExp = uncurry(minExp);
         REPLACE_PROTECT(save2, minExp);
-
-        if (uncurry_flag) {
-            ppMinExp(stdout, minExp);
-            printf("\n");
-            exit(0);
-        }
+        PP_AND_EXIT_IF(uncurry_flag);
 
         if (targetBFlag || targetCFlag) {
-            ///////
-            // CPS
-            ///////
             MinExp *done = makeDoneCont(CPI(minExp), 0);
             PROTECT(done);
             minExp = runCpsTrampolineTc(minExp, done);
             REPLACE_PROTECT(save2, minExp);
 
-            /////////
-            // β - η
-            /////////
-            minExp = betaEtaFixedPoint(minExp);
+            minExp = fixedPoint(betaEta, minExp);
             REPLACE_PROTECT(save2, minExp);
+            PP_AND_EXIT_IF(cps_flag);
 
-            if (cps_flag) {
-                ppMinExp(stdout, minExp);
-                printf("\n");
-                exit(0);
-            }
-
-            ///////
-            // AMB
-            ///////
             MinExp *fail = makeExhaustedCont(CPI(minExp), 0, 1);
             PROTECT(fail);
+
             minExp = ambMinExp(minExp, fail);
             REPLACE_PROTECT(save2, minExp);
+            PP_AND_EXIT_IF(amb_flag);
 
-            if (amb_flag) {
-                ppMinExp(stdout, minExp);
-                printf("\n");
-                exit(0);
-            }
-
-            /////////
-            // Shake
-            /////////
             minExp = shakeMinExp(minExp);
             REPLACE_PROTECT(save2, minExp);
+            PP_AND_EXIT_IF(shake_flag);
 
-            if (shake_flag) {
-                ppMinExp(stdout, minExp);
-                printf("\n");
-                exit(0);
-            }
-
-#ifdef DEBUG_FIXED_POINT
-            eprintf("inline/beta/eta/shake fixed point start\n");
-#endif
-
-            /////////////////////////////////////////////////////
-            // Inline Function Application Fixed Point Iteration
-            /////////////////////////////////////////////////////
-            MinExp *previousInline = NULL;
-            int save4 = PROTECT(minExp);
-#ifdef DEBUG_FIXED_POINT
-            int iterations = 0;
-#endif
-            while (previousInline != minExp) {
-                previousInline = minExp;
-                REPLACE_PROTECT(save4, previousInline);
-
-                //////////
-                // Inline
-                //////////
-                minExp = inlineMinExp(minExp, builtIns);
-                REPLACE_PROTECT(save2, minExp);
-
-                /////////
-                // β - η
-                /////////
-                minExp = betaEtaFixedPoint(minExp);
-                REPLACE_PROTECT(save2, minExp);
-
-                /////////
-                // Shake
-                /////////
-                minExp = shakeMinExp(minExp);
-                REPLACE_PROTECT(save2, minExp);
-
-                /////////////////////
-                // Fold vec/make-vec
-                /////////////////////
-                minExp = foldVecMinExp(minExp);
-                REPLACE_PROTECT(save2, minExp);
-
-                ////////////
-                // Fold Iff
-                ////////////
-                minExp = foldIffMinExp(minExp);
-                REPLACE_PROTECT(save2, minExp);
-
-                ////////////
-                // Fold Cmp
-                ////////////
-                minExp = foldCmpMinExp(minExp);
-                REPLACE_PROTECT(save2, minExp);
-
-#ifdef DEBUG_FIXED_POINT
-                iterations++;
-#endif
-            }
-            UNPROTECT(save4);
-
-#ifdef DEBUG_FIXED_POINT
-            eprintf("inline/beta/eta/shake fixed point: %d\n", iterations - 1);
-#endif
-
-            if (inline_f_flag) {
-                ppMinExp(stdout, minExp);
-                printf("\n");
-                exit(0);
-            }
+            minExp = fixedPoint(inlineShakeFold, minExp);
+            REPLACE_PROTECT(save2, minExp);
+            PP_AND_EXIT_IF(inline_f_flag);
 
 #ifdef SAFETY_CHECKS
             checkMinExp(minExp, builtIns);
 #endif
 
-            ///////////////////
-            // Closure Convert
-            ///////////////////
-            if (flat_closures_flag) {
-                minExp = flatClosureConvert(minExp);
-            } else {
-                minExp = sharedClosureConvert(minExp);
-            }
+            minExp = closureConvert(minExp);
             REPLACE_PROTECT(save2, minExp);
+            PP_AND_EXIT_IF(closure_flag);
 
-            if (closure_flag) {
-                ppMinExp(stdout, minExp);
-                printf("\n");
-                exit(0);
-            }
-
-            ////////////
-            // DeBruijn
-            ////////////
             minExp = indexMinExp(minExp);
             REPLACE_PROTECT(save2, minExp);
-
-            if (dumpIR) {
-                ppMinExp(stdout, minExp);
-                printf("\n");
-                exit(0);
-            }
+            PP_AND_EXIT_IF(dumpIR);
 
             //////////
             // Emit C
