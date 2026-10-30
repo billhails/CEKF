@@ -70,35 +70,24 @@ $$
 \begin{align*}
 \alpha_{\rho}\mathtt{C} &= \mathtt{C}
 \\
-\tag{1}
 \alpha_{\rho}x &= \rho(x)
-
 \\
 \alpha_{\rho}(e_0\ e_1) &= (\alpha_{\rho}e_0\ \alpha_{\rho}e_1)
-
 \\
-\tag{2}
 \alpha_{\rho}\lambda x.e &= \lambda x'.\alpha_{\rho[x \mapsto x']}e
 & \text{where } & x' = \mathrm{fresh}(x)
-
 \\
-\tag{3}
 l &= (\mathtt{letrec}\ (b_0\dots b_n)\ e)
-
 \\
 \rho' &= \rho[x_0 \mapsto x'_0,\dots,x_n \mapsto x'_n]
 & \text{where } & b_i = (x_i:\lambda y_i.e_i),
-
 \\
-\tag{4}
 &&&x'_i = \mathrm{fresh}(x_i)
-
 \\
 \tag{5}\alpha_{\rho}l &=
 (\mathtt{letrec}\ (\alpha_{\rho'}b_0\dots\alpha_{\rho'}b_n)\ \alpha_{\rho'}e)
-
 \\
-\tag{6}\alpha_{\rho}(x:\lambda y.e) &= (\rho(x):\lambda y'.\alpha_{\rho[y \mapsto y']}e)
+\alpha_{\rho}(x:\lambda y.e) &= (\rho(x):\lambda y'.\alpha_{\rho[y \mapsto y']}e)
 & \text{where } & y' = \mathrm{fresh}(y)
 \end{align*}
 $$
@@ -183,7 +172,6 @@ $$
 \\
 \beta x &= x
 \\
-\tag{1}
 \beta((\lambda x.e_0)\ e_1) &= \mathcal{S}_{[x/\beta e_1]}\beta e_0
 \\
 \beta (e_0\ e_1) &= (\beta e_0\ \beta e_1)
@@ -248,7 +236,7 @@ l &= (\mathtt{letrec}\ (( x_0:\lambda_0)\dots ( x_n:\lambda_n))\ e)
 l' &= (\mathtt{letrec}\ (( x_0:\lambda'_0)\dots ( x_n:\lambda'_n))\ e')
 \\
 \tag{2}
-&\phantom{=}\text{where }\lambda'_i = \mathcal{T}\lambda_i \text{ and }e' = \mathcal{T}e
+&\text{ where }\lambda'_i = \mathcal{T}\lambda_i \text{ and }e' = \mathcal{T}e
 \\
 \tag{3}
 K &= \set{x_0\dots x_n}
@@ -340,7 +328,7 @@ $$
 \\
 \mathcal{Z}b &= 1+ \mathcal{Z}e
 \\
-&\phantom{=}\text{where } b = (x:\lambda y.e)
+&\text{ where } b = (x:\lambda y.e)
 \end{align*}
 $$
 
