@@ -227,31 +227,23 @@ $$
 \\
 \mathcal{T}\lambda x . e &= \lambda x.\mathcal{T}e
 \\
-\tag{1}
 l &= (\mathtt{letrec}\ (( x_0:\lambda_0)\dots ( x_n:\lambda_n))\ e)
 \\
 l' &= (\mathtt{letrec}\ (( x_0:\lambda'_0)\dots ( x_n:\lambda'_n))\ e')
 \\
-\tag{2}
 &\text{ where }\lambda'_i = \mathcal{T}\lambda_i \text{ and }e' = \mathcal{T}e
 \\
-\tag{3}
 K &= \set{x_0\dots x_n}
 \\
-\tag{4}
 \vec{D} &= \set{ x_i \rightarrow x_j | x_i \in K,\ x_j \in K \cap \mathcal{F}\lambda'_i}
 \\
-\tag{5}
 B &= \mathcal{F}e' \cap K
 \\
-\tag{6}
 L &= \bigcup_{x\in B} \vec{D}^{\ast}x
 \\
-\tag{7}
 \mathcal{T}l &=
 (\mathtt{letrec}\ (\set{(x_i:\lambda'_i) | x_i \in L})\ e')
 \\
-\tag{8}
 \mathcal{T}(\mathtt{letrec}\ (\ )\ e) &= \mathcal{T}e
 \end{align*}
 $$
