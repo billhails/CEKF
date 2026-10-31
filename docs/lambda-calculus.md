@@ -119,23 +119,20 @@ y &\text{otherwise}
 \\
 \mathcal{S}_{[x/r]}(e_0\ e_1) &= (\mathcal{S}_{[x/r]}e_0\ \mathcal{S}_{[x/r]}e_1)
 \\
-\tag{1}
 \mathcal{S}_{[x/r]}\lambda y.e_0 &= \begin{cases}
 \lambda y.e_0 &\text{if } x = y
 \\
 \lambda y.\mathcal{S}_{[x/r]}e_0 &\text{otherwise}
 \end{cases}
-
 \\
 l &= (\mathtt{letrec}\ ((y_0:\lambda z_0.e_0)\dots(y_n:\lambda z_n.e_n))\ e)
 \\
-\tag{2}
 \mathcal{S}_{[x/r]}l &= \begin{cases}
 l &\text{if } x \in \set{y_0\dots y_n}
 \\
 (\mathtt{letrec}\ ((y_0:\lambda z_0.\mathcal{S}_{[x/r]}e_0)\dots
 \\
-\phantom{\mathtt{letrec}\ ((} (y_n:\lambda z_n.\mathcal{S}_{[x/r]}e_n))\ \mathcal{S}_{[x/r]}e) &\text{otherwise}
+\text{  } (y_n:\lambda z_n.\mathcal{S}_{[x/r]}e_n))\ \mathcal{S}_{[x/r]}e) &\text{otherwise}
 \end{cases}
 \end{align*}
 $$
