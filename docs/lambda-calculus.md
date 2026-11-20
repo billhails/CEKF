@@ -16,6 +16,8 @@ e\ &\mathtt{::=\ } \mathtt{C} & \texttt{[constant]}
 \\
 &\mathtt{|\ \ \ \ \ } (e\ e) & \texttt{[application]}
 \\
+&\mathtt{|\ \ \ \ \ } (\texttt{if}\ e\ e\ e) & \texttt{[conditional]}
+\\
 &\mathtt{|\ \ \ \ \ } \lambda x.e & \texttt{[lambda]}
 \\
 &\mathtt{|\ \ \ \ \ } (\mathtt{letrec}\ (b_0\dots b_n)\ e) & \texttt{[letrec]}
@@ -41,7 +43,9 @@ $$
 \\
 \mathcal{F}(e_0\ e_1) &= \mathcal{F}e_0\cup \mathcal{F}e_1
 \\
-\tag{1}\mathcal{F}\lambda x.e &= \mathcal{F}e - \set{ x }
+\mathcal{F}(\texttt{if}\ e_0\ e_1\ e_2) &= \mathcal{F}e_0\cup \mathcal{F}e_1 \cup \mathcal{F}e_2
+\\
+\mathcal{F}\lambda x.e &= \mathcal{F}e - \set{ x }
 \\
 \tag{2}\mathcal{F}(\mathtt{letrec}\ (( x_0:\lambda_0)\dots( x_n:\lambda_n))\ e) &=
 \Big( \mathcal{F}e\cup\bigcup_{i=0}^n\mathcal{F}\lambda_i\Big) - \set{x_0\dots x_n}
@@ -406,3 +410,43 @@ $$
 $$
 
 All other clauses of $\mathcal{C}^{cs}$ are the same as $\mathcal{C}$.
+
+## Eval $\mathcal{E}_\rho$ / Apply $\mathcal{A}$
+
+Just because we can 😃
+
+### Eval
+
+$$
+\begin{align*}
+\mathcal{E}_\rho\mathtt{C} &= \mathtt{C}
+\\
+\mathcal{E}_\rho x &= \rho(x)
+\\
+\mathcal{E}_\rho (e_0\ e_1) &= \mathcal{A}\mathcal{E}_\rho e_0\ \mathcal{E}_\rho e_1
+\\
+\mathcal{E}_\rho (\texttt{if}\ e_0\ e_1\ e_2) &= \begin{cases}
+\mathcal{E}_\rho e_1 &\text{if } \mathcal{E}_\rho e_0
+\\
+\mathcal{E}_\rho e_2 &\text{otherwise}
+\end{cases}
+\\
+\mathcal{E}_\rho \lambda x.e &= \text{clo}[\rho, x, e]
+\\
+\mathcal{E}_\rho (\mathtt{letrec}\ ((x_0:\lambda_0)\dots(x_n:\lambda_n))\ e)
+&= \mathcal{E}_{\rho[x_0 \mapsto \mathcal{E}\lambda_0 \dots x_n\mapsto \mathcal{E}\lambda_n]} e
+\end{align*}
+$$
+
+The last rule is not quite correct as the `letrec` lambdas are evaluated in an environment where all the $x_n$ are already bound.
+
+### Apply
+
+$$
+\begin{align*}
+\mathcal{A}\text{primop}\ e &= \text{primop}(e)
+\\
+\mathcal{A}\text{clo}[\rho,x, e_0]\ e_1 &= \mathcal{E}_{\rho[x \mapsto e_1]}e_0
+\end{align*}
+$$
+
