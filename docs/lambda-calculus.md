@@ -438,7 +438,11 @@ $$
 \end{align*}
 $$
 
-The last rule is not quite correct as the `letrec` lambdas are evaluated in an environment where all the $x_n$ are already bound.
+* $\rho$ is an environment.
+* $\mathcal{E}_\rho$ is evaluation in the context of environment $\rho$.
+* $\rho[x \mapsto e]$ is $\rho$ extended with a mapping from $x$ to $e$.
+* $\text{clo}[\rho, x, e]$ is a closure of environment, formal argument and function body.
+* The last rule is not quite correct as the `letrec` lambdas are evaluated in an environment where all the $x_n$ are already bound.
 
 ### Apply
 
@@ -449,4 +453,7 @@ $$
 \mathcal{A}\text{clo}[\rho,x, e_0]\ e_1 &= \mathcal{E}_{\rho[x \mapsto e_1]}e_0
 \end{align*}
 $$
+
+* evaluating a variable like `+` results in the primitive operation that can be applied directly.
+* evaluating a lambda results in a closure which is applied by evaluating the function body in the closure environment extended by binding the formal argument $x$ to the actual argument $e_1$.
 
